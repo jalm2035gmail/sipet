@@ -732,9 +732,9 @@ def web(request: Request):
         "frontend/web.html",
         {
             "request": request,
-            "title": "Frontend Web",
-            "content": "<h2>Bienvenido a la vista web del sistema</h2>",
+            "title": "SIPET",
             "app_favicon_url": login_identity.get("login_favicon_url"),
+            "company_logo_url": login_identity.get("login_logo_url"),
         },
     )
 

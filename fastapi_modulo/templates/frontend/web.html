@@ -7,88 +7,255 @@
     <link rel="icon" type="image/png" href="{{ app_favicon_url | default('/templates/icon/icon.png') }}">
     <link rel="shortcut icon" type="image/x-icon" href="{{ app_favicon_url | default('/templates/icon/icon.png') }}">
     <style>
+        :root {
+            --banner-height: 32px;
+            --bg-start: #eef5ff;
+            --bg-end: #f7fafc;
+            --panel: #ffffff;
+            --title: #0f2340;
+            --text: #29435c;
+            --accent: #0f6db4;
+            --accent-strong: #0a4f85;
+            --chip: #dbeefe;
+            --border: #d2dfec;
+        }
+        * {
+            box-sizing: border-box;
+        }
         body {
             margin: 0;
-            font-family: Arial, sans-serif;
-            background: #f5f6fa;
+            padding-top: var(--banner-height);
+            font-family: "Segoe UI", "Avenir Next", "Helvetica Neue", sans-serif;
+            color: var(--text);
+            background: radial-gradient(circle at 10% 0%, #dceeff 0%, var(--bg-start) 28%, var(--bg-end) 100%);
         }
-        .header {
-            background: #3498db;
-            color: #fff;
-            padding: 24px 32px;
-            font-size: 2em;
-            text-align: center;
-            position: relative;
-        }
-        .login-btn {
-            position: absolute;
-            top: 24px;
-            right: 32px;
-            font-size: 0.45em;
-            color: #3498db;
-            background: #fff;
-            text-decoration: none;
-            font-weight: bold;
-            padding: 8px 14px;
-            border-radius: 6px;
-            transition: background 0.2s, color 0.2s;
-        }
-        .login-btn:hover {
-            background: #f1c40f;
-            color: #1f5f8b;
-        }
-        .nav {
-            background: #2980b9;
-            color: #fff;
+        .demo-banner {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: var(--banner-height);
             display: flex;
+            align-items: center;
             justify-content: center;
-            padding: 12px 0;
-        }
-        .nav a {
+            background: #b91c1c;
             color: #fff;
-            text-decoration: none;
-            margin: 0 16px;
-            font-weight: bold;
-            transition: color 0.2s;
+            font-size: 0.9rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            z-index: 1000;
         }
-        .nav a:hover {
-            color: #f1c40f;
+        .page {
+            max-width: 1080px;
+            margin: 0 auto;
+            padding: 28px 20px 48px;
         }
-        .content {
-            max-width: 900px;
-            margin: 32px auto;
+        .hero {
+            background: linear-gradient(130deg, #ffffff 0%, #f2f8ff 100%);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 28px;
+            box-shadow: 0 18px 40px rgba(16, 50, 88, 0.08);
+            display: grid;
+            grid-template-columns: 160px minmax(0, 1fr);
+            gap: 20px;
+            align-items: center;
+        }
+        .logo-box {
+            width: 160px;
+            height: 160px;
+            border-radius: 20px;
             background: #fff;
-            padding: 32px;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 14px;
         }
-        @media (max-width: 600px) {
-            .header {
-                padding-right: 20px;
-                padding-left: 20px;
+        .logo-box img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+        .hero h1 {
+            margin: 0 0 6px;
+            color: var(--title);
+            font-size: clamp(1.6rem, 4vw, 2.3rem);
+            line-height: 1.2;
+        }
+        .hero p {
+            margin: 0;
+            font-size: 1.05rem;
+            line-height: 1.65;
+        }
+        .chip {
+            display: inline-block;
+            margin-bottom: 10px;
+            background: var(--chip);
+            color: var(--accent-strong);
+            border-radius: 999px;
+            padding: 8px 14px;
+            font-weight: 700;
+            font-size: 0.85rem;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+        }
+        .functions {
+            margin-top: 24px;
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 14px;
+        }
+        .function-card {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 18px;
+            box-shadow: 0 8px 22px rgba(17, 50, 89, 0.07);
+        }
+        .function-card h2 {
+            margin: 0 0 8px;
+            color: var(--title);
+            font-size: 1.05rem;
+        }
+        .function-card p {
+            margin: 0;
+            line-height: 1.55;
+            font-size: 0.96rem;
+        }
+        .summary {
+            margin-top: 18px;
+            background: #eaf3ff;
+            border: 1px solid #c4daf3;
+            border-radius: 14px;
+            padding: 16px 18px;
+            color: #15365c;
+            font-weight: 600;
+            line-height: 1.55;
+        }
+        .actions {
+            margin-top: 20px;
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .btn {
+            text-decoration: none;
+            border-radius: 12px;
+            padding: 11px 16px;
+            font-weight: 700;
+            border: 1px solid transparent;
+        }
+        .btn-primary {
+            background: var(--accent);
+            color: #fff;
+        }
+        .btn-primary:hover {
+            background: var(--accent-strong);
+        }
+        .btn-ghost {
+            background: #fff;
+            color: var(--accent-strong);
+            border-color: var(--border);
+        }
+        .btn-ghost:hover {
+            background: #f4f9ff;
+        }
+        .access-note {
+            margin: 0;
+            color: #32506e;
+            font-weight: 600;
+            font-size: 0.92rem;
+        }
+        .demo-credentials {
+            margin-top: 12px;
+            background: #f3f8ff;
+            border: 1px solid #cfe0f3;
+            border-radius: 12px;
+            padding: 10px 12px;
+            max-width: 360px;
+            color: #173a5f;
+            font-size: 0.92rem;
+            line-height: 1.5;
+        }
+        .demo-credentials strong {
+            color: #0f2f50;
+        }
+        @media (max-width: 900px) {
+            .hero {
+                grid-template-columns: 1fr;
+                text-align: center;
             }
-            .login-btn {
-                top: 14px;
-                right: 20px;
-                font-size: 0.5em;
-                padding: 7px 12px;
+            .logo-box {
+                margin: 0 auto;
+            }
+            .functions {
+                grid-template-columns: 1fr 1fr;
+            }
+            .actions {
+                justify-content: center;
+            }
+        }
+        @media (max-width: 620px) {
+            .page {
+                padding: 20px 14px 34px;
+            }
+            .hero {
+                padding: 20px;
+            }
+            .functions {
+                grid-template-columns: 1fr;
             }
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <a class="login-btn" href="/web/login">Ingresar</a>
-        {{ title }}
-    </div>
-    <div class="nav">
-        <a href="#">Inicio</a>
-        <a href="#">Servicios</a>
-        <a href="#">Contacto</a>
-        <a href="#">Personalización</a>
-    </div>
-    <div class="content">
-        {{ content|safe }}
+    <div class="demo-banner">esto es un demo</div>
+
+    <div class="page">
+        <section class="hero">
+            <div class="logo-box" aria-hidden="true">
+                <img src="{{ company_logo_url | default(app_favicon_url | default('/templates/icon/icon.png')) }}" alt="Logo de la empresa">
+            </div>
+            <div>
+                <span class="chip">SIPET</span>
+                <h1>Sistema de Plan Estratégico y Táctico</h1>
+                <p>
+                    SIPET tiene el objetivo de apoyar a las organizaciones, incrementando su nivel de eficiencia
+                    al facilitar el control y seguimiento de su POA (Plan Operativo Anual).
+                </p>
+                <div class="actions">
+                    <a class="btn btn-primary" href="/web/login">Ingresar al panel</a>
+                    <p class="access-note">Acceso permitido solo para usuarios registrados.</p>
+                </div>
+                <div class="demo-credentials">
+                    <strong>Usuario:</strong> demo<br>
+                    <strong>Contraseña:</strong> demo
+                </div>
+            </div>
+        </section>
+
+        <section class="functions" aria-label="Funciones principales de SIPET">
+            <article class="function-card">
+                <h2>Planificación estratégica</h2>
+                <p>Organiza objetivos, ejes e iniciativas para alinear las metas de la organización.</p>
+            </article>
+            <article class="function-card">
+                <h2>Seguimiento del POA</h2>
+                <p>Controla avances, responsables, fechas y resultados para cada actividad del plan operativo.</p>
+            </article>
+            <article class="function-card">
+                <h2>Indicadores y reportes</h2>
+                <p>Visualiza KPIs y reportes ejecutivos para tomar decisiones con información actualizada.</p>
+            </article>
+        </section>
+
+        <div class="summary">
+            SIPET centraliza la gestión del plan estratégico y táctico para mejorar el control,
+            la trazabilidad y el cumplimiento de objetivos institucionales.
+        </div>
     </div>
 </body>
 </html>
