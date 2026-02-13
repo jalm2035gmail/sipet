@@ -1,0 +1,10 @@
+.venv/
+*.pyc
+__pycache__/
+*.db
+*.sqlite3
+nohup.out
+uvicorn.log
+colores.db
+
+.DS_Store
