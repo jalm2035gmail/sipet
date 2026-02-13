@@ -3248,5 +3248,6 @@ async def identidad_institucional_save(
 # En el futuro, importar y usar templates para todas las respuestas
 
 if __name__ == "__main__":
+    import os
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8005)
+    uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", "8005")))
