@@ -1,4 +1,4 @@
-from app.models.strategic import StrategicPlan
+from app.models.strategic.plan import StrategicPlan
 from app.models.operational import POA
 
 class POAGenerator:

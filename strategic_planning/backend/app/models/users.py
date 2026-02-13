@@ -18,6 +18,7 @@ class Department(Base):
     manager = relationship("User", foreign_keys=[manager_id])
     users = relationship("User", back_populates="department")
     activities = relationship("Activity", back_populates="department")
+    objectives = relationship("DepartmentObjective", back_populates="department")
     kpis = relationship("KPI", back_populates="department")
 
 class User(Base):
@@ -27,6 +28,7 @@ class User(Base):
     email = Column(String(100), unique=True, index=True, nullable=False)
     username = Column(String(50), unique=True, index=True)
     full_name = Column(String(150))
+    password = Column(String(255), nullable=False)
     department_id = Column(Integer, ForeignKey("departments.id"))
     role = Column(String(50))  # admin, strategic_manager, department_manager, employee
     is_active = Column(Boolean, default=True)

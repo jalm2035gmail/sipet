@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ title }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="/templates/icon/icon.png">
+    <link rel="shortcut icon" type="image/x-icon" href="/templates/icon/icon.png">
+    <style>
+        :root {
+            color-scheme: dark;
+            --login-bg-desktop: url("{{ login_bg_desktop_url }}");
+            --login-bg-mobile: url("{{ login_bg_mobile_url }}");
+            --login-bg-color: #000b05;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Inter', Arial, sans-serif;
+            background-color: var(--login-bg-color);
+            background-image: var(--login-bg-desktop);
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            position: relative;
+            overflow: hidden;
+        }
+
+        @media (max-width: 900px) {
+            body {
+                background-image: var(--login-bg-mobile);
+            }
+            body::after {
+                animation: focusBlurMobile 4s ease-in-out forwards;
+            }
+        }
+
+        body::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.35);
+            backdrop-filter: blur(20px);
+            animation: focusBlur 4s ease-in-out forwards;
+            pointer-events: none;
+        }
+
+        /* El contenido que se muestra aquí puede reemplazarse dinámicamente desde el backend
+           o mediante plantillas reutilizando los mismos selectores (.logo-block img, .description, etc.) */
+        .login-frame {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 1200px;
+            padding: 48px 72px 64px;
+            min-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            color: #fefefe;
+        }
+
+        .login-header {
+            display: flex;
+            justify-content: flex-start;
+            align-items: flex-start;
+            gap: 32px;
+            margin-top: 40px;
+            position: relative;
+        }
+
+        .logo-block {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            text-align: center;
+        }
+
+        .logo-block img {
+            width: 96px;
+            height: 96px;
+            object-fit: contain;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            background: rgba(255, 255, 255, 0.05);
+            box-shadow:
+                0 25px 40px rgba(0, 0, 0, 0.6),
+                0 10px 20px rgba(255, 255, 255, 0.1);
+            animation: logoZoom 1.6s ease-out forwards;
+        }
+
+        .logo-block span {
+            font-size: 0.92rem;
+            letter-spacing: 0.2em;
+            text-align: center;
+            white-space: normal;
+            max-width: 120px;
+            word-break: break-word;
+            animation: logoZoom 1.6s ease-out forwards;
+        }
+
+        .company-name {
+            font-size: 2rem;
+            text-transform: uppercase;
+            font-weight: 700;
+        }
+
+        .description {
+            font-size: 2rem;
+            max-width: 480px;
+            line-height: 1.6;
+            color: rgba(255, 255, 255, 0.95);
+            text-align: center;
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60%;
+            text-shadow:
+                0 2px 6px rgba(0, 0, 0, 0.9),
+                0 0 20px rgba(255, 255, 255, 0.4);
+            animation: slideDescription 5s ease-in-out forwards;
+        }
+
+        .main-content {
+            display: flex;
+            flex: 1;
+            margin-top: 2rem;
+            position: relative;
+        }
+
+        .left-side {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            min-height: 60vh;
+        }
+
+        .form-panel {
+            width: 33.333%;
+            min-width: 320px;
+            margin-left: auto;
+            background: linear-gradient(155deg, rgba(18, 19, 26, 0.95), rgba(37, 63, 60, 0.6));
+            border-radius: 36px;
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            box-shadow:
+                0 30px 80px rgba(0, 0, 0, 0.6),
+                inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+            padding: 32px;
+            opacity: 0;
+            transform: translateX(30px);
+            transition: all 0.5s ease;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+            pointer-events: none;
+        }
+
+        .form-panel.active {
+            opacity: 1;
+            transform: translateX(0);
+            pointer-events: auto;
+        }
+
+        .form-panel h2 {
+            margin: 0;
+            text-transform: uppercase;
+            letter-spacing: 0.4em;
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.65);
+            text-align: center;
+        }
+
+        .form-icon {
+            width: 84px;
+            height: 84px;
+            border-radius: 50%;
+            background: #2b8b6d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto;
+            box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.2);
+        }
+
+        .form-icon svg {
+            width: 42px;
+            height: 42px;
+            stroke: #fff;
+            stroke-width: 2;
+            fill: none;
+        }
+
+        .login-form {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .login-error {
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 120, 120, 0.65);
+            background: rgba(160, 20, 20, 0.2);
+            color: #ffd9d9;
+            font-size: 13px;
+            line-height: 1.35;
+        }
+
+        .field {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .field label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.65);
+            letter-spacing: 0.35em;
+        }
+
+        .field input {
+            border: none;
+            border-radius: 12px;
+            padding: 14px 18px;
+            font-size: 1rem;
+            background: rgba(255, 255, 255, 0.65);
+            color: #00160f;
+        }
+
+        .field input::placeholder {
+            color: rgba(0, 0, 0, 0.35);
+        }
+
+        .field input:focus {
+            outline: 2px solid rgba(255, 255, 255, 0.4);
+            background: rgba(255, 255, 255, 0.85);
+        }
+
+        .form-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.8rem;
+            letter-spacing: 0.2em;
+        }
+
+        .form-footer a {
+            color: rgba(255, 255, 255, 0.75);
+            text-decoration: none;
+        }
+
+        .form-panel button {
+            margin-top: 8px;
+            padding: 14px 0;
+            border-radius: 12px;
+            border: none;
+            background: #2c9c63;
+            color: #fff;
+            font-size: 1rem;
+            letter-spacing: 0.4em;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .form-panel button:hover {
+            background: #1e724f;
+        }
+
+        .cta-ingresar {
+            font-size: 2.16rem;
+            letter-spacing: 0.3em;
+            padding: 12px 28px;
+            border-radius: 999px;
+            border: 2px solid rgba(255, 255, 255, 0.6);
+            background: rgba(0, 0, 0, 0.25);
+            color: #fff;
+            transition: background 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .cta-ingresar:hover {
+            background: #fefefe;
+            color: #00160f;
+            border-color: #bdbdbd;
+        }
+
+        @media (max-width: 900px) {
+            body {
+                background-image: var(--login-bg-mobile);
+            }
+            body::after {
+                animation: focusBlurMobile 4s ease-in-out forwards;
+            }
+            .login-frame {
+                padding: 32px 24px 48px;
+                min-height: 100vh;
+            }
+            .login-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .logo-block {
+                align-items: flex-start;
+            }
+            .left-side {
+                justify-content: center;
+                min-height: 80vh;
+            }
+            .left-side h1 {
+                margin-top: 20%;
+            }
+            .form-panel {
+                position: absolute;
+                top: 20px;
+                right: 20px;
+                width: calc(100% - 40px);
+                transform: translateY(20px);
+            }
+            .form-panel.active {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes focusBlur {
+            0% {
+                backdrop-filter: blur(20px);
+                opacity: 0.7;
+            }
+            60% {
+                backdrop-filter: blur(0px);
+                opacity: 0.9;
+            }
+            100% {
+                backdrop-filter: blur(0px);
+                opacity: 0.85;
+            }
+        }
+
+        @keyframes focusBlurMobile {
+            0% {
+                backdrop-filter: blur(24px);
+                opacity: 0.85;
+            }
+            50% {
+                backdrop-filter: blur(0px);
+                opacity: 0.95;
+            }
+            100% {
+                backdrop-filter: blur(0px);
+                opacity: 0.9;
+            }
+        }
+
+        @keyframes slideDescription {
+            0% {
+                transform: translate(-60%, 0);
+                opacity: 0;
+            }
+            60% {
+                transform: translate(-50%, 0);
+                opacity: 1;
+            }
+            100% {
+                transform: translate(-40%, 0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes logoZoom {
+            0% {
+                transform: scale(0.9);
+                opacity: 0;
+            }
+            60% {
+                transform: scale(1.1);
+                opacity: 1;
+            }
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+
+    </style>
+</head>
+<body>
+    <div class="login-frame">
+        <div class="login-header">
+            <div class="logo-block">
+                <img src="{{ login_logo_url }}" alt="Logo de la empresa">
+                <span class="company-name">{{ login_company_short_name }}</span>
+            </div>
+            <div class="description">
+                {{ login_message }}
+            </div>
+        </div>
+        <div class="main-content">
+            <div class="left-side">
+                <button class="cta-ingresar" type="button" aria-expanded="false" aria-controls="login-form">INGRESAR</button>
+            </div>
+            <div class="form-panel" id="login-form" aria-hidden="true">
+                <div class="form-icon" aria-hidden="true">
+                    <svg viewBox="0 0 64 64" role="presentation">
+                        <circle cx="32" cy="20" r="12"/>
+                        <path d="M16 54c0-10 8-18 16-18s16 8 16 18"/>
+                    </svg>
+                </div>
+                <h2>Login</h2>
+                <form class="login-form" method="post" action="/web/login">
+                    <div class="field">
+                        <label for="usuario">Usuario</label>
+                        <input id="usuario" name="usuario" type="text" placeholder="Nombre de usuario" required>
+                    </div>
+                    <div class="field">
+                        <label for="contrasena">Contraseña</label>
+                        <input id="contrasena" name="contrasena" type="password" placeholder="Contraseña" required>
+                    </div>
+                    <div class="form-footer">
+                        <span>Recuerdame</span>
+                        <a href="#">Olvidé contraseña</a>
+                    </div>
+                    <button type="submit">Entrar</button>
+                    {% if login_error %}
+                        <div class="login-error" id="login-error" role="alert">{{ login_error }}</div>
+                    {% endif %}
+                </form>
+            </div>
+        </div>
+    </div>
+    <script>
+        const ingresarBtn = document.querySelector(".cta-ingresar");
+        const formPanel = document.getElementById("login-form");
+        const usuarioInput = document.getElementById("usuario");
+        const contrasenaInput = document.getElementById("contrasena");
+        const loginError = document.getElementById("login-error");
+        ingresarBtn.addEventListener("click", () => {
+            const isExpanded = ingresarBtn.getAttribute("aria-expanded") === "true";
+            ingresarBtn.setAttribute("aria-expanded", String(!isExpanded));
+            formPanel.classList.toggle("active");
+            formPanel.setAttribute("aria-hidden", String(isExpanded));
+        });
+
+        const clearLoginError = () => {
+            if (loginError) {
+                loginError.remove();
+            }
+        };
+
+        usuarioInput && usuarioInput.addEventListener("input", clearLoginError);
+        contrasenaInput && contrasenaInput.addEventListener("input", clearLoginError);
+    </script>
+</body>
+</html>

@@ -5,14 +5,32 @@
     <title>{{ title }}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
+        :root {
+            --body-bg: #f4f6fb;
+            --text-color: #0f172a;
+            --sidebar-top: #2c3e50;
+            --sidebar-bottom: #1c2533;
+            --sidebar-text: #ffffff;
+            --sidebar-hover: #34495e;
+            --navbar-bg: #ecf0f1;
+            --navbar-text: #1f2933;
+            --content-bg: #ffffff;
+            {% if colores %}
+            {% for key, value in colores.items() %}
+            --{{ key }}: {{ value }};
+            {% endfor %}
+            {% endif %}
+        }
         body {
             margin: 0;
             font-family: Arial, sans-serif;
+            background: var(--body-bg, #f4f6fb);
+            color: var(--text-color, #0f172a);
         }
         .sidebar {
             width: 220px;
-            background: #2c3e50;
-            color: #fff;
+            background: linear-gradient(180deg, var(--sidebar-top, #2c3e50), var(--sidebar-bottom, #1c2533));
+            color: var(--sidebar-text, #fff);
             position: fixed;
             height: 100vh;
             top: 0;
@@ -29,20 +47,37 @@
         .sidebar nav {
             margin-top: 32px;
         }
-        .sidebar nav a {
+        .sidebar nav a,
+        .sidebar nav .submenu-toggle {
             display: block;
-            color: #fff;
+            color: var(--sidebar-text, #fff);
             text-decoration: none;
             padding: 12px 16px;
             transition: background 0.2s;
+            cursor: pointer;
         }
-        .sidebar nav a:hover {
+        .sidebar nav a:hover,
+        .sidebar nav .submenu-toggle:hover {
+            background: var(--sidebar-hover, #34495e);
+        }
+        .sidebar nav .submenu {
+            display: none;
+            flex-direction: column;
+            margin-left: 8px;
+        }
+        .sidebar nav .submenu a {
+            padding-left: 32px;
+            background: rgba(255, 255, 255, 0.08);
+        }
+        .sidebar nav .submenu-toggle.active + .submenu,
+        .sidebar nav .submenu-toggle.active {
             background: #34495e;
         }
         .navbar {
             margin-left: 220px;
             height: 56px;
-            background: #ecf0f1;
+            background: var(--navbar-bg, #ecf0f1);
+            color: var(--navbar-text, #1f2933);
             display: flex;
             align-items: center;
             padding: 0 24px;
@@ -51,6 +86,8 @@
         .main-content {
             margin-left: 220px;
             padding: 32px;
+            background: var(--content-bg, #ffffff);
+            min-height: 100vh;
         }
         @media (max-width: 700px) {
             .sidebar {
@@ -71,10 +108,17 @@
         <nav>
             <a href="#">Inicio</a>
             <a href="#">Planes</a>
-            <a href="#">Diagnóstico</a>
+            <div class="submenu-toggle">Diagnóstico</div>
+            <div class="submenu">
+                <a href="/strategic/plans/diagnostic/swot">FODA</a>
+                <a href="/strategic/plans/diagnostic/pestel">PESTEL</a>
+                <a href="/strategic/plans/diagnostic/porter">Porter</a>
+                <a href="/strategic/plans/diagnostic/customer">Percepción del consumidor</a>
+            </div>
             <a href="#">POA</a>
             <a href="#">KPIs</a>
             <a href="#">Reportes</a>
+            <a href="/personalizacion/roles-permisos">Roles del Sistema</a>
         </nav>
     </div>
     <div class="navbar">
@@ -84,5 +128,17 @@
     <div class="main-content">
         {{ content|safe }}
     </div>
+    <script>
+        const toggle = document.querySelector(".submenu-toggle");
+        if (toggle) {
+            toggle.addEventListener("click", () => {
+                toggle.classList.toggle("active");
+                const submenu = toggle.nextElementSibling;
+                if (submenu) {
+                    submenu.style.display = submenu.style.display === "flex" ? "none" : "flex";
+                }
+            });
+        }
+    </script>
 </body>
 </html>

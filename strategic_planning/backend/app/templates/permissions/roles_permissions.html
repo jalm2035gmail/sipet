@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Roles y Permisos</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+    <div class="main-content">
+        <h1>Gestión de Roles y Permisos</h1>
+        <section>
+            <h2>Roles del Sistema</h2>
+            <div id="roles-list">
+                {% for role in roles %}
+                <div class="role-card">
+                    <h3>{{ role.display_name }}</h3>
+                    <p>{{ role.description }}</p>
+                    <span>Nivel: {{ role.hierarchy_level }}</span>
+                    <span>Usuarios: {{ role.user_count }}</span>
+                    <span>Tipo: {{ 'Sistema' if role.is_system else 'Personalizado' }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+        <section>
+            <h2>Permisos</h2>
+            <div id="permissions-list">
+                {% for permission in permissions %}
+                <div class="permission-card">
+                    <strong>{{ permission.code }}</strong> - {{ permission.name }}<br>
+                    <span>{{ permission.category }}</span>
+                    <p>{{ permission.description }}</p>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+    </div>
+</body>
+</html>

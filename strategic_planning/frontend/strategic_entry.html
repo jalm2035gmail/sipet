@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Entrada de Plan Estratégico</title>
+  <style>
+    body {
+      font-family: "Inter", system-ui, sans-serif;
+      margin: 0;
+      background: #eef2f7;
+      color: #1f2933;
+    }
+    header {
+      background: #111827;
+      color: white;
+      padding: 1rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 1.25rem;
+    }
+    main {
+      padding: 2rem;
+      display: grid;
+      gap: 1.5rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .card {
+      background: white;
+      border-radius: 1rem;
+      padding: 1.5rem;
+      box-shadow: 0 20px 60px rgba(15, 23, 42, 0.15);
+    }
+    .card legend {
+      font-weight: 600;
+      margin-bottom: 1rem;
+    }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1rem;
+    }
+    label {
+      font-size: 0.9rem;
+      color: #4b5563;
+      display: block;
+      margin-bottom: 0.35rem;
+    }
+    input,
+    textarea,
+    select {
+      width: 100%;
+      padding: 0.7rem;
+      border-radius: 0.65rem;
+      border: 1px solid #d1d5db;
+      font-size: 1rem;
+      background: #f9fafb;
+    }
+    textarea {
+      min-height: 120px;
+    }
+    button {
+      background: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 0.75rem;
+      padding: 0.85rem 1.5rem;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+    button:hover {
+      background: #1d4ed8;
+    }
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.35rem 0.8rem;
+      border-radius: 999px;
+      background: #e0f2fe;
+      color: #0369a1;
+      margin-right: 0.5rem;
+      margin-bottom: 0.5rem;
+      font-size: 0.85rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Gestión de Plan Estratégico</h1>
+    <span>Fase 4 / Ingreso web</span>
+  </header>
+  <main>
+    <form id="plan-form" class="card">
+      <legend>1. Datos del Plan</legend>
+      <div class="grid-2">
+        <div>
+          <label for="plan-name">Nombre</label>
+          <input id="plan-name" name="name" placeholder="Plan Estratégico 2026-2028" required />
+        </div>
+        <div>
+          <label for="plan-code">Código</label>
+          <input id="plan-code" name="code" placeholder="PE-2628" required />
+        </div>
+        <div>
+          <label for="plan-department">Departamento</label>
+          <select id="plan-department" name="department_id">
+            <option value="">Seleccionar</option>
+            <option value="1">Dirección General</option>
+            <option value="2">Innovación</option>
+          </select>
+        </div>
+        <div>
+          <label for="plan-period">Periodo</label>
+          <input type="text" id="plan-period" name="period" placeholder="2026-2028" />
+        </div>
+      </div>
+      <div style="margin-top: 1rem;">
+        <label for="plan-description">Descripción</label>
+        <textarea id="plan-description" name="description" placeholder="Resumen estratégico..." rows="3"></textarea>
+      </div>
+      <div class="grid-2" style="margin-top: 1rem;">
+        <div>
+          <label for="plan-vision">Visión</label>
+          <textarea id="plan-vision" name="vision"></textarea>
+        </div>
+        <div>
+          <label for="plan-mission">Misión</label>
+          <textarea id="plan-mission" name="mission"></textarea>
+        </div>
+      </div>
+      <div style="margin-top: 1rem;">
+        <label for="plan-values">Valores (separados por comas)</label>
+        <input id="plan-values" name="values" placeholder="Innovación, Calidad, Colaboración" />
+      </div>
+    </form>
+
+    <form id="analysis-form" class="card">
+      <legend>2. FODA + PESTEL</legend>
+      <div style="margin-bottom: 1rem;">
+        <label>Agregar factor FODA</label>
+        <div class="grid-2">
+          <input placeholder="Descripción" id="swot-description" />
+          <select id="swot-category">
+            <option value="strength">Fortaleza</option>
+            <option value="weakness">Debilidad</option>
+            <option value="opportunity">Oportunidad</option>
+            <option value="threat">Amenaza</option>
+          </select>
+        </div>
+        <button type="button" onclick="addSwotFactor()">Agregar FODA</button>
+        <div id="swot-tags" style="margin-top: 1rem;"></div>
+      </div>
+      <div>
+        <label>Mapa PESTEL</label>
+        <div class="grid-2">
+          <input placeholder="Factor político" id="pestel-political" />
+          <input placeholder="Factor económico" id="pestel-economic" />
+        </div>
+        <div class="grid-2" style="margin-top: 0.5rem;">
+          <input placeholder="Factor social" id="pestel-social" />
+          <input placeholder="Factor tecnológico" id="pestel-technological" />
+        </div>
+      </div>
+    </form>
+
+    <form id="porter-form" class="card">
+      <legend>3. Porter & Percepción</legend>
+      <div class="grid-2">
+        <textarea placeholder="Poder proveedores" id="porter-supplier"></textarea>
+        <textarea placeholder="Poder compradores" id="porter-buyer"></textarea>
+      </div>
+      <div class="grid-2" style="margin-top: 1rem;">
+        <textarea placeholder="Rivalidad competitiva" id="porter-rivalry"></textarea>
+        <textarea placeholder="Amenaza de sustitutos" id="porter-substitutes"></textarea>
+      </div>
+      <div style="margin-top: 1rem;">
+        <label for="nps-score">Net Promoter Score</label>
+        <input id="nps-score" type="number" min="-100" max="100" step="0.1" />
+      </div>
+      <div style="margin-top: 0.5rem;">
+        <label for="satisfaction-score">Índice de satisfacción</label>
+        <input id="satisfaction-score" type="number" min="0" max="10" step="0.1" />
+      </div>
+    </form>
+
+    <div class="card">
+      <legend>4. Acciones</legend>
+      <button type="button" onclick="submitStrategicPlan()">Guardar plan estratégico</button>
+    </div>
+  </main>
+
+  <script>
+    const swotTags = document.getElementById("swot-tags");
+
+    function addSwotFactor() {
+      const description = document.getElementById("swot-description").value.trim();
+      const category = document.getElementById("swot-category").value;
+      if (!description) return;
+      const chip = document.createElement("span");
+      chip.classList.add("chip");
+      chip.textContent = `${category.toUpperCase()}: ${description}`;
+      swotTags.appendChild(chip);
+      document.getElementById("swot-description").value = "";
+    }
+
+    async function submitStrategicPlan() {
+      const form = document.getElementById("plan-form");
+      const formData = new FormData(form);
+      const payload = {
+        name: formData.get("name"),
+        code: formData.get("code"),
+        department_id: parseInt(formData.get("department_id")) || null,
+        description: formData.get("description"),
+        vision: formData.get("vision"),
+        mission: formData.get("mission"),
+        values: formData.get("values") ? formData.get("values").split(",").map(v => v.trim()) : [],
+        start_date: new Date().toISOString().split("T")[0],
+        end_date: new Date(new Date().setFullYear(new Date().getFullYear() + 2)).toISOString().split("T")[0],
+        status: "draft",
+      };
+
+      try {
+        const response = await fetch("/api/v1/strategic/plans/", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        });
+        const data = await response.json();
+        alert("Plan creado: " + (data?.data?.name || "sin nombre"));
+      } catch (error) {
+        alert("Error al crear el plan: " + error.message);
+      }
+    }
+  </script>
+</body>
+</html>

@@ -9,6 +9,19 @@
     <style>
         :root {
             color-scheme: light;
+            /* defaults */
+            --navbar-bg: #ffffff;
+            --navbar-text: #1f172a;
+            --sidebar-top: #1f2a3d;
+            --sidebar-bottom: #0f172a;
+            --sidebar-text: #ffffff;
+            --sidebar-icon: #f5f7fb;
+            --sidebar-hover: #2a3a52;
+            --page-bg: #f4f6fb;
+            --content-bg: #ffffff;
+            --body-text: #0f172a;
+            --sidebar-block-title-size: 1.05rem;
+            --sidebar-submenu-size: calc(var(--sidebar-block-title-size) * 0.85);
             {% if colores %}
             {% for key, value in colores.items() %}
             --{{ key }}: {{ value }};
@@ -21,13 +34,17 @@
         body {
             margin: 0;
             font-family: 'Inter', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
-            background: #f4f6fb;
-            color: #0f172a;
+            background: var(--page-bg, #f4f6fb);
+            color: var(--body-text, #0f172a);
         }
         .sidebar {
             width: 220px;
-            background: #1f2a3d;
-            color: #fff;
+            background: linear-gradient(
+                180deg,
+                var(--sidebar-top, #1f2a3d),
+                var(--sidebar-bottom, #0f172a)
+            );
+            color: var(--sidebar-text, #ffffff);
             position: fixed;
             top: 0;
             left: 0;
@@ -54,7 +71,7 @@
             width: 96px;
             height: 96px;
             border-radius: 24px;
-            background: #ffffff;
+            background: var(--sidebar-icon, #ffffff);
             border: 2px solid rgba(255,255,255,0.4);
         }
         .sidebar-user img {
@@ -84,36 +101,77 @@
             margin-top: 8px;
             display: flex;
             flex-direction: column;
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding-bottom: 12px;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255, 255, 255, 0.35) transparent;
+        }
+        .menu-audit-note {
+            margin: 12px 16px 16px;
+            padding: 10px 12px;
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.08);
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 0.78rem;
+            line-height: 1.35;
+        }
+        .menu-audit-note strong {
+            display: block;
+            margin-bottom: 4px;
+            font-size: 0.8rem;
+        }
+        nav::-webkit-scrollbar {
+            width: 8px;
+        }
+        nav::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        nav::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 999px;
+        }
+        nav::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.45);
         }
         nav a,
-        .accordion-header {
+        .accordion-header,
+        .sidebar-section-toggle {
             display: flex;
             align-items: center;
             padding: 12px 24px;
             text-decoration: none;
             color: inherit;
-            font-size: 1.05rem;
+            font-size: var(--sidebar-block-title-size);
             background: none;
             border: none;
             width: 100%;
             cursor: pointer;
+            font-family: inherit;
         }
         nav a {
             justify-content: flex-start;
             gap: 12px;
         }
         nav a:hover,
-        .accordion-header:hover {
+        .accordion-header:hover,
+        .sidebar-section-toggle:hover {
             background: rgba(255, 255, 255, 0.08);
         }
         .accordion-header {
             justify-content: space-between;
         }
-        .accordion {
+        .accordion,
+        .sidebar-section {
             margin-top: 8px;
             border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding-top: 4px;
         }
-        .accordion-content {
+        .accordion-content,
+        .sidebar-section-content {
             display: none;
             flex-direction: column;
         }
@@ -121,41 +179,100 @@
             display: flex;
         }
         .submenu {
-            padding: 8px 24px 8px 32px;
-            font-size: 0.95rem;
-            color: #d9e5ff;
+            display: block;
+            width: 100%;
+            padding: 10px 24px 10px 24px;
+            padding-left: 66px;
+            font-size: var(--sidebar-submenu-size);
+            color: var(--sidebar-text, #d9e5ff);
             text-decoration: none;
-            transition: color 0.2s;
+            text-align: right;
+            transition: color 0.2s, background 0.2s;
+            font-family: inherit;
         }
         .submenu:hover {
             color: #ffcb2b;
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .submenu span {
+            display: block;
+            width: 100%;
+            text-align: right;
+        }
+        .sidebar-section-title-with-icon {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: var(--sidebar-block-title-size);
+            letter-spacing: 0.02em;
+            text-transform: none;
+            color: inherit;
+            justify-content: flex-start;
+        }
+        .sidebar-section-title-with-icon .menu-icon img,
+        .menu-indicator .menu-icon img {
+            width: 18px;
+            height: 18px;
+            filter: brightness(0) invert(1);
+        }
+        .sidebar-section-toggle {
+            justify-content: space-between;
+        }
+        .sidebar-section-toggle .menu-icon img {
+            width: 20px;
+            height: 20px;
+        }
+        .menu-indicator,
+        .sidebar-section-title-with-icon {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            font-size: var(--sidebar-block-title-size);
+            letter-spacing: 0.02em;
+            text-transform: none;
+        }
+        .sidebar-section-content.open {
+            display: flex;
         }
         .menu-icon {
             display: inline-flex;
             align-items: center;
             justify-content: center;
+            width: 30px;
+            height: 30px;
         }
         .menu-icon svg {
             width: 22px;
             height: 22px;
             stroke: currentColor;
         }
-        .menu-indicator {
-            display: inline-flex;
-            align-items: center;
-            gap: 12px;
+        .menu-icon img {
+            width: 22px;
+            height: 22px;
+            display: block;
+            object-fit: contain;
+            filter: brightness(0) invert(1);
+        }
+        .menu-label {
+            flex: 1;
+            font-size: var(--sidebar-block-title-size);
+            letter-spacing: 0.02em;
+            text-transform: none;
+        }
+        .menu-icon.placeholder {
+            visibility: hidden;
         }
         .navbar {
             margin-left: 220px;
             padding: 0 24px;
-            background: #fff;
-            border-bottom: 1px solid #ecedf4;
+            background: var(--navbar-bg, #ffffff);
+            border-bottom: 1px solid rgba(236, 237, 244, 0.9);
             position: sticky;
             top: 0;
             z-index: 2;
             transition: margin-left 0.3s ease;
             font-weight: 600;
-            color: #1f2933;
+            color: var(--navbar-text, #1f2933);
             display: flex;
             justify-content: center;
             height: 72px;
@@ -226,8 +343,8 @@
             font-weight: 600;
             font-size: 0.95rem;
             box-shadow: 0 10px 30px rgba(15, 23, 42, 0.25);
-            color: #fff;
-            background: rgba(37, 99, 235, 0.9);
+            color: var(--sidebar-bottom, #0f172a);
+            background: transparent;
             z-index: 20;
             opacity: 0;
             transform: translateY(-10px);
@@ -401,6 +518,34 @@
         .action-button:hover img {
             opacity: 0;
         }
+        .floating-actions-group[data-floating-screen="usuarios"] .action-button,
+        .floating-actions-group[data-floating-screen="areas"] .action-button,
+        .floating-actions-group[data-floating-screen="plantillas"] .action-button {
+            min-width: 124px;
+            justify-content: flex-start;
+            border: 1px solid #cbd5e1;
+            background: #ffffff;
+            color: #0f172a;
+        }
+        .floating-actions-group[data-floating-screen="usuarios"] .action-label,
+        .floating-actions-group[data-floating-screen="areas"] .action-label,
+        .floating-actions-group[data-floating-screen="plantillas"] .action-label {
+            position: static;
+            inset: auto;
+            opacity: 1;
+            font-style: normal;
+            pointer-events: auto;
+            color: #0f172a;
+            font-weight: 600;
+        }
+        .floating-actions-group[data-floating-screen="usuarios"] .action-button:hover img,
+        .floating-actions-group[data-floating-screen="usuarios"] .action-button:hover svg,
+        .floating-actions-group[data-floating-screen="areas"] .action-button:hover img,
+        .floating-actions-group[data-floating-screen="areas"] .action-button:hover svg,
+        .floating-actions-group[data-floating-screen="plantillas"] .action-button:hover img,
+        .floating-actions-group[data-floating-screen="plantillas"] .action-button:hover svg {
+            opacity: 1;
+        }
         .floating-toggle {
             position: absolute;
             top: 50%;
@@ -532,7 +677,8 @@
             gap: 8px;
             margin-bottom: 18px;
         }
-        .usuario-tab {
+        .usuario-tab,
+        .area-tab {
             padding: 8px 18px;
             border-radius: 999px;
             border: 1px solid #d4d4d8;
@@ -541,7 +687,8 @@
             cursor: pointer;
             transition: background 0.2s, color 0.2s;
         }
-        .usuario-tab.active {
+        .usuario-tab.active,
+        .area-tab.active {
             background: #0f172a;
             color: #fff;
         }
@@ -618,164 +765,822 @@
             max-width: 240px;
             margin-bottom: 12px;
         }
+        .area-form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 14px 18px;
+        }
+        .area-kanban-columns {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+        }
+        .area-kanban-column {
+            border: 1px dashed #d1d5db;
+            border-radius: 12px;
+            padding: 12px;
+            background: #fff;
+        }
+        .area-kanban-column h4 {
+            margin: 0 0 10px;
+            font-size: 0.95rem;
+            color: #0f172a;
+        }
+        .area-card {
+            padding: 10px 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            background: #f8fafc;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+        .area-card strong {
+            color: #0f172a;
+        }
+        .area-card span {
+            color: #475569;
+            font-size: 0.9rem;
+        }
+        .usuario-organigrama {
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+            padding: 6px 0;
+        }
+        .plantillas-page {
+            width: 100%;
+        }
+        .plantillas-layout {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 16px;
+            align-items: start;
+        }
+        .plantillas-list-card,
+        .plantillas-editor-card {
+            background: #ffffff;
+            border: 1px solid #dbe3ef;
+            border-radius: 12px;
+            padding: 16px;
+        }
+        .plantillas-list-card h3 {
+            margin: 0;
+            color: #0f172a;
+        }
+        .plantillas-hint {
+            margin: 8px 0 14px;
+            font-size: 0.9rem;
+            color: #475569;
+        }
+        .plantillas-list {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 460px;
+            overflow: auto;
+        }
+        .plantillas-item {
+            border: 1px solid #dbe3ef;
+            background: #f8fbff;
+            color: #1e293b;
+            border-radius: 10px;
+            padding: 10px 12px;
+            cursor: pointer;
+            text-align: left;
+            font-weight: 600;
+            transition: border-color 160ms ease, background 160ms ease;
+        }
+        .plantillas-item.active {
+            border-color: #2c9c63;
+            background: #ecfdf5;
+        }
+        .plantillas-editor-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 10px;
+        }
+        .plantilla-code {
+            min-height: 240px;
+            resize: vertical;
+            font-family: "SFMono-Regular", Menlo, Consolas, monospace;
+            font-size: 0.86rem;
+            background: #f8fafc;
+        }
+        .plantillas-preview-head {
+            margin-top: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .plantillas-preview-head h4 {
+            margin: 0;
+            color: #0f172a;
+        }
+        .plantillas-preview-head button {
+            border: 1px solid #14532d;
+            background: #166534;
+            color: #fff;
+            border-radius: 8px;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .plantilla-preview-frame {
+            width: 100%;
+            min-height: 290px;
+            border: 1px solid #dbe3ef;
+            border-radius: 10px;
+            background: #ffffff;
+            margin-top: 10px;
+        }
+        .org-level {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        .org-node {
+            min-width: 210px;
+            padding: 12px 14px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            background: #ffffff;
+            text-align: center;
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+        }
+        .org-node strong {
+            display: block;
+            margin-bottom: 4px;
+            color: #0f172a;
+        }
+        .org-node span {
+            display: block;
+            color: #475569;
+            font-size: 0.9rem;
+        }
+        .org-root .org-node {
+            border-color: #0f172a;
+            background: #f8fafc;
+        }
+        .org-divider {
+            width: 2px;
+            height: 20px;
+            margin: 0 auto;
+            background: #cbd5e1;
+        }
         .usuarios-form-layout {
             display: flex;
             flex-direction: column;
-            gap: 32px;
+            gap: 18px;
+            max-width: 980px;
         }
         .form-section {
             background: #fff;
-            border-radius: 18px;
-            padding: 28px;
-            box-shadow: 0 20px 60px rgba(15, 23, 42, 0.08);
+            border-radius: 2px;
+            padding: 16px 18px;
+            border: 1px solid #e5e7eb;
+            box-shadow: none;
         }
         .section-title h2 {
-            margin: 0;
+            margin: 0 0 14px;
+            font-size: 1.15rem;
+            color: #1e293b;
+            font-weight: 600;
         }
         .section-title .tag {
-            font-size: 0.75rem;
-            letter-spacing: 0.2em;
+            font-size: 0.72rem;
+            letter-spacing: 0.08em;
             text-transform: uppercase;
-            color: #94a3b8;
-            margin: 0 0 8px;
+            color: #64748b;
+            margin: 0 0 4px;
+            font-weight: 600;
         }
         .section-grid {
             display: grid;
-            gap: 16px;
+            gap: 12px 18px;
             grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
         }
         .section-grid.two-columns {
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            align-items: stretch;
+            grid-template-columns: minmax(0, 1fr) 110px;
+            align-items: start;
         }
         .column {
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: 10px;
         }
         .form-field {
             display: flex;
             flex-direction: column;
-            gap: 4px;
-            font-size: 0.85rem;
+            gap: 5px;
+            font-size: 0.88rem;
+            color: #334155;
+        }
+        .form-field label {
+            font-size: 0.86rem;
+            font-weight: 600;
+            color: #334155;
+        }
+        .form-field input,
+        .form-field select,
+        .form-field textarea {
+            border-radius: 2px;
+            border: 1px solid #d1d5db;
+            padding: 9px 10px;
+            font-size: 0.95rem;
+            font-family: inherit;
+            color: #0f172a;
+            background: #fff;
+        }
+        .form-field input:focus,
+        .form-field select:focus,
+        .form-field textarea:focus {
+            outline: none;
+            border-color: #64748b;
+            box-shadow: 0 0 0 2px rgba(100, 116, 139, 0.12);
+        }
+        .password-confirm-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.35);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 30;
+        }
+        .password-confirm-backdrop.hidden {
+            display: none;
+        }
+        .password-confirm-modal {
+            width: min(92vw, 360px);
+            background: #ffffff;
+            border: 1px solid #d1d5db;
+            border-radius: 10px;
+            box-shadow: 0 20px 45px rgba(15, 23, 42, 0.2);
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .password-confirm-modal h3 {
+            margin: 0;
+            font-size: 1rem;
+            color: #0f172a;
+        }
+        .password-confirm-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+        }
+        .password-confirm-actions button {
+            border: 1px solid #cbd5e1;
+            background: #fff;
+            color: #0f172a;
+            border-radius: 6px;
+            padding: 7px 10px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .password-confirm-actions button.primary {
+            background: #0f172a;
+            border-color: #0f172a;
+            color: #fff;
+        }
+        .password-confirm-msg {
+            min-height: 16px;
+            margin: 0;
+            font-size: 0.82rem;
+            color: #b91c1c;
+        }
+        .foda-page {
+            max-width: 1200px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .foda-input-card {
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 16px;
+        }
+        .foda-input-card h2 {
+            margin: 0;
+            color: #0f172a;
+            font-size: 1.25rem;
+        }
+        .foda-input-card p {
+            margin: 8px 0 14px;
             color: #475569;
         }
-        .form-field input {
+        .foda-input-grid {
+            display: grid;
+            grid-template-columns: 1.8fr 1fr 1fr;
+            gap: 12px;
+        }
+        .foda-input-grid textarea {
+            min-height: 96px;
+            resize: vertical;
+        }
+        .foda-input-actions {
+            margin-top: 12px;
+            display: flex;
+            justify-content: flex-end;
+        }
+        .foda-input-actions button {
+            border: 1px solid #0f172a;
+            background: #0f172a;
+            color: #fff;
+            border-radius: 8px;
+            padding: 8px 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .foda-matrix {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 14px;
+        }
+        .foda-quadrant {
+            background: #fff;
+            border: 1px solid #dbeafe;
             border-radius: 12px;
-            border: 1px solid #cbd5f5;
-            padding: 10px 12px;
+            padding: 12px;
+            min-height: 200px;
+        }
+        .foda-quadrant header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        .foda-quadrant h3 {
+            margin: 0;
             font-size: 1rem;
-            font-family: inherit;
+            color: #0f172a;
+        }
+        .foda-quadrant header span {
+            font-size: 0.85rem;
+            border-radius: 999px;
+            padding: 3px 8px;
+            background: #e2e8f0;
+            color: #1e293b;
+            font-weight: 600;
+        }
+        .foda-quadrant ul {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .foda-item {
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 8px 10px;
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 8px;
+            align-items: start;
+            background: #f8fafc;
+        }
+        .foda-item small {
+            color: #64748b;
+        }
+        .foda-item button {
+            border: none;
+            background: transparent;
+            color: #475569;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+        .foda-strengths { border-color: #86efac; }
+        .foda-weaknesses { border-color: #fdba74; }
+        .foda-opportunities { border-color: #93c5fd; }
+        .foda-threats { border-color: #fca5a5; }
+        .pestel-page {
+            max-width: 1200px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .pestel-input-card {
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 16px;
+        }
+        .pestel-input-card h2 {
+            margin: 0;
+            color: #0f172a;
+            font-size: 1.25rem;
+        }
+        .pestel-input-card p {
+            margin: 8px 0 14px;
+            color: #475569;
+        }
+        .pestel-input-grid {
+            display: grid;
+            grid-template-columns: 1.8fr 1fr 1fr;
+            gap: 12px;
+        }
+        .pestel-input-grid textarea {
+            min-height: 96px;
+            resize: vertical;
+        }
+        .pestel-input-actions {
+            margin-top: 12px;
+            display: flex;
+            justify-content: flex-end;
+        }
+        .pestel-input-actions button {
+            border: 1px solid #0f172a;
+            background: #0f172a;
+            color: #fff;
+            border-radius: 8px;
+            padding: 8px 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .pestel-board {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 12px;
+        }
+        .pestel-column {
+            background: #fff;
+            border: 1px solid #dbeafe;
+            border-radius: 10px;
+            padding: 10px;
+            min-height: 180px;
+        }
+        .pestel-column header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        .pestel-column h3 {
+            margin: 0;
+            font-size: 0.96rem;
+            color: #0f172a;
+        }
+        .pestel-column header span {
+            font-size: 0.8rem;
+            border-radius: 999px;
+            padding: 2px 7px;
+            background: #e2e8f0;
+            color: #1e293b;
+            font-weight: 600;
+        }
+        .pestel-column ul {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+        }
+        .pestel-item {
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 7px 8px;
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 6px;
+            align-items: start;
+            background: #f8fafc;
+        }
+        .pestel-item small {
+            color: #64748b;
+        }
+        .pestel-item button {
+            border: none;
+            background: transparent;
+            color: #475569;
+            cursor: pointer;
+            font-size: 0.78rem;
+        }
+        .porter-page {
+            max-width: 1200px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .porter-input-card {
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 16px;
+        }
+        .porter-input-card h2 {
+            margin: 0;
+            color: #0f172a;
+            font-size: 1.25rem;
+        }
+        .porter-input-card p {
+            margin: 8px 0 14px;
+            color: #475569;
+        }
+        .porter-input-grid {
+            display: grid;
+            grid-template-columns: 1.8fr 1fr 1fr;
+            gap: 12px;
+        }
+        .porter-input-grid textarea {
+            min-height: 96px;
+            resize: vertical;
+        }
+        .porter-input-actions {
+            margin-top: 12px;
+            display: flex;
+            justify-content: flex-end;
+        }
+        .porter-input-actions button {
+            border: 1px solid #0f172a;
+            background: #0f172a;
+            color: #fff;
+            border-radius: 8px;
+            padding: 8px 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .porter-board {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 12px;
+        }
+        .porter-column {
+            background: #fff;
+            border: 1px solid #dbeafe;
+            border-radius: 10px;
+            padding: 10px;
+            min-height: 180px;
+        }
+        .porter-column header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        .porter-column h3 {
+            margin: 0;
+            font-size: 0.96rem;
+            color: #0f172a;
+        }
+        .porter-column header span {
+            font-size: 0.8rem;
+            border-radius: 999px;
+            padding: 2px 7px;
+            background: #e2e8f0;
+            color: #1e293b;
+            font-weight: 600;
+        }
+        .porter-column ul {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+        }
+        .porter-item {
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 7px 8px;
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 6px;
+            align-items: start;
+            background: #f8fafc;
+        }
+        .porter-item small {
+            color: #64748b;
+        }
+        .porter-item button {
+            border: none;
+            background: transparent;
+            color: #475569;
+            cursor: pointer;
+            font-size: 0.78rem;
+        }
+        .percepcion-page {
+            max-width: 1200px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .percepcion-input-card {
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 16px;
+        }
+        .percepcion-input-card h2 {
+            margin: 0;
+            color: #0f172a;
+            font-size: 1.25rem;
+        }
+        .percepcion-input-card p {
+            margin: 8px 0 14px;
+            color: #475569;
+        }
+        .percepcion-input-grid {
+            display: grid;
+            grid-template-columns: 1.8fr 1fr 1fr;
+            gap: 12px;
+        }
+        .percepcion-input-grid textarea {
+            min-height: 96px;
+            resize: vertical;
+        }
+        .percepcion-input-actions {
+            margin-top: 12px;
+            display: flex;
+            justify-content: flex-end;
+        }
+        .percepcion-input-actions button {
+            border: 1px solid #0f172a;
+            background: #0f172a;
+            color: #fff;
+            border-radius: 8px;
+            padding: 8px 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .percepcion-board {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 12px;
+        }
+        .percepcion-column {
+            background: #fff;
+            border: 1px solid #dbeafe;
+            border-radius: 10px;
+            padding: 10px;
+            min-height: 180px;
+        }
+        .percepcion-column header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        .percepcion-column h3 {
+            margin: 0;
+            font-size: 0.96rem;
+            color: #0f172a;
+        }
+        .percepcion-column header span {
+            font-size: 0.8rem;
+            border-radius: 999px;
+            padding: 2px 7px;
+            background: #e2e8f0;
+            color: #1e293b;
+            font-weight: 600;
+        }
+        .percepcion-column ul {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+        }
+        .percepcion-item {
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 7px 8px;
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 6px;
+            align-items: start;
+            background: #f8fafc;
+        }
+        .percepcion-item small {
+            color: #64748b;
+        }
+        .percepcion-item button {
+            border: none;
+            background: transparent;
+            color: #475569;
+            cursor: pointer;
+            font-size: 0.78rem;
         }
         .image-uploader {
-            justify-content: center;
+            align-items: flex-end;
+            justify-content: flex-start;
         }
         .image-placeholder {
+            width: 92px;
+            min-height: 92px;
             background: #f8fafc;
-            border-radius: 16px;
-            border: 1px dashed #94a3b8;
-            padding: 24px;
+            border-radius: 2px;
+            border: 1px solid #d1d5db;
+            padding: 8px;
             text-align: center;
             display: flex;
             flex-direction: column;
-            gap: 12px;
-            color: #475569;
+            gap: 8px;
+            color: #64748b;
+            justify-content: center;
+        }
+        .image-placeholder span {
+            font-size: 0.72rem;
+            line-height: 1.2;
         }
         .image-placeholder button {
-            border: none;
-            padding: 8px 18px;
-            border-radius: 999px;
-            background: #0f172a;
-            color: #fff;
+            border: 1px solid #cbd5e1;
+            padding: 4px 8px;
+            border-radius: 2px;
+            background: #ffffff;
+            color: #334155;
             cursor: pointer;
-            font-weight: 600;
+            font-weight: 500;
+            font-size: 0.75rem;
         }
         .notebook-section .notebook-tabs {
             display: flex;
-            gap: 12px;
-            flex-wrap: wrap;
-            margin-top: 18px;
+            gap: 0;
+            flex-wrap: nowrap;
+            margin-top: 0;
+            border-bottom: 1px solid #d1d5db;
+            overflow-x: auto;
         }
         .notebook-tabs .tab {
-            border: 1px solid #cbd5f5;
-            padding: 6px 18px;
-            border-radius: 999px;
-            background: #fff;
-            color: #0f172a;
+            border: 1px solid #d1d5db;
+            border-bottom: none;
+            padding: 8px 14px;
+            border-radius: 0;
+            background: #f8fafc;
+            color: #334155;
             cursor: pointer;
-            font-weight: 600;
+            font-weight: 500;
+            font-size: 0.9rem;
+            white-space: nowrap;
+            margin-bottom: -1px;
         }
         .notebook-tabs .tab.active {
-            background: #0f172a;
-            color: #fff;
-            border-color: #0f172a;
+            background: #ffffff;
+            color: #0f172a;
+            border-color: #d1d5db;
         }
         .notebook-content {
-            margin-top: 20px;
-            padding: 18px;
-            border-radius: 12px;
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
+            margin-top: 0;
+            padding: 16px;
+            border-radius: 0;
+            background: #ffffff;
+            border: 1px solid #d1d5db;
+            border-top: none;
+            min-height: 120px;
         }
         .notebook-content p {
             margin: 0;
-            color: #475569;
+            color: #334155;
         }
-        .roles-panel {
-            background: #fff;
-            padding: 28px;
-            border-radius: 18px;
-            box-shadow: 0 20px 60px rgba(15, 23, 42, 0.08);
-            max-width: 1120px;
-            margin: 0 auto 40px;
-        }
-        .roles-panel header h2 {
-            margin: 0 0 6px;
-            font-size: 1.8rem;
-            color: #0f172a;
-        }
-        .roles-panel header p {
-            margin: 0 0 20px;
-            color: #475569;
-        }
-        .role-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 16px;
-        }
-        .role-card {
-            border: 1px solid #e2e8f0;
-            border-radius: 16px;
-            padding: 18px;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            background: #f7f9fd;
-        }
-        .role-card h3 {
-            margin: 0;
-            font-size: 1.1rem;
-            color: #0f172a;
-        }
-        .role-card p {
-            margin: 0;
-            color: #475569;
-        }
-        .role-card.placeholder {
-            opacity: 0.6;
-            border-style: dashed;
-        }
-        .role-card .role-actions {
-            margin-top: 12px;
-        }
-        .role-card .role-actions button {
-            border: none;
-            background: #0f172a;
-            color: #fff;
-            padding: 6px 14px;
-            border-radius: 999px;
-            cursor: pointer;
-            font-weight: 600;
+        @media (max-width: 900px) {
+            .foda-input-grid {
+                grid-template-columns: 1fr;
+            }
+            .foda-matrix {
+                grid-template-columns: 1fr;
+            }
+            .pestel-input-grid {
+                grid-template-columns: 1fr;
+            }
+            .pestel-board {
+                grid-template-columns: 1fr;
+            }
+            .porter-input-grid {
+                grid-template-columns: 1fr;
+            }
+            .porter-board {
+                grid-template-columns: 1fr;
+            }
+            .percepcion-input-grid {
+                grid-template-columns: 1fr;
+            }
+            .percepcion-board {
+                grid-template-columns: 1fr;
+            }
+            .section-grid.two-columns {
+                grid-template-columns: 1fr;
+            }
+            .plantillas-layout {
+                grid-template-columns: 1fr;
+            }
+            .plantillas-editor-grid {
+                grid-template-columns: 1fr;
+            }
+            .image-uploader {
+                align-items: flex-start;
+            }
         }
         @media (max-width: 900px) {
             .sidebar {
@@ -804,13 +1609,70 @@
                         <path d="M21.6359 12.9579L21.3572 14.8952C20.8697 18.2827 20.626 19.9764 19.451 20.9882C18.2759 22 16.5526 22 13.1061 22H10.8939C7.44737 22 5.72409 22 4.54903 20.9882C3.37396 19.9764 3.13025 18.2827 2.64284 14.8952L2.36407 12.9579C1.98463 10.3208 1.79491 9.00229 2.33537 7.87495C2.87583 6.7476 4.02619 6.06234 6.32691 4.69181L7.71175 3.86687C9.80104 2.62229 10.8457 2 12 2C13.1543 2 14.199 2.62229 16.2882 3.86687L17.6731 4.69181C19.9738 6.06234 21.1242 6.7476 21.6646 7.87495" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
                     </svg>
                 </span>
-                <span>Inicio</span>
+                <span class="menu-label">Inicio</span>
             </a>
-            <a href="/planes" data-menu-name="Planes" data-route="/planes"><span>Planes</span></a>
-            <a href="/diagnostico" data-menu-name="Diagnóstico" data-route="/diagnostico"><span>Diagnóstico</span></a>
-            <a href="/poa" data-menu-name="POA" data-route="/poa"><span>POA</span></a>
-            <a href="/kpis" data-menu-name="KPIs" data-route="/kpis"><span>KPIs</span></a>
-            <a href="/reportes" data-menu-name="Reportes" data-route="/reportes"><span>Reportes</span></a>
+            <div class="accordion">
+                <button type="button" class="accordion-header" id="planificacion-btn" data-menu-name="Planificación" data-route="/planes">
+                    <span class="menu-indicator">
+                        <span class="menu-icon" aria-hidden="true">
+                            <img src="/templates/icon/plan.svg" alt="Planificación">
+                        </span>
+                        <span>Planificación</span>
+                    </span>
+                    <span id="planificacion-toggle">+</span>
+                </button>
+                <div class="accordion-content" id="planificacion-submenu">
+                    <a href="/planes" class="submenu" data-menu-name="Plan estratégico" data-route="/planes"><span>Plan estratégico</span></a>
+                    <a href="/poa" class="submenu" data-menu-name="POA" data-route="/poa"><span>POA</span></a>
+                </div>
+            </div>
+            <div class="accordion">
+                <button type="button" class="accordion-header" id="diagnostico-btn" data-menu-name="Diagnóstico" data-route="/diagnostico">
+                    <span class="menu-indicator">
+                        <span class="menu-icon" aria-hidden="true">
+                            <img src="/templates/icon/diagnostico.svg" alt="Diagnóstico">
+                        </span>
+                        <span>Diagnóstico</span>
+                    </span>
+                    <span id="diagnostico-toggle">+</span>
+                </button>
+                <div class="accordion-content" id="diagnostico-submenu">
+                    <a href="/diagnostico/foda" class="submenu" data-menu-name="FODA" data-route="/diagnostico/foda"><span>FODA</span></a>
+                    <a href="/diagnostico/pestel" class="submenu" data-menu-name="PESTEL" data-route="/diagnostico/pestel"><span>PESTEL</span></a>
+                    <a href="/diagnostico/porter" class="submenu" data-menu-name="PORTER" data-route="/diagnostico/porter"><span>PORTER</span></a>
+                    <a href="/diagnostico/percepcion-cliente" class="submenu" data-menu-name="Percepción del cliente" data-route="/diagnostico/percepcion-cliente"><span>Percepción del cliente</span></a>
+                </div>
+            </div>
+            <a href="/kpis" data-menu-name="KPIs" data-route="/kpis">
+                <span class="menu-icon" aria-hidden="true">
+                    <img src="/templates/icon/kpi.svg" alt="KPIs">
+                </span>
+                <span class="menu-label">KPIs</span>
+            </a>
+            <a href="/reportes" data-menu-name="Reportes" data-route="/reportes">
+                <span class="menu-icon" aria-hidden="true">
+                    <img src="/templates/icon/reporte.svg" alt="Reportes">
+                </span>
+                <span class="menu-label">Reportes</span>
+            </a>
+            <div class="sidebar-section">
+                <button type="button" class="sidebar-section-toggle" aria-expanded="false" id="empresa-section-toggle">
+                    <span class="sidebar-section-title-with-icon" aria-hidden="true">
+                        <span class="menu-icon" aria-hidden="true">
+                            <img src="/templates/icon/empresa.svg" alt="Empresa">
+                        </span>
+                        <span>Empresa</span>
+                    </span>
+                    <span class="toggle-indicator">+</span>
+                </button>
+                <div class="sidebar-section-content" id="empresa-section-content">
+                    <a href="/identidad-institucional" class="submenu" data-menu-name="Identidad institucional" data-route="/identidad-institucional"><span>Identidad institucional</span></a>
+                    <a href="/areas-organizacionales" class="submenu" data-menu-name="Áreas organizacionales" data-route="/areas-organizacionales" data-floating-screen="areas"><span>Áreas organizacionales</span></a>
+                    <a href="/usuarios-sistema" class="submenu usuario-view-link" data-menu-name="Usuarios de sistema" data-route="/usuarios-sistema" data-view="form" data-floating-screen="usuarios"><span>Usuarios de sistema</span></a>
+                    <a href="/plantillas" class="submenu" data-menu-name="Plantillas" data-route="/plantillas" data-floating-screen="plantillas"><span>Plantillas</span></a>
+                </div>
+            </div>
+            {% if can_manage_personalization %}
             <div class="accordion">
                 <button type="button" class="accordion-header" id="personalizar-btn" data-menu-name="Personalización" data-route="/personalizacion">
                     <span class="menu-indicator">
@@ -825,14 +1687,18 @@
                     <span id="personalizar-toggle">+</span>
                 </button>
                 <div class="accordion-content" id="personalizar-submenu">
-                    <a href="/identidad-institucional" class="submenu" data-menu-name="Identidad institucional" data-route="/identidad-institucional" data-floating-screen="identity">Identidad institucional</a>
                     <a href="/personalizar-pantalla" class="submenu" data-menu-name="Personalizar pantalla" data-route="/personalizar-pantalla" data-floating-screen="personalization">Personalizar pantalla</a>
-                    <a href="/roles-sistema" class="submenu" data-menu-name="Roles del sistema" data-route="/roles-sistema" data-floating-screen="personalization">Roles del sistema</a>
-                    <a href="/usuarios" class="submenu usuario-view-link" data-menu-name="Usuarios" data-route="/usuarios" data-view="form" data-floating-screen="usuarios">Usuarios</a>
+                    <a href="/roles-permisos" class="submenu" data-menu-name="Roles del sistema" data-route="/roles-permisos" data-floating-screen="personalization">Roles del sistema</a>
                     <a href="/membresia" class="submenu" data-menu-name="Membresía" data-route="/membresia">Membresía</a>
                 </div>
             </div>
+            {% endif %}
         </nav>
+        <div class="menu-audit-note">
+            <strong>Módulos fuera del menú actual</strong>
+            Web, Avance y Configura imagen.
+            <br>Diagnóstico pendiente: Ninguno.
+        </div>
     </div>
     <div class="navbar">
         <div class="navbar-inner">
@@ -849,7 +1715,7 @@
         </div>
     </div>
     <main class="main-content">
-        {% if page_title or title or page_description or subtitle or view_buttons_html %}
+        {% if show_page_header | default(true) and (page_title or title or page_description or subtitle or view_buttons_html) %}
         <section class="page-header">
             <div class="page-header-text">
                 {% if subtitle %}
@@ -886,7 +1752,7 @@
                     <span class="action-label">Restablecer</span>
                 </button>
             </div>
-            <div class="floating-actions-group" data-floating-screen="usuarios">
+            <div class="floating-actions-group{% if (floating_actions_screen | default('personalization')) == 'usuarios' %} active{% endif %}" data-floating-screen="usuarios"{% if (floating_actions_screen | default('personalization')) == 'usuarios' %} style="display:flex"{% endif %}>
                 <button class="action-button" type="button" id="action-edit" aria-label="Editar">
                     <img src="/templates/icon/editar.svg" alt="Editar">
                     <span class="action-label">Editar</span>
@@ -899,14 +1765,29 @@
                     <img src="/templates/icon/eliminar.svg" alt="Eliminar">
                     <span class="action-label">Eliminar</span>
                 </button>
-                <div class="floating-actions-separator" aria-hidden="true"></div>
-                <button class="action-button" type="button" id="action-view-form" aria-label="Formulario">
-                    <img src="/templates/icon/form.svg" alt="Formulario">
-                    <span class="action-label">Formulario</span>
+            </div>
+            <div class="floating-actions-group{% if (floating_actions_screen | default('personalization')) == 'areas' %} active{% endif %}" data-floating-screen="areas"{% if (floating_actions_screen | default('personalization')) == 'areas' %} style="display:flex"{% endif %}>
+                <button class="action-button" type="button" id="action-edit-areas" aria-label="Editar">
+                    <img src="/templates/icon/editar.svg" alt="Editar">
+                    <span class="action-label">Editar</span>
                 </button>
-                <button class="action-button" type="button" id="action-view-list" aria-label="Lista">
-                    <img src="/templates/icon/list.svg" alt="Lista">
-                    <span class="action-label">Lista</span>
+                <button class="action-button" type="button" id="action-save-areas" aria-label="Guardar">
+                    <img src="/templates/icon/guardar.svg" alt="Guardar">
+                    <span class="action-label">Guardar</span>
+                </button>
+                <button class="action-button" type="button" id="action-delete-areas" aria-label="Eliminar">
+                    <img src="/templates/icon/eliminar.svg" alt="Eliminar">
+                    <span class="action-label">Eliminar</span>
+                </button>
+            </div>
+            <div class="floating-actions-group{% if (floating_actions_screen | default('personalization')) == 'plantillas' %} active{% endif %}" data-floating-screen="plantillas"{% if (floating_actions_screen | default('personalization')) == 'plantillas' %} style="display:flex"{% endif %}>
+                <button class="action-button" type="button" id="action-new-template" aria-label="Nuevo">
+                    <img src="/templates/icon/nuevo.svg" alt="Nuevo">
+                    <span class="action-label">Nuevo</span>
+                </button>
+                <button class="action-button" type="button" id="action-save-template" aria-label="Guardar">
+                    <img src="/templates/icon/guardar.svg" alt="Guardar">
+                    <span class="action-label">Guardar</span>
                 </button>
             </div>
             {% endset %}
@@ -923,6 +1804,12 @@
             const personalizarBtn = document.getElementById('personalizar-btn');
             const personalizarToggle = document.getElementById('personalizar-toggle');
             const personalizarSubmenu = document.getElementById('personalizar-submenu');
+            const planificacionBtn = document.getElementById('planificacion-btn');
+            const planificacionToggle = document.getElementById('planificacion-toggle');
+            const planificacionSubmenu = document.getElementById('planificacion-submenu');
+            const diagnosticoBtn = document.getElementById('diagnostico-btn');
+            const diagnosticoToggle = document.getElementById('diagnostico-toggle');
+            const diagnosticoSubmenu = document.getElementById('diagnostico-submenu');
             const submenuLinks = document.querySelectorAll('.submenu[data-menu-name]');
             const menuLinks = document.querySelectorAll('nav > a[data-menu-name]');
             const navbarMenuName = document.querySelector('.navbar-menu-name');
@@ -932,11 +1819,15 @@
             const floatingToggle = document.getElementById('floating-toggle');
             const floatingActionsWrapper = document.querySelector('.floating-actions-wrapper');
             const usuarioPanel = document.getElementById('usuario-panel');
+            const areaPanel = document.getElementById('area-panel');
             const actionSavePersonal = document.getElementById('action-save-personal');
             const actionResetPersonal = document.getElementById('action-reset-personal');
             const actionEdit = document.getElementById('action-edit');
             const actionSaveUsuario = document.getElementById('action-save-usuario');
             const actionDelete = document.getElementById('action-delete');
+            const actionEditAreas = document.getElementById('action-edit-areas');
+            const actionSaveAreas = document.getElementById('action-save-areas');
+            const actionDeleteAreas = document.getElementById('action-delete-areas');
             const actionViewForm = document.getElementById('action-view-form');
             const actionViewList = document.getElementById('action-view-list');
             const actionViewKanban = document.getElementById('action-view-kanban');
@@ -944,6 +1835,8 @@
             const actionViewGantt = document.getElementById('action-view-gantt');
             const actionViewDashboard = document.getElementById('action-view-dashboard');
             const actionViewCalendar = document.getElementById('action-view-calendar');
+            const actionNewTemplate = document.getElementById('action-new-template');
+            const actionSaveTemplate = document.getElementById('action-save-template');
             const personalizationPanel = document.querySelector('.personalization-panel');
             const viewPills = document.querySelectorAll('.view-buttons .view-pill[data-view]');
             const activateViewButton = (view) => {
@@ -1019,15 +1912,63 @@
                 hamburger.addEventListener('click', toggleSidebar);
             }
 
-            personalizarBtn.addEventListener('click', function(event) {
-                event.preventDefault();
-                const accordion = personalizarBtn.closest('.accordion');
-                const isOpen = accordion.classList.toggle('open');
-                personalizarSubmenu.style.display = isOpen ? 'flex' : 'none';
-                personalizarToggle.textContent = isOpen ? '−' : '+';
-                setMenuInfo(personalizarBtn);
-                setFloatingScreen('personalization');
-            });
+            if (personalizarBtn && personalizarSubmenu && personalizarToggle) {
+                personalizarBtn.addEventListener('click', function(event) {
+                    event.preventDefault();
+                    const accordion = personalizarBtn.closest('.accordion');
+                    const isOpen = accordion.classList.toggle('open');
+                    personalizarSubmenu.style.display = isOpen ? 'flex' : 'none';
+                    personalizarToggle.textContent = isOpen ? '−' : '+';
+                    setMenuInfo(personalizarBtn);
+                    setFloatingScreen('personalization');
+                });
+            }
+            if (diagnosticoBtn && diagnosticoSubmenu && diagnosticoToggle) {
+                diagnosticoBtn.addEventListener('click', function(event) {
+                    event.preventDefault();
+                    const accordion = diagnosticoBtn.closest('.accordion');
+                    const isOpen = accordion.classList.toggle('open');
+                    diagnosticoSubmenu.style.display = isOpen ? 'flex' : 'none';
+                    diagnosticoToggle.textContent = isOpen ? '−' : '+';
+                    setMenuInfo(diagnosticoBtn);
+                });
+                const currentPath = window.location.pathname;
+                const diagnosticoLinks = diagnosticoSubmenu.querySelectorAll('a[href]');
+                const shouldOpenDiagnostico = Array.from(diagnosticoLinks).some(link => link.getAttribute('href') === currentPath);
+                if (shouldOpenDiagnostico) {
+                    const accordion = diagnosticoBtn.closest('.accordion');
+                    accordion && accordion.classList.add('open');
+                    diagnosticoSubmenu.style.display = 'flex';
+                    diagnosticoToggle.textContent = '−';
+                    const activeDiagnosticoLink = Array.from(diagnosticoLinks).find(link => link.getAttribute('href') === currentPath);
+                    if (activeDiagnosticoLink) {
+                        setMenuInfo(activeDiagnosticoLink);
+                    }
+                }
+            }
+            if (planificacionBtn && planificacionSubmenu && planificacionToggle) {
+                planificacionBtn.addEventListener('click', function(event) {
+                    event.preventDefault();
+                    const accordion = planificacionBtn.closest('.accordion');
+                    const isOpen = accordion.classList.toggle('open');
+                    planificacionSubmenu.style.display = isOpen ? 'flex' : 'none';
+                    planificacionToggle.textContent = isOpen ? '−' : '+';
+                    setMenuInfo(planificacionBtn);
+                });
+                const currentPath = window.location.pathname;
+                const planificacionLinks = planificacionSubmenu.querySelectorAll('a[href]');
+                const shouldOpenPlanificacion = Array.from(planificacionLinks).some(link => link.getAttribute('href') === currentPath);
+                if (shouldOpenPlanificacion) {
+                    const accordion = planificacionBtn.closest('.accordion');
+                    accordion && accordion.classList.add('open');
+                    planificacionSubmenu.style.display = 'flex';
+                    planificacionToggle.textContent = '−';
+                    const activePlanificacionLink = Array.from(planificacionLinks).find(link => link.getAttribute('href') === currentPath);
+                    if (activePlanificacionLink) {
+                        setMenuInfo(activePlanificacionLink);
+                    }
+                }
+            }
 
             // Eliminado: los links ahora navegan normalmente
 
@@ -1035,14 +1976,13 @@
                 setMenuInfo(menuLinks[0]);
             }
             setSidebarState(true);
-            setFloatingScreen('personalization');
+            setFloatingScreen(floatingDefaultScreen);
             const messageBox = document.createElement('div');
             messageBox.className = 'message-box';
             document.body.appendChild(messageBox);
             let hideTimeout;
             const showMessage = (msg, type = 'success') => {
                 messageBox.textContent = msg;
-                messageBox.style.background = type === 'error' ? '#dc2626' : '#2563eb';
                 messageBox.classList.add('visible');
                 clearTimeout(hideTimeout);
                 hideTimeout = setTimeout(() => {
@@ -1216,6 +2156,10 @@
             floatingToggle.setAttribute('aria-label', actionsVisible ? 'Ocultar barra flotante' : 'Mostrar barra flotante');
             floatingActions.classList.toggle('hidden', !actionsVisible);
         };
+            const ensureFloatingVisible = () => {
+                actionsVisible = true;
+                updateToggle();
+            };
             floatingToggle && floatingToggle.addEventListener('click', () => {
                 actionsVisible = !actionsVisible;
                 updateToggle();
@@ -1224,89 +2168,205 @@
             const usuarioView = document.getElementById('usuario-view');
             const usuarioTabs = document.querySelectorAll('.usuario-tab');
             const usuarioLinks = document.querySelectorAll('.usuario-view-link');
+            const areaView = document.getElementById('area-view');
+            const areaTabs = document.querySelectorAll('.area-tab');
             const usuarioData = [
                 { name: 'Adriana Chávez Galeana', role: 'Gerente', department: 'Operaciones', status: 'Activo', email: 'a.galeana@empresa.com' },
                 { name: 'Lucía Ortega Moreno', role: 'Analista', department: 'KPIs', status: 'En mejora', email: 'l.ortega@empresa.com' },
                 { name: 'María Delgado', role: 'Ejecutivo', department: 'Servicios', status: 'Activo', email: 'm.delgado@empresa.com' },
                 { name: 'Pablo Rojas', role: 'Analista', department: 'Planeación', status: 'Observando', email: 'p.rojas@empresa.com' }
             ];
+            const areasData = [
+                { name: 'Dirección General', parent: 'N/A', manager: 'Adriana Chávez Galeana', code: 'DIR-001', color: '#0f172a', status: 'Estratégico' },
+                { name: 'Operaciones', parent: 'Dirección General', manager: 'Pablo Rojas', code: 'OPE-010', color: '#1d4ed8', status: 'Activo' },
+                { name: 'Planeación', parent: 'Dirección General', manager: 'Lucía Ortega Moreno', code: 'PLA-020', color: '#0ea5e9', status: 'Activo' },
+                { name: 'Servicios', parent: 'Operaciones', manager: 'María Delgado', code: 'SER-030', color: '#16a34a', status: 'En revisión' }
+            ];
             const usuarioRoles = ['Todos', ...new Set(usuarioData.map(u => u.role))];
+            const usuarioRolesDisponibles = usuarioRoles.filter(role => role !== 'Todos');
+            const departamentosDisponibles = [...new Set(usuarioData.map(u => u.department).filter(Boolean))];
             const getRoleOptions = (selected = 'Todos') => {
                 return usuarioRoles.map(role => `<option value="${role}" ${role === selected ? 'selected' : ''}>${role}</option>`).join('');
             };
+            const getUsuarioRolOptions = (selected = '') => {
+                return usuarioRolesDisponibles.map(role => `<option value="${role}" ${role === selected ? 'selected' : ''}>${role}</option>`).join('');
+            };
+            const getDepartamentoOptions = (selected = '') => {
+                return departamentosDisponibles.map(dept => `<option value="${dept}" ${dept === selected ? 'selected' : ''}>${dept}</option>`).join('');
+            };
             function renderUsuarioForm() {
                 usuarioView.innerHTML = `
-                    <div class="usuario-form-grid">
-                        <div class="usuario-form-group">
-                            <label>Correo electrónico de trabajo</label>
-                            <input type="email" placeholder="usuario@empresa.com">
-                        </div>
-                        <div class="usuario-form-group">
-                            <label>Teléfono del trabajo</label>
-                            <input type="text" placeholder="+52 55 0000 0000">
-                        </div>
-                        <div class="usuario-form-group">
-                            <label>Móvil de trabajo</label>
-                            <input type="text" placeholder="+52 55 0000 0000">
-                        </div>
-                        <div class="usuario-form-group">
-                            <label>Etiquetas</label>
-                            <input type="text" placeholder="Etiquetas">
-                        </div>
-                        <div class="usuario-form-group">
-                            <label>Departamento</label>
-                            <input type="text" placeholder="Departamento">
-                        </div>
-                        <div class="usuario-form-group">
-                            <label>Puesto de trabajo</label>
-                            <input type="text" placeholder="Puesto">
-                        </div>
-                        <div class="usuario-form-group">
-                            <label>Nivel organizacional</label>
-                            <select>
-                                <option>Ejecutivo</option>
-                                <option>Gerente</option>
-                                <option>Analista</option>
-                            </select>
-                        </div>
-                        <div class="usuario-form-group">
-                            <label>Supervisa a</label>
-                            <input type="text" placeholder="Selecciona empleados">
-                        </div>
-                        <div class="usuario-form-group">
-                            <label>Se coordina con</label>
-                            <input type="text" placeholder="Selecciona coordinaciones">
-                        </div>
-                        <div class="usuario-form-group">
-                            <label>Naturaleza</label>
-                            <input type="text" placeholder="Naturaleza del puesto">
-                        </div>
-                        <div class="usuario-form-group">
-                            <label>Ubicación</label>
-                            <input type="text" placeholder="Ej: Oficina Central">
-                        </div>
-                        <div class="usuario-form-group">
-                            <label>Tipo de contrato</label>
-                            <input type="text" placeholder="Tiempo completo / Indefinido">
-                        </div>
-                        <div class="usuario-form-group">
-                            <label>Visión</label>
-                            <textarea placeholder="Describe la visión y aspiraciones del empleado..."></textarea>
-                        </div>
-                        <div class="usuario-form-group">
-                            <label>Plantilla de puesto</label>
-                            <input type="text" placeholder="Plantilla actual">
-                        </div>
-                        <div class="usuario-form-group">
-                            <label>Gerente</label>
-                            <input type="text" placeholder="Nombre del gerente">
-                        </div>
-                        <div class="usuario-form-group">
-                            <label>Mentor</label>
-                            <input type="text" placeholder="Nombre del mentor">
+                    <div class="usuarios-form-layout">
+                        <section class="form-section">
+                            <div class="section-title">
+                                <p class="tag">Sección 1</p>
+                                <h2>Datos de usuario</h2>
+                            </div>
+                            <div class="section-grid two-columns">
+                                <div class="column">
+                                    <div class="form-field">
+                                        <label>Nombre</label>
+                                        <input type="text" placeholder="Nombre completo">
+                                    </div>
+                                    <div class="form-field">
+                                        <label>Usuario</label>
+                                        <input type="text" placeholder="Nombre de usuario">
+                                    </div>
+                                    <div class="form-field">
+                                        <label>Correo electrónico</label>
+                                        <input type="email" placeholder="usuario@empresa.com">
+                                    </div>
+                                    <div class="form-field">
+                                        <label>Contraseña</label>
+                                        <input type="password" id="usuario-password" placeholder="••••••••">
+                                    </div>
+                                    <div class="form-field">
+                                        <label>Rol</label>
+                                        <select>
+                                            <option value="">Selecciona un rol</option>
+                                            ${getUsuarioRolOptions()}
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="column image-uploader">
+                                    <div class="form-field">
+                                        <label>Foto</label>
+                                    </div>
+                                    <div class="image-placeholder">
+                                        <span>Vista previa de foto</span>
+                                        <button type="button">Subir foto</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section class="form-section">
+                            <div class="section-title">
+                                <p class="tag">Sección 2</p>
+                                <h2>Datos generales</h2>
+                            </div>
+                            <div class="section-grid">
+                                <div class="form-field">
+                                    <label>Dirección</label>
+                                    <input type="text" placeholder="Dirección">
+                                </div>
+                                <div class="form-field">
+                                    <label>Teléfono</label>
+                                    <input type="text" placeholder="+52 55 0000 0000">
+                                </div>
+                            </div>
+                        </section>
+
+                        <section class="form-section notebook-section">
+                            <div class="section-title">
+                                <p class="tag">Sección 3</p>
+                                <h2>Notebook</h2>
+                            </div>
+                            <div class="notebook-tabs">
+                                <button type="button" class="tab active" data-tab="estructura-organizacional">Estructura organizacional</button>
+                            </div>
+                            <div class="notebook-content">
+                                <div class="tab-panel" data-panel="estructura-organizacional">
+                                    <div class="section-grid">
+                                        <div class="form-field">
+                                            <label>Departamento</label>
+                                            <select id="usuario-departamento-select">
+                                                <option value="">Selecciona un departamento</option>
+                                                ${getDepartamentoOptions()}
+                                            </select>
+                                        </div>
+                                        <div class="form-field">
+                                            <label>Jefe inmediato</label>
+                                            <select id="usuario-jefe-select">
+                                                <option value="">Selecciona un jefe inmediato</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+                    <div class="password-confirm-backdrop hidden" id="password-confirm-backdrop">
+                        <div class="password-confirm-modal" role="dialog" aria-modal="true" aria-label="Confirmar contraseña">
+                            <h3>Confirmar contraseña</h3>
+                            <input type="password" id="usuario-confirm-password" placeholder="Repite la contraseña">
+                            <div class="password-confirm-actions">
+                                <button type="button" id="password-confirm-cancel">Cancelar</button>
+                                <button type="button" class="primary" id="password-confirm-ok">Confirmar</button>
+                            </div>
+                            <p class="password-confirm-msg" id="password-confirm-msg"></p>
                         </div>
                     </div>
                 `;
+                const notebookTabsLocal = usuarioView.querySelectorAll('.notebook-tabs .tab');
+                const notebookPanelsLocal = usuarioView.querySelectorAll('.notebook-content .tab-panel');
+                const activateNotebookTabLocal = (name) => {
+                    if (!name) return;
+                    notebookTabsLocal.forEach(tab => tab.classList.toggle('active', tab.dataset.tab === name));
+                    notebookPanelsLocal.forEach(panel => {
+                        panel.hidden = panel.dataset.panel !== name;
+                    });
+                };
+                notebookTabsLocal.forEach(tab => tab.addEventListener('click', () => activateNotebookTabLocal(tab.dataset.tab)));
+                if (notebookTabsLocal.length) {
+                    activateNotebookTabLocal(notebookTabsLocal[0].dataset.tab);
+                }
+                const departamentoSelect = usuarioView.querySelector('#usuario-departamento-select');
+                const jefeSelect = usuarioView.querySelector('#usuario-jefe-select');
+                const refreshJefes = (department) => {
+                    if (!jefeSelect) return;
+                    const options = usuarioData
+                        .filter(user => user.department === department)
+                        .map(user => `<option value="${user.name}">${user.name}</option>`)
+                        .join('');
+                    jefeSelect.innerHTML = `<option value="">Selecciona un jefe inmediato</option>${options}`;
+                };
+                if (departamentoSelect) {
+                    departamentoSelect.addEventListener('change', () => refreshJefes(departamentoSelect.value));
+                    refreshJefes(departamentoSelect.value);
+                }
+                const passwordInput = usuarioView.querySelector('#usuario-password');
+                const passwordConfirmBackdrop = usuarioView.querySelector('#password-confirm-backdrop');
+                const passwordConfirmInput = usuarioView.querySelector('#usuario-confirm-password');
+                const passwordConfirmOk = usuarioView.querySelector('#password-confirm-ok');
+                const passwordConfirmCancel = usuarioView.querySelector('#password-confirm-cancel');
+                const passwordConfirmMsg = usuarioView.querySelector('#password-confirm-msg');
+                let passwordConfirmed = false;
+                const openPasswordModal = () => {
+                    if (!passwordConfirmBackdrop || !passwordConfirmInput) return;
+                    passwordConfirmBackdrop.classList.remove('hidden');
+                    passwordConfirmInput.value = '';
+                    if (passwordConfirmMsg) passwordConfirmMsg.textContent = '';
+                    setTimeout(() => passwordConfirmInput.focus(), 0);
+                };
+                const closePasswordModal = () => {
+                    if (!passwordConfirmBackdrop) return;
+                    passwordConfirmBackdrop.classList.add('hidden');
+                };
+                if (passwordInput) {
+                    passwordInput.addEventListener('input', () => {
+                        passwordConfirmed = false;
+                    });
+                    passwordInput.addEventListener('blur', () => {
+                        const value = (passwordInput.value || '').trim();
+                        if (!value || passwordConfirmed) return;
+                        openPasswordModal();
+                    });
+                }
+                passwordConfirmCancel && passwordConfirmCancel.addEventListener('click', () => {
+                    passwordConfirmed = false;
+                    closePasswordModal();
+                });
+                passwordConfirmOk && passwordConfirmOk.addEventListener('click', () => {
+                    if (!passwordInput || !passwordConfirmInput) return;
+                    if (passwordConfirmInput.value !== passwordInput.value) {
+                        if (passwordConfirmMsg) passwordConfirmMsg.textContent = 'Las contraseñas no coinciden.';
+                        return;
+                    }
+                    passwordConfirmed = true;
+                    closePasswordModal();
+                    showMessage('Contraseña confirmada.', 'success');
+                });
             }
             function renderUsuarioList(role = 'Todos') {
                 const filtered = role === 'Todos' ? usuarioData : usuarioData.filter(u => u.role === role);
@@ -1365,9 +2425,168 @@
                 const selector = document.getElementById('usuario-role-select-kanban');
                 selector && selector.addEventListener('change', () => renderUsuarioKanban(selector.value));
             }
+            function renderUsuarioOrganigrama() {
+                const lider = usuarioData[0];
+                const mandos = usuarioData.slice(1, 3);
+                const equipoBase = usuarioData.slice(3);
+                usuarioView.innerHTML = `
+                    <div class="usuario-organigrama">
+                        <div class="org-level org-root">
+                            <article class="org-node">
+                                <strong>Dirección General</strong>
+                                <span>${lider?.name || 'Sin asignar'}</span>
+                                <span>${lider?.role || 'N/A'}</span>
+                            </article>
+                        </div>
+                        <div class="org-divider" aria-hidden="true"></div>
+                        <div class="org-level">
+                            ${mandos.map(user => `
+                                <article class="org-node">
+                                    <strong>${user.department}</strong>
+                                    <span>${user.name}</span>
+                                    <span>${user.role}</span>
+                                </article>
+                            `).join('')}
+                        </div>
+                        <div class="org-divider" aria-hidden="true"></div>
+                        <div class="org-level">
+                            ${equipoBase.map(user => `
+                                <article class="org-node">
+                                    <strong>${user.name}</strong>
+                                    <span>${user.department}</span>
+                                    <span>${user.role}</span>
+                                </article>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+            function renderAreaForm() {
+                if (!areaView) return;
+                areaView.innerHTML = `
+                    <section class="form-section">
+                        <div class="section-title">
+                            <h2>Datos del área</h2>
+                        </div>
+                        <div class="area-form-grid">
+                            <div class="form-field">
+                                <label>Nombre</label>
+                                <input type="text" placeholder="Nombre del área">
+                            </div>
+                            <div class="form-field">
+                                <label>Departamento padre</label>
+                                <input type="text" placeholder="Área superior">
+                            </div>
+                            <div class="form-field">
+                                <label>Responsable</label>
+                                <input type="text" placeholder="Nombre del responsable">
+                            </div>
+                            <div class="form-field">
+                                <label>Código</label>
+                                <input type="text" placeholder="Ej: OPE-010">
+                            </div>
+                            <div class="form-field">
+                                <label>Color</label>
+                                <input type="color" value="#1d4ed8">
+                            </div>
+                        </div>
+                    </section>
+                `;
+            }
+            function renderAreaKanban() {
+                if (!areaView) return;
+                const byStatus = {
+                    'Estratégico': areasData.filter(area => area.status === 'Estratégico'),
+                    'Activo': areasData.filter(area => area.status === 'Activo'),
+                    'En revisión': areasData.filter(area => area.status === 'En revisión')
+                };
+                areaView.innerHTML = `
+                    <section class="form-section">
+                        <div class="section-title">
+                            <h2>Kanban de áreas</h2>
+                        </div>
+                        <div class="area-kanban-columns">
+                            ${Object.entries(byStatus).map(([status, areas]) => `
+                                <article class="area-kanban-column">
+                                    <h4>${status}</h4>
+                                    ${areas.map(area => `
+                                        <div class="area-card">
+                                            <strong>${area.name}</strong>
+                                            <span>${area.code}</span>
+                                            <span>${area.manager}</span>
+                                        </div>
+                                    `).join('')}
+                                </article>
+                            `).join('')}
+                        </div>
+                    </section>
+                `;
+            }
+            function renderAreaOrganigrama() {
+                if (!areaView) return;
+                const root = areasData.find(area => area.parent === 'N/A') || areasData[0];
+                const firstLevel = areasData.filter(area => area.parent === root.name);
+                const secondLevel = areasData.filter(area => firstLevel.some(parent => parent.name === area.parent));
+                areaView.innerHTML = `
+                    <section class="form-section">
+                        <div class="section-title">
+                            <h2>Organigrama de áreas</h2>
+                        </div>
+                        <div class="usuario-organigrama">
+                            <div class="org-level org-root">
+                                <article class="org-node">
+                                    <strong>${root.name}</strong>
+                                    <span>${root.manager}</span>
+                                    <span>${root.code}</span>
+                                </article>
+                            </div>
+                            <div class="org-divider" aria-hidden="true"></div>
+                            <div class="org-level">
+                                ${firstLevel.map(area => `
+                                    <article class="org-node">
+                                        <strong>${area.name}</strong>
+                                        <span>${area.manager}</span>
+                                        <span>${area.code}</span>
+                                    </article>
+                                `).join('')}
+                            </div>
+                            <div class="org-divider" aria-hidden="true"></div>
+                            <div class="org-level">
+                                ${secondLevel.map(area => `
+                                    <article class="org-node">
+                                        <strong>${area.name}</strong>
+                                        <span>${area.manager}</span>
+                                        <span>${area.code}</span>
+                                    </article>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </section>
+                `;
+            }
+            function setAreaView(view) {
+                if (!areaPanel || !areaView) return;
+                setFloatingScreen('areas');
+                ensureFloatingVisible();
+                areaPanel.classList.remove('hidden');
+                areaTabs.forEach(tab => tab.classList.toggle('active', tab.dataset.view === view));
+                activateViewButton(view);
+                switch (view) {
+                    case 'kanban':
+                        renderAreaKanban();
+                        break;
+                    case 'organigrama':
+                        renderAreaOrganigrama();
+                        break;
+                    default:
+                        renderAreaForm();
+                        break;
+                }
+            }
             function setUsuarioView(view) {
                 if (!usuarioPanel || !usuarioView) return;
                 setFloatingScreen('usuarios');
+                ensureFloatingVisible();
                 usuarioPanel.classList.remove('hidden');
                 usuarioTabs.forEach(tab => tab.classList.toggle('active', tab.dataset.view === view));
                 activateViewButton(view);
@@ -1380,21 +2599,128 @@
                     case 'kanban':
                         renderUsuarioKanban();
                         break;
+                    case 'organigrama':
+                        renderUsuarioOrganigrama();
+                        break;
                     default:
                         renderUsuarioForm();
                         break;
                 }
             }
             usuarioTabs.forEach(tab => tab.addEventListener('click', () => setUsuarioView(tab.dataset.view)));
+            areaTabs.forEach(tab => tab.addEventListener('click', () => setAreaView(tab.dataset.view)));
             usuarioLinks.forEach(link => link.addEventListener('click', event => {
+                const targetHref = link.getAttribute('href');
+                const currentPath = window.location.pathname;
+                if (targetHref && targetHref !== currentPath) {
+                    return;
+                }
                 event.preventDefault();
-                setUsuarioView(link.dataset.view);
+                setUsuarioView(link.dataset.view || 'form');
             }));
+            const isUsuariosRoute = window.location.pathname === '/usuarios-sistema' || window.location.pathname === '/usuarios';
+            if (isUsuariosRoute && usuarioPanel && usuarioView) {
+                const activeUsuarioLink = Array.from(usuarioLinks).find(link => link.getAttribute('href') === window.location.pathname);
+                if (activeUsuarioLink) {
+                    setMenuInfo(activeUsuarioLink);
+                }
+                setUsuarioView('form');
+            }
+            const isAreasRoute = window.location.pathname === '/areas-organizacionales';
+            if (isAreasRoute && areaPanel && areaView) {
+                const areaMenuLink = document.querySelector('a[data-route="/areas-organizacionales"]');
+                if (areaMenuLink) {
+                    setMenuInfo(areaMenuLink);
+                }
+                setAreaView('form');
+            }
+            const plantillasPage = document.getElementById('plantillas-page');
+            const templateNameInput = document.getElementById('template-name');
+            const templateHtmlInput = document.getElementById('template-html');
+            const templateCssInput = document.getElementById('template-css');
+            const templatePreviewBtn = document.getElementById('template-preview-btn');
+            const templatePreviewFrame = document.getElementById('template-preview');
+            const plantillasList = document.getElementById('plantillas-list');
+            let plantillasStore = [];
+            let selectedTemplateId = null;
+            const renderTemplatePreview = () => {
+                if (!templatePreviewFrame) return;
+                const htmlCode = templateHtmlInput?.value || '';
+                const cssCode = templateCssInput?.value || '';
+                templatePreviewFrame.srcdoc = `<!doctype html><html><head><meta charset="UTF-8"><style>${cssCode}</style></head><body>${htmlCode}</body></html>`;
+            };
+            const clearTemplateEditor = () => {
+                selectedTemplateId = null;
+                if (templateNameInput) templateNameInput.value = '';
+                if (templateHtmlInput) templateHtmlInput.value = '';
+                if (templateCssInput) templateCssInput.value = '';
+                renderTemplatePreview();
+                if (plantillasList) {
+                    plantillasList.querySelectorAll('.plantillas-item').forEach((btn) => btn.classList.remove('active'));
+                }
+            };
+            const setTemplateEditor = (tpl) => {
+                if (!tpl) return;
+                selectedTemplateId = tpl.id;
+                if (templateNameInput) templateNameInput.value = tpl.nombre || '';
+                if (templateHtmlInput) templateHtmlInput.value = tpl.html || '';
+                if (templateCssInput) templateCssInput.value = tpl.css || '';
+                renderTemplatePreview();
+            };
+            const renderPlantillasList = () => {
+                if (!plantillasList) return;
+                plantillasList.innerHTML = plantillasStore.map((tpl) => `
+                    <li>
+                        <button type="button" class="plantillas-item ${tpl.id === selectedTemplateId ? 'active' : ''}" data-template-id="${tpl.id}">
+                            ${tpl.nombre}
+                        </button>
+                    </li>
+                `).join('');
+                plantillasList.querySelectorAll('[data-template-id]').forEach((btn) => {
+                    btn.addEventListener('click', () => {
+                        const id = btn.dataset.templateId;
+                        const tpl = plantillasStore.find((item) => item.id === id);
+                        if (!tpl) return;
+                        setTemplateEditor(tpl);
+                        renderPlantillasList();
+                        showMessage(`Plantilla "${tpl.nombre}" cargada.`, 'success');
+                    });
+                });
+            };
+            const loadPlantillas = async () => {
+                if (!plantillasPage) return;
+                try {
+                    const res = await fetch('/api/plantillas');
+                    if (!res.ok) throw new Error('No se pudo cargar la lista');
+                    const json = await res.json();
+                    plantillasStore = Array.isArray(json?.data) ? json.data : [];
+                    if (!selectedTemplateId && plantillasStore.length) {
+                        setTemplateEditor(plantillasStore[0]);
+                    } else if (!plantillasStore.length) {
+                        clearTemplateEditor();
+                    }
+                    renderPlantillasList();
+                } catch (error) {
+                    showMessage('No se pudieron cargar las plantillas.', 'error');
+                }
+            };
+            if (plantillasPage) {
+                const plantillasLink = document.querySelector('a[data-route="/plantillas"]');
+                if (plantillasLink) {
+                    setMenuInfo(plantillasLink);
+                }
+                setFloatingScreen('plantillas');
+                ensureFloatingVisible();
+                loadPlantillas();
+                templatePreviewBtn && templatePreviewBtn.addEventListener('click', renderTemplatePreview);
+            }
             document.addEventListener('backend-view-change', (event) => {
                 const view = event.detail?.view;
                 if (!view) return;
                 if (activeFloatingScreen === 'usuarios') {
                     setUsuarioView(view);
+                } else if (activeFloatingScreen === 'areas') {
+                    setAreaView(view);
                 }
             });
             const notebookTabs = document.querySelectorAll('.notebook-tabs .tab');
@@ -1438,6 +2764,68 @@
                     showMessage('Eliminación cancelada.', 'error');
                 }
             });
+            actionEditAreas && actionEditAreas.addEventListener('click', (event) => {
+                if (activeFloatingScreen !== 'areas') return;
+                event.preventDefault();
+                setAreaView('form');
+                showMessage('Modo edición de áreas activado.', 'success');
+            });
+            actionSaveAreas && actionSaveAreas.addEventListener('click', (event) => {
+                if (activeFloatingScreen !== 'areas') return;
+                event.preventDefault();
+                showMessage('Cambios en áreas guardados.', 'success');
+            });
+            actionDeleteAreas && actionDeleteAreas.addEventListener('click', (event) => {
+                if (activeFloatingScreen !== 'areas') return;
+                event.preventDefault();
+                if (confirm('¿Eliminar el área seleccionada?')) {
+                    showMessage('Área eliminada.', 'success');
+                } else {
+                    showMessage('Eliminación cancelada.', 'error');
+                }
+            });
+            actionNewTemplate && actionNewTemplate.addEventListener('click', (event) => {
+                if (activeFloatingScreen !== 'plantillas') return;
+                event.preventDefault();
+                clearTemplateEditor();
+                templateNameInput && templateNameInput.focus();
+                showMessage('Nueva plantilla lista para captura.', 'success');
+            });
+            actionSaveTemplate && actionSaveTemplate.addEventListener('click', async (event) => {
+                if (activeFloatingScreen !== 'plantillas') return;
+                event.preventDefault();
+                const payload = {
+                    id: selectedTemplateId,
+                    nombre: (templateNameInput?.value || '').trim(),
+                    html: templateHtmlInput?.value || '',
+                    css: templateCssInput?.value || '',
+                };
+                if (!payload.nombre) {
+                    showMessage('El nombre de la plantilla es obligatorio.', 'error');
+                    return;
+                }
+                if (!payload.html.trim() && !payload.css.trim()) {
+                    showMessage('Agrega HTML o CSS para guardar.', 'error');
+                    return;
+                }
+                try {
+                    const res = await fetch('/api/plantillas', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload),
+                    });
+                    const json = await res.json();
+                    if (!res.ok || !json?.success) {
+                        throw new Error(json?.error || 'No se pudo guardar');
+                    }
+                    selectedTemplateId = json?.data?.id || selectedTemplateId;
+                    await loadPlantillas();
+                    renderTemplatePreview();
+                    showMessage('Plantilla guardada.', 'success');
+                } catch (error) {
+                    showMessage('Error al guardar la plantilla.', 'error');
+                }
+            });
             actionViewForm && actionViewForm.addEventListener('click', (event) => {
                 if (activeFloatingScreen !== 'usuarios') return;
                 event.preventDefault();
@@ -1476,6 +2864,299 @@
                 event.preventDefault();
                 showMessage('Vista calendario.', 'success');
             });
+            const fodaBuilder = document.getElementById('foda-builder');
+            if (fodaBuilder) {
+                const descriptionInput = document.getElementById('foda-description');
+                const categoryInput = document.getElementById('foda-category');
+                const impactInput = document.getElementById('foda-impact');
+                const addButton = document.getElementById('foda-add');
+                const lists = {
+                    strengths: document.getElementById('foda-list-strengths'),
+                    weaknesses: document.getElementById('foda-list-weaknesses'),
+                    opportunities: document.getElementById('foda-list-opportunities'),
+                    threats: document.getElementById('foda-list-threats'),
+                };
+                const counters = {
+                    strengths: document.getElementById('foda-count-strengths'),
+                    weaknesses: document.getElementById('foda-count-weaknesses'),
+                    opportunities: document.getElementById('foda-count-opportunities'),
+                    threats: document.getElementById('foda-count-threats'),
+                };
+                const factors = {
+                    strengths: [],
+                    weaknesses: [],
+                    opportunities: [],
+                    threats: [],
+                };
+                const impactLabel = {
+                    high: 'Impacto alto',
+                    medium: 'Impacto medio',
+                    low: 'Impacto bajo',
+                };
+                const renderFoda = () => {
+                    Object.keys(factors).forEach((key) => {
+                        const targetList = lists[key];
+                        const targetCount = counters[key];
+                        if (!targetList || !targetCount) return;
+                        targetCount.textContent = String(factors[key].length);
+                        targetList.innerHTML = factors[key].map((item, index) => `
+                            <li class="foda-item">
+                                <div>
+                                    <strong>${item.description}</strong><br>
+                                    <small>${impactLabel[item.impact] || 'Impacto medio'}</small>
+                                </div>
+                                <button type="button" data-foda-remove="${key}:${index}">Quitar</button>
+                            </li>
+                        `).join('');
+                    });
+                    fodaBuilder.querySelectorAll('[data-foda-remove]').forEach((btn) => {
+                        btn.addEventListener('click', () => {
+                            const [cat, indexRaw] = (btn.dataset.fodaRemove || '').split(':');
+                            const index = Number(indexRaw);
+                            if (!factors[cat] || Number.isNaN(index)) return;
+                            factors[cat].splice(index, 1);
+                            renderFoda();
+                        });
+                    });
+                };
+                addButton && addButton.addEventListener('click', () => {
+                    const description = (descriptionInput?.value || '').trim();
+                    const category = categoryInput?.value || 'strengths';
+                    const impact = impactInput?.value || 'medium';
+                    if (!description) {
+                        showMessage('Escribe una descripción para el factor FODA.', 'error');
+                        return;
+                    }
+                    if (!factors[category]) return;
+                    factors[category].push({ description, impact });
+                    if (descriptionInput) descriptionInput.value = '';
+                    renderFoda();
+                    showMessage('Factor FODA agregado.', 'success');
+                });
+                renderFoda();
+            }
+            const pestelBuilder = document.getElementById('pestel-builder');
+            if (pestelBuilder) {
+                const descriptionInput = document.getElementById('pestel-description');
+                const factorInput = document.getElementById('pestel-factor');
+                const impactInput = document.getElementById('pestel-impact');
+                const addButton = document.getElementById('pestel-add');
+                const dimensions = ['political', 'economic', 'social', 'technological', 'ecological', 'legal'];
+                const lists = {
+                    political: document.getElementById('pestel-list-political'),
+                    economic: document.getElementById('pestel-list-economic'),
+                    social: document.getElementById('pestel-list-social'),
+                    technological: document.getElementById('pestel-list-technological'),
+                    ecological: document.getElementById('pestel-list-ecological'),
+                    legal: document.getElementById('pestel-list-legal'),
+                };
+                const counters = {
+                    political: document.getElementById('pestel-count-political'),
+                    economic: document.getElementById('pestel-count-economic'),
+                    social: document.getElementById('pestel-count-social'),
+                    technological: document.getElementById('pestel-count-technological'),
+                    ecological: document.getElementById('pestel-count-ecological'),
+                    legal: document.getElementById('pestel-count-legal'),
+                };
+                const factors = {
+                    political: [],
+                    economic: [],
+                    social: [],
+                    technological: [],
+                    ecological: [],
+                    legal: [],
+                };
+                const impactLabel = {
+                    high: 'Impacto alto',
+                    medium: 'Impacto medio',
+                    low: 'Impacto bajo',
+                };
+                const renderPestel = () => {
+                    dimensions.forEach((key) => {
+                        const targetList = lists[key];
+                        const targetCount = counters[key];
+                        if (!targetList || !targetCount) return;
+                        targetCount.textContent = String(factors[key].length);
+                        targetList.innerHTML = factors[key].map((item, index) => `
+                            <li class="pestel-item">
+                                <div>
+                                    <strong>${item.description}</strong><br>
+                                    <small>${impactLabel[item.impact] || 'Impacto medio'}</small>
+                                </div>
+                                <button type="button" data-pestel-remove="${key}:${index}">Quitar</button>
+                            </li>
+                        `).join('');
+                    });
+                    pestelBuilder.querySelectorAll('[data-pestel-remove]').forEach((btn) => {
+                        btn.addEventListener('click', () => {
+                            const [dimension, indexRaw] = (btn.dataset.pestelRemove || '').split(':');
+                            const index = Number(indexRaw);
+                            if (!factors[dimension] || Number.isNaN(index)) return;
+                            factors[dimension].splice(index, 1);
+                            renderPestel();
+                        });
+                    });
+                };
+                addButton && addButton.addEventListener('click', () => {
+                    const description = (descriptionInput?.value || '').trim();
+                    const dimension = factorInput?.value || 'political';
+                    const impact = impactInput?.value || 'medium';
+                    if (!description) {
+                        showMessage('Escribe una descripción para el factor PESTEL.', 'error');
+                        return;
+                    }
+                    if (!factors[dimension]) return;
+                    factors[dimension].push({ description, impact });
+                    if (descriptionInput) descriptionInput.value = '';
+                    renderPestel();
+                    showMessage('Factor PESTEL agregado.', 'success');
+                });
+                renderPestel();
+            }
+            const porterBuilder = document.getElementById('porter-builder');
+            if (porterBuilder) {
+                const descriptionInput = document.getElementById('porter-description');
+                const forceInput = document.getElementById('porter-force');
+                const impactInput = document.getElementById('porter-impact');
+                const addButton = document.getElementById('porter-add');
+                const forces = ['competitors', 'entrants', 'suppliers', 'buyers', 'substitutes'];
+                const lists = {
+                    competitors: document.getElementById('porter-list-competitors'),
+                    entrants: document.getElementById('porter-list-entrants'),
+                    suppliers: document.getElementById('porter-list-suppliers'),
+                    buyers: document.getElementById('porter-list-buyers'),
+                    substitutes: document.getElementById('porter-list-substitutes'),
+                };
+                const counters = {
+                    competitors: document.getElementById('porter-count-competitors'),
+                    entrants: document.getElementById('porter-count-entrants'),
+                    suppliers: document.getElementById('porter-count-suppliers'),
+                    buyers: document.getElementById('porter-count-buyers'),
+                    substitutes: document.getElementById('porter-count-substitutes'),
+                };
+                const factors = {
+                    competitors: [],
+                    entrants: [],
+                    suppliers: [],
+                    buyers: [],
+                    substitutes: [],
+                };
+                const impactLabel = {
+                    high: 'Impacto alto',
+                    medium: 'Impacto medio',
+                    low: 'Impacto bajo',
+                };
+                const renderPorter = () => {
+                    forces.forEach((key) => {
+                        const targetList = lists[key];
+                        const targetCount = counters[key];
+                        if (!targetList || !targetCount) return;
+                        targetCount.textContent = String(factors[key].length);
+                        targetList.innerHTML = factors[key].map((item, index) => `
+                            <li class="porter-item">
+                                <div>
+                                    <strong>${item.description}</strong><br>
+                                    <small>${impactLabel[item.impact] || 'Impacto medio'}</small>
+                                </div>
+                                <button type="button" data-porter-remove="${key}:${index}">Quitar</button>
+                            </li>
+                        `).join('');
+                    });
+                    porterBuilder.querySelectorAll('[data-porter-remove]').forEach((btn) => {
+                        btn.addEventListener('click', () => {
+                            const [force, indexRaw] = (btn.dataset.porterRemove || '').split(':');
+                            const index = Number(indexRaw);
+                            if (!factors[force] || Number.isNaN(index)) return;
+                            factors[force].splice(index, 1);
+                            renderPorter();
+                        });
+                    });
+                };
+                addButton && addButton.addEventListener('click', () => {
+                    const description = (descriptionInput?.value || '').trim();
+                    const force = forceInput?.value || 'competitors';
+                    const impact = impactInput?.value || 'medium';
+                    if (!description) {
+                        showMessage('Escribe una descripción para el factor PORTER.', 'error');
+                        return;
+                    }
+                    if (!factors[force]) return;
+                    factors[force].push({ description, impact });
+                    if (descriptionInput) descriptionInput.value = '';
+                    renderPorter();
+                    showMessage('Factor PORTER agregado.', 'success');
+                });
+                renderPorter();
+            }
+            const percepcionBuilder = document.getElementById('percepcion-builder');
+            if (percepcionBuilder) {
+                const descriptionInput = document.getElementById('percepcion-description');
+                const categoryInput = document.getElementById('percepcion-category');
+                const priorityInput = document.getElementById('percepcion-priority');
+                const addButton = document.getElementById('percepcion-add');
+                const categories = ['positive', 'neutral', 'negative'];
+                const lists = {
+                    positive: document.getElementById('percepcion-list-positive'),
+                    neutral: document.getElementById('percepcion-list-neutral'),
+                    negative: document.getElementById('percepcion-list-negative'),
+                };
+                const counters = {
+                    positive: document.getElementById('percepcion-count-positive'),
+                    neutral: document.getElementById('percepcion-count-neutral'),
+                    negative: document.getElementById('percepcion-count-negative'),
+                };
+                const factors = {
+                    positive: [],
+                    neutral: [],
+                    negative: [],
+                };
+                const priorityLabel = {
+                    high: 'Prioridad alta',
+                    medium: 'Prioridad media',
+                    low: 'Prioridad baja',
+                };
+                const renderPercepcion = () => {
+                    categories.forEach((key) => {
+                        const targetList = lists[key];
+                        const targetCount = counters[key];
+                        if (!targetList || !targetCount) return;
+                        targetCount.textContent = String(factors[key].length);
+                        targetList.innerHTML = factors[key].map((item, index) => `
+                            <li class="percepcion-item">
+                                <div>
+                                    <strong>${item.description}</strong><br>
+                                    <small>${priorityLabel[item.priority] || 'Prioridad media'}</small>
+                                </div>
+                                <button type="button" data-percepcion-remove="${key}:${index}">Quitar</button>
+                            </li>
+                        `).join('');
+                    });
+                    percepcionBuilder.querySelectorAll('[data-percepcion-remove]').forEach((btn) => {
+                        btn.addEventListener('click', () => {
+                            const [category, indexRaw] = (btn.dataset.percepcionRemove || '').split(':');
+                            const index = Number(indexRaw);
+                            if (!factors[category] || Number.isNaN(index)) return;
+                            factors[category].splice(index, 1);
+                            renderPercepcion();
+                        });
+                    });
+                };
+                addButton && addButton.addEventListener('click', () => {
+                    const description = (descriptionInput?.value || '').trim();
+                    const category = categoryInput?.value || 'neutral';
+                    const priority = priorityInput?.value || 'medium';
+                    if (!description) {
+                        showMessage('Escribe una descripción para la percepción del cliente.', 'error');
+                        return;
+                    }
+                    if (!factors[category]) return;
+                    factors[category].push({ description, priority });
+                    if (descriptionInput) descriptionInput.value = '';
+                    renderPercepcion();
+                    showMessage('Percepción agregada.', 'success');
+                });
+                renderPercepcion();
+            }
             const navbarAvatarImg = document.getElementById('navbar-avatar-img');
             const sidebarUserImg = document.getElementById('sidebar-user-img');
             const applyFallback = (img) => {
@@ -1488,6 +3169,28 @@
             };
             applyFallback(navbarAvatarImg);
             applyFallback(sidebarUserImg);
+            const empresaToggle = document.getElementById("empresa-section-toggle");
+            const empresaContent = document.getElementById("empresa-section-content");
+            if (empresaToggle && empresaContent) {
+                const setEmpresaOpenState = (open) => {
+                    empresaContent.classList.toggle("open", open);
+                    empresaToggle.setAttribute("aria-expanded", open ? "true" : "false");
+                    const indicator = empresaToggle.querySelector(".toggle-indicator");
+                    if (indicator) {
+                        indicator.textContent = open ? "−" : "+";
+                    }
+                };
+                empresaToggle.addEventListener("click", () => {
+                    const open = !empresaContent.classList.contains("open");
+                    setEmpresaOpenState(open);
+                });
+                const currentPath = window.location.pathname;
+                const empresaLinks = empresaContent.querySelectorAll('a[href]');
+                const shouldOpenEmpresa = Array.from(empresaLinks).some(link => link.getAttribute('href') === currentPath);
+                if (shouldOpenEmpresa) {
+                    setEmpresaOpenState(true);
+                }
+            }
         });
     </script>
 </body>

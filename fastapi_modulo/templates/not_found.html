@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <style>
+        :root {
+            --institutional-404-bg: {{ sidebar_top_color or '#1f2a3d' }};
+        }
+
+        html, body {
+            margin: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--institutional-404-bg) !important;
+            background-image: none !important;
+        }
+
+        .company-logo-box {
+            position: fixed;
+            top: 16px;
+            left: 16px;
+            width: 170px;
+            height: 78px;
+            background: #e9e9e9;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 8px 18px rgba(0, 0, 0, 0.12);
+            z-index: 20;
+            text-decoration: none;
+            cursor: pointer;
+            transition: transform 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
+        }
+
+        .company-logo-box img {
+            max-width: 85%;
+            max-height: 70%;
+            object-fit: contain;
+        }
+
+        .company-logo-box:hover {
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 14px 26px rgba(0, 0, 0, 0.2);
+            background-color: #f2f2f2;
+        }
+
+        .not-found-layout {
+            display: flex;
+            width: 100%;
+            height: 100%;
+            align-items: center;
+            background-color: var(--institutional-404-bg) !important;
+        }
+
+        .not-found-left {
+            width: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+        }
+
+        .not-found-left img {
+            max-width: 91%;
+            height: auto;
+            filter: drop-shadow(0 30px 48px rgba(0, 0, 0, 0.5));
+            opacity: 0;
+            transform: translateY(24px) scale(0.96);
+            animation: imageReveal 900ms ease-out 120ms forwards;
+        }
+
+        .not-found-right {
+            width: 50%;
+            padding: 120px 60px 60px 90px;
+            box-sizing: border-box;
+            display: flex;
+            align-items: center;
+        }
+
+        .not-found-copy {
+            max-width: 520px;
+            color: {{ not_found_text_color or '#2b2b2b' }};
+            font-family: "Segoe UI", Tahoma, sans-serif;
+            line-height: 1.45;
+            font-size: 28px;
+        }
+
+        .not-found-copy .highlight {
+            font-weight: 800;
+            color: {{ not_found_highlight_color or '#1f1f1f' }};
+        }
+
+        .back-home-link {
+            display: inline-block;
+            margin-top: 24px;
+            font-size: 24px;
+            font-weight: 800;
+            color: {{ not_found_text_color or '#2b2b2b' }};
+            text-decoration: none;
+        }
+
+        .back-home-link:hover {
+            text-decoration: underline;
+        }
+
+        @keyframes imageReveal {
+            from {
+                opacity: 0;
+                transform: translateY(24px) scale(0.96);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+    </style>
+</head>
+<body>
+    <a class="company-logo-box" href="/web" aria-label="Ir al inicio">
+        <img src="{{ company_logo_url or '/templates/imagenes/icon.png' }}" alt="Logo empresa">
+    </a>
+    <main class="not-found-layout">
+        <section class="not-found-right">
+            <div class="not-found-copy">
+                <p><span class="highlight">Lo sentimos,</span> la página que buscas no existe o fue movida.</p>
+                <p>Puedes volver al inicio dando clic en el logo</p>
+                <a class="back-home-link" href="/web">Volver al inicio</a>
+            </div>
+        </section>
+        <section class="not-found-left">
+            <img src="/templates/icon/404.png" alt="404">
+        </section>
+    </main>
+</body>
+</html>
