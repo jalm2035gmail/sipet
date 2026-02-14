@@ -375,7 +375,8 @@
             min-height: 100vh;
             background: #f4f6fb;
             transition: margin-left 0.3s ease;
-            overflow: auto;
+            overflow-x: hidden;
+            overflow-y: auto;
             width: calc(100vw - 220px);
             box-sizing: border-box;
         }
@@ -1830,6 +1831,16 @@
             .navbar,
             .main-content {
                 margin-left: 0;
+            }
+            .navbar {
+                padding: 0 12px;
+            }
+            .main-content {
+                width: 100%;
+                padding: 16px 14px 24px;
+            }
+            .page-header {
+                margin-bottom: 18px;
             }
             .content-shell {
                 width: 100%;
