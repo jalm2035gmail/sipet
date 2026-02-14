@@ -1865,11 +1865,164 @@ PERCEPCION_CLIENTE_HTML = dedent("""
 """)
 
 PLAN_ESTRATEGICO_HTML = dedent("""
-    <section class="foda-page">
-        <article class="foda-input-card">
-            <h2>Plan estratégico</h2>
-            <p>En esta vista se concentra la gestión del plan estratégico institucional.</p>
-            <p>Incluye definición de objetivos, líneas estratégicas y seguimiento general del plan.</p>
+    <section class="plan-shell">
+        <style>
+            .plan-shell {
+                display: grid;
+                gap: 14px;
+            }
+            .plan-header {
+                background: linear-gradient(125deg, #102c4a 0%, #155179 55%, #1d7db0 100%);
+                border-radius: 16px;
+                padding: 20px;
+                color: #f4f8ff;
+                box-shadow: 0 12px 30px rgba(12, 38, 61, 0.25);
+            }
+            .plan-header h2 {
+                margin: 0 0 6px;
+                font-size: 1.3rem;
+            }
+            .plan-header p {
+                margin: 0;
+                opacity: 0.95;
+                line-height: 1.55;
+            }
+            .plan-kpis {
+                display: grid;
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+                gap: 10px;
+            }
+            .plan-kpi {
+                background: #fff;
+                border: 1px solid #dbe6f3;
+                border-radius: 12px;
+                padding: 12px;
+                box-shadow: 0 6px 16px rgba(15, 38, 61, 0.08);
+            }
+            .plan-kpi small {
+                display: block;
+                color: #546b84;
+                margin-bottom: 6px;
+            }
+            .plan-kpi strong {
+                color: #13314e;
+                font-size: 1.28rem;
+            }
+            .plan-grid {
+                display: grid;
+                grid-template-columns: 1.2fr 0.8fr;
+                gap: 12px;
+            }
+            .plan-card {
+                background: #fff;
+                border: 1px solid #dbe6f3;
+                border-radius: 14px;
+                padding: 14px;
+                box-shadow: 0 6px 16px rgba(15, 38, 61, 0.08);
+            }
+            .plan-card h3 {
+                margin: 0 0 10px;
+                font-size: 1rem;
+                color: #113250;
+            }
+            .plan-list {
+                margin: 0;
+                padding: 0;
+                list-style: none;
+                display: grid;
+                gap: 8px;
+            }
+            .plan-list li {
+                border: 1px solid #e5edf6;
+                border-radius: 10px;
+                background: #f8fbff;
+                padding: 10px;
+                line-height: 1.45;
+                color: #24435f;
+            }
+            .plan-roadmap {
+                display: grid;
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+                gap: 10px;
+            }
+            .phase {
+                border-radius: 12px;
+                border: 1px dashed #bed0e4;
+                background: #f4f9ff;
+                padding: 10px;
+            }
+            .phase strong {
+                display: block;
+                color: #0f2f4d;
+                margin-bottom: 6px;
+            }
+            .phase span {
+                color: #47627f;
+                font-size: 0.9rem;
+            }
+            @media (max-width: 980px) {
+                .plan-kpis {
+                    grid-template-columns: repeat(2, minmax(0, 1fr));
+                }
+                .plan-grid {
+                    grid-template-columns: 1fr;
+                }
+                .plan-roadmap {
+                    grid-template-columns: repeat(2, minmax(0, 1fr));
+                }
+            }
+            @media (max-width: 620px) {
+                .plan-kpis,
+                .plan-roadmap {
+                    grid-template-columns: 1fr;
+                }
+            }
+        </style>
+
+        <article class="plan-header">
+            <h2>Plan estratégico institucional</h2>
+            <p>
+                Cascarón para estructurar visión, ejes estratégicos, objetivos, iniciativas y metas
+                con trazabilidad al POA.
+            </p>
+        </article>
+
+        <section class="plan-kpis">
+            <article class="plan-kpi"><small>Objetivos estratégicos</small><strong>12</strong></article>
+            <article class="plan-kpi"><small>Iniciativas activas</small><strong>24</strong></article>
+            <article class="plan-kpi"><small>Indicadores vinculados</small><strong>36</strong></article>
+            <article class="plan-kpi"><small>Avance del plan</small><strong>74%</strong></article>
+        </section>
+
+        <section class="plan-grid">
+            <article class="plan-card">
+                <h3>Objetivos priorizados</h3>
+                <ul class="plan-list">
+                    <li><strong>OE-01:</strong> Fortalecer la sostenibilidad financiera institucional.</li>
+                    <li><strong>OE-02:</strong> Mejorar la satisfacción de clientes y usuarios finales.</li>
+                    <li><strong>OE-03:</strong> Optimizar procesos críticos y tiempos de respuesta.</li>
+                    <li><strong>OE-04:</strong> Impulsar capacidades del talento y cultura de mejora continua.</li>
+                </ul>
+            </article>
+            <article class="plan-card">
+                <h3>Ejes estratégicos</h3>
+                <ul class="plan-list">
+                    <li>Gobernanza y cumplimiento</li>
+                    <li>Excelencia operativa</li>
+                    <li>Innovación y digitalización</li>
+                    <li>Desarrollo del talento</li>
+                </ul>
+            </article>
+        </section>
+
+        <article class="plan-card">
+            <h3>Hoja de ruta (cascarón)</h3>
+            <div class="plan-roadmap">
+                <div class="phase"><strong>Fase 1</strong><span>Diagnóstico estratégico y línea base.</span></div>
+                <div class="phase"><strong>Fase 2</strong><span>Definición de objetivos, metas e indicadores.</span></div>
+                <div class="phase"><strong>Fase 3</strong><span>Implementación de iniciativas y seguimiento.</span></div>
+                <div class="phase"><strong>Fase 4</strong><span>Evaluación de resultados y ajuste del plan.</span></div>
+            </div>
         </article>
     </section>
 """)
@@ -2765,11 +2918,205 @@ PROYECTANDO_HTML = dedent("""
 """)
 
 POA_HTML = dedent("""
-    <section class="foda-page">
-        <article class="foda-input-card">
-            <h2>POA</h2>
-            <p>En esta vista se concentra la programación operativa anual vinculada al plan estratégico.</p>
-            <p>Aquí se gestionarán actividades, responsables, plazos y presupuesto por periodo.</p>
+    <section class="poa-shell">
+        <style>
+            .poa-shell {
+                display: grid;
+                gap: 14px;
+            }
+            .poa-header {
+                background: linear-gradient(125deg, #0f2f4b 0%, #14557f 55%, #1b80b6 100%);
+                border-radius: 16px;
+                padding: 20px;
+                color: #f4f9ff;
+                box-shadow: 0 12px 30px rgba(10, 38, 61, 0.24);
+            }
+            .poa-header h2 {
+                margin: 0 0 6px;
+                font-size: 1.3rem;
+            }
+            .poa-header p {
+                margin: 0;
+                line-height: 1.55;
+                opacity: 0.95;
+            }
+            .poa-kpis {
+                display: grid;
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+                gap: 10px;
+            }
+            .poa-kpi {
+                background: #fff;
+                border: 1px solid #dbe6f3;
+                border-radius: 12px;
+                padding: 12px;
+                box-shadow: 0 6px 16px rgba(15, 38, 61, 0.08);
+            }
+            .poa-kpi small {
+                display: block;
+                color: #546b84;
+                margin-bottom: 6px;
+            }
+            .poa-kpi strong {
+                color: #13314e;
+                font-size: 1.28rem;
+            }
+            .poa-grid {
+                display: grid;
+                grid-template-columns: 1.2fr 0.8fr;
+                gap: 12px;
+            }
+            .poa-card {
+                background: #fff;
+                border: 1px solid #dbe6f3;
+                border-radius: 14px;
+                padding: 14px;
+                box-shadow: 0 6px 16px rgba(15, 38, 61, 0.08);
+            }
+            .poa-card h3 {
+                margin: 0 0 10px;
+                font-size: 1rem;
+                color: #113250;
+            }
+            .poa-list {
+                margin: 0;
+                padding: 0;
+                list-style: none;
+                display: grid;
+                gap: 8px;
+            }
+            .poa-list li {
+                border: 1px solid #e5edf6;
+                border-radius: 10px;
+                background: #f8fbff;
+                padding: 10px;
+                line-height: 1.45;
+                color: #24435f;
+            }
+            .poa-table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 0.92rem;
+            }
+            .poa-table th,
+            .poa-table td {
+                text-align: left;
+                padding: 9px 8px;
+                border-bottom: 1px solid #e5edf6;
+            }
+            .poa-badge {
+                display: inline-block;
+                font-size: 0.78rem;
+                font-weight: 700;
+                border-radius: 999px;
+                padding: 4px 8px;
+            }
+            .ok { background: #dcfce7; color: #166534; }
+            .warn { background: #fef3c7; color: #92400e; }
+            .crit { background: #fee2e2; color: #991b1b; }
+            .poa-roadmap {
+                display: grid;
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+                gap: 10px;
+            }
+            .poa-phase {
+                border-radius: 12px;
+                border: 1px dashed #bed0e4;
+                background: #f4f9ff;
+                padding: 10px;
+            }
+            .poa-phase strong {
+                display: block;
+                color: #0f2f4d;
+                margin-bottom: 6px;
+            }
+            .poa-phase span {
+                color: #47627f;
+                font-size: 0.9rem;
+            }
+            @media (max-width: 980px) {
+                .poa-kpis {
+                    grid-template-columns: repeat(2, minmax(0, 1fr));
+                }
+                .poa-grid {
+                    grid-template-columns: 1fr;
+                }
+                .poa-roadmap {
+                    grid-template-columns: repeat(2, minmax(0, 1fr));
+                }
+            }
+            @media (max-width: 620px) {
+                .poa-kpis,
+                .poa-roadmap {
+                    grid-template-columns: 1fr;
+                }
+            }
+        </style>
+
+        <article class="poa-header">
+            <h2>Programación Operativa Anual (POA)</h2>
+            <p>
+                Cascarón para planificar actividades operativas, responsables, presupuesto, hitos
+                y seguimiento trimestral alineado al plan estratégico.
+            </p>
+        </article>
+
+        <section class="poa-kpis">
+            <article class="poa-kpi"><small>Actividades programadas</small><strong>64</strong></article>
+            <article class="poa-kpi"><small>Actividades en ejecución</small><strong>39</strong></article>
+            <article class="poa-kpi"><small>Cumplimiento trimestral</small><strong>76%</strong></article>
+            <article class="poa-kpi"><small>Desviaciones críticas</small><strong>5</strong></article>
+        </section>
+
+        <section class="poa-grid">
+            <article class="poa-card">
+                <h3>Metas operativas priorizadas</h3>
+                <ul class="poa-list">
+                    <li><strong>MO-01:</strong> Reducir tiempos de atención de solicitudes en 20%.</li>
+                    <li><strong>MO-02:</strong> Estandarizar procesos clave en áreas operativas.</li>
+                    <li><strong>MO-03:</strong> Incrementar productividad por célula de trabajo.</li>
+                    <li><strong>MO-04:</strong> Asegurar cumplimiento de cronograma anual.</li>
+                </ul>
+            </article>
+            <article class="poa-card">
+                <h3>Responsables por frente</h3>
+                <ul class="poa-list">
+                    <li>Operaciones: Dirección Operativa</li>
+                    <li>Calidad: Coordinación de Mejora Continua</li>
+                    <li>Tecnología: Equipo de Transformación Digital</li>
+                    <li>Control: PMO / Planeación</li>
+                </ul>
+            </article>
+        </section>
+
+        <article class="poa-card">
+            <h3>Seguimiento trimestral (cascarón)</h3>
+            <table class="poa-table">
+                <thead>
+                    <tr>
+                        <th>Trimestre</th>
+                        <th>Meta</th>
+                        <th>Avance</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td>T1</td><td>18 hitos</td><td>16 / 18</td><td><span class="poa-badge ok">En meta</span></td></tr>
+                    <tr><td>T2</td><td>16 hitos</td><td>12 / 16</td><td><span class="poa-badge warn">En riesgo</span></td></tr>
+                    <tr><td>T3</td><td>15 hitos</td><td>0 / 15</td><td><span class="poa-badge crit">Pendiente</span></td></tr>
+                    <tr><td>T4</td><td>15 hitos</td><td>0 / 15</td><td><span class="poa-badge crit">Pendiente</span></td></tr>
+                </tbody>
+            </table>
+        </article>
+
+        <article class="poa-card">
+            <h3>Cronograma anual (cascarón)</h3>
+            <div class="poa-roadmap">
+                <div class="poa-phase"><strong>Q1</strong><span>Arranque operativo y ajustes de línea base.</span></div>
+                <div class="poa-phase"><strong>Q2</strong><span>Escalamiento de iniciativas y control de costos.</span></div>
+                <div class="poa-phase"><strong>Q3</strong><span>Consolidación de mejoras y auditoría de avance.</span></div>
+                <div class="poa-phase"><strong>Q4</strong><span>Cierre, evaluación de resultados y lecciones aprendidas.</span></div>
+            </div>
         </article>
     </section>
 """)
