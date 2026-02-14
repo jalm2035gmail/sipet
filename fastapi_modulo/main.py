@@ -400,7 +400,10 @@ def build_view_buttons_html(view_buttons: Optional[List[Dict]]) -> str:
         attr_str = f' {" ".join(attrs)}' if attrs else ""
         icon_html = ""
         if icon:
-            icon_html = f'<img src="{icon}" alt="{label} icon">'
+            icon_html = (
+                f'<span class="view-pill-icon-mask" aria-hidden="true" '
+                f'style="--view-pill-icon-url:url(\'{icon}\')"></span>'
+            )
         pieces.append(f'<button class="{classes}" type="button"{attr_str}>{icon_html}<span>{label}</span></button>')
     return "".join(pieces)
 
@@ -1901,7 +1904,119 @@ PERSONALIZACION_HTML = dedent("""
 """)
 
 FODA_HTML = dedent("""
-    <section class="foda-page" id="foda-builder">
+    <section class="foda-page pe-foda" id="foda-builder">
+        <style>
+            .pe-foda {
+                --bg: #f6f8fc;
+                --surface: rgba(255,255,255,.88);
+                --text: #0f172a;
+                --muted: #64748b;
+                --border: rgba(148,163,184,.38);
+                --shadow-soft: 0 10px 22px rgba(15,23,42,.06);
+                --primary: #0f3d2e;
+                --ok: #16a34a;
+                --warn: #f59e0b;
+                --crit: #ef4444;
+                width: 100%;
+                font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+                color: var(--text);
+                background:
+                  radial-gradient(1200px 640px at 15% 0%, rgba(15,61,46,.10), transparent 58%),
+                  radial-gradient(1000px 540px at 90% 6%, rgba(37,99,235,.10), transparent 55%),
+                  var(--bg);
+                border-radius: 18px;
+                padding: 18px 0 34px;
+            }
+            .pe-foda .foda-input-card,
+            .pe-foda .foda-quadrant {
+                background: var(--surface);
+                border: 1px solid var(--border);
+                border-radius: 22px;
+                box-shadow: var(--shadow-soft);
+                backdrop-filter: blur(10px);
+                -webkit-backdrop-filter: blur(10px);
+            }
+            .pe-foda .foda-input-card {
+                padding: 16px;
+            }
+            .pe-foda .foda-input-card h2 {
+                margin: 0;
+                font-size: 20px;
+                letter-spacing: -0.02em;
+            }
+            .pe-foda .foda-input-card p {
+                margin: 6px 0 12px;
+                color: var(--muted);
+                font-size: 13px;
+            }
+            .pe-foda .foda-input-grid {
+                grid-template-columns: 1.4fr .8fr .8fr;
+                gap: 12px;
+            }
+            .pe-foda .foda-input-grid textarea,
+            .pe-foda .foda-input-grid select {
+                border: 1px solid var(--border);
+                border-radius: 14px;
+                background: rgba(255,255,255,.82);
+                box-shadow: 0 10px 20px rgba(15,23,42,.04);
+                padding: 12px;
+            }
+            .pe-foda .foda-input-actions button {
+                border-radius: 14px;
+                padding: 10px 14px;
+                font-weight: 800;
+                border: 1px solid rgba(15,61,46,.35);
+                background: linear-gradient(135deg, #0f3d2e, #1f6f52);
+                color: #fff;
+                cursor: pointer;
+            }
+            .pe-foda .foda-matrix {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 14px;
+                margin-top: 14px;
+            }
+            .pe-foda .foda-quadrant {
+                padding: 14px;
+            }
+            .pe-foda .foda-quadrant header {
+                margin-bottom: 10px;
+            }
+            .pe-foda .foda-quadrant header span {
+                border-radius: 999px;
+                padding: 6px 10px;
+                border: 1px solid var(--border);
+                background: rgba(255,255,255,.70);
+            }
+            .pe-foda .foda-quadrant ul {
+                min-height: 120px;
+                gap: 10px;
+            }
+            .pe-foda .foda-item {
+                border-radius: 16px;
+                border: 1px solid rgba(148,163,184,.30);
+                background: rgba(255,255,255,.82);
+                box-shadow: 0 10px 20px rgba(15,23,42,.04);
+                padding: 12px;
+            }
+            .pe-foda .foda-item button {
+                border-radius: 999px;
+                border: 1px solid var(--border);
+                background: rgba(255,255,255,.75);
+                padding: 6px 10px;
+                font-size: 12px;
+            }
+            .pe-foda .foda-strengths { border-color: rgba(22,163,74,.28); }
+            .pe-foda .foda-weaknesses { border-color: rgba(245,158,11,.30); }
+            .pe-foda .foda-opportunities { border-color: rgba(37,99,235,.30); }
+            .pe-foda .foda-threats { border-color: rgba(239,68,68,.30); }
+            @media (max-width: 1100px) {
+                .pe-foda .foda-input-grid { grid-template-columns: 1fr; }
+            }
+            @media (max-width: 640px) {
+                .pe-foda .foda-matrix { grid-template-columns: 1fr; }
+            }
+        </style>
+
         <article class="foda-input-card">
             <h2>Matriz FODA</h2>
             <p>Registra factores y clasifícalos como fortalezas, debilidades, oportunidades o amenazas.</p>
@@ -1966,7 +2081,86 @@ FODA_HTML = dedent("""
 """)
 
 PESTEL_HTML = dedent("""
-    <section class="pestel-page" id="pestel-builder">
+    <section class="pestel-page pe-pestel" id="pestel-builder">
+        <style>
+            .pe-pestel {
+                --bg: #f6f8fc;
+                --surface: rgba(255,255,255,.88);
+                --text: #0f172a;
+                --muted: #64748b;
+                --border: rgba(148,163,184,.38);
+                --shadow-soft: 0 10px 22px rgba(15,23,42,.06);
+                width: 100%;
+                font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+                color: var(--text);
+                background:
+                  radial-gradient(1200px 640px at 15% 0%, rgba(15,61,46,.10), transparent 58%),
+                  radial-gradient(1000px 540px at 90% 6%, rgba(37,99,235,.10), transparent 55%),
+                  var(--bg);
+                border-radius: 18px;
+                padding: 18px 0 34px;
+            }
+            .pe-pestel .pestel-input-card,
+            .pe-pestel .pestel-column {
+                background: var(--surface);
+                border: 1px solid var(--border);
+                border-radius: 22px;
+                box-shadow: var(--shadow-soft);
+                backdrop-filter: blur(10px);
+                -webkit-backdrop-filter: blur(10px);
+            }
+            .pe-pestel .pestel-input-card { padding: 16px; }
+            .pe-pestel .pestel-input-card h2 { margin: 0; font-size: 20px; letter-spacing: -0.02em; }
+            .pe-pestel .pestel-input-card p { margin: 6px 0 12px; color: var(--muted); font-size: 13px; }
+            .pe-pestel .pestel-input-grid { grid-template-columns: 1.4fr .8fr .8fr; gap: 12px; }
+            .pe-pestel .pestel-input-grid textarea,
+            .pe-pestel .pestel-input-grid select {
+                border: 1px solid var(--border);
+                border-radius: 14px;
+                background: rgba(255,255,255,.82);
+                box-shadow: 0 10px 20px rgba(15,23,42,.04);
+                padding: 12px;
+            }
+            .pe-pestel .pestel-input-actions button {
+                border-radius: 14px;
+                padding: 10px 14px;
+                font-weight: 800;
+                border: 1px solid rgba(15,61,46,.35);
+                background: linear-gradient(135deg, #0f3d2e, #1f6f52);
+                color: #fff;
+                cursor: pointer;
+            }
+            .pe-pestel .pestel-board {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+                gap: 14px;
+                margin-top: 14px;
+            }
+            .pe-pestel .pestel-column { padding: 14px; }
+            .pe-pestel .pestel-column header { margin-bottom: 10px; }
+            .pe-pestel .pestel-column header span {
+                border-radius: 999px;
+                padding: 6px 10px;
+                border: 1px solid var(--border);
+                background: rgba(255,255,255,.70);
+            }
+            .pe-pestel .pestel-column ul { min-height: 120px; gap: 10px; }
+            .pe-pestel .pestel-item {
+                border-radius: 16px;
+                border: 1px solid rgba(148,163,184,.30);
+                background: rgba(255,255,255,.82);
+                box-shadow: 0 10px 20px rgba(15,23,42,.04);
+                padding: 12px;
+            }
+            .pe-pestel .pestel-item button {
+                border-radius: 999px;
+                border: 1px solid var(--border);
+                background: rgba(255,255,255,.75);
+                padding: 6px 10px;
+                font-size: 12px;
+            }
+            @media (max-width: 1100px) { .pe-pestel .pestel-input-grid { grid-template-columns: 1fr; } }
+            @media (max-width: 900px) { .pe-pestel .pestel-board { grid-template-columns: 1fr; } }
+        </style>
         <article class="pestel-input-card">
             <h2>Análisis PESTEL</h2>
             <p>Registra factores externos por dimensión: Política, Económica, Social, Tecnológica, Ecológica y Legal.</p>
@@ -2029,7 +2223,86 @@ PESTEL_HTML = dedent("""
 """)
 
 PORTER_HTML = dedent("""
-    <section class="porter-page" id="porter-builder">
+    <section class="porter-page pe-porter" id="porter-builder">
+        <style>
+            .pe-porter {
+                --bg: #f6f8fc;
+                --surface: rgba(255,255,255,.88);
+                --text: #0f172a;
+                --muted: #64748b;
+                --border: rgba(148,163,184,.38);
+                --shadow-soft: 0 10px 22px rgba(15,23,42,.06);
+                width: 100%;
+                font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+                color: var(--text);
+                background:
+                  radial-gradient(1200px 640px at 15% 0%, rgba(15,61,46,.10), transparent 58%),
+                  radial-gradient(1000px 540px at 90% 6%, rgba(37,99,235,.10), transparent 55%),
+                  var(--bg);
+                border-radius: 18px;
+                padding: 18px 0 34px;
+            }
+            .pe-porter .porter-input-card,
+            .pe-porter .porter-column {
+                background: var(--surface);
+                border: 1px solid var(--border);
+                border-radius: 22px;
+                box-shadow: var(--shadow-soft);
+                backdrop-filter: blur(10px);
+                -webkit-backdrop-filter: blur(10px);
+            }
+            .pe-porter .porter-input-card { padding: 16px; }
+            .pe-porter .porter-input-card h2 { margin: 0; font-size: 20px; letter-spacing: -0.02em; }
+            .pe-porter .porter-input-card p { margin: 6px 0 12px; color: var(--muted); font-size: 13px; }
+            .pe-porter .porter-input-grid { grid-template-columns: 1.4fr .8fr .8fr; gap: 12px; }
+            .pe-porter .porter-input-grid textarea,
+            .pe-porter .porter-input-grid select {
+                border: 1px solid var(--border);
+                border-radius: 14px;
+                background: rgba(255,255,255,.82);
+                box-shadow: 0 10px 20px rgba(15,23,42,.04);
+                padding: 12px;
+            }
+            .pe-porter .porter-input-actions button {
+                border-radius: 14px;
+                padding: 10px 14px;
+                font-weight: 800;
+                border: 1px solid rgba(15,61,46,.35);
+                background: linear-gradient(135deg, #0f3d2e, #1f6f52);
+                color: #fff;
+                cursor: pointer;
+            }
+            .pe-porter .porter-board {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+                gap: 14px;
+                margin-top: 14px;
+            }
+            .pe-porter .porter-column { padding: 14px; }
+            .pe-porter .porter-column header { margin-bottom: 10px; }
+            .pe-porter .porter-column header span {
+                border-radius: 999px;
+                padding: 6px 10px;
+                border: 1px solid var(--border);
+                background: rgba(255,255,255,.70);
+            }
+            .pe-porter .porter-column ul { min-height: 120px; gap: 10px; }
+            .pe-porter .porter-item {
+                border-radius: 16px;
+                border: 1px solid rgba(148,163,184,.30);
+                background: rgba(255,255,255,.82);
+                box-shadow: 0 10px 20px rgba(15,23,42,.04);
+                padding: 12px;
+            }
+            .pe-porter .porter-item button {
+                border-radius: 999px;
+                border: 1px solid var(--border);
+                background: rgba(255,255,255,.75);
+                padding: 6px 10px;
+                font-size: 12px;
+            }
+            @media (max-width: 1100px) { .pe-porter .porter-input-grid { grid-template-columns: 1fr; } }
+            @media (max-width: 900px) { .pe-porter .porter-board { grid-template-columns: 1fr; } }
+        </style>
         <article class="porter-input-card">
             <h2>5 Fuerzas de Porter</h2>
             <p>Analiza la intensidad competitiva del entorno y su impacto en la estrategia.</p>
@@ -2087,7 +2360,86 @@ PORTER_HTML = dedent("""
 """)
 
 PERCEPCION_CLIENTE_HTML = dedent("""
-    <section class="percepcion-page" id="percepcion-builder">
+    <section class="percepcion-page pe-percepcion" id="percepcion-builder">
+        <style>
+            .pe-percepcion {
+                --bg: #f6f8fc;
+                --surface: rgba(255,255,255,.88);
+                --text: #0f172a;
+                --muted: #64748b;
+                --border: rgba(148,163,184,.38);
+                --shadow-soft: 0 10px 22px rgba(15,23,42,.06);
+                width: 100%;
+                font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+                color: var(--text);
+                background:
+                  radial-gradient(1200px 640px at 15% 0%, rgba(15,61,46,.10), transparent 58%),
+                  radial-gradient(1000px 540px at 90% 6%, rgba(37,99,235,.10), transparent 55%),
+                  var(--bg);
+                border-radius: 18px;
+                padding: 18px 0 34px;
+            }
+            .pe-percepcion .percepcion-input-card,
+            .pe-percepcion .percepcion-column {
+                background: var(--surface);
+                border: 1px solid var(--border);
+                border-radius: 22px;
+                box-shadow: var(--shadow-soft);
+                backdrop-filter: blur(10px);
+                -webkit-backdrop-filter: blur(10px);
+            }
+            .pe-percepcion .percepcion-input-card { padding: 16px; }
+            .pe-percepcion .percepcion-input-card h2 { margin: 0; font-size: 20px; letter-spacing: -0.02em; }
+            .pe-percepcion .percepcion-input-card p { margin: 6px 0 12px; color: var(--muted); font-size: 13px; }
+            .pe-percepcion .percepcion-input-grid { grid-template-columns: 1.4fr .8fr .8fr; gap: 12px; }
+            .pe-percepcion .percepcion-input-grid textarea,
+            .pe-percepcion .percepcion-input-grid select {
+                border: 1px solid var(--border);
+                border-radius: 14px;
+                background: rgba(255,255,255,.82);
+                box-shadow: 0 10px 20px rgba(15,23,42,.04);
+                padding: 12px;
+            }
+            .pe-percepcion .percepcion-input-actions button {
+                border-radius: 14px;
+                padding: 10px 14px;
+                font-weight: 800;
+                border: 1px solid rgba(15,61,46,.35);
+                background: linear-gradient(135deg, #0f3d2e, #1f6f52);
+                color: #fff;
+                cursor: pointer;
+            }
+            .pe-percepcion .percepcion-board {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+                gap: 14px;
+                margin-top: 14px;
+            }
+            .pe-percepcion .percepcion-column { padding: 14px; }
+            .pe-percepcion .percepcion-column header { margin-bottom: 10px; }
+            .pe-percepcion .percepcion-column header span {
+                border-radius: 999px;
+                padding: 6px 10px;
+                border: 1px solid var(--border);
+                background: rgba(255,255,255,.70);
+            }
+            .pe-percepcion .percepcion-column ul { min-height: 120px; gap: 10px; }
+            .pe-percepcion .percepcion-item {
+                border-radius: 16px;
+                border: 1px solid rgba(148,163,184,.30);
+                background: rgba(255,255,255,.82);
+                box-shadow: 0 10px 20px rgba(15,23,42,.04);
+                padding: 12px;
+            }
+            .pe-percepcion .percepcion-item button {
+                border-radius: 999px;
+                border: 1px solid var(--border);
+                background: rgba(255,255,255,.75);
+                padding: 6px 10px;
+                font-size: 12px;
+            }
+            @media (max-width: 1100px) { .pe-percepcion .percepcion-input-grid { grid-template-columns: 1fr; } }
+            @media (max-width: 900px) { .pe-percepcion .percepcion-board { grid-template-columns: 1fr; } }
+        </style>
         <article class="percepcion-input-card">
             <h2>Percepción del cliente</h2>
             <p>Registra percepciones y clasifícalas para orientar mejoras del servicio.</p>
@@ -2135,165 +2487,450 @@ PERCEPCION_CLIENTE_HTML = dedent("""
 """)
 
 PLAN_ESTRATEGICO_HTML = dedent("""
-    <section class="plan-shell">
-        <style>
-            .plan-shell {
-                display: grid;
-                gap: 14px;
-            }
-            .plan-header {
-                background: linear-gradient(125deg, #102c4a 0%, #155179 55%, #1d7db0 100%);
-                border-radius: 16px;
-                padding: 20px;
-                color: #f4f8ff;
-                box-shadow: 0 12px 30px rgba(12, 38, 61, 0.25);
-            }
-            .plan-header h2 {
-                margin: 0 0 6px;
-                font-size: 1.3rem;
-            }
-            .plan-header p {
-                margin: 0;
-                opacity: 0.95;
-                line-height: 1.55;
-            }
-            .plan-kpis {
-                display: grid;
-                grid-template-columns: repeat(4, minmax(0, 1fr));
-                gap: 10px;
-            }
-            .plan-kpi {
-                background: #fff;
-                border: 1px solid #dbe6f3;
-                border-radius: 12px;
-                padding: 12px;
-                box-shadow: 0 6px 16px rgba(15, 38, 61, 0.08);
-            }
-            .plan-kpi small {
-                display: block;
-                color: #546b84;
-                margin-bottom: 6px;
-            }
-            .plan-kpi strong {
-                color: #13314e;
-                font-size: 1.28rem;
-            }
-            .plan-grid {
-                display: grid;
-                grid-template-columns: 1.2fr 0.8fr;
-                gap: 12px;
-            }
-            .plan-card {
-                background: #fff;
-                border: 1px solid #dbe6f3;
-                border-radius: 14px;
-                padding: 14px;
-                box-shadow: 0 6px 16px rgba(15, 38, 61, 0.08);
-            }
-            .plan-card h3 {
-                margin: 0 0 10px;
-                font-size: 1rem;
-                color: #113250;
-            }
-            .plan-list {
-                margin: 0;
-                padding: 0;
-                list-style: none;
-                display: grid;
-                gap: 8px;
-            }
-            .plan-list li {
-                border: 1px solid #e5edf6;
-                border-radius: 10px;
-                background: #f8fbff;
-                padding: 10px;
-                line-height: 1.45;
-                color: #24435f;
-            }
-            .plan-roadmap {
-                display: grid;
-                grid-template-columns: repeat(4, minmax(0, 1fr));
-                gap: 10px;
-            }
-            .phase {
-                border-radius: 12px;
-                border: 1px dashed #bed0e4;
-                background: #f4f9ff;
-                padding: 10px;
-            }
-            .phase strong {
-                display: block;
-                color: #0f2f4d;
-                margin-bottom: 6px;
-            }
-            .phase span {
-                color: #47627f;
-                font-size: 0.9rem;
-            }
-            @media (max-width: 980px) {
-                .plan-kpis {
-                    grid-template-columns: repeat(2, minmax(0, 1fr));
-                }
-                .plan-grid {
-                    grid-template-columns: 1fr;
-                }
-                .plan-roadmap {
-                    grid-template-columns: repeat(2, minmax(0, 1fr));
-                }
-            }
-            @media (max-width: 620px) {
-                .plan-kpis,
-                .plan-roadmap {
-                    grid-template-columns: 1fr;
-                }
-            }
-        </style>
+    <section class="pe-page">
+      <style>
+        .pe-page{
+          --bg: #f6f8fc;
+          --surface: rgba(255,255,255,.88);
+          --card: #ffffff;
+          --text: #0f172a;
+          --muted: #64748b;
+          --border: rgba(148,163,184,.38);
+          --shadow: 0 18px 40px rgba(15,23,42,.08);
+          --shadow-soft: 0 10px 22px rgba(15,23,42,.06);
+          --radius: 18px;
+          --primary: #0f3d2e;
+          --primary-2: #1f6f52;
+          --accent: #2563eb;
+          --ok: #16a34a;
+          --warn: #f59e0b;
+          --crit: #ef4444;
+          width: 100%;
+          font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+          color: var(--text);
+          background:
+            radial-gradient(1200px 640px at 15% 0%, rgba(15,61,46,.10), transparent 58%),
+            radial-gradient(1000px 540px at 90% 6%, rgba(37,99,235,.10), transparent 55%),
+            var(--bg);
+          border-radius: 18px;
+        }
+        .pe-wrap{
+          width: 100%;
+          margin: 0 auto;
+          padding: 18px 0 34px;
+        }
+        .pe-btn{
+          border-radius: 14px;
+          padding: 10px 14px;
+          font-weight: 800;
+          border: 1px solid var(--border);
+          background: rgba(255,255,255,.75);
+          cursor:pointer;
+          box-shadow: var(--shadow-soft);
+          transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
+        }
+        .pe-btn:hover{ transform: translateY(-1px); box-shadow: var(--shadow); background: rgba(255,255,255,.95); }
+        .pe-btn--primary{ background: linear-gradient(135deg, var(--primary), var(--primary-2)); color:#fff; border-color: rgba(15,61,46,.35); }
+        .pe-btn--ghost{ background: rgba(255,255,255,.78); }
+        .pe-btn--soft{ background: rgba(15,61,46,.10); border-color: rgba(15,61,46,.18); color:#0b2a20; }
+        .pe-kpis{
+          display:grid;
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+          gap: 14px;
+          margin: 16px 0 18px;
+        }
+        .pe-kpi{
+          background: var(--surface);
+          border: 1px solid var(--border);
+          border-radius: var(--radius);
+          box-shadow: var(--shadow-soft);
+          padding: 16px;
+          backdrop-filter: blur(10px);
+          -webkit-backdrop-filter: blur(10px);
+          position: relative;
+          overflow:hidden;
+        }
+        .pe-kpi:before{
+          content:"";
+          position:absolute;
+          inset:-1px;
+          background: linear-gradient(135deg, rgba(15,61,46,.12), transparent 35%, rgba(37,99,235,.10));
+          opacity:.9;
+          pointer-events:none;
+        }
+        .pe-kpi > *{ position: relative; }
+        .pe-kpi__label{ color: var(--muted); font-size: 14px; font-weight: 600; }
+        .pe-kpi__value{ margin-top: 10px; font-size: 34px; font-weight: 900; letter-spacing: -0.03em; }
+        .pe-kpi__meta{ margin-top: 10px; display:flex; gap: 8px; flex-wrap: wrap; }
+        .pe-chip{
+          font-size: 12px;
+          padding: 6px 10px;
+          border-radius: 999px;
+          background: rgba(15,23,42,.05);
+          border: 1px solid rgba(15,23,42,.08);
+          color: rgba(15,23,42,.72);
+        }
+        .pe-chip--info{ background: rgba(37,99,235,.10); border-color: rgba(37,99,235,.18); color: #1d4ed8; }
+        .pe-chip--warn{ background: rgba(245,158,11,.12); border-color: rgba(245,158,11,.22); color: #92400e; }
+        .pe-kpi--progress{ display:flex; flex-direction:column; }
+        .pe-kpi__progress{ margin-top: 8px; display:flex; align-items:center; justify-content:flex-start; }
+        .pe-ring{
+          --p: 74;
+          width: 86px;
+          height: 86px;
+          border-radius: 999px;
+          background: conic-gradient(rgba(15,61,46,1) calc(var(--p) * 1%), rgba(148,163,184,.25) 0);
+          display:grid;
+          place-items:center;
+          border: 1px solid rgba(148,163,184,.25);
+          box-shadow: 0 12px 24px rgba(15,23,42,.06);
+        }
+        .pe-ring__inner{
+          width: 66px;
+          height: 66px;
+          border-radius: 999px;
+          background: rgba(255,255,255,.90);
+          display:flex;
+          flex-direction:column;
+          align-items:center;
+          justify-content:center;
+          border: 1px solid rgba(148,163,184,.25);
+        }
+        .pe-ring__val{ font-weight: 900; font-size: 16px; letter-spacing: -0.02em; }
+        .pe-ring__sub{ font-size: 11px; color: var(--muted); }
+        .pe-grid{
+          display:grid;
+          grid-template-columns: 1.35fr .85fr;
+          gap: 14px;
+          align-items:start;
+        }
+        .pe-card{
+          background: var(--surface);
+          border: 1px solid var(--border);
+          border-radius: 22px;
+          box-shadow: var(--shadow-soft);
+          padding: 16px;
+          backdrop-filter: blur(10px);
+          -webkit-backdrop-filter: blur(10px);
+          overflow:hidden;
+        }
+        .pe-card__head{
+          display:flex;
+          align-items:flex-start;
+          justify-content:space-between;
+          gap: 12px;
+          margin-bottom: 14px;
+        }
+        .pe-card__head h2{ margin:0; font-size: 20px; letter-spacing: -0.02em; }
+        .pe-card__head p{ margin: 6px 0 0; color: var(--muted); font-size: 13px; }
+        .pe-card__tools{ display:flex; align-items:center; gap: 10px; }
+        .pe-pill{
+          font-size: 12px;
+          padding: 6px 10px;
+          border-radius: 999px;
+          background: rgba(255,255,255,.70);
+          border: 1px solid var(--border);
+          color: rgba(15,23,42,.72);
+          white-space: nowrap;
+        }
+        .pe-pill--soft{ background: rgba(15,61,46,.10); border-color: rgba(15,61,46,.18); color: #0b2a20; }
+        .pe-list{ display:flex; flex-direction:column; gap: 12px; }
+        .pe-item{
+          background: rgba(255,255,255,.80);
+          border: 1px solid rgba(148,163,184,.30);
+          border-radius: 18px;
+          padding: 14px 14px 12px;
+          box-shadow: 0 10px 20px rgba(15,23,42,.04);
+          transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+        }
+        .pe-item:hover{ transform: translateY(-1px); box-shadow: 0 16px 30px rgba(15,23,42,.07); border-color: rgba(37,99,235,.22); }
+        .pe-item--active{ outline: 1px solid rgba(15,61,46,.22); background: rgba(15,61,46,.06); }
+        .pe-item__top{ display:flex; align-items:flex-start; justify-content:space-between; gap: 12px; }
+        .pe-item__title{ display:flex; gap: 10px; align-items:flex-start; line-height: 1.35; }
+        .pe-code{
+          font-weight: 900;
+          color: #0b2a20;
+          background: rgba(15,61,46,.10);
+          border: 1px solid rgba(15,61,46,.18);
+          padding: 6px 10px;
+          border-radius: 999px;
+          font-size: 12px;
+          white-space: nowrap;
+        }
+        .pe-item__meta{ margin-top: 10px; display:flex; gap: 10px; flex-wrap:wrap; color: var(--muted); }
+        .pe-mini{
+          font-size: 12px;
+          padding: 6px 10px;
+          border-radius: 999px;
+          background: rgba(15,23,42,.04);
+          border: 1px solid rgba(15,23,42,.08);
+        }
+        .pe-status{
+          font-size: 12px;
+          font-weight: 800;
+          padding: 6px 10px;
+          border-radius: 999px;
+          border: 1px solid var(--border);
+          background: rgba(255,255,255,.70);
+          color: rgba(15,23,42,.72);
+          white-space: nowrap;
+        }
+        .pe-status--ok{ background: rgba(22,163,74,.10); border-color: rgba(22,163,74,.20); color: #166534; }
+        .pe-status--warn{ background: rgba(245,158,11,.12); border-color: rgba(245,158,11,.22); color: #92400e; }
+        .pe-status--neutral{ background: rgba(15,23,42,.05); border-color: rgba(15,23,42,.10); color: rgba(15,23,42,.70); }
+        .pe-bar{
+          margin-top: 12px;
+          height: 10px;
+          border-radius: 999px;
+          background: rgba(148,163,184,.25);
+          border: 1px solid rgba(148,163,184,.25);
+          overflow:hidden;
+        }
+        .pe-bar__fill{ height: 100%; width: 50%; border-radius: 999px; background: linear-gradient(90deg, rgba(37,99,235,1), rgba(96,165,250,1)); }
+        .pe-bar__fill--ok{ background: linear-gradient(90deg, rgba(15,61,46,1), rgba(31,111,82,1)); }
+        .pe-bar__fill--warn{ background: linear-gradient(90deg, rgba(245,158,11,1), rgba(253,230,138,1)); }
+        .pe-axis{ display:flex; flex-direction:column; gap: 12px; }
+        .pe-axis__btn{
+          width:100%;
+          text-align:left;
+          border: 1px solid rgba(148,163,184,.30);
+          background: rgba(255,255,255,.80);
+          border-radius: 18px;
+          padding: 14px;
+          display:flex;
+          align-items:center;
+          gap: 12px;
+          cursor:pointer;
+          box-shadow: 0 10px 20px rgba(15,23,42,.04);
+          transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+        }
+        .pe-axis__btn:hover{ transform: translateY(-1px); box-shadow: 0 16px 30px rgba(15,23,42,.07); border-color: rgba(37,99,235,.22); }
+        .pe-axis__btn--active{ background: rgba(15,61,46,.06); outline: 1px solid rgba(15,61,46,.22); }
+        .pe-axis__dot{ width: 10px; height: 10px; border-radius: 999px; background: var(--primary); box-shadow: 0 0 0 6px rgba(15,61,46,.10); }
+        .pe-axis__dot--alt{ background: #2563eb; box-shadow: 0 0 0 6px rgba(37,99,235,.12); }
+        .pe-axis__dot--alt2{ background: #7c3aed; box-shadow: 0 0 0 6px rgba(124,58,237,.12); }
+        .pe-axis__dot--alt3{ background: #f59e0b; box-shadow: 0 0 0 6px rgba(245,158,11,.12); }
+        .pe-axis__count{
+          margin-left:auto;
+          font-weight: 900;
+          color: rgba(15,23,42,.72);
+          background: rgba(15,23,42,.04);
+          border: 1px solid rgba(15,23,42,.08);
+          padding: 6px 10px;
+          border-radius: 999px;
+        }
+        .pe-sidebox{
+          margin-top: 14px;
+          background: rgba(255,255,255,.80);
+          border: 1px solid rgba(148,163,184,.30);
+          border-radius: 18px;
+          padding: 14px;
+        }
+        .pe-sidebox__head{ display:flex; align-items:center; justify-content:space-between; gap: 10px; }
+        .pe-sidebox__grid{ margin-top: 12px; display:grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .pe-metric{
+          background: rgba(15,23,42,.03);
+          border: 1px solid rgba(15,23,42,.08);
+          border-radius: 16px;
+          padding: 12px;
+        }
+        .pe-metric__k{ font-size: 12px; color: var(--muted); font-weight: 700; }
+        .pe-metric__v{ margin-top: 6px; font-size: 18px; font-weight: 900; letter-spacing: -0.02em; }
+        .pe-metric__v--warn{ color: #92400e; }
+        .pe-roadmap{ margin-top: 14px; }
+        .pe-timeline{ display:grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 12px; }
+        .pe-tlcol{
+          background: rgba(255,255,255,.70);
+          border: 1px solid rgba(148,163,184,.30);
+          border-radius: 18px;
+          padding: 12px;
+        }
+        .pe-tlcol__head{
+          font-weight: 900;
+          color: rgba(15,23,42,.78);
+          padding: 8px 10px;
+          border-radius: 999px;
+          background: rgba(15,23,42,.04);
+          border: 1px solid rgba(15,23,42,.08);
+          display:inline-block;
+          margin-bottom: 10px;
+        }
+        .pe-tlitem{
+          background: rgba(255,255,255,.82);
+          border: 1px solid rgba(148,163,184,.30);
+          border-radius: 16px;
+          padding: 12px;
+          box-shadow: 0 10px 20px rgba(15,23,42,.04);
+          margin-bottom: 10px;
+        }
+        .pe-tlitem:last-child{ margin-bottom: 0; }
+        .pe-tlitem__top{ display:flex; align-items:flex-start; justify-content:space-between; gap: 10px; }
+        .pe-tlitem p{ margin: 8px 0 0; color: var(--muted); font-size: 12.5px; line-height: 1.4; }
+        .pe-tlmeta{ margin-top: 10px; display:flex; gap: 8px; flex-wrap:wrap; }
+        .pe-tlitem--ok{ outline: 1px solid rgba(22,163,74,.18); background: rgba(22,163,74,.06); }
+        .pe-tlitem--warn{ outline: 1px solid rgba(245,158,11,.18); background: rgba(245,158,11,.07); }
+        .pe-tlitem--soft{ background: rgba(15,61,46,.06); outline: 1px solid rgba(15,61,46,.18); }
+        @media (max-width: 1100px){
+          .pe-kpis{ grid-template-columns: repeat(2, minmax(0,1fr)); }
+          .pe-grid{ grid-template-columns: 1fr; }
+          .pe-timeline{ grid-template-columns: repeat(2, minmax(0,1fr)); }
+        }
+        @media (max-width: 640px){
+          .pe-kpis{ grid-template-columns: 1fr; }
+          .pe-timeline{ grid-template-columns: 1fr; }
+        }
+      </style>
 
-        <article class="plan-header">
-            <h2>Plan estratégico institucional</h2>
-            <p>
-                Cascarón para estructurar visión, ejes estratégicos, objetivos, iniciativas y metas
-                con trazabilidad al POA.
-            </p>
-        </article>
-
-        <section class="plan-kpis">
-            <article class="plan-kpi"><small>Objetivos estratégicos</small><strong>12</strong></article>
-            <article class="plan-kpi"><small>Iniciativas activas</small><strong>24</strong></article>
-            <article class="plan-kpi"><small>Indicadores vinculados</small><strong>36</strong></article>
-            <article class="plan-kpi"><small>Avance del plan</small><strong>74%</strong></article>
-        </section>
-
-        <section class="plan-grid">
-            <article class="plan-card">
-                <h3>Objetivos priorizados</h3>
-                <ul class="plan-list">
-                    <li><strong>OE-01:</strong> Fortalecer la sostenibilidad financiera institucional.</li>
-                    <li><strong>OE-02:</strong> Mejorar la satisfacción de clientes y usuarios finales.</li>
-                    <li><strong>OE-03:</strong> Optimizar procesos críticos y tiempos de respuesta.</li>
-                    <li><strong>OE-04:</strong> Impulsar capacidades del talento y cultura de mejora continua.</li>
-                </ul>
-            </article>
-            <article class="plan-card">
-                <h3>Ejes estratégicos</h3>
-                <ul class="plan-list">
-                    <li>Gobernanza y cumplimiento</li>
-                    <li>Excelencia operativa</li>
-                    <li>Innovación y digitalización</li>
-                    <li>Desarrollo del talento</li>
-                </ul>
-            </article>
-        </section>
-
-        <article class="plan-card">
-            <h3>Hoja de ruta (cascarón)</h3>
-            <div class="plan-roadmap">
-                <div class="phase"><strong>Fase 1</strong><span>Diagnóstico estratégico y línea base.</span></div>
-                <div class="phase"><strong>Fase 2</strong><span>Definición de objetivos, metas e indicadores.</span></div>
-                <div class="phase"><strong>Fase 3</strong><span>Implementación de iniciativas y seguimiento.</span></div>
-                <div class="phase"><strong>Fase 4</strong><span>Evaluación de resultados y ajuste del plan.</span></div>
+      <div class="pe-wrap">
+        <section class="pe-kpis">
+          <article class="pe-kpi">
+            <div class="pe-kpi__label">Objetivos estratégicos</div>
+            <div class="pe-kpi__value">12</div>
+            <div class="pe-kpi__meta"><span class="pe-chip pe-chip--info">4 por eje</span></div>
+          </article>
+          <article class="pe-kpi">
+            <div class="pe-kpi__label">Iniciativas activas</div>
+            <div class="pe-kpi__value">24</div>
+            <div class="pe-kpi__meta"><span class="pe-chip">18 en ejecución</span></div>
+          </article>
+          <article class="pe-kpi">
+            <div class="pe-kpi__label">Indicadores vinculados</div>
+            <div class="pe-kpi__value">36</div>
+            <div class="pe-kpi__meta"><span class="pe-chip pe-chip--warn">6 sin línea base</span></div>
+          </article>
+          <article class="pe-kpi pe-kpi--progress">
+            <div class="pe-kpi__label">Avance del plan</div>
+            <div class="pe-kpi__progress">
+              <div class="pe-ring" style="--p:74;">
+                <div class="pe-ring__inner">
+                  <div class="pe-ring__val">74%</div>
+                  <div class="pe-ring__sub">global</div>
+                </div>
+              </div>
             </div>
+          </article>
+        </section>
+
+        <section class="pe-grid">
+          <article class="pe-card">
+            <div class="pe-card__head">
+              <div>
+                <h2>Objetivos priorizados</h2>
+                <p>Portafolio vigente con estado y trazabilidad.</p>
+              </div>
+              <div class="pe-card__tools">
+                <span class="pe-pill pe-pill--soft">12 objetivos</span>
+              </div>
+            </div>
+
+            <div class="pe-list">
+              <article class="pe-item pe-item--active">
+                <div class="pe-item__top">
+                  <div class="pe-item__title"><span class="pe-code">OE-01</span><strong>Fortalecer la sostenibilidad financiera institucional.</strong></div>
+                  <span class="pe-status pe-status--ok">En meta</span>
+                </div>
+                <div class="pe-item__meta"><span class="pe-mini">3 iniciativas</span><span class="pe-mini">8 KPIs</span><span class="pe-mini">Líder: Dirección</span></div>
+                <div class="pe-bar"><div class="pe-bar__fill pe-bar__fill--ok" style="width:81%"></div></div>
+              </article>
+
+              <article class="pe-item">
+                <div class="pe-item__top">
+                  <div class="pe-item__title"><span class="pe-code">OE-02</span><strong>Mejorar la satisfacción de clientes y usuarios finales.</strong></div>
+                  <span class="pe-status pe-status--warn">En riesgo</span>
+                </div>
+                <div class="pe-item__meta"><span class="pe-mini">2 iniciativas</span><span class="pe-mini">9 KPIs</span><span class="pe-mini">Líder: Servicios</span></div>
+                <div class="pe-bar"><div class="pe-bar__fill pe-bar__fill--warn" style="width:63%"></div></div>
+              </article>
+
+              <article class="pe-item">
+                <div class="pe-item__top">
+                  <div class="pe-item__title"><span class="pe-code">OE-03</span><strong>Optimizar procesos críticos y tiempos de respuesta.</strong></div>
+                  <span class="pe-status pe-status--neutral">Seguimiento</span>
+                </div>
+                <div class="pe-item__meta"><span class="pe-mini">4 iniciativas</span><span class="pe-mini">11 KPIs</span><span class="pe-mini">Líder: Operaciones</span></div>
+                <div class="pe-bar"><div class="pe-bar__fill" style="width:71%"></div></div>
+              </article>
+            </div>
+          </article>
+
+          <aside class="pe-card">
+            <div class="pe-card__head">
+              <div>
+                <h2>Ejes estratégicos</h2>
+                <p>Distribución del portafolio por eje.</p>
+              </div>
+            </div>
+
+            <div class="pe-axis">
+              <button class="pe-axis__btn pe-axis__btn--active" type="button"><span class="pe-axis__dot"></span><span>Gobernanza y cumplimiento</span><span class="pe-axis__count">3</span></button>
+              <button class="pe-axis__btn" type="button"><span class="pe-axis__dot pe-axis__dot--alt"></span><span>Excelencia operativa</span><span class="pe-axis__count">4</span></button>
+              <button class="pe-axis__btn" type="button"><span class="pe-axis__dot pe-axis__dot--alt2"></span><span>Innovación y digitalización</span><span class="pe-axis__count">2</span></button>
+              <button class="pe-axis__btn" type="button"><span class="pe-axis__dot pe-axis__dot--alt3"></span><span>Desarrollo del talento</span><span class="pe-axis__count">3</span></button>
+            </div>
+
+            <div class="pe-sidebox">
+              <div class="pe-sidebox__head"><strong>Resumen rápido</strong><span class="pe-pill">Corte mensual</span></div>
+              <div class="pe-sidebox__grid">
+                <div class="pe-metric"><div class="pe-metric__k">Hitos del trimestre</div><div class="pe-metric__v">28</div></div>
+                <div class="pe-metric"><div class="pe-metric__k">Desviaciones</div><div class="pe-metric__v pe-metric__v--warn">6</div></div>
+                <div class="pe-metric"><div class="pe-metric__k">Cumplimiento</div><div class="pe-metric__v">74%</div></div>
+                <div class="pe-metric"><div class="pe-metric__k">Acciones correctivas</div><div class="pe-metric__v">9</div></div>
+              </div>
+            </div>
+          </aside>
+        </section>
+
+        <article class="pe-card pe-roadmap">
+          <div class="pe-card__head">
+            <div>
+              <h2>Hoja de ruta anual</h2>
+              <p>Fases clave del ciclo estratégico.</p>
+            </div>
+            <div class="pe-card__tools">
+              <button class="pe-btn pe-btn--soft" type="button">Exportar</button>
+              <button class="pe-btn pe-btn--ghost" type="button">Vista Gantt</button>
+            </div>
+          </div>
+
+          <div class="pe-timeline">
+            <div class="pe-tlcol">
+              <div class="pe-tlcol__head">Q1</div>
+              <article class="pe-tlitem pe-tlitem--ok">
+                <div class="pe-tlitem__top"><strong>Diagnóstico estratégico</strong><span class="pe-status pe-status--ok">Completo</span></div>
+                <p>Actualización de línea base y priorización inicial.</p>
+                <div class="pe-tlmeta"><span class="pe-mini">8 entregables</span><span class="pe-mini">Líder PMO</span></div>
+              </article>
+            </div>
+
+            <div class="pe-tlcol">
+              <div class="pe-tlcol__head">Q2</div>
+              <article class="pe-tlitem pe-tlitem--warn">
+                <div class="pe-tlitem__top"><strong>Definición de metas</strong><span class="pe-status pe-status--warn">Ajuste</span></div>
+                <p>Alineación final de KPIs y responsables por objetivo.</p>
+                <div class="pe-tlmeta"><span class="pe-mini">6 entregables</span><span class="pe-mini">Comité</span></div>
+              </article>
+            </div>
+
+            <div class="pe-tlcol">
+              <div class="pe-tlcol__head">Q3</div>
+              <article class="pe-tlitem pe-tlitem--soft">
+                <div class="pe-tlitem__top"><strong>Implementación</strong><span class="pe-status pe-status--neutral">En curso</span></div>
+                <p>Ejecución de iniciativas con control de hitos mensuales.</p>
+                <div class="pe-tlmeta"><span class="pe-mini">10 entregables</span><span class="pe-mini">Áreas</span></div>
+              </article>
+            </div>
+
+            <div class="pe-tlcol">
+              <div class="pe-tlcol__head">Q4</div>
+              <article class="pe-tlitem">
+                <div class="pe-tlitem__top"><strong>Cierre y evaluación</strong><span class="pe-status pe-status--neutral">Programado</span></div>
+                <p>Lecciones aprendidas y propuesta de ajustes para el siguiente ciclo.</p>
+                <div class="pe-tlmeta"><span class="pe-mini">4 entregables</span><span class="pe-mini">Dirección</span></div>
+              </article>
+            </div>
+          </div>
         </article>
+      </div>
     </section>
 """)
 
@@ -2336,9 +2973,7 @@ INICIO_BSC_HTML = dedent("""
             }
 
             .wrap{
-              width: min(80%, 1280px);
-              max-width: 100%;
-              margin: 0 auto;
+              width: 100%;
               padding: 18px 18px 28px;
             }
 
@@ -2974,465 +3609,1172 @@ INICIO_BSC_HTML = dedent("""
 """)
 
 PROYECTANDO_HTML = dedent("""
-    <section class="proyectando-finanzas">
-        <style>
-            .proyectando-finanzas{
-                background:#f4f7fb;
-                border-radius:14px;
-                padding:6px 0;
-            }
-            .proyectando-finanzas *{
-                box-sizing:border-box;
-                font-family:Arial, sans-serif;
-            }
-            .container{
-                margin-left:10%;
-                margin-right:10%;
-                padding:30px 0;
-            }
-            .title{
-                margin-bottom:25px;
-                color:#1e293b;
-            }
-            .card{
-                background:white;
-                border-radius:14px;
-                padding:20px;
-                box-shadow:0 10px 25px rgba(0,0,0,.06);
-            }
-            .kpis{
-                display:grid;
-                grid-template-columns:repeat(4,1fr);
-                gap:15px;
-                margin-bottom:20px;
-            }
-            .kpi h3{
-                color:#64748b;
-                font-size:14px;
-                margin:0;
-            }
-            .kpi h2{
-                margin:10px 0 0;
-                font-size:28px;
-            }
-            .grid{
-                display:grid;
-                grid-template-columns:2fr 1fr;
-                gap:20px;
-                margin-bottom:20px;
-            }
-            .form{
-                display:grid;
-                grid-template-columns:1fr 1fr;
-                gap:15px;
-                margin-top:15px;
-            }
-            .proyectando-finanzas label{
-                font-size:13px;
-                color:#334155;
-            }
-            .proyectando-finanzas input,
-            .proyectando-finanzas select{
-                width:100%;
-                padding:10px;
-                border-radius:10px;
-                border:1px solid #cbd5e1;
-                margin-top:5px;
-            }
-            .buttons{
-                margin-top:20px;
-                display:flex;
-                gap:10px;
-            }
-            .proyectando-finanzas button{
-                padding:10px 16px;
-                border-radius:10px;
-                border:none;
-                background:#e2e8f0;
-                cursor:pointer;
-            }
-            .primary{
-                background:#2563eb;
-                color:white;
-            }
-            .proyectando-finanzas table{
-                width:100%;
-                border-collapse:collapse;
-                margin-top:15px;
-            }
-            .proyectando-finanzas th,
-            .proyectando-finanzas td{
-                padding:12px;
-                text-align:left;
-                border-bottom:1px solid #e2e8f0;
-            }
-            .badge{
-                padding:6px 12px;
-                border-radius:20px;
-                font-size:12px;
-                display:inline-block;
-            }
-            .low{background:#dcfce7;color:#166534;}
-            .mid{background:#fef3c7;color:#92400e;}
-            .high{background:#fee2e2;color:#991b1b;}
-            .charts{
-                display:grid;
-                grid-template-columns:1fr 1fr;
-                gap:20px;
-            }
-            .proyectando-finanzas canvas{
-                height:250px !important;
-            }
-            @media(max-width:1100px){
-                .kpis{grid-template-columns:1fr 1fr;}
-                .grid{grid-template-columns:1fr;}
-                .charts{grid-template-columns:1fr;}
-                .container{
-                    margin-left:5%;
-                    margin-right:5%;
-                }
-            }
-            @media(max-width:680px){
-                .form{grid-template-columns:1fr;}
-                .kpis{grid-template-columns:1fr;}
-            }
-        </style>
-
-        <div class="container">
-            <div class="kpis">
-                <article class="card kpi">
-                    <h3>Ingresos proyectados (12m)</h3>
-                    <h2>$1,240,000</h2>
-                </article>
-                <article class="card kpi">
-                    <h3>Costos proyectados (12m)</h3>
-                    <h2>$918,000</h2>
-                </article>
-                <article class="card kpi">
-                    <h3>Flujo neto estimado</h3>
-                    <h2>$322,000</h2>
-                </article>
-                <article class="card kpi">
-                    <h3>Margen estimado</h3>
-                    <h2>26%</h2>
-                </article>
-            </div>
-
-            <div class="grid">
-                <article class="card">
-                    <h3>Parámetros de proyección</h3>
-                    <div class="form">
-                        <div>
-                            <label>Horizonte</label>
-                            <select>
-                                <option>12 meses</option>
-                                <option>24 meses</option>
-                                <option>36 meses</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label>Crecimiento mensual (%)</label>
-                            <input type="number" value="2.5" step="0.1">
-                        </div>
-                        <div>
-                            <label>Inflación estimada (%)</label>
-                            <input type="number" value="4.0" step="0.1">
-                        </div>
-                        <div>
-                            <label>Tasa de descuento (%)</label>
-                            <input type="number" value="10.0" step="0.1">
-                        </div>
-                        <div>
-                            <label>Ingresos base mensuales</label>
-                            <input type="number" value="85000">
-                        </div>
-                        <div>
-                            <label>Costos base mensuales</label>
-                            <input type="number" value="62000">
-                        </div>
-                    </div>
-                    <div class="buttons">
-                        <button class="primary" type="button">Calcular proyección</button>
-                        <button type="button">Guardar escenario</button>
-                        <button type="button">Exportar</button>
-                    </div>
-                </article>
-
-                <article class="card">
-                    <h3>Escenarios</h3>
-                    <table>
-                        <thead>
-                            <tr><th>Escenario</th><th>Flujo neto</th><th>Riesgo</th></tr>
-                        </thead>
-                        <tbody>
-                            <tr><td>Conservador</td><td>$210,000</td><td><span class="badge low">Bajo</span></td></tr>
-                            <tr><td>Base</td><td>$322,000</td><td><span class="badge mid">Medio</span></td></tr>
-                            <tr><td>Agresivo</td><td>$455,000</td><td><span class="badge high">Alto</span></td></tr>
-                        </tbody>
-                    </table>
-                </article>
-            </div>
-
-            <div class="charts">
-                <article class="card">
-                    <h3>Proyección de ingresos vs costos</h3>
-                    <canvas id="proyectando-chart-1"></canvas>
-                </article>
-                <article class="card">
-                    <h3>Flujo neto por escenario</h3>
-                    <canvas id="proyectando-chart-2"></canvas>
-                </article>
-            </div>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <style>
+      .fp-shell{
+        --bg: #f6f8fc;
+        --surface: rgba(255,255,255,.88);
+        --text: #0f172a;
+        --muted: #64748b;
+        --border: rgba(148,163,184,.35);
+        --shadow: 0 18px 40px rgba(15,23,42,.08);
+        --shadow-soft: 0 10px 22px rgba(15,23,42,.06);
+        --radius: 18px;
+        --primary: #2563eb;
+        --ok: #16a34a;
+        --warn: #f59e0b;
+        --crit: #ef4444;
+      }
+      .fp-shell *{ box-sizing:border-box; }
+      .fp-shell{
+        width: 100%;
+        padding: 18px 0 28px;
+        font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(1200px 600px at 20% 0%, rgba(37,99,235,.10), transparent 60%),
+          radial-gradient(1000px 500px at 90% 10%, rgba(96,165,250,.12), transparent 55%),
+          var(--bg);
+        border-radius: 18px;
+      }
+      .fp-topbar{
+        display:flex;
+        align-items:flex-start;
+        justify-content:space-between;
+        gap: 14px;
+        margin-bottom: 14px;
+      }
+      .fp-title{
+        display:flex;
+        gap: 12px;
+        align-items:flex-start;
+      }
+      .fp-mark{
+        width: 36px;
+        height: 36px;
+        border-radius: 12px;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        background: rgba(37,99,235,.12);
+        color: #1d4ed8;
+        border: 1px solid rgba(37,99,235,.18);
+        box-shadow: var(--shadow-soft);
+      }
+      .fp-title h1{
+        margin:0;
+        font-size: 20px;
+        letter-spacing: -.02em;
+      }
+      .fp-sub{ font-weight:600; color: var(--muted); font-size: 14px; }
+      .fp-title p{
+        margin: 6px 0 0;
+        font-size: 13px;
+        color: var(--muted);
+      }
+      .fp-actions{ display:flex; align-items:center; gap: 10px; }
+      .fp-chip{
+        padding: 8px 12px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        background: rgba(255,255,255,.75);
+        box-shadow: var(--shadow-soft);
+        font-weight: 800;
+      }
+      .fp-chip--count{ width: 40px; display:flex; justify-content:center; }
+      .fp-icon{
+        border: 1px solid var(--border);
+        background: rgba(255,255,255,.75);
+        box-shadow: var(--shadow-soft);
+        border-radius: 14px;
+        padding: 10px 12px;
+        cursor:pointer;
+        transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
+      }
+      .fp-icon:hover{ transform: translateY(-1px); box-shadow: var(--shadow); background: rgba(255,255,255,.95); }
+      .fp-btn{
+        border-radius: 14px;
+        padding: 10px 14px;
+        font-weight: 800;
+        border: 1px solid var(--border);
+        background: rgba(255,255,255,.75);
+        cursor:pointer;
+        transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
+      }
+      .fp-btn:hover{ transform: translateY(-1px); box-shadow: var(--shadow-soft); background: rgba(255,255,255,.95); }
+      .fp-btn--primary{
+        background: var(--primary);
+        border-color: rgba(37,99,235,.65);
+        color: #fff;
+      }
+      .fp-btn--soft{
+        background: rgba(37,99,235,.10);
+        color: #1d4ed8;
+        border-color: rgba(37,99,235,.18);
+      }
+      .fp-btn--ghost{
+        background: rgba(255,255,255,.78);
+        color: var(--text);
+      }
+      .fp-kpis{
+        display:grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+        margin: 12px 0 16px;
+      }
+      .fp-kpi{
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow-soft);
+        padding: 14px;
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        position: relative;
+        overflow:hidden;
+      }
+      .fp-kpi:before{
+        content:"";
+        position:absolute;
+        inset:-1px;
+        background: linear-gradient(135deg, rgba(37,99,235,.10), transparent 35%, rgba(96,165,250,.12));
+        opacity:.8;
+        pointer-events:none;
+      }
+      .fp-kpi > *{ position:relative; }
+      .fp-kpi__top{
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        gap: 10px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+      .fp-kpi__value{
+        margin-top: 10px;
+        font-size: 32px;
+        font-weight: 900;
+        letter-spacing: -0.03em;
+        line-height: 1.05;
+      }
+      .fp-kpi__sub{ margin-top: 10px; color: var(--muted); font-size: 12px; }
+      .fp-tag{
+        font-size: 12px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        background: rgba(255,255,255,.70);
+        color: rgba(15,23,42,.70);
+        white-space:nowrap;
+      }
+      .fp-tag--ok{ background: rgba(22,163,74,.10); border-color: rgba(22,163,74,.20); color: #166534; }
+      .fp-tag--warn{ background: rgba(245,158,11,.12); border-color: rgba(245,158,11,.22); color: #92400e; }
+      .fp-tag--crit{ background: rgba(239,68,68,.10); border-color: rgba(239,68,68,.22); color: #991b1b; }
+      .fp-tag--neutral{ background: rgba(15,23,42,.06); border-color: rgba(15,23,42,.10); color: rgba(15,23,42,.70); }
+      .fp-tag--info{ background: rgba(37,99,235,.10); border-color: rgba(37,99,235,.18); color: #1d4ed8; }
+      .fp-grid{
+        display:grid;
+        grid-template-columns: 1.35fr .85fr;
+        gap: 12px;
+        align-items:start;
+      }
+      .fp-card{
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow-soft);
+        padding: 14px;
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        overflow:hidden;
+      }
+      .fp-card__head{
+        display:flex;
+        align-items:flex-start;
+        justify-content:space-between;
+        gap: 12px;
+        margin-bottom: 14px;
+      }
+      .fp-card__head h2{ margin:0; font-size: 16px; letter-spacing: -0.02em; }
+      .fp-card__head p{ margin: 6px 0 0; color: var(--muted); font-size: 12px; }
+      .fp-badge{
+        font-size: 12px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: rgba(2,132,199,.10);
+        border: 1px solid rgba(2,132,199,.18);
+        color: #0369a1;
+        white-space:nowrap;
+      }
+      .fp-badge--pill{
+        background: rgba(15,23,42,.06);
+        border-color: rgba(15,23,42,.10);
+        color: rgba(15,23,42,.70);
+      }
+      .fp-form{ display:grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+      .fp-field{ display:flex; flex-direction:column; gap: 8px; }
+      .fp-field--full{ grid-column: 1 / -1; }
+      .fp-field label{ font-size: 12px; font-weight: 800; color: rgba(15,23,42,.78); }
+      .fp-field select{
+        width: 100%;
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 12px;
+        font-size: 14px;
+        background: rgba(255,255,255,.82);
+        outline:none;
+        box-shadow: 0 10px 20px rgba(15,23,42,.04);
+      }
+      .fp-money{
+        display:flex;
+        align-items:center;
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        background: rgba(255,255,255,.82);
+        box-shadow: 0 10px 20px rgba(15,23,42,.04);
+        overflow:hidden;
+      }
+      .fp-money__sym{ padding: 0 12px; color: var(--muted); font-weight: 900; }
+      .fp-money input{
+        border:0;
+        outline:0;
+        padding: 12px;
+        width:100%;
+        font-size: 14px;
+        background: transparent;
+      }
+      .fp-range{ display:flex; gap: 10px; align-items:center; }
+      .fp-range input[type="range"]{ width: 100%; }
+      .fp-range__val{
+        min-width: 92px;
+        text-align:right;
+        font-weight: 900;
+        color: rgba(15,23,42,.85);
+        background: rgba(15,23,42,.04);
+        border: 1px solid rgba(15,23,42,.08);
+        padding: 8px 10px;
+        border-radius: 12px;
+      }
+      .fp-cta{ display:flex; flex-wrap:wrap; gap: 10px; margin-top: 14px; }
+      .fp-charts2{ display:grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
+      .fp-mini{
+        background: rgba(255,255,255,.78);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 12px;
+        box-shadow: 0 10px 20px rgba(15,23,42,.04);
+        min-height: 260px;
+        display:flex;
+        flex-direction:column;
+        gap: 10px;
+      }
+      .fp-mini__head{ display:flex; align-items:baseline; justify-content:space-between; gap: 10px; }
+      .fp-mini__head strong{ font-size: 13px; }
+      .fp-mini__hint{ color: var(--muted); font-size: 12px; }
+      .fp-mini canvas{ width:100% !important; height: 190px !important; }
+      .fp-table{
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        overflow:hidden;
+        background: rgba(255,255,255,.65);
+      }
+      .fp-table__head{
+        display:grid;
+        grid-template-columns: 1fr 160px 140px;
+        gap: 10px;
+        align-items:center;
+        padding: 12px;
+        font-size: 12px;
+        color: var(--muted);
+        font-weight: 900;
+        background: rgba(15,23,42,.03);
+        border-bottom: 1px solid var(--border);
+      }
+      .fp-row{
+        width:100%;
+        border:0;
+        background: transparent;
+        display:grid;
+        grid-template-columns: 1fr 160px 140px;
+        gap: 10px;
+        align-items:center;
+        padding: 12px;
+        border-bottom: 1px solid rgba(148,163,184,.25);
+        cursor:pointer;
+        text-align:left;
+      }
+      .fp-row:last-child{ border-bottom:0; }
+      .fp-row:hover{ background: rgba(37,99,235,.06); }
+      .fp-row--active{ background: rgba(37,99,235,.10); outline: 1px solid rgba(37,99,235,.16); }
+      .fp-right{ text-align:right; }
+      .fp-name{ display:flex; flex-direction:column; gap: 2px; }
+      .fp-name strong{ display:flex; align-items:center; gap: 10px; font-size: 14px; }
+      .fp-name small{ color: var(--muted); font-size: 12px; }
+      .fp-dot{ width: 10px; height: 10px; border-radius: 999px; display:inline-block; }
+      .fp-dot--ok{ background: var(--ok); box-shadow: 0 0 0 6px rgba(22,163,74,.10); }
+      .fp-dot--info{ background: var(--primary); box-shadow: 0 0 0 6px rgba(37,99,235,.12); }
+      .fp-dot--warn{ background: var(--warn); box-shadow: 0 0 0 6px rgba(245,158,11,.12); }
+      .fp-pill{
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+        padding: 6px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 900;
+        border: 1px solid var(--border);
+      }
+      .fp-pill--ok{ background: rgba(22,163,74,.10); border-color: rgba(22,163,74,.20); color:#166534; }
+      .fp-pill--warn{ background: rgba(245,158,11,.12); border-color: rgba(245,158,11,.22); color:#92400e; }
+      .fp-pill--crit{ background: rgba(239,68,68,.10); border-color: rgba(239,68,68,.22); color:#991b1b; }
+      .fp-sidecharts{ display:grid; grid-template-columns: 1fr; gap: 12px; margin-top: 14px; }
+      @media (max-width: 1200px){
+        .fp-kpis{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .fp-grid{ grid-template-columns: 1fr; }
+        .fp-charts2{ grid-template-columns: 1fr; }
+      }
+      @media (max-width: 640px){
+        .fp-kpis{ grid-template-columns: 1fr; }
+        .fp-form{ grid-template-columns: 1fr; }
+        .fp-table__head, .fp-row{ grid-template-columns: 1fr 120px 100px; }
+      }
+    </style>
+    <div class="fp-shell">
+      <header class="fp-topbar">
+        <div class="fp-title">
+          <div class="fp-mark">▶</div>
+          <div>
+            <h1>Proyección Financiera <span class="fp-sub">(12 meses)</span></h1>
+            <p>Ajusta parámetros y observa el recalculo en tiempo real.</p>
+          </div>
         </div>
-    </section>
+
+        <div class="fp-actions">
+          <button class="fp-btn fp-btn--ghost" type="button" id="btnGuardar">Guardar</button>
+          <button class="fp-btn fp-btn--soft" type="button" id="btnExportar">Exportar</button>
+          <div class="fp-chip fp-chip--count" title="Escenarios activos">3</div>
+          <button class="fp-icon" type="button" title="Ajustes">🎚️</button>
+        </div>
+      </header>
+
+      <section class="fp-kpis">
+        <article class="fp-kpi">
+          <div class="fp-kpi__top">
+            <span>Ingresos proyectados</span>
+            <span class="fp-tag fp-tag--ok" id="kpiIngTag">↑ 2.5% / mes</span>
+          </div>
+          <div class="fp-kpi__value" id="kpiIngresos">$0</div>
+          <div class="fp-kpi__sub">Total acumulado en 12 meses</div>
+        </article>
+
+        <article class="fp-kpi">
+          <div class="fp-kpi__top">
+            <span>Costos proyectados</span>
+            <span class="fp-tag fp-tag--neutral" id="kpiCostTag">Inflación +4.0%</span>
+          </div>
+          <div class="fp-kpi__value" id="kpiCostos">$0</div>
+          <div class="fp-kpi__sub">Total acumulado en 12 meses</div>
+        </article>
+
+        <article class="fp-kpi">
+          <div class="fp-kpi__top">
+            <span>Flujo neto estimado</span>
+            <span class="fp-tag fp-tag--info" id="kpiFlujoTag">Base</span>
+          </div>
+          <div class="fp-kpi__value" id="kpiFlujo">$0</div>
+          <div class="fp-kpi__sub">Ingresos − costos (12m)</div>
+        </article>
+
+        <article class="fp-kpi">
+          <div class="fp-kpi__top">
+            <span>Margen estimado</span>
+            <span class="fp-tag fp-tag--warn" id="kpiMargTag">Objetivo ≥ 30%</span>
+          </div>
+          <div class="fp-kpi__value" id="kpiMargen">0%</div>
+          <div class="fp-kpi__sub">Flujo / ingresos</div>
+        </article>
+      </section>
+
+      <main class="fp-grid">
+        <section class="fp-card">
+          <div class="fp-card__head">
+            <div>
+              <h2>Parámetros de proyección</h2>
+              <p>Modifica supuestos y recalcula automáticamente.</p>
+            </div>
+            <span class="fp-badge" id="badgeHorizonte">Horizonte 12m</span>
+          </div>
+
+          <div class="fp-form">
+            <div class="fp-field">
+              <label>Horizonte</label>
+              <select id="horizonte">
+                <option value="12" selected>12 meses</option>
+                <option value="24">24 meses</option>
+                <option value="36">36 meses</option>
+              </select>
+            </div>
+
+            <div class="fp-field">
+              <label>Crecimiento mensual</label>
+              <div class="fp-range">
+                <input id="crec" type="range" min="0" max="10" step="0.1" value="2.5"/>
+                <div class="fp-range__val"><span id="crecVal">2.5</span>%</div>
+              </div>
+            </div>
+
+            <div class="fp-field">
+              <label>Inflación anual</label>
+              <div class="fp-range">
+                <input id="infl" type="range" min="0" max="20" step="0.1" value="4.0"/>
+                <div class="fp-range__val"><span id="inflVal">4.0</span>%</div>
+              </div>
+            </div>
+
+            <div class="fp-field">
+              <label>Tasa de descuento anual</label>
+              <div class="fp-range">
+                <input id="desc" type="range" min="0" max="30" step="0.1" value="10.0"/>
+                <div class="fp-range__val"><span id="descVal">10.0</span>%</div>
+              </div>
+            </div>
+
+            <div class="fp-field fp-field--full">
+              <label>Ingresos base / mes</label>
+              <div class="fp-money">
+                <span class="fp-money__sym">$</span>
+                <input id="ingBase" type="number" min="0" step="100" value="85000"/>
+              </div>
+            </div>
+
+            <div class="fp-field fp-field--full">
+              <label>Costos base / mes</label>
+              <div class="fp-money">
+                <span class="fp-money__sym">$</span>
+                <input id="costBase" type="number" min="0" step="100" value="62000"/>
+              </div>
+            </div>
+          </div>
+
+          <div class="fp-cta">
+            <button class="fp-btn fp-btn--primary" type="button" id="btnRecalcular">Calcular proyección</button>
+            <button class="fp-btn fp-btn--ghost" type="button" id="btnGuardarEsc">Guardar escenario</button>
+          </div>
+
+          <div class="fp-charts2">
+            <div class="fp-mini">
+              <div class="fp-mini__head">
+                <strong>Proyección mensual</strong>
+                <span class="fp-mini__hint">ingresos, costos, flujo</span>
+              </div>
+              <canvas id="chartMensual"></canvas>
+            </div>
+
+            <div class="fp-mini">
+              <div class="fp-mini__head">
+                <strong>Flujo acumulado</strong>
+                <span class="fp-mini__hint">caja acumulada</span>
+              </div>
+              <canvas id="chartAcum"></canvas>
+            </div>
+          </div>
+        </section>
+
+        <aside class="fp-card fp-card--side">
+          <div class="fp-card__head">
+            <div>
+              <h2>Escenarios</h2>
+              <p>Comparación base vs conservador vs agresivo.</p>
+            </div>
+            <span class="fp-badge fp-badge--pill">3 escenarios</span>
+          </div>
+
+          <div class="fp-table">
+            <div class="fp-table__head">
+              <span>Escenario</span>
+              <span class="fp-right">Flujo neto</span>
+              <span class="fp-right">Riesgo</span>
+            </div>
+
+            <button class="fp-row" type="button" data-scn="cons">
+              <div class="fp-name">
+                <span class="fp-dot fp-dot--ok"></span>
+                <strong>Conservador</strong>
+                <small>crec −30%</small>
+              </div>
+              <div class="fp-right" id="scnConsVal">$0</div>
+              <div class="fp-right"><span class="fp-pill fp-pill--ok">Bajo</span></div>
+            </button>
+
+            <button class="fp-row fp-row--active" type="button" data-scn="base">
+              <div class="fp-name">
+                <span class="fp-dot fp-dot--info"></span>
+                <strong>Base</strong>
+                <small>actual</small>
+              </div>
+              <div class="fp-right" id="scnBaseVal">$0</div>
+              <div class="fp-right"><span class="fp-pill fp-pill--warn">Medio</span></div>
+            </button>
+
+            <button class="fp-row" type="button" data-scn="agr">
+              <div class="fp-name">
+                <span class="fp-dot fp-dot--warn"></span>
+                <strong>Agresivo</strong>
+                <small>crec +30%</small>
+              </div>
+              <div class="fp-right" id="scnAgrVal">$0</div>
+              <div class="fp-right"><span class="fp-pill fp-pill--crit">Alto</span></div>
+            </button>
+          </div>
+
+          <div class="fp-sidecharts">
+            <div class="fp-mini">
+              <div class="fp-mini__head">
+                <strong>Flujo neto por escenario</strong>
+                <span class="fp-mini__hint">comparativo</span>
+              </div>
+              <canvas id="chartEsc"></canvas>
+            </div>
+
+            <div class="fp-mini">
+              <div class="fp-mini__head">
+                <strong>Mix Ingresos/Costos</strong>
+                <span class="fp-mini__hint">12 meses</span>
+              </div>
+              <canvas id="chartMix"></canvas>
+            </div>
+          </div>
+        </aside>
+      </main>
+    </div>
+
+    <script>
+      (function () {
+        if (typeof Chart === "undefined") return;
+        const $ = (id) => document.getElementById(id);
+
+        const fmtMoney = (n) => {
+          const v = Math.round(n);
+          return v.toLocaleString("es-MX", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+        };
+
+        const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+
+        function proyectar({ months, growthM, inflA, ing0, cost0 }) {
+          const inflM = Math.pow(1 + inflA / 100, 1 / 12) - 1;
+
+          const labels = [];
+          const ingresos = [];
+          const costos = [];
+          const flujo = [];
+          const acum = [];
+
+          let acc = 0;
+          for (let i = 1; i <= months; i += 1) {
+            labels.push(`M${i}`);
+            const ing = ing0 * Math.pow(1 + growthM / 100, i - 1);
+            const cos = cost0 * Math.pow(1 + inflM, i - 1);
+            const f = ing - cos;
+
+            ingresos.push(ing);
+            costos.push(cos);
+            flujo.push(f);
+
+            acc += f;
+            acum.push(acc);
+          }
+
+          const totalIng = ingresos.reduce((a, b) => a + b, 0);
+          const totalCos = costos.reduce((a, b) => a + b, 0);
+          const totalF = totalIng - totalCos;
+          const margen = totalIng > 0 ? (totalF / totalIng) * 100 : 0;
+
+          return { labels, ingresos, costos, flujo, acum, totalIng, totalCos, totalF, margen };
+        }
+
+        function scenarioParams(base, factorGrowth) {
+          return { ...base, growthM: base.growthM * factorGrowth };
+        }
+
+        const gridColor = "rgba(148,163,184,.25)";
+        const tickColor = "rgba(100,116,139,.95)";
+
+        const baseOpts = {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: "bottom", labels: { color: tickColor, boxWidth: 10, boxHeight: 10 } },
+            tooltip: { mode: "index", intersect: false },
+          },
+          interaction: { mode: "index", intersect: false },
+          scales: {
+            x: { grid: { display: false }, ticks: { color: tickColor } },
+            y: { grid: { color: gridColor }, ticks: { color: tickColor } },
+          },
+        };
+
+        const chartMensual = new Chart($("chartMensual"), {
+          type: "bar",
+          data: {
+            labels: [],
+            datasets: [
+              { label: "Ingresos", data: [], borderWidth: 1 },
+              { label: "Costos", data: [], borderWidth: 1 },
+              { label: "Flujo neto", data: [], borderWidth: 1 },
+            ],
+          },
+          options: {
+            ...baseOpts,
+            scales: {
+              ...baseOpts.scales,
+              y: { ...baseOpts.scales.y, ticks: { ...baseOpts.scales.y.ticks, callback: (v) => "$" + Number(v).toLocaleString("es-MX") } },
+            },
+          },
+        });
+
+        const chartAcum = new Chart($("chartAcum"), {
+          type: "line",
+          data: {
+            labels: [],
+            datasets: [{
+              label: "Acumulado",
+              data: [],
+              borderWidth: 2,
+              tension: 0.35,
+              pointRadius: 2,
+              fill: true,
+              backgroundColor: "rgba(37,99,235,.12)",
+            }],
+          },
+          options: {
+            ...baseOpts,
+            plugins: { ...baseOpts.plugins, legend: { display: false } },
+            scales: {
+              ...baseOpts.scales,
+              y: { ...baseOpts.scales.y, ticks: { ...baseOpts.scales.y.ticks, callback: (v) => "$" + Number(v).toLocaleString("es-MX") } },
+            },
+          },
+        });
+
+        const chartEsc = new Chart($("chartEsc"), {
+          type: "bar",
+          data: {
+            labels: ["Conservador", "Base", "Agresivo"],
+            datasets: [{ label: "Flujo neto", data: [0, 0, 0], borderWidth: 1 }],
+          },
+          options: {
+            ...baseOpts,
+            indexAxis: "y",
+            plugins: { ...baseOpts.plugins, legend: { display: false } },
+            scales: {
+              ...baseOpts.scales,
+              x: { ...baseOpts.scales.x, ticks: { ...baseOpts.scales.x.ticks, callback: (v) => "$" + Number(v).toLocaleString("es-MX") } },
+            },
+          },
+        });
+
+        const chartMix = new Chart($("chartMix"), {
+          type: "doughnut",
+          data: {
+            labels: ["Ingresos", "Costos"],
+            datasets: [{ data: [0, 0], borderWidth: 1 }],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: "bottom", labels: { color: tickColor, boxWidth: 10, boxHeight: 10 } } },
+            cutout: "68%",
+          },
+        });
+
+        const state = {
+          months: 12,
+          growthM: 2.5,
+          inflA: 4.0,
+          discA: 10.0,
+          ing0: 85000,
+          cost0: 62000,
+          activeScenario: "base",
+        };
+
+        function syncLabels() {
+          $("crecVal").textContent = Number(state.growthM).toFixed(1);
+          $("inflVal").textContent = Number(state.inflA).toFixed(1);
+          $("descVal").textContent = Number(state.discA).toFixed(1);
+
+          $("kpiIngTag").textContent = `↑ ${Number(state.growthM).toFixed(1)}% / mes`;
+          $("kpiCostTag").textContent = `Inflación +${Number(state.inflA).toFixed(1)}%`;
+          $("badgeHorizonte").textContent = `Horizonte ${state.months}m`;
+        }
+
+        function setMarginTag(m) {
+          const el = $("kpiMargTag");
+          el.classList.remove("fp-tag--ok", "fp-tag--warn", "fp-tag--crit");
+          if (m >= 30) { el.textContent = "En meta"; el.classList.add("fp-tag--ok"); }
+          else if (m >= 20) { el.textContent = "Cerca de meta"; el.classList.add("fp-tag--warn"); }
+          else { el.textContent = "Bajo"; el.classList.add("fp-tag--crit"); }
+        }
+
+        function recalc() {
+          syncLabels();
+
+          const baseParams = {
+            months: state.months,
+            growthM: state.growthM,
+            inflA: state.inflA,
+            ing0: state.ing0,
+            cost0: state.cost0,
+          };
+
+          const resBase = proyectar(baseParams);
+          const resCons = proyectar(scenarioParams(baseParams, 0.7));
+          const resAgr = proyectar(scenarioParams(baseParams, 1.3));
+
+          $("kpiIngresos").textContent = fmtMoney(resBase.totalIng);
+          $("kpiCostos").textContent = fmtMoney(resBase.totalCos);
+          $("kpiFlujo").textContent = fmtMoney(resBase.totalF);
+          $("kpiMargen").textContent = `${clamp(resBase.margen, -999, 999).toFixed(1)}%`;
+          setMarginTag(resBase.margen);
+
+          $("scnConsVal").textContent = fmtMoney(resCons.totalF);
+          $("scnBaseVal").textContent = fmtMoney(resBase.totalF);
+          $("scnAgrVal").textContent = fmtMoney(resAgr.totalF);
+
+          const showMonths = Math.min(state.months, 12);
+          chartMensual.data.labels = resBase.labels.slice(0, showMonths);
+          chartMensual.data.datasets[0].data = resBase.ingresos.slice(0, showMonths);
+          chartMensual.data.datasets[1].data = resBase.costos.slice(0, showMonths);
+          chartMensual.data.datasets[2].data = resBase.flujo.slice(0, showMonths);
+          chartMensual.update();
+
+          chartAcum.data.labels = resBase.labels.slice(0, showMonths);
+          chartAcum.data.datasets[0].data = resBase.acum.slice(0, showMonths);
+          chartAcum.update();
+
+          chartEsc.data.datasets[0].data = [resCons.totalF, resBase.totalF, resAgr.totalF];
+          chartEsc.update();
+
+          chartMix.data.datasets[0].data = [resBase.totalIng, resBase.totalCos];
+          chartMix.update();
+        }
+
+        function bind() {
+          $("horizonte").addEventListener("change", (e) => {
+            state.months = Number(e.target.value);
+            recalc();
+          });
+
+          $("crec").addEventListener("input", (e) => {
+            state.growthM = Number(e.target.value);
+            recalc();
+          });
+
+          $("infl").addEventListener("input", (e) => {
+            state.inflA = Number(e.target.value);
+            recalc();
+          });
+
+          $("desc").addEventListener("input", (e) => {
+            state.discA = Number(e.target.value);
+            recalc();
+          });
+
+          $("ingBase").addEventListener("input", (e) => {
+            state.ing0 = Number(e.target.value || 0);
+            recalc();
+          });
+
+          $("costBase").addEventListener("input", (e) => {
+            state.cost0 = Number(e.target.value || 0);
+            recalc();
+          });
+
+          $("btnRecalcular").addEventListener("click", recalc);
+
+          document.querySelectorAll(".fp-row").forEach((btn) => {
+            btn.addEventListener("click", () => {
+              document.querySelectorAll(".fp-row").forEach((b) => b.classList.remove("fp-row--active"));
+              btn.classList.add("fp-row--active");
+              state.activeScenario = btn.dataset.scn;
+              $("kpiFlujoTag").textContent =
+                state.activeScenario === "base" ? "Base" :
+                state.activeScenario === "cons" ? "Conservador" : "Agresivo";
+            });
+          });
+
+          $("btnGuardar").addEventListener("click", () => alert("Demo: Guardar (conectar a backend)"));
+          $("btnExportar").addEventListener("click", () => alert("Demo: Exportar (PDF/Excel)"));
+          $("btnGuardarEsc").addEventListener("click", () => alert("Demo: Guardar escenario"));
+        }
+
+        bind();
+        recalc();
+      })();
+    </script>
 """)
 
 POA_HTML = dedent("""
-    <section class="poa-shell">
-        <style>
-            .poa-shell {
-                display: grid;
-                gap: 14px;
-            }
-            .poa-header {
-                background: linear-gradient(125deg, #0f2f4b 0%, #14557f 55%, #1b80b6 100%);
-                border-radius: 16px;
-                padding: 20px;
-                color: #f4f9ff;
-                box-shadow: 0 12px 30px rgba(10, 38, 61, 0.24);
-            }
-            .poa-header h2 {
-                margin: 0 0 6px;
-                font-size: 1.3rem;
-            }
-            .poa-header p {
-                margin: 0;
-                line-height: 1.55;
-                opacity: 0.95;
-            }
-            .poa-kpis {
-                display: grid;
-                grid-template-columns: repeat(4, minmax(0, 1fr));
-                gap: 10px;
-            }
-            .poa-kpi {
-                background: #fff;
-                border: 1px solid #dbe6f3;
-                border-radius: 12px;
-                padding: 12px;
-                box-shadow: 0 6px 16px rgba(15, 38, 61, 0.08);
-            }
-            .poa-kpi small {
-                display: block;
-                color: #546b84;
-                margin-bottom: 6px;
-            }
-            .poa-kpi strong {
-                color: #13314e;
-                font-size: 1.28rem;
-            }
-            .poa-grid {
-                display: grid;
-                grid-template-columns: 1.2fr 0.8fr;
-                gap: 12px;
-            }
-            .poa-card {
-                background: #fff;
-                border: 1px solid #dbe6f3;
-                border-radius: 14px;
-                padding: 14px;
-                box-shadow: 0 6px 16px rgba(15, 38, 61, 0.08);
-            }
-            .poa-card h3 {
-                margin: 0 0 10px;
-                font-size: 1rem;
-                color: #113250;
-            }
-            .poa-list {
-                margin: 0;
-                padding: 0;
-                list-style: none;
-                display: grid;
-                gap: 8px;
-            }
-            .poa-list li {
-                border: 1px solid #e5edf6;
-                border-radius: 10px;
-                background: #f8fbff;
-                padding: 10px;
-                line-height: 1.45;
-                color: #24435f;
-            }
-            .poa-table {
-                width: 100%;
-                border-collapse: collapse;
-                font-size: 0.92rem;
-            }
-            .poa-table th,
-            .poa-table td {
-                text-align: left;
-                padding: 9px 8px;
-                border-bottom: 1px solid #e5edf6;
-            }
-            .poa-badge {
-                display: inline-block;
-                font-size: 0.78rem;
-                font-weight: 700;
-                border-radius: 999px;
-                padding: 4px 8px;
-            }
-            .ok { background: #dcfce7; color: #166534; }
-            .warn { background: #fef3c7; color: #92400e; }
-            .crit { background: #fee2e2; color: #991b1b; }
-            .poa-roadmap {
-                display: grid;
-                grid-template-columns: repeat(4, minmax(0, 1fr));
-                gap: 10px;
-            }
-            .poa-phase {
-                border-radius: 12px;
-                border: 1px dashed #bed0e4;
-                background: #f4f9ff;
-                padding: 10px;
-            }
-            .poa-phase strong {
-                display: block;
-                color: #0f2f4d;
-                margin-bottom: 6px;
-            }
-            .poa-phase span {
-                color: #47627f;
-                font-size: 0.9rem;
-            }
-            @media (max-width: 980px) {
-                .poa-kpis {
-                    grid-template-columns: repeat(2, minmax(0, 1fr));
-                }
-                .poa-grid {
-                    grid-template-columns: 1fr;
-                }
-                .poa-roadmap {
-                    grid-template-columns: repeat(2, minmax(0, 1fr));
-                }
-            }
-            @media (max-width: 620px) {
-                .poa-kpis,
-                .poa-roadmap {
-                    grid-template-columns: 1fr;
-                }
-            }
-        </style>
+    <section class="pe-page">
+      <style>
+        .pe-page{
+          --bg: #f6f8fc;
+          --surface: rgba(255,255,255,.88);
+          --card: #ffffff;
+          --text: #0f172a;
+          --muted: #64748b;
+          --border: rgba(148,163,184,.38);
+          --shadow: 0 18px 40px rgba(15,23,42,.08);
+          --shadow-soft: 0 10px 22px rgba(15,23,42,.06);
+          --radius: 18px;
+          --primary: #0f3d2e;
+          --primary-2: #1f6f52;
+          --accent: #2563eb;
+          --ok: #16a34a;
+          --warn: #f59e0b;
+          --crit: #ef4444;
+          width: 100%;
+          font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+          color: var(--text);
+          background:
+            radial-gradient(1200px 640px at 15% 0%, rgba(15,61,46,.10), transparent 58%),
+            radial-gradient(1000px 540px at 90% 6%, rgba(37,99,235,.10), transparent 55%),
+            var(--bg);
+          border-radius: 18px;
+        }
+        .pe-wrap{ width: 100%; margin: 0 auto; padding: 18px 0 34px; }
+        .pe-kpis{ display:grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin: 16px 0 18px; }
+        .pe-kpi{
+          background: var(--surface);
+          border: 1px solid var(--border);
+          border-radius: var(--radius);
+          box-shadow: var(--shadow-soft);
+          padding: 16px;
+          backdrop-filter: blur(10px);
+          -webkit-backdrop-filter: blur(10px);
+          position: relative;
+          overflow:hidden;
+        }
+        .pe-kpi:before{
+          content:"";
+          position:absolute;
+          inset:-1px;
+          background: linear-gradient(135deg, rgba(15,61,46,.12), transparent 35%, rgba(37,99,235,.10));
+          opacity:.9;
+          pointer-events:none;
+        }
+        .pe-kpi > *{ position: relative; }
+        .pe-kpi__label{ color: var(--muted); font-size: 14px; font-weight: 600; }
+        .pe-kpi__value{ margin-top: 10px; font-size: 34px; font-weight: 900; letter-spacing: -0.03em; }
+        .pe-kpi__meta{ margin-top: 10px; display:flex; gap: 8px; flex-wrap: wrap; }
+        .pe-chip{ font-size: 12px; padding: 6px 10px; border-radius: 999px; background: rgba(15,23,42,.05); border: 1px solid rgba(15,23,42,.08); color: rgba(15,23,42,.72); }
+        .pe-chip--info{ background: rgba(37,99,235,.10); border-color: rgba(37,99,235,.18); color: #1d4ed8; }
+        .pe-chip--warn{ background: rgba(245,158,11,.12); border-color: rgba(245,158,11,.22); color: #92400e; }
+        .pe-kpi--progress{ display:flex; flex-direction:column; }
+        .pe-kpi__progress{ margin-top: 8px; display:flex; align-items:center; justify-content:flex-start; }
+        .pe-ring{
+          --p: 76;
+          width: 86px;
+          height: 86px;
+          border-radius: 999px;
+          background: conic-gradient(rgba(15,61,46,1) calc(var(--p) * 1%), rgba(148,163,184,.25) 0);
+          display:grid;
+          place-items:center;
+          border: 1px solid rgba(148,163,184,.25);
+          box-shadow: 0 12px 24px rgba(15,23,42,.06);
+        }
+        .pe-ring__inner{ width: 66px; height: 66px; border-radius: 999px; background: rgba(255,255,255,.90); display:flex; flex-direction:column; align-items:center; justify-content:center; border: 1px solid rgba(148,163,184,.25); }
+        .pe-ring__val{ font-weight: 900; font-size: 16px; letter-spacing: -0.02em; }
+        .pe-ring__sub{ font-size: 11px; color: var(--muted); }
+        .pe-grid{ display:grid; grid-template-columns: 1.35fr .85fr; gap: 14px; align-items:start; }
+        .pe-card{
+          background: var(--surface);
+          border: 1px solid var(--border);
+          border-radius: 22px;
+          box-shadow: var(--shadow-soft);
+          padding: 16px;
+          backdrop-filter: blur(10px);
+          -webkit-backdrop-filter: blur(10px);
+          overflow:hidden;
+        }
+        .pe-card__head{ display:flex; align-items:flex-start; justify-content:space-between; gap: 12px; margin-bottom: 14px; }
+        .pe-card__head h2{ margin:0; font-size: 20px; letter-spacing: -0.02em; }
+        .pe-card__head p{ margin: 6px 0 0; color: var(--muted); font-size: 13px; }
+        .pe-card__tools{ display:flex; align-items:center; gap: 10px; }
+        .pe-pill{ font-size: 12px; padding: 6px 10px; border-radius: 999px; background: rgba(255,255,255,.70); border: 1px solid var(--border); color: rgba(15,23,42,.72); white-space: nowrap; }
+        .pe-pill--soft{ background: rgba(15,61,46,.10); border-color: rgba(15,61,46,.18); color: #0b2a20; }
+        .pe-list{ display:flex; flex-direction:column; gap: 12px; }
+        .pe-item{ background: rgba(255,255,255,.80); border: 1px solid rgba(148,163,184,.30); border-radius: 18px; padding: 14px 14px 12px; box-shadow: 0 10px 20px rgba(15,23,42,.04); }
+        .pe-item--active{ outline: 1px solid rgba(15,61,46,.22); background: rgba(15,61,46,.06); }
+        .pe-item__top{ display:flex; align-items:flex-start; justify-content:space-between; gap: 12px; }
+        .pe-item__title{ display:flex; gap: 10px; align-items:flex-start; line-height: 1.35; }
+        .pe-code{ font-weight: 900; color: #0b2a20; background: rgba(15,61,46,.10); border: 1px solid rgba(15,61,46,.18); padding: 6px 10px; border-radius: 999px; font-size: 12px; white-space: nowrap; }
+        .pe-item__meta{ margin-top: 10px; display:flex; gap: 10px; flex-wrap:wrap; color: var(--muted); }
+        .pe-mini{ font-size: 12px; padding: 6px 10px; border-radius: 999px; background: rgba(15,23,42,.04); border: 1px solid rgba(15,23,42,.08); }
+        .pe-status{ font-size: 12px; font-weight: 800; padding: 6px 10px; border-radius: 999px; border: 1px solid var(--border); background: rgba(255,255,255,.70); color: rgba(15,23,42,.72); white-space: nowrap; }
+        .pe-status--ok{ background: rgba(22,163,74,.10); border-color: rgba(22,163,74,.20); color: #166534; }
+        .pe-status--warn{ background: rgba(245,158,11,.12); border-color: rgba(245,158,11,.22); color: #92400e; }
+        .pe-status--neutral{ background: rgba(15,23,42,.05); border-color: rgba(15,23,42,.10); color: rgba(15,23,42,.70); }
+        .pe-bar{ margin-top: 12px; height: 10px; border-radius: 999px; background: rgba(148,163,184,.25); border: 1px solid rgba(148,163,184,.25); overflow:hidden; }
+        .pe-bar__fill{ height: 100%; width: 50%; border-radius: 999px; background: linear-gradient(90deg, rgba(37,99,235,1), rgba(96,165,250,1)); }
+        .pe-bar__fill--ok{ background: linear-gradient(90deg, rgba(15,61,46,1), rgba(31,111,82,1)); }
+        .pe-bar__fill--warn{ background: linear-gradient(90deg, rgba(245,158,11,1), rgba(253,230,138,1)); }
+        .pe-axis{ display:flex; flex-direction:column; gap: 12px; }
+        .pe-axis__btn{ width:100%; text-align:left; border: 1px solid rgba(148,163,184,.30); background: rgba(255,255,255,.80); border-radius: 18px; padding: 14px; display:flex; align-items:center; gap: 12px; }
+        .pe-axis__btn--active{ background: rgba(15,61,46,.06); outline: 1px solid rgba(15,61,46,.22); }
+        .pe-axis__dot{ width: 10px; height: 10px; border-radius: 999px; background: var(--primary); box-shadow: 0 0 0 6px rgba(15,61,46,.10); }
+        .pe-axis__dot--alt{ background: #2563eb; box-shadow: 0 0 0 6px rgba(37,99,235,.12); }
+        .pe-axis__dot--alt2{ background: #7c3aed; box-shadow: 0 0 0 6px rgba(124,58,237,.12); }
+        .pe-axis__dot--alt3{ background: #f59e0b; box-shadow: 0 0 0 6px rgba(245,158,11,.12); }
+        .pe-axis__count{ margin-left:auto; font-weight: 900; color: rgba(15,23,42,.72); background: rgba(15,23,42,.04); border: 1px solid rgba(15,23,42,.08); padding: 6px 10px; border-radius: 999px; }
+        .pe-roadmap{ margin-top: 14px; }
+        .pe-timeline{ display:grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 12px; }
+        .pe-tlcol{ background: rgba(255,255,255,.70); border: 1px solid rgba(148,163,184,.30); border-radius: 18px; padding: 12px; }
+        .pe-tlcol__head{ font-weight: 900; color: rgba(15,23,42,.78); padding: 8px 10px; border-radius: 999px; background: rgba(15,23,42,.04); border: 1px solid rgba(15,23,42,.08); display:inline-block; margin-bottom: 10px; }
+        .pe-tlitem{ background: rgba(255,255,255,.82); border: 1px solid rgba(148,163,184,.30); border-radius: 16px; padding: 12px; box-shadow: 0 10px 20px rgba(15,23,42,.04); margin-bottom: 10px; }
+        .pe-tlitem:last-child{ margin-bottom: 0; }
+        .pe-tlitem__top{ display:flex; align-items:flex-start; justify-content:space-between; gap: 10px; }
+        .pe-tlitem p{ margin: 8px 0 0; color: var(--muted); font-size: 12.5px; line-height: 1.4; }
+        .pe-tlmeta{ margin-top: 10px; display:flex; gap: 8px; flex-wrap:wrap; }
+        .pe-tlitem--ok{ outline: 1px solid rgba(22,163,74,.18); background: rgba(22,163,74,.06); }
+        .pe-tlitem--warn{ outline: 1px solid rgba(245,158,11,.18); background: rgba(245,158,11,.07); }
+        .pe-tlitem--soft{ background: rgba(15,61,46,.06); outline: 1px solid rgba(15,61,46,.18); }
+        @media (max-width: 1100px){
+          .pe-kpis{ grid-template-columns: repeat(2, minmax(0,1fr)); }
+          .pe-grid{ grid-template-columns: 1fr; }
+          .pe-timeline{ grid-template-columns: repeat(2, minmax(0,1fr)); }
+        }
+        @media (max-width: 640px){
+          .pe-kpis{ grid-template-columns: 1fr; }
+          .pe-timeline{ grid-template-columns: 1fr; }
+        }
+      </style>
 
-        <article class="poa-header">
-            <h2>Programación Operativa Anual (POA)</h2>
-            <p>
-                Cascarón para planificar actividades operativas, responsables, presupuesto, hitos
-                y seguimiento trimestral alineado al plan estratégico.
-            </p>
-        </article>
-
-        <section class="poa-kpis">
-            <article class="poa-kpi"><small>Actividades programadas</small><strong>64</strong></article>
-            <article class="poa-kpi"><small>Actividades en ejecución</small><strong>39</strong></article>
-            <article class="poa-kpi"><small>Cumplimiento trimestral</small><strong>76%</strong></article>
-            <article class="poa-kpi"><small>Desviaciones críticas</small><strong>5</strong></article>
-        </section>
-
-        <section class="poa-grid">
-            <article class="poa-card">
-                <h3>Metas operativas priorizadas</h3>
-                <ul class="poa-list">
-                    <li><strong>MO-01:</strong> Reducir tiempos de atención de solicitudes en 20%.</li>
-                    <li><strong>MO-02:</strong> Estandarizar procesos clave en áreas operativas.</li>
-                    <li><strong>MO-03:</strong> Incrementar productividad por célula de trabajo.</li>
-                    <li><strong>MO-04:</strong> Asegurar cumplimiento de cronograma anual.</li>
-                </ul>
-            </article>
-            <article class="poa-card">
-                <h3>Responsables por frente</h3>
-                <ul class="poa-list">
-                    <li>Operaciones: Dirección Operativa</li>
-                    <li>Calidad: Coordinación de Mejora Continua</li>
-                    <li>Tecnología: Equipo de Transformación Digital</li>
-                    <li>Control: PMO / Planeación</li>
-                </ul>
-            </article>
-        </section>
-
-        <article class="poa-card">
-            <h3>Seguimiento trimestral (cascarón)</h3>
-            <table class="poa-table">
-                <thead>
-                    <tr>
-                        <th>Trimestre</th>
-                        <th>Meta</th>
-                        <th>Avance</th>
-                        <th>Estado</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr><td>T1</td><td>18 hitos</td><td>16 / 18</td><td><span class="poa-badge ok">En meta</span></td></tr>
-                    <tr><td>T2</td><td>16 hitos</td><td>12 / 16</td><td><span class="poa-badge warn">En riesgo</span></td></tr>
-                    <tr><td>T3</td><td>15 hitos</td><td>0 / 15</td><td><span class="poa-badge crit">Pendiente</span></td></tr>
-                    <tr><td>T4</td><td>15 hitos</td><td>0 / 15</td><td><span class="poa-badge crit">Pendiente</span></td></tr>
-                </tbody>
-            </table>
-        </article>
-
-        <article class="poa-card">
-            <h3>Cronograma anual (cascarón)</h3>
-            <div class="poa-roadmap">
-                <div class="poa-phase"><strong>Q1</strong><span>Arranque operativo y ajustes de línea base.</span></div>
-                <div class="poa-phase"><strong>Q2</strong><span>Escalamiento de iniciativas y control de costos.</span></div>
-                <div class="poa-phase"><strong>Q3</strong><span>Consolidación de mejoras y auditoría de avance.</span></div>
-                <div class="poa-phase"><strong>Q4</strong><span>Cierre, evaluación de resultados y lecciones aprendidas.</span></div>
+      <div class="pe-wrap">
+        <section class="pe-kpis">
+          <article class="pe-kpi">
+            <div class="pe-kpi__label">Actividades programadas</div>
+            <div class="pe-kpi__value">64</div>
+            <div class="pe-kpi__meta"><span class="pe-chip pe-chip--info">POA anual</span></div>
+          </article>
+          <article class="pe-kpi">
+            <div class="pe-kpi__label">Actividades en ejecución</div>
+            <div class="pe-kpi__value">39</div>
+            <div class="pe-kpi__meta"><span class="pe-chip">61% activas</span></div>
+          </article>
+          <article class="pe-kpi">
+            <div class="pe-kpi__label">Desviaciones críticas</div>
+            <div class="pe-kpi__value">5</div>
+            <div class="pe-kpi__meta"><span class="pe-chip pe-chip--warn">2 sin plan</span></div>
+          </article>
+          <article class="pe-kpi pe-kpi--progress">
+            <div class="pe-kpi__label">Cumplimiento trimestral</div>
+            <div class="pe-kpi__progress">
+              <div class="pe-ring" style="--p:76;">
+                <div class="pe-ring__inner">
+                  <div class="pe-ring__val">76%</div>
+                  <div class="pe-ring__sub">avance</div>
+                </div>
+              </div>
             </div>
+          </article>
+        </section>
+
+        <section class="pe-grid">
+          <article class="pe-card">
+            <div class="pe-card__head">
+              <div>
+                <h2>Metas operativas priorizadas</h2>
+                <p>Seguimiento por meta con estado y avance.</p>
+              </div>
+              <div class="pe-card__tools"><span class="pe-pill pe-pill--soft">4 metas clave</span></div>
+            </div>
+            <div class="pe-list">
+              <article class="pe-item pe-item--active">
+                <div class="pe-item__top"><div class="pe-item__title"><span class="pe-code">MO-01</span><strong>Reducir tiempos de atención de solicitudes en 20%.</strong></div><span class="pe-status pe-status--ok">En meta</span></div>
+                <div class="pe-item__meta"><span class="pe-mini">Responsable: Operaciones</span><span class="pe-mini">Q2</span></div>
+                <div class="pe-bar"><div class="pe-bar__fill pe-bar__fill--ok" style="width:82%"></div></div>
+              </article>
+              <article class="pe-item">
+                <div class="pe-item__top"><div class="pe-item__title"><span class="pe-code">MO-02</span><strong>Estandarizar procesos clave en áreas operativas.</strong></div><span class="pe-status pe-status--warn">En riesgo</span></div>
+                <div class="pe-item__meta"><span class="pe-mini">Responsable: Calidad</span><span class="pe-mini">Q3</span></div>
+                <div class="pe-bar"><div class="pe-bar__fill pe-bar__fill--warn" style="width:64%"></div></div>
+              </article>
+              <article class="pe-item">
+                <div class="pe-item__top"><div class="pe-item__title"><span class="pe-code">MO-03</span><strong>Incrementar productividad por célula de trabajo.</strong></div><span class="pe-status pe-status--neutral">Seguimiento</span></div>
+                <div class="pe-item__meta"><span class="pe-mini">Responsable: Dirección</span><span class="pe-mini">Q4</span></div>
+                <div class="pe-bar"><div class="pe-bar__fill" style="width:70%"></div></div>
+              </article>
+            </div>
+          </article>
+
+          <aside class="pe-card">
+            <div class="pe-card__head">
+              <div>
+                <h2>Responsables por frente</h2>
+                <p>Asignación de liderazgo operativo.</p>
+              </div>
+            </div>
+            <div class="pe-axis">
+              <button class="pe-axis__btn pe-axis__btn--active" type="button"><span class="pe-axis__dot"></span><span>Operaciones: Dirección Operativa</span><span class="pe-axis__count">16</span></button>
+              <button class="pe-axis__btn" type="button"><span class="pe-axis__dot pe-axis__dot--alt"></span><span>Calidad: Mejora Continua</span><span class="pe-axis__count">14</span></button>
+              <button class="pe-axis__btn" type="button"><span class="pe-axis__dot pe-axis__dot--alt2"></span><span>Tecnología: Transformación Digital</span><span class="pe-axis__count">18</span></button>
+              <button class="pe-axis__btn" type="button"><span class="pe-axis__dot pe-axis__dot--alt3"></span><span>Control: PMO / Planeación</span><span class="pe-axis__count">16</span></button>
+            </div>
+          </aside>
+        </section>
+
+        <article class="pe-card pe-roadmap">
+          <div class="pe-card__head">
+            <div>
+              <h2>Seguimiento trimestral y cronograma</h2>
+              <p>Hitos, avance y estado por trimestre.</p>
+            </div>
+          </div>
+          <div class="pe-timeline">
+            <div class="pe-tlcol">
+              <div class="pe-tlcol__head">Q1</div>
+              <article class="pe-tlitem pe-tlitem--ok">
+                <div class="pe-tlitem__top"><strong>18 hitos</strong><span class="pe-status pe-status--ok">16 / 18</span></div>
+                <p>Arranque operativo y ajustes de línea base.</p>
+                <div class="pe-tlmeta"><span class="pe-mini">Estado: En meta</span></div>
+              </article>
+            </div>
+            <div class="pe-tlcol">
+              <div class="pe-tlcol__head">Q2</div>
+              <article class="pe-tlitem pe-tlitem--warn">
+                <div class="pe-tlitem__top"><strong>16 hitos</strong><span class="pe-status pe-status--warn">12 / 16</span></div>
+                <p>Escalamiento de iniciativas y control de costos.</p>
+                <div class="pe-tlmeta"><span class="pe-mini">Estado: En riesgo</span></div>
+              </article>
+            </div>
+            <div class="pe-tlcol">
+              <div class="pe-tlcol__head">Q3</div>
+              <article class="pe-tlitem pe-tlitem--soft">
+                <div class="pe-tlitem__top"><strong>15 hitos</strong><span class="pe-status pe-status--neutral">0 / 15</span></div>
+                <p>Consolidación de mejoras y auditoría de avance.</p>
+                <div class="pe-tlmeta"><span class="pe-mini">Estado: Pendiente</span></div>
+              </article>
+            </div>
+            <div class="pe-tlcol">
+              <div class="pe-tlcol__head">Q4</div>
+              <article class="pe-tlitem">
+                <div class="pe-tlitem__top"><strong>15 hitos</strong><span class="pe-status pe-status--neutral">0 / 15</span></div>
+                <p>Cierre, evaluación de resultados y lecciones aprendidas.</p>
+                <div class="pe-tlmeta"><span class="pe-mini">Estado: Programado</span></div>
+              </article>
+            </div>
+          </div>
         </article>
+      </div>
     </section>
 """)
 
 KPI_HTML = dedent("""
-    <section class="foda-page">
-        <article class="foda-input-card">
-            <h2>KPIs</h2>
-            <p>Panel para administrar indicadores clave de desempeño por objetivo y periodo.</p>
-            <div class="foda-matrix">
-                <article class="foda-quadrant">
-                    <header><h3>Indicadores activos</h3><span>0</span></header>
-                    <ul><li class="foda-item"><div><strong>Sin indicadores cargados</strong><br><small>Define KPIs por objetivo estratégico.</small></div></li></ul>
+    <section class="pe-page">
+        <style>
+            .pe-page{--bg:#f6f8fc;--surface:rgba(255,255,255,.88);--text:#0f172a;--muted:#64748b;--border:rgba(148,163,184,.38);--shadow-soft:0 10px 22px rgba(15,23,42,.06);--radius:18px;--primary:#0f3d2e;--warn:#f59e0b;width:100%;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:var(--text);background:radial-gradient(1200px 640px at 15% 0%, rgba(15,61,46,.10), transparent 58%),radial-gradient(1000px 540px at 90% 6%, rgba(37,99,235,.10), transparent 55%),var(--bg);border-radius:18px}
+            .pe-wrap{width:100%;padding:18px 0 34px}
+            .pe-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:16px 0 18px}
+            .pe-kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-soft);padding:16px;position:relative;overflow:hidden}
+            .pe-kpi:before{content:"";position:absolute;inset:-1px;background:linear-gradient(135deg, rgba(15,61,46,.12), transparent 35%, rgba(37,99,235,.10));opacity:.9;pointer-events:none}
+            .pe-kpi>*{position:relative}
+            .pe-kpi__label{color:var(--muted);font-size:14px;font-weight:600}
+            .pe-kpi__value{margin-top:10px;font-size:34px;font-weight:900;letter-spacing:-.03em}
+            .pe-kpi__meta{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap}
+            .pe-chip{font-size:12px;padding:6px 10px;border-radius:999px;background:rgba(15,23,42,.05);border:1px solid rgba(15,23,42,.08);color:rgba(15,23,42,.72)}
+            .pe-chip--warn{background:rgba(245,158,11,.12);border-color:rgba(245,158,11,.22);color:#92400e}
+            .pe-grid{display:grid;grid-template-columns:1.35fr .85fr;gap:14px;align-items:start}
+            .pe-card{background:var(--surface);border:1px solid var(--border);border-radius:22px;box-shadow:var(--shadow-soft);padding:16px;overflow:hidden}
+            .pe-card__head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px}
+            .pe-card__head h2{margin:0;font-size:20px;letter-spacing:-.02em}
+            .pe-card__head p{margin:6px 0 0;color:var(--muted);font-size:13px}
+            .pe-list{display:flex;flex-direction:column;gap:12px}
+            .pe-item{background:rgba(255,255,255,.80);border:1px solid rgba(148,163,184,.30);border-radius:18px;padding:14px 14px 12px;box-shadow:0 10px 20px rgba(15,23,42,.04)}
+            .pe-item__top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+            .pe-code{font-weight:900;color:#0b2a20;background:rgba(15,61,46,.10);border:1px solid rgba(15,61,46,.18);padding:6px 10px;border-radius:999px;font-size:12px}
+            .pe-status{font-size:12px;font-weight:800;padding:6px 10px;border-radius:999px;border:1px solid var(--border);background:rgba(255,255,255,.70)}
+            .pe-status--warn{background:rgba(245,158,11,.12);border-color:rgba(245,158,11,.22);color:#92400e}
+            .pe-sidebox{margin-top:14px;background:rgba(255,255,255,.80);border:1px solid rgba(148,163,184,.30);border-radius:18px;padding:14px}
+            .pe-sidebox__grid{margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+            .pe-metric{background:rgba(15,23,42,.03);border:1px solid rgba(15,23,42,.08);border-radius:16px;padding:12px}
+            .pe-metric__k{font-size:12px;color:var(--muted);font-weight:700}
+            .pe-metric__v{margin-top:6px;font-size:18px;font-weight:900}
+            @media (max-width:1100px){.pe-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.pe-grid{grid-template-columns:1fr}}
+            @media (max-width:640px){.pe-kpis{grid-template-columns:1fr}}
+        </style>
+        <div class="pe-wrap">
+            <section class="pe-kpis">
+                <article class="pe-kpi"><div class="pe-kpi__label">Indicadores activos</div><div class="pe-kpi__value">36</div><div class="pe-kpi__meta"><span class="pe-chip">12 objetivos</span></div></article>
+                <article class="pe-kpi"><div class="pe-kpi__label">Con línea base</div><div class="pe-kpi__value">30</div><div class="pe-kpi__meta"><span class="pe-chip">83%</span></div></article>
+                <article class="pe-kpi"><div class="pe-kpi__label">En meta</div><div class="pe-kpi__value">24</div><div class="pe-kpi__meta"><span class="pe-chip">67%</span></div></article>
+                <article class="pe-kpi"><div class="pe-kpi__label">Alertas</div><div class="pe-kpi__value">6</div><div class="pe-kpi__meta"><span class="pe-chip pe-chip--warn">Revisión</span></div></article>
+            </section>
+            <section class="pe-grid">
+                <article class="pe-card">
+                    <div class="pe-card__head"><div><h2>Indicadores críticos</h2><p>Seguimiento de KPIs con mayor variación.</p></div></div>
+                    <div class="pe-list">
+                        <article class="pe-item"><div class="pe-item__top"><div><span class="pe-code">KPI-01</span> Cumplimiento POA trimestral</div><span class="pe-status pe-status--warn">76%</span></div></article>
+                        <article class="pe-item"><div class="pe-item__top"><div><span class="pe-code">KPI-02</span> Satisfacción de usuarios</div><span class="pe-status">88%</span></div></article>
+                        <article class="pe-item"><div class="pe-item__top"><div><span class="pe-code">KPI-03</span> Ejecución presupuestaria</div><span class="pe-status">81%</span></div></article>
+                    </div>
                 </article>
-                <article class="foda-quadrant">
-                    <header><h3>Alertas</h3><span>0</span></header>
-                    <ul><li class="foda-item"><div><strong>Sin alertas</strong><br><small>Se mostrarán desvíos y umbrales fuera de rango.</small></div></li></ul>
-                </article>
-            </div>
-        </article>
+                <aside class="pe-card">
+                    <div class="pe-card__head"><div><h2>Panel rápido</h2><p>Resumen de salud de indicadores.</p></div></div>
+                    <div class="pe-sidebox">
+                        <div class="pe-sidebox__grid">
+                            <div class="pe-metric"><div class="pe-metric__k">Sin dato</div><div class="pe-metric__v">3</div></div>
+                            <div class="pe-metric"><div class="pe-metric__k">Fuera de rango</div><div class="pe-metric__v">6</div></div>
+                            <div class="pe-metric"><div class="pe-metric__k">En seguimiento</div><div class="pe-metric__v">7</div></div>
+                            <div class="pe-metric"><div class="pe-metric__k">A tiempo</div><div class="pe-metric__v">20</div></div>
+                        </div>
+                    </div>
+                </aside>
+            </section>
+        </div>
     </section>
 """)
 
 REPORTES_HTML = dedent("""
-    <section class="foda-page">
-        <article class="foda-input-card">
-            <h2>Reportes</h2>
-            <p>Consolida reportes de avance, desempeño y seguimiento para exportación.</p>
-            <div class="foda-matrix">
-                <article class="foda-quadrant">
-                    <header><h3>Reportes disponibles</h3><span>3</span></header>
-                    <ul>
-                        <li class="foda-item"><div><strong>Reporte ejecutivo</strong><br><small>Resumen de estado estratégico.</small></div></li>
-                        <li class="foda-item"><div><strong>Reporte operativo</strong><br><small>Actividades, avances y cumplimiento.</small></div></li>
-                        <li class="foda-item"><div><strong>Reporte KPI</strong><br><small>Indicadores, metas y variaciones.</small></div></li>
-                    </ul>
+    <section class="pe-page">
+        <style>
+            .pe-page{--bg:#f6f8fc;--surface:rgba(255,255,255,.88);--text:#0f172a;--muted:#64748b;--border:rgba(148,163,184,.38);--shadow-soft:0 10px 22px rgba(15,23,42,.06);--radius:18px;width:100%;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:var(--text);background:radial-gradient(1200px 640px at 15% 0%, rgba(15,61,46,.10), transparent 58%),radial-gradient(1000px 540px at 90% 6%, rgba(37,99,235,.10), transparent 55%),var(--bg);border-radius:18px}
+            .pe-wrap{width:100%;padding:18px 0 34px}
+            .pe-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:14px;align-items:start}
+            .pe-card{background:var(--surface);border:1px solid var(--border);border-radius:22px;box-shadow:var(--shadow-soft);padding:16px;overflow:hidden}
+            .pe-card__head h2{margin:0;font-size:20px;letter-spacing:-.02em}
+            .pe-card__head p{margin:6px 0 12px;color:var(--muted);font-size:13px}
+            .pe-list{display:flex;flex-direction:column;gap:12px}
+            .pe-item{background:rgba(255,255,255,.80);border:1px solid rgba(148,163,184,.30);border-radius:18px;padding:14px 14px 12px;box-shadow:0 10px 20px rgba(15,23,42,.04)}
+            .pe-item strong{display:block}
+            .pe-item small{color:var(--muted)}
+            .pe-chip{font-size:12px;padding:6px 10px;border-radius:999px;background:rgba(37,99,235,.10);border:1px solid rgba(37,99,235,.18);color:#1d4ed8}
+            .pe-table{width:100%;border-collapse:collapse;font-size:14px}
+            .pe-table th,.pe-table td{text-align:left;padding:10px;border-bottom:1px solid rgba(148,163,184,.25)}
+            @media (max-width:1000px){.pe-grid{grid-template-columns:1fr}}
+        </style>
+        <div class="pe-wrap">
+            <section class="pe-grid">
+                <article class="pe-card">
+                    <div class="pe-card__head"><h2>Reportes disponibles</h2><p>Consolida avance, desempeño y seguimiento institucional.</p></div>
+                    <div class="pe-list">
+                        <article class="pe-item"><strong>Reporte ejecutivo</strong><small>Resumen de estado estratégico por eje y objetivo.</small></article>
+                        <article class="pe-item"><strong>Reporte operativo</strong><small>Actividades, avances, cumplimientos y desviaciones.</small></article>
+                        <article class="pe-item"><strong>Reporte KPI</strong><small>Indicadores, metas, semáforos y variaciones.</small></article>
+                    </div>
                 </article>
-                <article class="foda-quadrant">
-                    <header><h3>Exportaciones</h3><span>PDF / Excel</span></header>
-                    <ul>
-                        <li class="foda-item"><div><strong>Formato PDF</strong><br><small>Para distribución institucional.</small></div></li>
-                        <li class="foda-item"><div><strong>Formato Excel</strong><br><small>Para análisis detallado.</small></div></li>
-                    </ul>
-                </article>
-            </div>
-        </article>
+                <aside class="pe-card">
+                    <div class="pe-card__head"><h2>Exportaciones</h2><p>Salidas disponibles para distribución y análisis.</p></div>
+                    <table class="pe-table">
+                        <thead><tr><th>Formato</th><th>Uso</th></tr></thead>
+                        <tbody>
+                            <tr><td><span class="pe-chip">PDF</span></td><td>Presentación institucional</td></tr>
+                            <tr><td><span class="pe-chip">Excel</span></td><td>Análisis detallado</td></tr>
+                            <tr><td><span class="pe-chip">HTML</span></td><td>Vista compartible</td></tr>
+                        </tbody>
+                    </table>
+                </aside>
+            </section>
+        </div>
     </section>
 """)
 
@@ -4661,25 +6003,11 @@ def _render_identidad_institucional_page(request: Request) -> HTMLResponse:
                         </label>
                         <textarea class="campo-personalizado" id="login_message" name="login_message" rows="3" placeholder="Mensaje institucional">{safe_login_message}</textarea>
                     </div>
-                    <div class="form-field">
-                        <label for="favicon">Favicon</label>
-                        <input class="campo-personalizado" type="file" id="favicon" name="favicon" accept="image/*">
-                        <small>Actual: {identity.get("favicon_filename", DEFAULT_LOGIN_IDENTITY["favicon_filename"])}</small>
-                    </div>
-                    <div class="form-field">
-                        <label for="logo_empresa">Logo de la empresa</label>
-                        <input class="campo-personalizado" type="file" id="logo_empresa" name="logo_empresa" accept="image/*">
-                        <small>Actual: {identity.get("logo_filename", DEFAULT_LOGIN_IDENTITY["logo_filename"])}</small>
-                    </div>
-                    <div class="form-field">
-                        <label for="fondo_escritorio">Fondo de escritorio</label>
-                        <input class="campo-personalizado" type="file" id="fondo_escritorio" name="fondo_escritorio" accept="image/*">
-                        <small>Actual: {identity.get("desktop_bg_filename", DEFAULT_LOGIN_IDENTITY["desktop_bg_filename"])}</small>
-                    </div>
-                    <div class="form-field">
-                        <label for="fondo_movil">Fondo de móvil</label>
-                        <input class="campo-personalizado" type="file" id="fondo_movil" name="fondo_movil" accept="image/*">
-                        <small>Actual: {identity.get("mobile_bg_filename", DEFAULT_LOGIN_IDENTITY["mobile_bg_filename"])}</small>
+                    <div style="display:none;">
+                        <input type="file" id="favicon" name="favicon" accept="image/*">
+                        <input type="file" id="logo_empresa" name="logo_empresa" accept="image/*">
+                        <input type="file" id="fondo_escritorio" name="fondo_escritorio" accept="image/*">
+                        <input type="file" id="fondo_movil" name="fondo_movil" accept="image/*">
                     </div>
                     <div class="foda-input-actions" style="grid-column: 1 / -1;">
                         <button type="submit">Guardar identidad</button>

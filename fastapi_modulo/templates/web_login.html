@@ -321,10 +321,11 @@
                 margin-top: 20%;
             }
             .form-panel {
-                position: absolute;
-                top: 20px;
-                right: 20px;
-                width: calc(100% - 40px);
+                position: relative;
+                top: auto;
+                right: auto;
+                width: min(420px, calc(100% - 40px));
+                margin: 20px auto 0;
                 transform: translateY(20px);
             }
             .form-panel.active {

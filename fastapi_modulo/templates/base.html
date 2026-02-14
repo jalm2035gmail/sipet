@@ -25,9 +25,17 @@
             --floating-action-border: var(--sidebar-bottom);
             --floating-action-text: var(--sidebar-bottom);
             --floating-action-bg: var(--sidebar-text);
+            --view-pill-border: var(--sidebar-bottom);
+            --view-pill-bg: var(--sidebar-text);
+            --view-pill-text: var(--sidebar-bottom);
+            --view-pill-icon: var(--sidebar-bottom);
+            --view-pill-hover-bg: var(--sidebar-bottom);
+            --view-pill-hover-text: var(--sidebar-text);
+            --view-pill-hover-icon: var(--sidebar-text);
             --page-bg: #f4f6fb;
             --content-bg: #ffffff;
             --body-text: #0f172a;
+            --page-title-color: var(--sidebar-bottom);
             --sidebar-block-title-size: 1.05rem;
             --sidebar-submenu-size: calc(var(--sidebar-block-title-size) * 0.85);
             {% if colores %}
@@ -371,6 +379,11 @@
             width: calc(100vw - 220px);
             box-sizing: border-box;
         }
+        .content-shell {
+            width: min(80%, 1280px);
+            max-width: 100%;
+            margin: 0 auto;
+        }
         .navbar-route {
             font-size: 1rem;
             font-style: italic;
@@ -420,7 +433,7 @@
         .page-header-text h1 {
             font-size: 2rem;
             margin: 0;
-            color: #0f172a;
+            color: var(--page-title-color, var(--sidebar-bottom, #0f172a));
         }
         .page-header-description {
             margin: 0;
@@ -435,9 +448,9 @@
         }
         .view-buttons .view-pill {
             border-radius: 999px;
-            border: 1px solid #cbd5f5;
-            background: #fff;
-            color: #0f172a;
+            border: 1px solid var(--view-pill-border, var(--sidebar-bottom, #0f172a));
+            background: var(--view-pill-bg, var(--sidebar-text, #ffffff));
+            color: var(--view-pill-text, var(--sidebar-bottom, #0f172a));
             font-weight: 600;
             padding: 10px 20px;
             cursor: pointer;
@@ -446,16 +459,35 @@
             gap: 8px;
             transition: background 0.2s, border-color 0.2s, color 0.2s;
         }
+        .view-buttons .view-pill:hover {
+            background: var(--view-pill-hover-bg, var(--sidebar-bottom, #0f172a));
+            color: var(--view-pill-hover-text, var(--sidebar-text, #ffffff));
+            border-color: var(--view-pill-border, var(--sidebar-bottom, #0f172a));
+        }
         .view-buttons .view-pill.active {
-            background: #0f172a;
-            color: #fff;
-            border-color: #0f172a;
+            background: var(--view-pill-hover-bg, var(--sidebar-bottom, #0f172a));
+            color: var(--view-pill-hover-text, var(--sidebar-text, #ffffff));
+            border-color: var(--view-pill-border, var(--sidebar-bottom, #0f172a));
         }
         .view-buttons .view-pill img {
             width: 18px;
             height: 18px;
             object-fit: contain;
             display: block;
+        }
+        .view-pill-icon-mask {
+            width: 18px;
+            height: 18px;
+            display: inline-block;
+            background: var(--view-pill-icon, var(--sidebar-bottom, #0f172a));
+            -webkit-mask: var(--view-pill-icon-url) center / contain no-repeat;
+            mask: var(--view-pill-icon-url) center / contain no-repeat;
+            transition: background 0.2s;
+            flex: 0 0 18px;
+        }
+        .view-buttons .view-pill:hover .view-pill-icon-mask,
+        .view-buttons .view-pill.active .view-pill-icon-mask {
+            background: var(--view-pill-hover-icon, var(--sidebar-text, #ffffff));
         }
         .floating-actions-wrapper {
             position: fixed;
@@ -1275,12 +1307,16 @@
             border-color: #64748b;
             box-shadow: 0 0 0 2px rgba(100, 116, 139, 0.12);
         }
+        .campo,
         .campo-personalizado {
             background: var(--field-color, #e7d7da) !important;
             border-radius: 16px !important;
             border: 1px solid rgba(15, 23, 42, 0.08);
             padding: 10px 14px;
         }
+        input.campo,
+        textarea.campo,
+        select.campo,
         input.campo-personalizado,
         textarea.campo-personalizado,
         select.campo-personalizado {
@@ -1469,378 +1505,6 @@
             color: #991b1b;
             background: #fff1f2;
         }
-        .foda-matrix {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 14px;
-        }
-        .foda-quadrant {
-            background: #fff;
-            border: 1px solid #dbeafe;
-            border-radius: 12px;
-            padding: 12px;
-            min-height: 200px;
-        }
-        .foda-quadrant header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 10px;
-        }
-        .foda-quadrant h3 {
-            margin: 0;
-            font-size: 1rem;
-            color: #0f172a;
-        }
-        .foda-quadrant header span {
-            font-size: 0.85rem;
-            border-radius: 999px;
-            padding: 3px 8px;
-            background: #e2e8f0;
-            color: #1e293b;
-            font-weight: 600;
-        }
-        .foda-quadrant ul {
-            list-style: none;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-        .foda-item {
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            padding: 8px 10px;
-            display: grid;
-            grid-template-columns: 1fr auto;
-            gap: 8px;
-            align-items: start;
-            background: #f8fafc;
-        }
-        .foda-item small {
-            color: #64748b;
-        }
-        .foda-item button {
-            border: none;
-            background: transparent;
-            color: #475569;
-            cursor: pointer;
-            font-size: 0.8rem;
-        }
-        .foda-strengths { border-color: #86efac; }
-        .foda-weaknesses { border-color: #fdba74; }
-        .foda-opportunities { border-color: #93c5fd; }
-        .foda-threats { border-color: #fca5a5; }
-        .pestel-page {
-            max-width: 1200px;
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-        }
-        .pestel-input-card {
-            background: #fff;
-            border: 1px solid #e2e8f0;
-            border-radius: 12px;
-            padding: 16px;
-        }
-        .pestel-input-card h2 {
-            margin: 0;
-            color: #0f172a;
-            font-size: 1.25rem;
-        }
-        .pestel-input-card p {
-            margin: 8px 0 14px;
-            color: #475569;
-        }
-        .pestel-input-grid {
-            display: grid;
-            grid-template-columns: 1.8fr 1fr 1fr;
-            gap: 12px;
-        }
-        .pestel-input-grid textarea {
-            min-height: 96px;
-            resize: vertical;
-        }
-        .pestel-input-actions {
-            margin-top: 12px;
-            display: flex;
-            justify-content: flex-end;
-        }
-        .pestel-input-actions button {
-            border: 1px solid #0f172a;
-            background: #0f172a;
-            color: #fff;
-            border-radius: 8px;
-            padding: 8px 14px;
-            font-weight: 600;
-            cursor: pointer;
-        }
-        .pestel-board {
-            display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 12px;
-        }
-        .pestel-column {
-            background: #fff;
-            border: 1px solid #dbeafe;
-            border-radius: 10px;
-            padding: 10px;
-            min-height: 180px;
-        }
-        .pestel-column header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 8px;
-        }
-        .pestel-column h3 {
-            margin: 0;
-            font-size: 0.96rem;
-            color: #0f172a;
-        }
-        .pestel-column header span {
-            font-size: 0.8rem;
-            border-radius: 999px;
-            padding: 2px 7px;
-            background: #e2e8f0;
-            color: #1e293b;
-            font-weight: 600;
-        }
-        .pestel-column ul {
-            list-style: none;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            flex-direction: column;
-            gap: 7px;
-        }
-        .pestel-item {
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            padding: 7px 8px;
-            display: grid;
-            grid-template-columns: 1fr auto;
-            gap: 6px;
-            align-items: start;
-            background: #f8fafc;
-        }
-        .pestel-item small {
-            color: #64748b;
-        }
-        .pestel-item button {
-            border: none;
-            background: transparent;
-            color: #475569;
-            cursor: pointer;
-            font-size: 0.78rem;
-        }
-        .porter-page {
-            max-width: 1200px;
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-        }
-        .porter-input-card {
-            background: #fff;
-            border: 1px solid #e2e8f0;
-            border-radius: 12px;
-            padding: 16px;
-        }
-        .porter-input-card h2 {
-            margin: 0;
-            color: #0f172a;
-            font-size: 1.25rem;
-        }
-        .porter-input-card p {
-            margin: 8px 0 14px;
-            color: #475569;
-        }
-        .porter-input-grid {
-            display: grid;
-            grid-template-columns: 1.8fr 1fr 1fr;
-            gap: 12px;
-        }
-        .porter-input-grid textarea {
-            min-height: 96px;
-            resize: vertical;
-        }
-        .porter-input-actions {
-            margin-top: 12px;
-            display: flex;
-            justify-content: flex-end;
-        }
-        .porter-input-actions button {
-            border: 1px solid #0f172a;
-            background: #0f172a;
-            color: #fff;
-            border-radius: 8px;
-            padding: 8px 14px;
-            font-weight: 600;
-            cursor: pointer;
-        }
-        .porter-board {
-            display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 12px;
-        }
-        .porter-column {
-            background: #fff;
-            border: 1px solid #dbeafe;
-            border-radius: 10px;
-            padding: 10px;
-            min-height: 180px;
-        }
-        .porter-column header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 8px;
-        }
-        .porter-column h3 {
-            margin: 0;
-            font-size: 0.96rem;
-            color: #0f172a;
-        }
-        .porter-column header span {
-            font-size: 0.8rem;
-            border-radius: 999px;
-            padding: 2px 7px;
-            background: #e2e8f0;
-            color: #1e293b;
-            font-weight: 600;
-        }
-        .porter-column ul {
-            list-style: none;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            flex-direction: column;
-            gap: 7px;
-        }
-        .porter-item {
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            padding: 7px 8px;
-            display: grid;
-            grid-template-columns: 1fr auto;
-            gap: 6px;
-            align-items: start;
-            background: #f8fafc;
-        }
-        .porter-item small {
-            color: #64748b;
-        }
-        .porter-item button {
-            border: none;
-            background: transparent;
-            color: #475569;
-            cursor: pointer;
-            font-size: 0.78rem;
-        }
-        .percepcion-page {
-            max-width: 1200px;
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-        }
-        .percepcion-input-card {
-            background: #fff;
-            border: 1px solid #e2e8f0;
-            border-radius: 12px;
-            padding: 16px;
-        }
-        .percepcion-input-card h2 {
-            margin: 0;
-            color: #0f172a;
-            font-size: 1.25rem;
-        }
-        .percepcion-input-card p {
-            margin: 8px 0 14px;
-            color: #475569;
-        }
-        .percepcion-input-grid {
-            display: grid;
-            grid-template-columns: 1.8fr 1fr 1fr;
-            gap: 12px;
-        }
-        .percepcion-input-grid textarea {
-            min-height: 96px;
-            resize: vertical;
-        }
-        .percepcion-input-actions {
-            margin-top: 12px;
-            display: flex;
-            justify-content: flex-end;
-        }
-        .percepcion-input-actions button {
-            border: 1px solid #0f172a;
-            background: #0f172a;
-            color: #fff;
-            border-radius: 8px;
-            padding: 8px 14px;
-            font-weight: 600;
-            cursor: pointer;
-        }
-        .percepcion-board {
-            display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 12px;
-        }
-        .percepcion-column {
-            background: #fff;
-            border: 1px solid #dbeafe;
-            border-radius: 10px;
-            padding: 10px;
-            min-height: 180px;
-        }
-        .percepcion-column header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 8px;
-        }
-        .percepcion-column h3 {
-            margin: 0;
-            font-size: 0.96rem;
-            color: #0f172a;
-        }
-        .percepcion-column header span {
-            font-size: 0.8rem;
-            border-radius: 999px;
-            padding: 2px 7px;
-            background: #e2e8f0;
-            color: #1e293b;
-            font-weight: 600;
-        }
-        .percepcion-column ul {
-            list-style: none;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            flex-direction: column;
-            gap: 7px;
-        }
-        .percepcion-item {
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            padding: 7px 8px;
-            display: grid;
-            grid-template-columns: 1fr auto;
-            gap: 6px;
-            align-items: start;
-            background: #f8fafc;
-        }
-        .percepcion-item small {
-            color: #64748b;
-        }
-        .percepcion-item button {
-            border: none;
-            background: transparent;
-            color: #475569;
-            cursor: pointer;
-            font-size: 0.78rem;
-        }
         .image-uploader {
             align-items: flex-end;
             justify-content: flex-start;
@@ -1941,27 +1605,6 @@
             .identity-asset-actions {
                 flex-direction: row;
             }
-            .foda-matrix {
-                grid-template-columns: 1fr;
-            }
-            .pestel-input-grid {
-                grid-template-columns: 1fr;
-            }
-            .pestel-board {
-                grid-template-columns: 1fr;
-            }
-            .porter-input-grid {
-                grid-template-columns: 1fr;
-            }
-            .porter-board {
-                grid-template-columns: 1fr;
-            }
-            .percepcion-input-grid {
-                grid-template-columns: 1fr;
-            }
-            .percepcion-board {
-                grid-template-columns: 1fr;
-            }
             .section-grid.two-columns {
                 grid-template-columns: 1fr;
             }
@@ -1993,6 +1636,9 @@
             .navbar,
             .main-content {
                 margin-left: 0;
+            }
+            .content-shell {
+                width: 100%;
             }
         }
     </style>
@@ -2125,6 +1771,7 @@
         </div>
     </div>
     <main class="main-content">
+        <div class="content-shell">
         {% if show_page_header | default(true) and (page_title or title or page_description or subtitle or view_buttons_html) %}
         <section class="page-header">
             <div class="page-header-text">
@@ -2146,6 +1793,7 @@
         </section>
         {% endif %}
         {{ content|safe }}
+        </div>
     </main>
         <div class="floating-actions-wrapper{% if hide_floating_actions %} floating-placeholder{% endif %}"
              aria-label="Acciones rápidas de pantalla"
@@ -2561,6 +2209,14 @@
                     }
                     const bottomColor = (sidebarBottom && sidebarBottom.value) || '#0f172a';
                     const textColor = (sidebarText && sidebarText.value) || '#ffffff';
+                    document.documentElement.style.setProperty('--page-title-color', bottomColor);
+                    document.documentElement.style.setProperty('--view-pill-border', bottomColor);
+                    document.documentElement.style.setProperty('--view-pill-bg', textColor);
+                    document.documentElement.style.setProperty('--view-pill-text', bottomColor);
+                    document.documentElement.style.setProperty('--view-pill-icon', bottomColor);
+                    document.documentElement.style.setProperty('--view-pill-hover-bg', bottomColor);
+                    document.documentElement.style.setProperty('--view-pill-hover-text', textColor);
+                    document.documentElement.style.setProperty('--view-pill-hover-icon', textColor);
                     if (floatingActions) {
                         floatingActions.style.background = textColor;
                         floatingActions.style.borderColor = bottomColor;
