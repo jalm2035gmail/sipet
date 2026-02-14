@@ -3638,7 +3638,6 @@ def eliminar_plantilla(template_id: str):
 
 @app.post("/api/usuarios/registro-seguro")
 def crear_usuario_seguro(request: Request, data: dict = Body(...)):
-    require_admin_or_superadmin(request)
     nombre = (data.get("nombre") or "").strip()
     usuario_login = (data.get("usuario") or "").strip()
     correo = (data.get("correo") or "").strip()
@@ -3666,9 +3665,11 @@ def crear_usuario_seguro(request: Request, data: dict = Body(...)):
             return JSONResponse({"success": False, "error": "El correo ya existe"}, status_code=409)
 
         rol_id = None
+        if not rol_nombre:
+            rol_nombre = "usuario"
+        if not can_assign_role(request, rol_nombre):
+            rol_nombre = "usuario"
         if rol_nombre:
-            if not can_assign_role(request, rol_nombre):
-                return JSONResponse({"success": False, "error": "No tienes permiso para asignar ese rol"}, status_code=403)
             rol = db.query(Rol).filter(Rol.nombre == rol_nombre).first()
             if not rol:
                 return JSONResponse({"success": False, "error": "Rol no encontrado"}, status_code=404)
