@@ -368,7 +368,17 @@
             background: var(--navbar-notifications-icon-color, var(--sidebar-text, #ffffff));
             -webkit-mask: url("/templates/icon/notificaciones.svg") center / contain no-repeat;
             mask: url("/templates/icon/notificaciones.svg") center / contain no-repeat;
-            filter: drop-shadow(0 0 1px rgba(15, 23, 42, 0.75));
+            filter: none;
+            transition: background 0.2s ease;
+        }
+        .navbar-notifications-btn:hover,
+        .navbar-notifications-btn:focus-visible {
+            background: var(--sidebar-text, #ffffff);
+            outline: none;
+        }
+        .navbar-notifications-btn:hover .navbar-notifications-icon,
+        .navbar-notifications-btn:focus-visible .navbar-notifications-icon {
+            background: var(--navbar-bg, #ffffff);
         }
         .navbar-notifications-badge {
             position: absolute;
@@ -2616,7 +2626,8 @@
                 }, 2200);
             };
             const syncNavbarNotificationIconColor = (color) => {
-                const value = (color || '').trim() || '#ffffff';
+                const fromSidebar = sidebarElem ? getComputedStyle(sidebarElem).color : '';
+                const value = (color || '').trim() || (fromSidebar || '').trim() || '#ffffff';
                 document.documentElement.style.setProperty('--navbar-notifications-icon-color', value);
                 if (navbarNotificationsIcon) {
                     navbarNotificationsIcon.style.background = value;
@@ -2761,7 +2772,7 @@
                     if (sidebarText && sidebarElem) {
                         sidebarElem.style.color = sidebarText.value;
                         document.documentElement.style.setProperty('--sidebar-text', sidebarText.value);
-                        syncNavbarNotificationIconColor(sidebarText.value);
+                        syncNavbarNotificationIconColor(sidebarText.value || getComputedStyle(sidebarElem).color);
                     } else {
                         syncNavbarNotificationIconColor(getComputedStyle(document.documentElement).getPropertyValue('--sidebar-text'));
                     }
@@ -3040,6 +3051,7 @@
             ];
             let selectedUsuarioName = null;
             let createUsuarioMode = false;
+            let submitUsuarioFromPanel = null;
             const departamentosDisponibles = [...new Set(usuarioData.map(u => u.department).filter(Boolean))];
             const roleMatches = (userRole, selectedRole) => {
                 const left = String(userRole || '').trim().toLowerCase();
@@ -3098,6 +3110,7 @@
                 }
             };
             function renderUsuarioForm() {
+                submitUsuarioFromPanel = null;
                 const totalUsers = usuarioData.length;
                 const activeUsers = usuarioData.filter((user) => user.status === 'Activo').length;
                 const roleCount = new Set(usuarioData.map((user) => user.role).filter(Boolean)).size;
@@ -3319,7 +3332,7 @@
                 const formCancelBtn = usuarioView.querySelector('#usuario-form-cancel');
                 formSaveBtn && formSaveBtn.addEventListener('click', (event) => {
                     event.preventDefault();
-                    actionSaveUsuario && actionSaveUsuario.click();
+                    submitUsuarioFromPanel && submitUsuarioFromPanel();
                 });
                 formCancelBtn && formCancelBtn.addEventListener('click', (event) => {
                     event.preventDefault();
@@ -3327,6 +3340,49 @@
                     selectedUsuarioName = null;
                     setUsuarioView('list');
                 });
+                submitUsuarioFromPanel = async () => {
+                    if (!usuarioPanel || usuarioPanel.classList.contains('hidden')) {
+                        showMessage('Abre la vista de formulario para guardar usuarios.', 'error');
+                        return;
+                    }
+                    const nombreInput = usuarioView.querySelector('#usuario-nombre');
+                    const usuarioInput = usuarioView.querySelector('#usuario-usuario');
+                    const correoInput = usuarioView.querySelector('#usuario-correo');
+                    const passwordInput = usuarioView.querySelector('#usuario-password');
+                    const rolSelect = usuarioView.querySelector('#usuario-rol');
+                    if (!nombreInput || !usuarioInput || !correoInput || !passwordInput) {
+                        showMessage('No se pudo leer el formulario de usuario.', 'error');
+                        return;
+                    }
+                    const payload = {
+                        nombre: (nombreInput.value || '').trim(),
+                        usuario: (usuarioInput.value || '').trim(),
+                        correo: (correoInput.value || '').trim(),
+                        contrasena: passwordInput.value || '',
+                        rol: (rolSelect?.value || 'usuario').trim(),
+                    };
+                    if (!payload.nombre || !payload.usuario || !payload.correo || !payload.contrasena) {
+                        showMessage('Nombre, usuario, correo y contraseña son obligatorios.', 'error');
+                        return;
+                    }
+                    try {
+                        const res = await fetch('/api/usuarios/registro-seguro', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload),
+                        });
+                        const json = await res.json().catch(() => ({}));
+                        if (!res.ok || !json?.success) {
+                            throw new Error(json?.error || 'No se pudo guardar el usuario');
+                        }
+                        createUsuarioMode = false;
+                        showMessage('Usuario registrado correctamente.', 'success');
+                        passwordInput.value = '';
+                        await loadUsuariosImagenes();
+                    } catch (err) {
+                        showMessage(err?.message || 'Error al registrar usuario.', 'error');
+                    }
+                };
             }
             function renderUsuarioList(role = 'Todos') {
                 const filtered = role === 'Todos' ? usuarioData : usuarioData.filter(u => roleMatches(u.role, role));
@@ -3921,13 +3977,15 @@
             let selectedFormDefinitionId = null;
             let builderFields = [];
             let builderRoleOptions = [];
-            const slugifyText = (value) => (value || '')
-                .toString()
-                .normalize('NFD')
-                .replace(/[\u0300-\u036f]/g, '')
-                .toLowerCase()
-                .replace(/[^a-z0-9]+/g, '-')
-                .replace(/^-+|-+$/g, '');
+            function slugifyText(value) {
+                return (value || '')
+                    .toString()
+                    .normalize('NFD')
+                    .replace(/[\u0300-\u036f]/g, '')
+                    .toLowerCase()
+                    .replace(/[^a-z0-9]+/g, '-')
+                    .replace(/^-+|-+$/g, '');
+            }
             const normalizeRoleValue = (value) => (value || '').toString().trim().toLowerCase();
             const getBuilderSelectedRoles = () => {
                 if (!builderFormRoles) return [];
@@ -4365,8 +4423,10 @@
                 });
             };
             notebookTabs.forEach(tab => tab.addEventListener('click', () => activateNotebookTab(tab.dataset.tab)));
-            actionCreateUser && actionCreateUser.addEventListener('click', (event) => {
-                event.preventDefault();
+            const openCreateUsuarioForm = () => {
+                setFloatingScreen('usuarios');
+                refreshUsuarioFloating();
+                ensureFloatingVisible();
                 createUsuarioMode = true;
                 selectedUsuarioName = null;
                 setUsuarioView('form');
@@ -4388,6 +4448,10 @@
                 if (jefeSelect) jefeSelect.innerHTML = '<option value="">Selecciona un jefe inmediato</option>';
                 if (nombreInput) nombreInput.focus();
                 showMessage('Formulario listo para crear usuario.', 'success');
+            };
+            actionCreateUser && actionCreateUser.addEventListener('click', (event) => {
+                event.preventDefault();
+                openCreateUsuarioForm();
             });
             actionEdit && actionEdit.addEventListener('click', (event) => {
                 if (activeFloatingScreen !== 'usuarios') return;
@@ -4410,48 +4474,11 @@
             actionSaveUsuario && actionSaveUsuario.addEventListener('click', (event) => {
                 if (activeFloatingScreen !== 'usuarios') return;
                 event.preventDefault();
-                if (!usuarioPanel || usuarioPanel.classList.contains('hidden')) {
-                    showMessage('Abre la vista de formulario para guardar usuarios.', 'error');
+                if (typeof submitUsuarioFromPanel === 'function') {
+                    submitUsuarioFromPanel();
                     return;
                 }
-                const nombreInput = usuarioView.querySelector('#usuario-nombre');
-                const usuarioInput = usuarioView.querySelector('#usuario-usuario');
-                const correoInput = usuarioView.querySelector('#usuario-correo');
-                const passwordInput = usuarioView.querySelector('#usuario-password');
-                const rolSelect = usuarioView.querySelector('#usuario-rol');
-                if (!nombreInput || !usuarioInput || !correoInput || !passwordInput) {
-                    showMessage('No se pudo leer el formulario de usuario.', 'error');
-                    return;
-                }
-                const payload = {
-                    nombre: (nombreInput.value || '').trim(),
-                    usuario: (usuarioInput.value || '').trim(),
-                    correo: (correoInput.value || '').trim(),
-                    contrasena: passwordInput.value || '',
-                    rol: (rolSelect?.value || 'usuario').trim(),
-                };
-                if (!payload.nombre || !payload.usuario || !payload.correo || !payload.contrasena) {
-                    showMessage('Nombre, usuario, correo y contraseña son obligatorios.', 'error');
-                    return;
-                }
-                fetch('/api/usuarios/registro-seguro', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload),
-                })
-                    .then(async (res) => {
-                        const json = await res.json().catch(() => ({}));
-                        if (!res.ok || !json?.success) {
-                            throw new Error(json?.error || 'No se pudo guardar el usuario');
-                        }
-                        createUsuarioMode = false;
-                        showMessage('Usuario registrado correctamente.', 'success');
-                        passwordInput.value = '';
-                        await loadUsuariosImagenes();
-                    })
-                    .catch((err) => {
-                        showMessage(err?.message || 'Error al registrar usuario.', 'error');
-                    });
+                showMessage('Abre la vista de formulario para guardar usuarios.', 'error');
             });
             actionDelete && actionDelete.addEventListener('click', (event) => {
                 if (activeFloatingScreen !== 'usuarios') return;
@@ -4942,7 +4969,10 @@
             };
             applyFallback(navbarAvatarImg);
             applyFallback(sidebarUserImg);
-            syncNavbarNotificationIconColor(getComputedStyle(document.documentElement).getPropertyValue('--sidebar-text'));
+            syncNavbarNotificationIconColor(
+                (sidebarElem ? getComputedStyle(sidebarElem).color : '')
+                || getComputedStyle(document.documentElement).getPropertyValue('--sidebar-text')
+            );
             if (navbarAvatarBtn && userDropdown) {
                 const closeUserDropdown = () => {
                     userDropdown.classList.remove('open');

@@ -7723,7 +7723,13 @@ EJES_ESTRATEGICOS_HTML = dedent("""
         }
         .axm-btn.primary{ background:#0f3d2e; border-color:#0f3d2e; color:#fff; }
         .axm-btn.warn{ background:#ef4444; border-color:#ef4444; color:#fff; }
-        .axm-obj-layout{ margin-top: 12px; display:grid; grid-template-columns: minmax(220px, 300px) minmax(0, 1fr); gap: 12px; }
+        .axm-obj-layout{
+          margin-top: 12px;
+          display:grid;
+          grid-template-columns: minmax(280px, 0.95fr) minmax(460px, 1.35fr);
+          gap: 14px;
+          align-items: start;
+        }
         .axm-obj-list{ display:flex; flex-direction:column; gap: 8px; max-height: 320px; overflow:auto; }
         .axm-obj-btn{
           width: 100%;
@@ -7741,11 +7747,26 @@ EJES_ESTRATEGICOS_HTML = dedent("""
         .axm-obj-form{
           border:1px solid rgba(148,163,184,.32);
           border-radius: 12px;
-          padding: 10px;
+          padding: 14px;
           background: rgba(255,255,255,.95);
+        }
+        .axm-obj-form .axm-row{
+          grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        }
+        .axm-obj-form .axm-input,
+        .axm-obj-form .axm-textarea{
+          min-width: 0;
+          width: 100%;
+        }
+        .axm-obj-form .axm-textarea{
+          min-height: 116px;
         }
         .axm-obj-grid{ display:grid; grid-template-columns: 150px 1fr; gap: 8px; }
         .axm-msg{ margin-top: 10px; font-size: 13px; color:#0f3d2e; min-height: 1.2em; }
+        @media (max-width: 1200px){
+          .axm-obj-layout{ grid-template-columns: 1fr; }
+          .axm-obj-form .axm-row{ grid-template-columns: 1fr; }
+        }
         @media (max-width: 980px){
           .axm-grid{ grid-template-columns: 1fr; }
           .axm-list{ max-height: 36vh; }
