@@ -1,3 +1,11 @@
+
+Dolores de la cooperativa que resuelve esta app:
+- Dificultad para planificar y dar seguimiento a los objetivos estratégicos y operativos.
+- Falta de visibilidad sobre el avance de los planes y cumplimiento de metas.
+- Procesos manuales y dispersos para la gestión de actividades, indicadores y reportes.
+- Problemas para centralizar la información y generar reportes automáticos.
+- Necesidad de mejorar la comunicación y notificación de tareas y resultados.
+
 Avance: 70%
 
 Estructura actual (✳️ marcados los módulos ya implementados)
