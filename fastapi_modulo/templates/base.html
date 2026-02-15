@@ -20,6 +20,7 @@
             --sidebar-hover: #2a3a52;
             --field-color: #e7d7da;
             --floating-panel-bg: var(--sidebar-text);
+            --floating-scale: 0.5;
             --floating-toggle-color: var(--sidebar-bottom);
             --floating-toggle-text-color: var(--sidebar-text);
             --floating-icon-color: var(--sidebar-bottom);
@@ -346,6 +347,49 @@
             cursor: pointer;
             padding: 0;
         }
+        .navbar-notifications-btn {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: transparent;
+            border: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            position: relative;
+            padding: 0;
+            z-index: 2;
+        }
+        .navbar-notifications-icon {
+            width: 20px;
+            height: 20px;
+            display: block;
+            background: var(--navbar-notifications-icon-color, var(--sidebar-text, #ffffff));
+            -webkit-mask: url("/templates/icon/notificaciones.svg") center / contain no-repeat;
+            mask: url("/templates/icon/notificaciones.svg") center / contain no-repeat;
+            filter: drop-shadow(0 0 1px rgba(15, 23, 42, 0.75));
+        }
+        .navbar-notifications-badge {
+            position: absolute;
+            top: -4px;
+            right: -3px;
+            min-width: 18px;
+            height: 18px;
+            padding: 0 4px;
+            border-radius: 999px;
+            background: #ef4444;
+            color: #ffffff;
+            font-size: 0.65rem;
+            font-weight: 700;
+            line-height: 18px;
+            text-align: center;
+            display: none;
+            border: 1px solid #ffffff;
+        }
+        .navbar-notifications-badge.visible {
+            display: inline-block;
+        }
         .navbar-avatar img {
             width: 100%;
             height: 100%;
@@ -356,6 +400,7 @@
             position: relative;
             display: flex;
             align-items: center;
+            gap: 10px;
         }
         .user-dropdown {
             position: absolute;
@@ -610,7 +655,8 @@
             position: fixed;
             right: 12px;
             top: 50%;
-            transform: translateY(-50%);
+            transform: translateY(-50%) scale(var(--floating-scale, 1));
+            transform-origin: right center;
             z-index: 4;
         }
         .floating-actions {
@@ -676,7 +722,8 @@
             overflow: hidden;
         }
         .action-button:hover {
-            background: rgba(37, 99, 235, 0.08);
+            background: var(--floating-toggle-color, #1f2a3d);
+            color: var(--floating-toggle-text-color, #ffffff);
         }
         .action-button img,
         .action-button svg {
@@ -701,7 +748,7 @@
             stroke: var(--floating-icon-color, #1f2a3d);
         }
         .action-label {
-            font-size: 0.85rem;
+            font-size: 1.3rem;
             font-style: italic;
             letter-spacing: 0.02em;
             opacity: 0;
@@ -713,6 +760,9 @@
             transition: opacity 0.2s;
             color: inherit;
             white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            padding: 0 10px;
             pointer-events: none;
         }
         .action-button:hover .action-label {
@@ -726,9 +776,9 @@
         .floating-actions-group[data-floating-screen="usuarios"] .action-button,
         .floating-actions-group[data-floating-screen="areas"] .action-button,
         .floating-actions-group[data-floating-screen="plantillas"] .action-button {
-            width: 124px;
-            min-width: 124px;
-            max-width: 124px;
+            width: 156px;
+            min-width: 156px;
+            max-width: 156px;
             justify-content: center;
             border: 1px solid var(--floating-action-border, #cbd5e1);
             background: var(--floating-action-bg, #ffffff);
@@ -760,6 +810,14 @@
         .floating-actions-group[data-floating-screen="areas"] .action-button:hover .action-label,
         .floating-actions-group[data-floating-screen="plantillas"] .action-button:hover .action-label {
             opacity: 1;
+            color: var(--floating-action-bg, #ffffff);
+        }
+        .floating-actions-group[data-floating-screen="usuarios"] .action-button:hover,
+        .floating-actions-group[data-floating-screen="areas"] .action-button:hover,
+        .floating-actions-group[data-floating-screen="plantillas"] .action-button:hover {
+            background: var(--floating-action-text, #0f172a);
+            color: var(--floating-action-bg, #ffffff);
+            border-color: var(--floating-action-text, #0f172a);
         }
         .floating-actions-group[data-floating-screen="areas"].active {
             display: flex !important;
@@ -793,6 +851,8 @@
             color: var(--floating-toggle-text-color, #ffffff);
             cursor: pointer;
             transition: background 0.2s, transform 0.2s;
+            transform: scale(1.56);
+            transform-origin: center;
         }
         .floating-toggle:focus {
             outline: none;
@@ -2131,6 +2191,10 @@
                 </div>
             </div>
             <div class="navbar-user-menu">
+                <button class="navbar-notifications-btn" id="navbar-notifications-trigger" aria-label="Notificaciones" aria-expanded="false">
+                    <span class="navbar-notifications-icon" aria-hidden="true"></span>
+                    <span class="navbar-notifications-badge" id="navbar-notifications-badge">0</span>
+                </button>
                 <button class="navbar-avatar" id="navbar-avatar-btn" aria-label="Menú de usuario" aria-expanded="false">
                     <img id="navbar-avatar-img" src="/templates/icon/usuarios.svg" alt="Avatar" data-default="/templates/icon/usuarios.svg">
                 </button>
@@ -2297,6 +2361,9 @@
             const logoutLink = document.getElementById('logout-link');
             const sidebarNotificationsTrigger = document.getElementById('sidebar-notifications-trigger');
             const sidebarNotificationsBadge = document.getElementById('sidebar-notifications-badge');
+            const navbarNotificationsTrigger = document.getElementById('navbar-notifications-trigger');
+            const navbarNotificationsBadge = document.getElementById('navbar-notifications-badge');
+            const navbarNotificationsIcon = document.querySelector('.navbar-notifications-icon');
             const sidebarNotificationsPanel = document.getElementById('sidebar-notifications-panel');
             const sidebarNotificationsCount = document.getElementById('sidebar-notifications-count');
             const sidebarNotificationsList = document.getElementById('sidebar-notifications-list');
@@ -2548,6 +2615,13 @@
                     messageBox.classList.remove('visible');
                 }, 2200);
             };
+            const syncNavbarNotificationIconColor = (color) => {
+                const value = (color || '').trim() || '#ffffff';
+                document.documentElement.style.setProperty('--navbar-notifications-icon-color', value);
+                if (navbarNotificationsIcon) {
+                    navbarNotificationsIcon.style.background = value;
+                }
+            };
             const escapeHtml = (value) => String(value || '').replace(/[&<>"']/g, (char) => (
                 { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char] || char
             ));
@@ -2564,12 +2638,18 @@
                 });
             };
             const renderNotifications = (payload) => {
-                if (!sidebarNotificationsList || !sidebarNotificationsBadge || !sidebarNotificationsCount || !sidebarNotificationsEmpty) return;
+                if (!sidebarNotificationsList || !sidebarNotificationsCount || !sidebarNotificationsEmpty) return;
                 const total = Number(payload?.total || 0);
                 const unread = Number(payload?.unread || 0);
                 const items = Array.isArray(payload?.items) ? payload.items : [];
-                sidebarNotificationsBadge.textContent = unread > 99 ? '99+' : String(unread);
-                sidebarNotificationsBadge.classList.toggle('visible', unread > 0);
+                if (sidebarNotificationsBadge) {
+                    sidebarNotificationsBadge.textContent = unread > 99 ? '99+' : String(unread);
+                    sidebarNotificationsBadge.classList.toggle('visible', unread > 0);
+                }
+                if (navbarNotificationsBadge) {
+                    navbarNotificationsBadge.textContent = unread > 99 ? '99+' : String(unread);
+                    navbarNotificationsBadge.classList.toggle('visible', unread > 0);
+                }
                 sidebarNotificationsCount.textContent = unread > 0 ? `${unread} pendiente${unread === 1 ? '' : 's'}` : 'Sin pendientes';
                 if (!items.length) {
                     sidebarNotificationsList.innerHTML = '';
@@ -2680,6 +2760,10 @@
                     }
                     if (sidebarText && sidebarElem) {
                         sidebarElem.style.color = sidebarText.value;
+                        document.documentElement.style.setProperty('--sidebar-text', sidebarText.value);
+                        syncNavbarNotificationIconColor(sidebarText.value);
+                    } else {
+                        syncNavbarNotificationIconColor(getComputedStyle(document.documentElement).getPropertyValue('--sidebar-text'));
                     }
                     if (sidebarIcon) {
                         document.querySelectorAll('.menu-icon svg path').forEach(path => {
@@ -2955,6 +3039,7 @@
                 { value: 'departamento', label: 'Departamento' },
             ];
             let selectedUsuarioName = null;
+            let createUsuarioMode = false;
             const departamentosDisponibles = [...new Set(usuarioData.map(u => u.department).filter(Boolean))];
             const roleMatches = (userRole, selectedRole) => {
                 const left = String(userRole || '').trim().toLowerCase();
@@ -2984,6 +3069,7 @@
             const openUsuarioInForm = (userName) => {
                 const normalized = String(userName || '').trim();
                 if (!normalized) return;
+                createUsuarioMode = false;
                 selectedUsuarioName = normalized;
                 setUsuarioView('form');
             };
@@ -3015,7 +3101,9 @@
                 const totalUsers = usuarioData.length;
                 const activeUsers = usuarioData.filter((user) => user.status === 'Activo').length;
                 const roleCount = new Set(usuarioData.map((user) => user.role).filter(Boolean)).size;
-                const selectedUser = usuarioData.find((user) => String(user.name || '').trim() === String(selectedUsuarioName || '').trim()) || usuarioData[0] || {};
+                const selectedUser = createUsuarioMode
+                    ? {}
+                    : (usuarioData.find((user) => String(user.name || '').trim() === String(selectedUsuarioName || '').trim()) || usuarioData[0] || {});
                 const selectedName = escapeHtmlAttr(selectedUser.name || '');
                 const selectedEmail = escapeHtmlAttr(selectedUser.email || '');
                 const selectedRole = String(selectedUser.role || 'Usuario');
@@ -3106,8 +3194,8 @@
                                         </div>
                                     </div>
                                     <div class="ar-actions">
-                                        <button type="button" class="ar-btn ar-btn--soft">Cancelar</button>
-                                        <button type="button" class="ar-btn ar-btn--primary2">Guardar</button>
+                                        <button type="button" class="ar-btn ar-btn--soft" id="usuario-form-cancel">Cancelar</button>
+                                        <button type="button" class="ar-btn ar-btn--primary2" id="usuario-form-save">Guardar</button>
                                     </div>
                                 </form>
                             </section>
@@ -3226,6 +3314,18 @@
                     passwordConfirmed = true;
                     closePasswordModal();
                     showMessage('Contrasena confirmada.', 'success');
+                });
+                const formSaveBtn = usuarioView.querySelector('#usuario-form-save');
+                const formCancelBtn = usuarioView.querySelector('#usuario-form-cancel');
+                formSaveBtn && formSaveBtn.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    actionSaveUsuario && actionSaveUsuario.click();
+                });
+                formCancelBtn && formCancelBtn.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    createUsuarioMode = false;
+                    selectedUsuarioName = null;
+                    setUsuarioView('list');
                 });
             }
             function renderUsuarioList(role = 'Todos') {
@@ -4266,8 +4366,9 @@
             };
             notebookTabs.forEach(tab => tab.addEventListener('click', () => activateNotebookTab(tab.dataset.tab)));
             actionCreateUser && actionCreateUser.addEventListener('click', (event) => {
-                if (activeFloatingScreen !== 'usuarios') return;
                 event.preventDefault();
+                createUsuarioMode = true;
+                selectedUsuarioName = null;
                 setUsuarioView('form');
                 const nombreInput = usuarioView ? usuarioView.querySelector('#usuario-nombre') : null;
                 const usuarioInput = usuarioView ? usuarioView.querySelector('#usuario-usuario') : null;
@@ -4291,6 +4392,7 @@
             actionEdit && actionEdit.addEventListener('click', (event) => {
                 if (activeFloatingScreen !== 'usuarios') return;
                 event.preventDefault();
+                createUsuarioMode = false;
                 setUsuarioView('form');
                 showMessage('Modo edición activado.', 'success');
             });
@@ -4326,7 +4428,7 @@
                     usuario: (usuarioInput.value || '').trim(),
                     correo: (correoInput.value || '').trim(),
                     contrasena: passwordInput.value || '',
-                    rol: (rolSelect?.value || '').trim(),
+                    rol: (rolSelect?.value || 'usuario').trim(),
                 };
                 if (!payload.nombre || !payload.usuario || !payload.correo || !payload.contrasena) {
                     showMessage('Nombre, usuario, correo y contraseña son obligatorios.', 'error');
@@ -4342,6 +4444,7 @@
                         if (!res.ok || !json?.success) {
                             throw new Error(json?.error || 'No se pudo guardar el usuario');
                         }
+                        createUsuarioMode = false;
                         showMessage('Usuario registrado correctamente.', 'success');
                         passwordInput.value = '';
                         await loadUsuariosImagenes();
@@ -4839,6 +4942,7 @@
             };
             applyFallback(navbarAvatarImg);
             applyFallback(sidebarUserImg);
+            syncNavbarNotificationIconColor(getComputedStyle(document.documentElement).getPropertyValue('--sidebar-text'));
             if (navbarAvatarBtn && userDropdown) {
                 const closeUserDropdown = () => {
                     userDropdown.classList.remove('open');
@@ -4873,27 +4977,36 @@
                     });
                 }
             }
-            if (sidebarNotificationsTrigger && sidebarNotificationsPanel) {
+            if ((sidebarNotificationsTrigger || navbarNotificationsTrigger) && sidebarNotificationsPanel) {
                 const closeNotifications = () => {
                     sidebarNotificationsPanel.classList.remove('open');
                     sidebarNotificationsPanel.setAttribute('aria-hidden', 'true');
+                    if (navbarNotificationsTrigger) navbarNotificationsTrigger.setAttribute('aria-expanded', 'false');
+                    if (sidebarNotificationsTrigger) sidebarNotificationsTrigger.setAttribute('aria-expanded', 'false');
                 };
                 const openNotifications = async () => {
                     sidebarNotificationsPanel.classList.add('open');
                     sidebarNotificationsPanel.setAttribute('aria-hidden', 'false');
+                    if (navbarNotificationsTrigger) navbarNotificationsTrigger.setAttribute('aria-expanded', 'true');
+                    if (sidebarNotificationsTrigger) sidebarNotificationsTrigger.setAttribute('aria-expanded', 'true');
                     await loadNotifications(false);
                 };
-                sidebarNotificationsTrigger.addEventListener('click', async (event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    setMenuInfo(sidebarNotificationsTrigger);
-                    const willOpen = !sidebarNotificationsPanel.classList.contains('open');
-                    if (willOpen) {
-                        await openNotifications();
-                    } else {
-                        closeNotifications();
-                    }
-                });
+                const bindNotificationsTrigger = (trigger, setMenu = false) => {
+                    if (!trigger) return;
+                    trigger.addEventListener('click', async (event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        if (setMenu) setMenuInfo(trigger);
+                        const willOpen = !sidebarNotificationsPanel.classList.contains('open');
+                        if (willOpen) {
+                            await openNotifications();
+                        } else {
+                            closeNotifications();
+                        }
+                    });
+                };
+                bindNotificationsTrigger(sidebarNotificationsTrigger, true);
+                bindNotificationsTrigger(navbarNotificationsTrigger, false);
                 sidebarNotificationsRefresh && sidebarNotificationsRefresh.addEventListener('click', async (event) => {
                     event.preventDefault();
                     await loadNotifications(false);
@@ -4930,7 +5043,8 @@
                     if (
                         sidebarNotificationsPanel.classList.contains('open')
                         && !sidebarNotificationsPanel.contains(event.target)
-                        && !sidebarNotificationsTrigger.contains(event.target)
+                        && !(sidebarNotificationsTrigger && sidebarNotificationsTrigger.contains(event.target))
+                        && !(navbarNotificationsTrigger && navbarNotificationsTrigger.contains(event.target))
                     ) {
                         closeNotifications();
                     }
