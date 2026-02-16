@@ -362,6 +362,34 @@ main{
 .traffic{
   padding: 4px 0 12px;
 }
+.traffic__head{
+  margin-bottom: 12px;
+}
+.traffic__meta{
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.traffic__badge{
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid rgba(79,209,197,.30);
+  background: rgba(79,209,197,.12);
+  color: #d6fff6;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.traffic__updated{
+  color: var(--muted2);
+  font-size: 12px;
+}
+.traffic__updated strong{
+  color: var(--text);
+}
 .traffic__grid{
   display: grid;
   grid-template-columns: repeat(3, minmax(0,1fr));
@@ -369,7 +397,8 @@ main{
 }
 .traffic__card{
   border: 1px solid var(--stroke);
-  background: rgba(255,255,255,.03);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
   border-radius: 16px;
   padding: 14px 14px;
 }
@@ -387,11 +416,17 @@ main{
   line-height: 1.1;
   letter-spacing: -0.02em;
 }
+.traffic__hint{
+  display: block;
+  margin-top: 6px;
+  color: var(--muted2);
+  font-size: 12px;
+}
 .traffic__locations{
   margin-top: 12px;
   border: 1px solid var(--stroke);
   border-radius: var(--radius2);
-  background: rgba(255,255,255,.03);
+  background: rgba(255,255,255,.035);
   padding: 14px;
 }
 .traffic__locations-head{
@@ -414,24 +449,49 @@ main{
   margin: 0;
   padding: 0;
   display: grid;
-  gap: 8px;
+  gap: 10px;
 }
 .traffic__locations-list li{
-  display:flex;
-  align-items:center;
-  justify-content: space-between;
-  gap: 10px;
+  display:grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas:
+    "label count"
+    "bar bar";
+  gap: 6px 10px;
   border: 1px solid var(--stroke);
   border-radius: 12px;
   padding: 9px 10px;
   background: rgba(255,255,255,.02);
 }
 .traffic__locations-list li span{
+  grid-area: label;
   color: var(--muted);
   font-size: 13px;
 }
 .traffic__locations-list li strong{
+  grid-area: count;
   font-size: 13px;
+}
+.traffic__bar{
+  grid-area: bar;
+  width: 100%;
+  height: 7px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.08);
+  background: rgba(255,255,255,.03);
+  overflow: hidden;
+}
+.traffic__bar > i{
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(79,209,197,.8), rgba(47,122,89,.8));
+}
+.traffic__empty{
+  grid-template-areas: "label count";
+}
+.traffic__empty .traffic__bar{
+  display: none;
 }
 
 /* ===== Value strip ===== */
