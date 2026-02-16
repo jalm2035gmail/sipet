@@ -136,6 +136,41 @@
       </div>
     </section>
 
+    <section class="traffic" aria-label="Analítica de visitas">
+      <div class="wrap">
+        <header class="section-head">
+          <h2>Interés de cooperativas en SIPET</h2>
+          <p>
+            Indicadores en tiempo real de esta página: volumen de visitas, visitantes únicos
+            y origen de accesos reportados por la infraestructura.
+          </p>
+        </header>
+        <div class="traffic__grid">
+          <article class="traffic__card">
+            <span class="traffic__label">Visitas totales</span>
+            <strong class="traffic__value" id="metric-total-visits">0</strong>
+          </article>
+          <article class="traffic__card">
+            <span class="traffic__label">Visitantes únicos</span>
+            <strong class="traffic__value" id="metric-unique-visitors">0</strong>
+          </article>
+          <article class="traffic__card">
+            <span class="traffic__label">Visitas hoy</span>
+            <strong class="traffic__value" id="metric-visits-today">0</strong>
+          </article>
+        </div>
+        <article class="traffic__locations">
+          <div class="traffic__locations-head">
+            <h3>Origen de accesos</h3>
+            <small>Top ubicaciones detectadas</small>
+          </div>
+          <ul id="metric-top-locations" class="traffic__locations-list">
+            <li><span>Ubicación no disponible</span><strong>0</strong></li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
     <!-- Value strip -->
     <section class="value">
       <div class="wrap value__grid" aria-label="Propuesta de valor">
@@ -633,6 +668,12 @@
         }
         return payload;
       };
+      const escapeHtml = (value) => String(value || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/\"/g, "&quot;")
+        .replace(/'/g, "&#39;");
 
       const quizModal = document.getElementById("quiz-modal");
       const quizOpen = document.getElementById("promo-quiz-open");
@@ -641,6 +682,10 @@
       const quizForm = document.getElementById("quiz-form");
       const quizStatus = document.getElementById("quiz-status");
       const quizResult = document.getElementById("quiz-result");
+      const metricTotalVisits = document.getElementById("metric-total-visits");
+      const metricUniqueVisitors = document.getElementById("metric-unique-visitors");
+      const metricVisitsToday = document.getElementById("metric-visits-today");
+      const metricTopLocations = document.getElementById("metric-top-locations");
       const openQuiz = () => {
         if (!quizModal) return;
         quizModal.classList.add("is-open");
@@ -662,10 +707,39 @@
       });
 
       // Analítica pública de acceso
+      const renderTopLocations = (rows) => {
+        if (!metricTopLocations) return;
+        const list = Array.isArray(rows) ? rows : [];
+        if (!list.length) {
+          metricTopLocations.innerHTML = "<li><span>Ubicación no disponible</span><strong>0</strong></li>";
+          return;
+        }
+        metricTopLocations.innerHTML = list
+          .map((item) => {
+            const label = escapeHtml(item.label || "Ubicación no disponible");
+            const count = Number(item.count || 0);
+            return `<li><span>${label}</span><strong>${count}</strong></li>`;
+          })
+          .join("");
+      };
+
+      const loadLandingMetrics = async () => {
+        try {
+          const response = await requestJson("/api/public/landing-metrics?page=funcionalidades", { method: "GET" });
+          const data = response.data || {};
+          metricTotalVisits && (metricTotalVisits.textContent = Number(data.total_visits || 0).toLocaleString("es-MX"));
+          metricUniqueVisitors && (metricUniqueVisitors.textContent = Number(data.unique_visitors || 0).toLocaleString("es-MX"));
+          metricVisitsToday && (metricVisitsToday.textContent = Number(data.visits_today || 0).toLocaleString("es-MX"));
+          renderTopLocations(data.top_locations || []);
+        } catch (err) {
+          renderTopLocations([]);
+        }
+      };
+
       requestJson("/api/public/track-visit", {
         method: "POST",
         body: JSON.stringify({ page: "funcionalidades" }),
-      }).catch(() => {});
+      }).finally(loadLandingMetrics);
 
       const form = document.getElementById("lead-form");
       const status = document.getElementById("lead-status");

@@ -13,6 +13,7 @@ import os
 import re
 import secrets
 import time
+import ipaddress
 from textwrap import dedent
 from email.message import EmailMessage
 from urllib.parse import urlparse
@@ -56,6 +57,8 @@ PASSKEY_COOKIE_REGISTER = "passkey_register"
 PASSKEY_COOKIE_AUTH = "passkey_auth"
 PASSKEY_CHALLENGE_TTL_SECONDS = 300
 NON_DATA_FIELD_TYPES = {"header", "paragraph", "html", "divider", "pagebreak"}
+GEOIP_CACHE_TTL_SECONDS = 60 * 60 * 6
+_GEOIP_CACHE: Dict[str, Dict[str, Any]] = {}
 
 
 ROLE_ALIASES = {
@@ -1726,6 +1729,78 @@ def _public_client_ip(request: Request) -> str:
     return (request.client.host if request.client else "") or ""
 
 
+def _is_public_ip_address(value: str) -> bool:
+    raw = (value or "").strip()
+    if not raw:
+        return False
+    try:
+        ip_obj = ipaddress.ip_address(raw)
+    except ValueError:
+        return False
+    if (
+        ip_obj.is_private
+        or ip_obj.is_loopback
+        or ip_obj.is_link_local
+        or ip_obj.is_multicast
+        or ip_obj.is_reserved
+        or ip_obj.is_unspecified
+    ):
+        return False
+    return True
+
+
+def _geoip_lookup_by_ip(ip_address: str) -> Dict[str, str]:
+    ip_value = (ip_address or "").strip()
+    if not _is_public_ip_address(ip_value):
+        return {"country": "", "region": "", "city": ""}
+
+    now_ts = int(time.time())
+    cached = _GEOIP_CACHE.get(ip_value)
+    if cached and int(cached.get("expires_at") or 0) > now_ts:
+        return {
+            "country": str(cached.get("country") or ""),
+            "region": str(cached.get("region") or ""),
+            "city": str(cached.get("city") or ""),
+        }
+
+    resolved = {"country": "", "region": "", "city": ""}
+    provider_urls = [
+        f"https://ipwho.is/{ip_value}",
+        f"https://ipapi.co/{ip_value}/json/",
+    ]
+    timeout = httpx.Timeout(1.8, connect=1.0)
+    for url in provider_urls:
+        try:
+            response = httpx.get(url, timeout=timeout)
+            if response.status_code != 200:
+                continue
+            data = response.json() if response.headers.get("content-type", "").startswith("application/json") else {}
+            if not isinstance(data, dict):
+                continue
+            if "ipwho.is" in url and data.get("success") is False:
+                continue
+            country = (
+                str(data.get("country_code") or data.get("countryCode") or data.get("country") or "")
+                .strip()
+                .upper()
+            )
+            region = str(data.get("region") or data.get("regionName") or "").strip()
+            city = str(data.get("city") or "").strip()
+            if country or region or city:
+                resolved = {"country": country, "region": region, "city": city}
+                break
+        except Exception:
+            continue
+
+    _GEOIP_CACHE[ip_value] = {
+        "country": resolved["country"],
+        "region": resolved["region"],
+        "city": resolved["city"],
+        "expires_at": now_ts + GEOIP_CACHE_TTL_SECONDS,
+    }
+    return resolved
+
+
 def _public_client_location(request: Request) -> Dict[str, str]:
     country = (
         request.headers.get("cf-ipcountry")
@@ -1739,6 +1814,16 @@ def _public_client_location(request: Request) -> Dict[str, str]:
         or ""
     ).strip()
     city = (request.headers.get("x-vercel-ip-city") or request.headers.get("x-city") or "").strip()
+    if country and (region or city):
+        return {"country": country, "region": region, "city": city}
+
+    resolved = _geoip_lookup_by_ip(_public_client_ip(request))
+    if not country:
+        country = (resolved.get("country") or "").strip().upper()
+    if not region:
+        region = (resolved.get("region") or "").strip()
+    if not city:
+        city = (resolved.get("city") or "").strip()
     return {"country": country, "region": region, "city": city}
 
 
@@ -1929,7 +2014,12 @@ def public_landing_metrics(request: Request):
             .count()
         )
         recent_rows = (
-            db.query(PublicLandingVisit.country, PublicLandingVisit.region, PublicLandingVisit.city)
+            db.query(
+                PublicLandingVisit.country,
+                PublicLandingVisit.region,
+                PublicLandingVisit.city,
+                PublicLandingVisit.ip_address,
+            )
             .filter(PublicLandingVisit.page == page)
             .order_by(PublicLandingVisit.created_at.desc())
             .limit(700)
@@ -1940,6 +2030,11 @@ def public_landing_metrics(request: Request):
             country = (row.country or "").strip()
             region = (row.region or "").strip()
             city = (row.city or "").strip()
+            if not (country or region or city):
+                resolved = _geoip_lookup_by_ip(str(row.ip_address or "").strip())
+                country = (resolved.get("country") or "").strip()
+                region = (resolved.get("region") or "").strip()
+                city = (resolved.get("city") or "").strip()
             if city and region:
                 key = f"{city}, {region}"
             elif city and country:
