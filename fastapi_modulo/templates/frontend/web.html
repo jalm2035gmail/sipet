@@ -29,6 +29,14 @@
             color: var(--text);
             background: radial-gradient(circle at 10% 0%, #dceeff 0%, var(--bg-start) 28%, var(--bg-end) 100%);
         }
+        .initial-white {
+            position: fixed;
+            inset: 0;
+            background: #ffffff;
+            z-index: 3000;
+            pointer-events: none;
+            animation: initialWhiteScreen 1.8s ease forwards;
+        }
         .demo-banner {
             position: fixed;
             top: 0;
@@ -104,7 +112,7 @@
         .functions {
             margin-top: 24px;
             display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
+            grid-template-columns: repeat(4, minmax(0, 1fr));
             gap: 14px;
         }
         .function-card {
@@ -209,10 +217,23 @@
                 grid-template-columns: 1fr;
             }
         }
+        @keyframes initialWhiteScreen {
+            0% {
+                opacity: 1;
+            }
+            65% {
+                opacity: 1;
+            }
+            100% {
+                opacity: 0;
+                visibility: hidden;
+            }
+        }
     </style>
 </head>
 <body>
-    <div class="demo-banner">esto es un demo</div>
+    <div class="initial-white" aria-hidden="true"></div>
+    <div class="demo-banner">Tecnología al alcance de su cooperativa</div>
 
     <div class="page">
         <section class="hero">
@@ -231,11 +252,6 @@
                     <a class="btn btn-ghost" href="/web/funcionalidades">Ver funcionalidades</a>
                     <p class="access-note">Acceso permitido solo para usuarios registrados.</p>
                 </div>
-                <div class="demo-credentials">
-                    <strong>Usuario:</strong> demo<br>
-                    <strong>Contraseña:</strong> demodemo<br>
-                    Puede ingresar con estos datos, tendrá un acceso parcial.
-                </div>
             </div>
         </section>
 
@@ -251,6 +267,10 @@
             <article class="function-card">
                 <h2>Indicadores y reportes</h2>
                 <p>Visualiza KPIs y reportes ejecutivos para tomar decisiones con información actualizada.</p>
+            </article>
+            <article class="function-card">
+                <h2>Control Presupuestal</h2>
+                <p>Monitorea presupuesto planificado vs ejecutado, identifica desviaciones y mejora el control financiero por área.</p>
             </article>
         </section>
 

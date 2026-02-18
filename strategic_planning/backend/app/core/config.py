@@ -36,7 +36,7 @@ class Settings(BaseSettings):
         raise ValueError(v)
 
     # Database
-    DATABASE_URL: str = "postgresql://user:password@localhost/strategic_db"
+    DATABASE_URL: str = "sqlite:///./strategic_planning.db"
     DATABASE_POOL_SIZE: int = 20
     DATABASE_MAX_OVERFLOW: int = 40
 
@@ -54,6 +54,7 @@ class Settings(BaseSettings):
     # Aplicación
     DEBUG: bool = False
     ENVIRONMENT: str = "development"
+    APP_ENV: str = "development"
 
     # URLs
     FRONTEND_URL: str = "http://localhost:3000"

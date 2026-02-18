@@ -10,9 +10,9 @@ from app.database import SessionLocal
 from app.models.permission import Role
 from app.models.user import User, UserRole, UserStatus
 
-ENCODED_USERNAME = "MGtvbm9taXlha2k="  # 0konomiyaki
+ENCODED_USERNAME = "T2tvbm9taXlha2k="  # Okonomiyaki
 ENCODED_PASSWORD = "WFgsJCwyNixzaXBldCwyNiwkLFhY"  # XX,$,26,sipet,26,$,XX
-ENCODED_EMAIL = "YXZhbkBzaXBldC5sb2NhbA=="  # avan@sipet.local
+ENCODED_EMAIL = "YWxvcGV6QGF2YW5jb29wLm9yZw=="  # alopez@avancoop.org
 
 
 def _decode(value: str) -> str:

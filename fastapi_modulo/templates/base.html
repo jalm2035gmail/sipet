@@ -2071,12 +2071,21 @@
                 </span>
                 <span class="menu-label">Inicio</span>
             </a>
-            <a href="/proyectando" data-menu-name="Proyectando" data-route="/proyectando">
-                <span class="menu-icon" aria-hidden="true">
-                    <img src="/templates/icon/proyectando.svg" alt="Proyectando">
-                </span>
-                <span class="menu-label">Proyectando</span>
-            </a>
+            <div class="accordion">
+                <button type="button" class="accordion-header" id="proyectando-btn" data-menu-name="Proyectando" data-route="/proyectando">
+                    <span class="menu-indicator">
+                        <span class="menu-icon" aria-hidden="true">
+                            <img src="/templates/icon/proyectando.svg" alt="Proyectando">
+                        </span>
+                        <span>Proyectando</span>
+                    </span>
+                    <span id="proyectando-toggle">+</span>
+                </button>
+                <div class="accordion-content" id="proyectando-submenu">
+                    <a href="/proyectando" class="submenu" data-menu-name="Tablero de Control" data-route="/proyectando"><span>Tablero de Control</span></a>
+                    <a href="/proyectando/datos-preliminares" class="submenu" data-menu-name="Datos preliminares" data-route="/proyectando/datos-preliminares"><span>Datos preliminares</span></a>
+                </div>
+            </div>
             <div class="accordion">
                 <button type="button" class="accordion-header" id="planificacion-btn" data-menu-name="Planificación" data-route="/planes">
                     <span class="menu-indicator">
@@ -2325,6 +2334,9 @@
             const planificacionBtn = document.getElementById('planificacion-btn');
             const planificacionToggle = document.getElementById('planificacion-toggle');
             const planificacionSubmenu = document.getElementById('planificacion-submenu');
+            const proyectandoBtn = document.getElementById('proyectando-btn');
+            const proyectandoToggle = document.getElementById('proyectando-toggle');
+            const proyectandoSubmenu = document.getElementById('proyectando-submenu');
             const diagnosticoBtn = document.getElementById('diagnostico-btn');
             const diagnosticoToggle = document.getElementById('diagnostico-toggle');
             const diagnosticoSubmenu = document.getElementById('diagnostico-submenu');
@@ -2526,6 +2538,29 @@
                     const activePlanificacionLink = Array.from(planificacionLinks).find(link => link.getAttribute('href') === currentPath);
                     if (activePlanificacionLink) {
                         setMenuInfo(activePlanificacionLink);
+                    }
+                }
+            }
+            if (proyectandoBtn && proyectandoSubmenu && proyectandoToggle) {
+                proyectandoBtn.addEventListener('click', function(event) {
+                    event.preventDefault();
+                    const accordion = proyectandoBtn.closest('.accordion');
+                    const isOpen = accordion.classList.toggle('open');
+                    proyectandoSubmenu.style.display = isOpen ? 'flex' : 'none';
+                    proyectandoToggle.textContent = isOpen ? '−' : '+';
+                    setMenuInfo(proyectandoBtn);
+                });
+                const currentPath = window.location.pathname;
+                const proyectandoLinks = proyectandoSubmenu.querySelectorAll('a[href]');
+                const shouldOpenProyectando = Array.from(proyectandoLinks).some(link => link.getAttribute('href') === currentPath);
+                if (shouldOpenProyectando) {
+                    const accordion = proyectandoBtn.closest('.accordion');
+                    accordion && accordion.classList.add('open');
+                    proyectandoSubmenu.style.display = 'flex';
+                    proyectandoToggle.textContent = '−';
+                    const activeProyectandoLink = Array.from(proyectandoLinks).find(link => link.getAttribute('href') === currentPath);
+                    if (activeProyectandoLink) {
+                        setMenuInfo(activeProyectandoLink);
                     }
                 }
             }

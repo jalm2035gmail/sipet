@@ -21,6 +21,7 @@
             align-items: center;
             justify-content: center;
             font-family: 'Inter', Arial, sans-serif;
+            font-size: 16px;
             background-color: var(--login-bg-color);
             background-image: var(--login-bg-desktop);
             background-size: cover;
@@ -57,9 +58,9 @@
             position: relative;
             z-index: 1;
             width: 100%;
-            max-width: 1200px;
-            padding: 48px 72px 64px;
-            min-height: 90vh;
+            max-width: 1040px;
+            padding: 24px 36px 32px;
+            min-height: 82vh;
             display: flex;
             flex-direction: column;
             color: #fefefe;
@@ -69,8 +70,8 @@
             display: flex;
             justify-content: flex-start;
             align-items: flex-start;
-            gap: 32px;
-            margin-top: 40px;
+            gap: 24px;
+            margin-top: 12px;
             position: relative;
         }
 
@@ -106,15 +107,15 @@
         }
 
         .company-name {
-            font-size: 2rem;
+            font-size: 1.35rem;
             text-transform: uppercase;
             font-weight: 700;
         }
 
         .description {
-            font-size: 2rem;
+            font-size: 1.2rem;
             max-width: 480px;
-            line-height: 1.6;
+            line-height: 1.45;
             color: rgba(255, 255, 255, 0.95);
             text-align: center;
             position: absolute;
@@ -132,21 +133,14 @@
             flex: 1;
             margin-top: 2rem;
             position: relative;
-        }
-
-        .left-side {
-            flex: 1;
-            display: flex;
-            align-items: center;
             justify-content: flex-start;
-            min-height: 60vh;
         }
 
         .form-panel {
             width: 33.333%;
             min-width: 0;
             max-width: 460px;
-            margin-left: auto;
+            margin-left: 0;
             background: linear-gradient(155deg, rgba(18, 19, 26, 0.95), rgba(37, 63, 60, 0.6));
             border-radius: 36px;
             border: 1px solid rgba(255, 255, 255, 0.25);
@@ -154,19 +148,13 @@
                 0 30px 80px rgba(0, 0, 0, 0.6),
                 inset 0 0 0 1px rgba(255, 255, 255, 0.05);
             padding: 32px;
-            opacity: 0;
-            transform: translateX(30px);
-            transition: all 0.5s ease;
+            opacity: 1;
+            transform: translateX(0);
             display: flex;
             flex-direction: column;
             gap: 18px;
-            pointer-events: none;
-        }
-
-        .form-panel.active {
-            opacity: 1;
-            transform: translateX(0);
             pointer-events: auto;
+            animation: panelEnterDesktop 1.8s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
         }
 
         .form-panel h2 {
@@ -312,27 +300,6 @@
             text-align: center;
         }
 
-        .cta-ingresar {
-            font-size: 2.16rem;
-            letter-spacing: 0.3em;
-            padding: 12px 28px;
-            border-radius: 999px;
-            border: 2px solid rgba(255, 255, 255, 0.6);
-            background: rgba(0, 0, 0, 0.25);
-            color: #fff;
-            transition: background 0.3s ease, color 0.3s ease, border-color 0.3s ease;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-        }
-
-        .cta-ingresar:hover {
-            background: #fefefe;
-            color: #00160f;
-            border-color: #bdbdbd;
-        }
-
         @media (max-width: 900px) {
             body {
                 background-image: var(--login-bg-mobile);
@@ -367,23 +334,18 @@
             .logo-block {
                 align-items: flex-start;
             }
-            .left-side {
-                width: 100%;
-                justify-content: center;
-                min-height: auto;
-            }
             .form-panel {
-                position: relative;
-                top: auto;
-                right: auto;
+                position: fixed;
+                inset: 0;
                 width: 100%;
                 max-width: 100%;
-                margin: 12px 0 0;
-                transform: translateY(20px);
-            }
-            .form-panel.active {
+                margin: 0;
+                min-height: 100dvh;
+                border-radius: 0;
+                border: none;
+                transform: translateY(100%);
                 opacity: 1;
-                transform: translateY(0);
+                animation: panelEnterMobile 1.35s cubic-bezier(0.22, 0.7, 0.22, 1) forwards;
             }
         }
 
@@ -447,6 +409,24 @@
             }
         }
 
+        @keyframes panelEnterDesktop {
+            0% {
+                transform: translateX(85vw);
+            }
+            100% {
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes panelEnterMobile {
+            0% {
+                transform: translateY(100%);
+            }
+            100% {
+                transform: translateY(0);
+            }
+        }
+
 
     </style>
 </head>
@@ -462,10 +442,7 @@
             </div>
         </div>
         <div class="main-content">
-            <div class="left-side">
-                <button class="cta-ingresar" type="button" aria-expanded="false" aria-controls="login-form">INGRESAR</button>
-            </div>
-            <div class="form-panel" id="login-form" aria-hidden="true">
+            <div class="form-panel active" id="login-form" aria-hidden="false">
                 <div class="form-icon" aria-hidden="true">
                     <svg viewBox="0 0 64 64" role="presentation">
                         <circle cx="32" cy="20" r="12"/>
@@ -481,6 +458,10 @@
                     <div class="field">
                         <label for="contrasena">Contraseña</label>
                         <input id="contrasena" name="contrasena" type="password" placeholder="Contraseña" autocomplete="current-password" enterkeyhint="go" required>
+                    </div>
+                    <div class="field">
+                        <label for="codigo_autenticador">Código autenticador (opcional)</label>
+                        <input id="codigo_autenticador" name="codigo_autenticador" type="text" inputmode="numeric" pattern="[0-9]{6}" placeholder="000000" autocomplete="one-time-code" maxlength="6">
                     </div>
                     <div class="form-footer">
                         <span>Recuerdame</span>
@@ -499,7 +480,6 @@
         </div>
     </div>
     <script>
-        const ingresarBtn = document.querySelector(".cta-ingresar");
         const formPanel = document.getElementById("login-form");
         const loginForm = document.querySelector(".login-form");
         const usuarioInput = document.getElementById("usuario");
@@ -512,6 +492,7 @@
         const loginQuery = new URLSearchParams(window.location.search || "");
         const demoUsuario = (loginQuery.get("usuario") || "").trim();
         const demoContrasena = loginQuery.get("contrasena") || "";
+        const mfaRequired = (loginQuery.get("mfa") || "").trim().toLowerCase() === "required";
         const hasLoginPrefill = !!(demoUsuario || demoContrasena);
         let passkeyMode = "register";
         const PASSKEY_LABELS = {
@@ -558,28 +539,14 @@
             return json;
         };
         const setFormPanelState = (open) => {
-            if (!ingresarBtn || !formPanel) return;
-            ingresarBtn.setAttribute("aria-expanded", String(open));
+            if (!formPanel) return;
             formPanel.classList.toggle("active", open);
             formPanel.setAttribute("aria-hidden", String(!open));
         };
         const syncLoginLayout = () => {
-            if (!ingresarBtn || !formPanel) return;
-            if (mobilePortraitQuery.matches) {
-                ingresarBtn.style.display = "none";
-                setFormPanelState(true);
-                return;
-            }
-            ingresarBtn.style.display = "inline-flex";
-            if (!loginError && !hasLoginPrefill) {
-                setFormPanelState(false);
-            }
+            if (!formPanel) return;
+            setFormPanelState(true);
         };
-
-        ingresarBtn.addEventListener("click", () => {
-            const isExpanded = ingresarBtn.getAttribute("aria-expanded") === "true";
-            setFormPanelState(!isExpanded);
-        });
 
         const clearLoginError = () => {
             if (loginError) {
@@ -714,7 +681,7 @@
 
         if (usuarioInput && demoUsuario) usuarioInput.value = demoUsuario;
         if (contrasenaInput && demoContrasena) contrasenaInput.value = demoContrasena;
-        if (hasLoginPrefill) setFormPanelState(true);
+        if (hasLoginPrefill || mfaRequired) setFormPanelState(true);
 
         // Si backend devolvió error, mostrar panel automáticamente.
         if (loginError) {
@@ -729,6 +696,10 @@
         syncLoginLayout();
         applyPasskeyMode("register");
         refreshPasskeyMode();
+        if (mfaRequired) {
+            applyPasskeyMode("login");
+            setPasskeyStatus("Segundo factor requerido: valida con biometría para completar el ingreso.");
+        }
         if (mobilePortraitQuery.addEventListener) {
             mobilePortraitQuery.addEventListener("change", syncLoginLayout);
         } else if (mobilePortraitQuery.addListener) {

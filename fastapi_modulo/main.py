@@ -13,10 +13,11 @@ import os
 import re
 import secrets
 import time
+import struct
 import ipaddress
 from textwrap import dedent
 from email.message import EmailMessage
-from urllib.parse import urlparse
+from urllib.parse import quote, urlparse
 from cryptography.fernet import Fernet, InvalidToken
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives import hashes, serialization
@@ -51,14 +52,32 @@ DEFAULT_LOGIN_IDENTITY = {
 PLANTILLAS_STORE_PATH = "fastapi_modulo/plantillas_store.json"
 SYSTEM_REPORT_HEADER_TEMPLATE_ID = "system-report-header"
 AUTH_COOKIE_NAME = "auth_session"
-AUTH_COOKIE_SECRET = os.environ.get("AUTH_COOKIE_SECRET", "sipet-dev-auth-secret")
-SENSITIVE_DATA_SECRET = os.environ.get("SENSITIVE_DATA_SECRET", AUTH_COOKIE_SECRET)
+
+
+def _require_secret(name: str) -> str:
+    value = (os.environ.get(name) or "").strip()
+    if not value:
+        raise RuntimeError(
+            f"{name} no está configurada. Define esta variable de entorno antes de iniciar la aplicación."
+        )
+    return value
+
+
+AUTH_COOKIE_SECRET = _require_secret("AUTH_COOKIE_SECRET")
+SENSITIVE_DATA_SECRET = (os.environ.get("SENSITIVE_DATA_SECRET") or AUTH_COOKIE_SECRET).strip()
 PASSKEY_COOKIE_REGISTER = "passkey_register"
 PASSKEY_COOKIE_AUTH = "passkey_auth"
+PASSKEY_COOKIE_MFA_GATE = "passkey_mfa_gate"
 PASSKEY_CHALLENGE_TTL_SECONDS = 300
 NON_DATA_FIELD_TYPES = {"header", "paragraph", "html", "divider", "pagebreak"}
 GEOIP_CACHE_TTL_SECONDS = 60 * 60 * 6
 _GEOIP_CACHE: Dict[str, Dict[str, Any]] = {}
+LOGIN_RATE_LIMIT_WINDOW_SECONDS = int((os.environ.get("LOGIN_RATE_LIMIT_WINDOW_SECONDS") or "300").strip() or "300")
+LOGIN_RATE_LIMIT_MAX_ATTEMPTS = int((os.environ.get("LOGIN_RATE_LIMIT_MAX_ATTEMPTS") or "7").strip() or "7")
+_LOGIN_ATTEMPTS: Dict[str, List[float]] = {}
+IDENTITY_UPLOAD_MAX_BYTES = int((os.environ.get("IDENTITY_UPLOAD_MAX_BYTES") or str(5 * 1024 * 1024)).strip() or str(5 * 1024 * 1024))
+TOTP_PERIOD_SECONDS = int((os.environ.get("TOTP_PERIOD_SECONDS") or "30").strip() or "30")
+TOTP_ALLOWED_DRIFT_STEPS = int((os.environ.get("TOTP_ALLOWED_DRIFT_STEPS") or "1").strip() or "1")
 
 
 ROLE_ALIASES = {
@@ -66,6 +85,10 @@ ROLE_ALIASES = {
     "superadministrador": "superadministrador",
     "admin": "administrador",
     "administrador": "administrador",
+    "autoridad": "autoridades",
+    "autoridades": "autoridades",
+    "authority": "autoridades",
+    "authorities": "autoridades",
     "strategic_manager": "departamento",
     "department_manager": "departamento",
     "departamento": "departamento",
@@ -164,6 +187,56 @@ def _sensitive_lookup_hash(value: str) -> str:
     return hmac.new(_sensitive_secret_bytes(), normalized.encode("utf-8"), hashlib.sha256).hexdigest()
 
 
+def _auth_client_key(request: Request) -> str:
+    forwarded_for = (request.headers.get("x-forwarded-for") or "").split(",")[0].strip()
+    if forwarded_for:
+        return forwarded_for
+    if request.client and request.client.host:
+        return request.client.host
+    return "unknown"
+
+
+def _is_login_rate_limited(request: Request) -> bool:
+    key = _auth_client_key(request)
+    now = time.time()
+    window_start = now - max(1, LOGIN_RATE_LIMIT_WINDOW_SECONDS)
+    attempts = [ts for ts in _LOGIN_ATTEMPTS.get(key, []) if ts >= window_start]
+    _LOGIN_ATTEMPTS[key] = attempts
+    return len(attempts) >= max(1, LOGIN_RATE_LIMIT_MAX_ATTEMPTS)
+
+
+def _register_failed_login_attempt(request: Request) -> None:
+    key = _auth_client_key(request)
+    now = time.time()
+    window_start = now - max(1, LOGIN_RATE_LIMIT_WINDOW_SECONDS)
+    attempts = [ts for ts in _LOGIN_ATTEMPTS.get(key, []) if ts >= window_start]
+    attempts.append(now)
+    _LOGIN_ATTEMPTS[key] = attempts
+
+
+def _clear_failed_login_attempts(request: Request) -> None:
+    _LOGIN_ATTEMPTS.pop(_auth_client_key(request), None)
+
+
+def _is_same_origin_request(request: Request) -> bool:
+    host = (request.headers.get("host") or "").strip().lower()
+    if not host:
+        return False
+    current_origin = f"{request.url.scheme}://{host}"
+
+    origin = (request.headers.get("origin") or "").strip().rstrip("/")
+    if origin:
+        return origin.lower() == current_origin
+
+    referer = (request.headers.get("referer") or "").strip()
+    if referer:
+        parsed = urlparse(referer)
+        referer_origin = f"{parsed.scheme}://{parsed.netloc}".rstrip("/")
+        return referer_origin.lower() == current_origin
+
+    return False
+
+
 def _encrypt_sensitive(value: Optional[str]) -> Optional[str]:
     raw = (value or "").strip()
     if not raw:
@@ -243,9 +316,14 @@ def _remove_login_image_if_custom(filename: Optional[str]) -> None:
 async def _store_login_image(upload: UploadFile, prefix: str) -> Optional[str]:
     if not upload or not upload.filename:
         return None
+    content_type = (upload.content_type or "").lower().strip()
+    if content_type and not content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="Solo se permiten imágenes para identidad institucional")
     data = await upload.read()
     if not data:
         return None
+    if len(data) > max(1, IDENTITY_UPLOAD_MAX_BYTES):
+        raise HTTPException(status_code=413, detail="La imagen supera el tamaño máximo permitido")
     _ensure_login_identity_paths()
     ext = _get_upload_ext(upload)
     new_filename = f"{prefix}_{secrets.token_hex(6)}{ext}"
@@ -562,10 +640,54 @@ def backend_screen(
     }
     return templates.TemplateResponse("base.html", context)
 
-# Configuración SQLite (BD principal unificada)
-PRIMARY_DB_PATH = "strategic_planning.db"
-DATABASE_URL = f"sqlite:///./{PRIMARY_DB_PATH}"
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+# Configuración de BD por entorno (Railway/Local)
+def _resolve_database_url() -> str:
+    raw_url = (os.environ.get("DATABASE_URL") or "").strip()
+    if raw_url:
+        if raw_url.startswith("postgres://"):
+            return raw_url.replace("postgres://", "postgresql://", 1)
+        return raw_url
+    sqlite_db_path = (os.environ.get("SQLITE_DB_PATH") or "strategic_planning.db").strip()
+    return f"sqlite:///./{sqlite_db_path}"
+
+
+def _extract_sqlite_path(db_url: str) -> Optional[str]:
+    if not db_url.startswith("sqlite:///"):
+        return None
+    path = db_url.replace("sqlite:///", "", 1).split("?", 1)[0]
+    if path.startswith("./"):
+        return path[2:]
+    return path
+
+
+DATABASE_URL = _resolve_database_url()
+IS_SQLITE_DATABASE = DATABASE_URL.startswith("sqlite:///")
+PRIMARY_DB_PATH = _extract_sqlite_path(DATABASE_URL)
+APP_ENV = (os.environ.get("APP_ENV") or os.environ.get("ENVIRONMENT") or "development").strip().lower()
+SESSION_MAX_AGE_SECONDS = int((os.environ.get("SESSION_MAX_AGE_SECONDS") or "28800").strip() or "28800")
+COOKIE_SECURE = (os.environ.get("COOKIE_SECURE") or "").strip().lower() in {"1", "true", "yes", "on"} or APP_ENV in {
+    "production",
+    "prod",
+}
+ALLOW_LEGACY_PLAINTEXT_PASSWORDS = (os.environ.get("ALLOW_LEGACY_PLAINTEXT_PASSWORDS") or "").strip().lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
+ENABLE_API_DOCS = (os.environ.get("ENABLE_API_DOCS") or "").strip().lower() in {"1", "true", "yes", "on"} or APP_ENV not in {
+    "production",
+    "prod",
+}
+HEALTH_INCLUDE_DETAILS = (os.environ.get("HEALTH_INCLUDE_DETAILS") or "").strip().lower() in {"1", "true", "yes", "on"}
+CSRF_PROTECTION_ENABLED = (os.environ.get("CSRF_PROTECTION_ENABLED") or "true").strip().lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
+ENGINE_CONNECT_ARGS = {"check_same_thread": False} if IS_SQLITE_DATABASE else {}
+engine = create_engine(DATABASE_URL, connect_args=ENGINE_CONNECT_ARGS)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
@@ -603,6 +725,8 @@ class Usuario(Base):
     webauthn_credential_id = Column(String, unique=True, index=True)
     webauthn_public_key = Column(String)
     webauthn_sign_count = Column(Integer, default=0)
+    totp_secret = Column(String)
+    totp_enabled = Column(Boolean, default=False)
 
 
 class StrategicAxisConfig(Base):
@@ -845,12 +969,13 @@ class PublicQuizSubmission(Base):
 DEFAULT_SYSTEM_ROLES = [
     ("superadministrador", "Acceso total a todo el módulo"),
     ("administrador", "Acceso a todo menos a Personalización"),
+    ("autoridades", "Acceso al tablero de control"),
     ("departamento", "Acceso a su departamento"),
     ("usuario", "Acceso solo a sus datos"),
 ]
-DEFAULT_SUPERADMIN_USERNAME_B64 = "MGtvbm9taXlha2k="  # 0konomiyaki
+DEFAULT_SUPERADMIN_USERNAME_B64 = "T2tvbm9taXlha2k="  # Okonomiyaki
 DEFAULT_SUPERADMIN_PASSWORD_B64 = "WFgsJCwyNixzaXBldCwyNiwkLFhY"  # XX,$,26,sipet,26,$,XX
-DEFAULT_SUPERADMIN_EMAIL_B64 = "c3lzdGVtLjBrb25vbWl5YWtpQGxvY2FsLmludmFsaWQ="  # system.0konomiyaki@local.invalid
+DEFAULT_SUPERADMIN_EMAIL_B64 = "YWxvcGV6QGF2YW5jb29wLm9yZw=="  # alopez@avancoop.org
 
 
 def ensure_default_roles() -> None:
@@ -1010,6 +1135,8 @@ def ensure_default_strategic_axes_data() -> None:
 
 
 def protect_sensitive_user_fields() -> None:
+    if not IS_SQLITE_DATABASE or not PRIMARY_DB_PATH:
+        return
     with sqlite3.connect(PRIMARY_DB_PATH) as conn:
         cols = {row[1] for row in conn.execute('PRAGMA table_info("users")').fetchall()}
         if "usuario_hash" not in cols:
@@ -1040,6 +1167,8 @@ def protect_sensitive_user_fields() -> None:
 
 
 def ensure_passkey_user_schema() -> None:
+    if not IS_SQLITE_DATABASE or not PRIMARY_DB_PATH:
+        return
     with sqlite3.connect(PRIMARY_DB_PATH) as conn:
         cols = {row[1] for row in conn.execute('PRAGMA table_info("users")').fetchall()}
         if "webauthn_credential_id" not in cols:
@@ -1048,6 +1177,10 @@ def ensure_passkey_user_schema() -> None:
             conn.execute('ALTER TABLE "users" ADD COLUMN "webauthn_public_key" VARCHAR')
         if "webauthn_sign_count" not in cols:
             conn.execute('ALTER TABLE "users" ADD COLUMN "webauthn_sign_count" INTEGER DEFAULT 0')
+        if "totp_secret" not in cols:
+            conn.execute('ALTER TABLE "users" ADD COLUMN "totp_secret" VARCHAR')
+        if "totp_enabled" not in cols:
+            conn.execute('ALTER TABLE "users" ADD COLUMN "totp_enabled" BOOLEAN DEFAULT 0')
         conn.execute(
             'CREATE UNIQUE INDEX IF NOT EXISTS "ix_users_webauthn_credential_id" ON "users" ("webauthn_credential_id")'
         )
@@ -1055,6 +1188,8 @@ def ensure_passkey_user_schema() -> None:
 
 
 def ensure_strategic_axes_schema() -> None:
+    if not IS_SQLITE_DATABASE or not PRIMARY_DB_PATH:
+        return
     with sqlite3.connect(PRIMARY_DB_PATH) as conn:
         table_exists = conn.execute(
             "SELECT 1 FROM sqlite_master WHERE type='table' AND name='strategic_axes_config'"
@@ -1109,6 +1244,8 @@ def ensure_strategic_axes_schema() -> None:
 
 
 def ensure_documentos_schema() -> None:
+    if not IS_SQLITE_DATABASE or not PRIMARY_DB_PATH:
+        return
     with sqlite3.connect(PRIMARY_DB_PATH) as conn:
         table_exists = conn.execute(
             "SELECT 1 FROM sqlite_master WHERE type='table' AND name='documentos_evidencia'"
@@ -1126,6 +1263,8 @@ def ensure_documentos_schema() -> None:
 
 
 def ensure_forms_schema() -> None:
+    if not IS_SQLITE_DATABASE or not PRIMARY_DB_PATH:
+        return
     with sqlite3.connect(PRIMARY_DB_PATH) as conn:
         table_exists = conn.execute(
             "SELECT 1 FROM sqlite_master WHERE type='table' AND name='form_definitions'"
@@ -1150,6 +1289,9 @@ def unify_users_table() -> None:
     Unifica usuarios legacy (`usuarios`) dentro de la tabla canónica `users`.
     Mantiene compatibilidad agregando columnas opcionales usadas por el frontend.
     """
+    if not IS_SQLITE_DATABASE or not PRIMARY_DB_PATH:
+        return
+
     required_columns = {
         "celular": "VARCHAR",
         "departamento": "VARCHAR",
@@ -1341,14 +1483,27 @@ protect_sensitive_user_fields()
 ensure_system_superadmin_user()
 ensure_default_strategic_axes_data()
 
-app = FastAPI(title="Módulo de Planificación Estratégica y POA", docs_url="/docs", redoc_url="/redoc")
+app = FastAPI(
+    title="Módulo de Planificación Estratégica y POA",
+    docs_url="/docs" if ENABLE_API_DOCS else None,
+    redoc_url="/redoc" if ENABLE_API_DOCS else None,
+    openapi_url="/openapi.json" if ENABLE_API_DOCS else None,
+)
 templates = Jinja2Templates(directory="fastapi_modulo/templates")
 app.state.templates = templates
 app.mount("/templates", StaticFiles(directory="fastapi_modulo/templates"), name="templates")
 
 @app.get("/health")
 def healthcheck():
-    return {"status": "ok"}
+    payload = {"status": "ok"}
+    if HEALTH_INCLUDE_DETAILS:
+        payload.update(
+            {
+                "environment": APP_ENV,
+                "database_engine": "sqlite" if IS_SQLITE_DATABASE else "postgresql",
+            }
+        )
+    return payload
 
 
 def _not_found_context(request: Request, title: str = "Pagina no encontrada") -> Dict[str, str]:
@@ -1404,16 +1559,16 @@ async def enforce_backend_login(request: Request, call_next):
     path = request.url.path
     public_paths = {
         "/web",
+        "/web/descripcion",
         "/web/funcionalidades",
         "/web/404",
         "/web/login",
         "/logout",
         "/health",
-        "/docs",
-        "/redoc",
-        "/openapi.json",
         "/favicon.ico",
     }
+    if ENABLE_API_DOCS:
+        public_paths.update({"/docs", "/redoc", "/openapi.json"})
     if (
         request.method == "OPTIONS"
         or path in public_paths
@@ -1439,6 +1594,21 @@ async def enforce_backend_login(request: Request, call_next):
     request.state.user_name = session_data["username"]
     request.state.user_role = session_data["role"]
     request.state.tenant_id = _normalize_tenant_id(session_data.get("tenant_id"))
+
+    if (
+        CSRF_PROTECTION_ENABLED
+        and request.method in {"POST", "PUT", "PATCH", "DELETE"}
+        and not path.startswith("/web/passkey/")
+        and not _is_same_origin_request(request)
+    ):
+        if path.startswith("/api/"):
+            return JSONResponse({"success": False, "error": "CSRF validation failed"}, status_code=403)
+        return templates.TemplateResponse(
+            "not_found.html",
+            _not_found_context(request, title="Solicitud no válida"),
+            status_code=403,
+        )
+
     return await call_next(request)
 
 
@@ -1456,7 +1626,9 @@ def verify_password(password: str, stored_hash: str) -> bool:
     try:
         algo, iterations, salt, digest_hex = stored.split("$", 3)
         if algo != "pbkdf2_sha256":
-            return hmac.compare_digest(password, stored)
+            if ALLOW_LEGACY_PLAINTEXT_PASSWORDS:
+                return hmac.compare_digest(password, stored)
+            return False
         digest = hashlib.pbkdf2_hmac(
             "sha256",
             password.encode("utf-8"),
@@ -1465,8 +1637,9 @@ def verify_password(password: str, stored_hash: str) -> bool:
         )
         return hmac.compare_digest(digest.hex(), digest_hex)
     except Exception:
-        # Compatibilidad con usuarios legacy guardados en texto plano.
-        return hmac.compare_digest(password, stored)
+        if ALLOW_LEGACY_PLAINTEXT_PASSWORDS:
+            return hmac.compare_digest(password, stored)
+        return False
 
 
 def _find_user_by_login(db, login_value: str) -> Optional[Usuario]:
@@ -1502,10 +1675,33 @@ def _apply_auth_cookies(response: Response, request: Request, username: str, rol
         _build_session_cookie(username, role_name, tenant_id),
         httponly=True,
         samesite="lax",
+        secure=COOKIE_SECURE,
+        max_age=SESSION_MAX_AGE_SECONDS,
     )
-    response.set_cookie("user_role", normalize_role_name(role_name), httponly=True, samesite="lax")
-    response.set_cookie("user_name", username, httponly=True, samesite="lax")
-    response.set_cookie("tenant_id", tenant_id, httponly=True, samesite="lax")
+    response.set_cookie(
+        "user_role",
+        normalize_role_name(role_name),
+        httponly=True,
+        samesite="lax",
+        secure=COOKIE_SECURE,
+        max_age=SESSION_MAX_AGE_SECONDS,
+    )
+    response.set_cookie(
+        "user_name",
+        username,
+        httponly=True,
+        samesite="lax",
+        secure=COOKIE_SECURE,
+        max_age=SESSION_MAX_AGE_SECONDS,
+    )
+    response.set_cookie(
+        "tenant_id",
+        tenant_id,
+        httponly=True,
+        samesite="lax",
+        secure=COOKIE_SECURE,
+        max_age=SESSION_MAX_AGE_SECONDS,
+    )
 
 
 def _b64url_encode(data: bytes) -> str:
@@ -1586,6 +1782,91 @@ def _read_passkey_token(token: str, expected_action: str) -> Optional[Dict[str, 
     except (TypeError, ValueError):
         return None
     return data
+
+
+def _build_mfa_gate_token(user_id: int) -> str:
+    payload_json = json.dumps(
+        {
+            "u": int(user_id),
+            "exp": int(time.time()) + PASSKEY_CHALLENGE_TTL_SECONDS,
+        },
+        separators=(",", ":"),
+        ensure_ascii=True,
+    )
+    payload = _b64url_encode(payload_json.encode("utf-8"))
+    signature = hmac.new(
+        AUTH_COOKIE_SECRET.encode("utf-8"),
+        payload.encode("utf-8"),
+        hashlib.sha256,
+    ).hexdigest()
+    return f"{payload}.{signature}"
+
+
+def _read_mfa_gate_token(token: str) -> Optional[int]:
+    if not token or "." not in token:
+        return None
+    payload, signature = token.rsplit(".", 1)
+    expected_signature = hmac.new(
+        AUTH_COOKIE_SECRET.encode("utf-8"),
+        payload.encode("utf-8"),
+        hashlib.sha256,
+    ).hexdigest()
+    if not hmac.compare_digest(signature, expected_signature):
+        return None
+    try:
+        data = json.loads(_b64url_decode(payload).decode("utf-8"))
+        if int(data.get("exp", 0)) < int(time.time()):
+            return None
+        return int(data.get("u", 0))
+    except (ValueError, TypeError, json.JSONDecodeError):
+        return None
+
+
+def _normalize_totp_secret(secret: str) -> str:
+    return re.sub(r"[^A-Z2-7]", "", (secret or "").strip().upper())
+
+
+def _totp_code_for_counter(secret: str, counter: int) -> str:
+    normalized = _normalize_totp_secret(secret)
+    if not normalized:
+        return ""
+    padded = normalized + "=" * ((8 - len(normalized) % 8) % 8)
+    try:
+        key = base64.b32decode(padded, casefold=True)
+    except Exception:
+        return ""
+    digest = hmac.new(key, struct.pack(">Q", int(counter)), hashlib.sha1).digest()
+    offset = digest[-1] & 0x0F
+    binary = (
+        ((digest[offset] & 0x7F) << 24)
+        | ((digest[offset + 1] & 0xFF) << 16)
+        | ((digest[offset + 2] & 0xFF) << 8)
+        | (digest[offset + 3] & 0xFF)
+    )
+    return f"{binary % 1000000:06d}"
+
+
+def _verify_totp_code(secret: str, code: str) -> bool:
+    normalized_code = re.sub(r"\s+", "", (code or "").strip())
+    if not re.fullmatch(r"\d{6}", normalized_code):
+        return False
+    period = max(1, TOTP_PERIOD_SECONDS)
+    current_counter = int(time.time() // period)
+    window = max(0, TOTP_ALLOWED_DRIFT_STEPS)
+    for drift in range(-window, window + 1):
+        if hmac.compare_digest(_totp_code_for_counter(secret, current_counter + drift), normalized_code):
+            return True
+    return False
+
+
+def _get_user_totp_secret(user: Optional[Usuario], role_name: str) -> str:
+    if normalize_role_name(role_name) != "autoridades":
+        return ""
+    user_secret = (getattr(user, "totp_secret", "") or "").strip()
+    user_enabled = bool(getattr(user, "totp_enabled", False))
+    if user_enabled and user_secret:
+        return user_secret
+    return (os.environ.get("AUTHORITIES_TOTP_SECRET") or "").strip()
 
 
 def _parse_client_data(client_data_b64: str) -> Optional[Dict[str, Any]]:
@@ -1946,6 +2227,21 @@ async def obtener_colores():
 def web(request: Request):
     login_identity = _get_login_identity_context()
     return templates.TemplateResponse(
+        "frontend/web_blank.html",
+        {
+            "request": request,
+            "title": "SIPET",
+            "app_favicon_url": login_identity.get("login_favicon_url"),
+            "company_logo_url": login_identity.get("login_logo_url"),
+            "login_company_short_name": login_identity.get("login_company_short_name"),
+        },
+    )
+
+
+@app.get("/web/descripcion", response_class=HTMLResponse)
+def web_descripcion(request: Request):
+    login_identity = _get_login_identity_context()
+    return templates.TemplateResponse(
         "frontend/web.html",
         {
             "request": request,
@@ -2226,11 +2522,24 @@ def web_login_submit(
     request: Request,
     usuario: str = Form(""),
     contrasena: str = Form(""),
+    codigo_autenticador: str = Form(""),
 ):
     login_identity = _get_login_identity_context()
+    if _is_login_rate_limited(request):
+        return templates.TemplateResponse(
+            "web_login.html",
+            {
+                "request": request,
+                "title": "Login",
+                "login_error": "Demasiados intentos. Intenta de nuevo en unos minutos.",
+                **login_identity,
+            },
+            status_code=429,
+        )
     username = usuario.strip()
     password = contrasena or ""
     if not username or not password:
+        _register_failed_login_attempt(request)
         return templates.TemplateResponse(
             "web_login.html",
             {
@@ -2243,9 +2552,12 @@ def web_login_submit(
         )
 
     db = SessionLocal()
+    has_passkey = False
+    totp_secret = ""
     try:
         user = _find_user_by_login(db, username)
         if not user or not verify_password(password, user.contrasena or ""):
+            _register_failed_login_attempt(request)
             return templates.TemplateResponse(
                 "web_login.html",
                 {
@@ -2259,11 +2571,80 @@ def web_login_submit(
 
         role_name = _resolve_user_role_name(db, user)
         session_username = _decrypt_sensitive(user.usuario) or username
+        has_passkey = bool(user.webauthn_credential_id and user.webauthn_public_key)
+        totp_secret = _get_user_totp_secret(user, role_name)
     finally:
         db.close()
 
+    _clear_failed_login_attempts(request)
+    if role_name == "autoridades":
+        code_value = re.sub(r"\s+", "", codigo_autenticador or "")
+        if code_value:
+            if not totp_secret:
+                _register_failed_login_attempt(request)
+                return templates.TemplateResponse(
+                    "web_login.html",
+                    {
+                        "request": request,
+                        "title": "Login",
+                        "login_error": "El código autenticador no está configurado para este usuario.",
+                        **login_identity,
+                    },
+                    status_code=403,
+                )
+            if not _verify_totp_code(totp_secret, code_value):
+                _register_failed_login_attempt(request)
+                return templates.TemplateResponse(
+                    "web_login.html",
+                    {
+                        "request": request,
+                        "title": "Login",
+                        "login_error": "Código de autenticador inválido.",
+                        **login_identity,
+                    },
+                    status_code=401,
+                )
+            response = RedirectResponse(url="/inicio", status_code=303)
+            _apply_auth_cookies(response, request, session_username, role_name)
+            response.delete_cookie(PASSKEY_COOKIE_MFA_GATE)
+            return response
+
+        if not has_passkey and not totp_secret:
+            return templates.TemplateResponse(
+                "web_login.html",
+                {
+                    "request": request,
+                    "title": "Login",
+                    "login_error": "El rol Autoridades requiere segundo factor (biometría o autenticador) configurado.",
+                    **login_identity,
+                },
+                status_code=403,
+            )
+        if has_passkey:
+            response = RedirectResponse(url=f"/web/login?mfa=required&usuario={quote(username)}", status_code=303)
+            response.set_cookie(
+                PASSKEY_COOKIE_MFA_GATE,
+                _build_mfa_gate_token(user.id),
+                httponly=True,
+                samesite="lax",
+                secure=COOKIE_SECURE,
+                max_age=PASSKEY_CHALLENGE_TTL_SECONDS,
+            )
+            return response
+        return templates.TemplateResponse(
+            "web_login.html",
+            {
+                "request": request,
+                "title": "Login",
+                "login_error": "Ingresa tu código de autenticador para completar el acceso.",
+                **login_identity,
+            },
+            status_code=401,
+        )
+
     response = RedirectResponse(url="/inicio", status_code=303)
     _apply_auth_cookies(response, request, session_username, role_name)
+    response.delete_cookie(PASSKEY_COOKIE_MFA_GATE)
     return response
 
 
@@ -2327,6 +2708,7 @@ def passkey_register_options(
         token,
         httponly=True,
         samesite="lax",
+        secure=COOKIE_SECURE,
         max_age=PASSKEY_CHALLENGE_TTL_SECONDS,
     )
     return response
@@ -2403,6 +2785,14 @@ def passkey_auth_options(
         user = _find_user_by_login(db, username)
         if not user or not user.webauthn_credential_id or not user.webauthn_public_key:
             return JSONResponse({"success": False, "error": "Este usuario no tiene biometría registrada"}, status_code=404)
+        role_name = _resolve_user_role_name(db, user)
+        if role_name == "autoridades":
+            gate_user_id = _read_mfa_gate_token(request.cookies.get(PASSKEY_COOKIE_MFA_GATE, ""))
+            if not gate_user_id or gate_user_id != user.id:
+                return JSONResponse(
+                    {"success": False, "error": "Primero valida usuario y contraseña para continuar con doble autenticación"},
+                    status_code=403,
+                )
         challenge = _b64url_encode(secrets.token_bytes(32))
         rp_id = _passkey_rp_id(request)
         origin = _passkey_origin(request)
@@ -2429,6 +2819,7 @@ def passkey_auth_options(
         token,
         httponly=True,
         samesite="lax",
+        secure=COOKIE_SECURE,
         max_age=PASSKEY_CHALLENGE_TTL_SECONDS,
     )
     return response
@@ -2524,6 +2915,7 @@ def passkey_auth_verify(
     response = JSONResponse({"success": True, "redirect": "/inicio"})
     _apply_auth_cookies(response, request, session_username, role_name)
     response.delete_cookie(PASSKEY_COOKIE_AUTH)
+    response.delete_cookie(PASSKEY_COOKIE_MFA_GATE)
     return response
 
 
@@ -2537,6 +2929,7 @@ def logout():
     response.delete_cookie("tenant_id")
     response.delete_cookie(PASSKEY_COOKIE_AUTH)
     response.delete_cookie(PASSKEY_COOKIE_REGISTER)
+    response.delete_cookie(PASSKEY_COOKIE_MFA_GATE)
     return response
 
 
@@ -3257,7 +3650,9 @@ AVANCE_CONTENT_FILE = "fastapi_modulo/avance_content.txt"
 def get_avance_content():
     if os.path.exists(AVANCE_CONTENT_FILE):
         with open(AVANCE_CONTENT_FILE, "r", encoding="utf-8") as f:
-            return f.read()
+            stored = f.read()
+            if stored.strip():
+                return stored
     return "<p>Sin contenido personalizado aún.</p><p>Inicio.<br>bienvenido al tablero</p>"
 
 def set_avance_content(new_content: str):
@@ -10439,6 +10834,7 @@ def eliminar_plantilla(template_id: str):
 
 @app.post("/api/usuarios/registro-seguro")
 def crear_usuario_seguro(request: Request, data: dict = Body(...)):
+    require_admin_or_superadmin(request)
     nombre = (data.get("nombre") or "").strip()
     usuario_login = (data.get("usuario") or "").strip()
     correo = (data.get("correo") or "").strip()
@@ -10642,6 +11038,37 @@ def proyectando_page(request: Request):
             {"label": "Kanban", "icon": "/templates/icon/kanban.svg", "view": "kanban"},
             {"label": "Dashboard", "icon": "/templates/icon/tablero.svg", "view": "dashboard", "active": True},
         ],
+    )
+
+
+@app.get("/proyectando/datos-preliminares", response_class=HTMLResponse)
+def proyectando_datos_preliminares_page(request: Request):
+    login_identity = _get_login_identity_context()
+    logo_url = escape((login_identity.get("login_logo_url") or "").strip())
+    logo_html = (
+        f'<img src="{logo_url}" alt="Logo de la empresa" '
+        'style="width:min(220px, 34vw); max-width:100%; height:auto; object-fit:contain;">'
+        if logo_url
+        else ""
+    )
+    preliminares_content = dedent(f"""
+        <section style="padding: 12px 4px 8px;">
+            <div style="display:flex; justify-content:flex-end; margin-bottom: 32px;">
+                {logo_html}
+            </div>
+            <div>
+                <h2 style="margin:0 0 8px; font-size: clamp(1.4rem, 2.5vw, 2rem); color:#0f172a;">Fase 1: Parametrización</h2>
+                <p style="margin:0; font-size: clamp(1rem, 1.5vw, 1.1rem); color:#334155;">Capture los datos requeridos</p>
+            </div>
+        </section>
+    """)
+    return render_backend_page(
+        request,
+        title="Datos preliminares",
+        description="",
+        content=preliminares_content,
+        hide_floating_actions=True,
+        show_page_header=False,
     )
 
 
@@ -11276,6 +11703,7 @@ def _render_identidad_institucional_page(request: Request) -> HTMLResponse:
 
 @app.get("/identidad-institucional", response_class=HTMLResponse)
 def identidad_institucional_page(request: Request):
+    require_superadmin(request)
     return _render_identidad_institucional_page(request)
 
 
@@ -11293,6 +11721,7 @@ async def identidad_institucional_save(
     remove_desktop: str = Form("0"),
     remove_mobile: str = Form("0"),
 ):
+    require_superadmin(request)
     current = _load_login_identity()
     current["company_short_name"] = company_short_name.strip() or DEFAULT_LOGIN_IDENTITY["company_short_name"]
     current["login_message"] = login_message.strip() or DEFAULT_LOGIN_IDENTITY["login_message"]
