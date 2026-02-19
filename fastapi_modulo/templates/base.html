@@ -20,7 +20,7 @@
             --sidebar-hover: #2a3a52;
             --field-color: #e7d7da;
             --floating-panel-bg: var(--sidebar-text);
-            --floating-scale: 0.5;
+            --floating-scale: 0.75;
             --floating-toggle-color: var(--sidebar-bottom);
             --floating-toggle-text-color: var(--sidebar-text);
             --floating-icon-color: var(--sidebar-bottom);
@@ -2062,15 +2062,26 @@
             </div>
         </div>
         <nav>
-            <a href="/inicio" data-menu-name="Inicio" data-route="/inicio">
-                <span class="menu-icon" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M9 16C9.85038 16.6303 10.8846 17 12 17C13.1154 17 14.1496 16.6303 15 16" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
-                        <path d="M21.6359 12.9579L21.3572 14.8952C20.8697 18.2827 20.626 19.9764 19.451 20.9882C18.2759 22 16.5526 22 13.1061 22H10.8939C7.44737 22 5.72409 22 4.54903 20.9882C3.37396 19.9764 3.13025 18.2827 2.64284 14.8952L2.36407 12.9579C1.98463 10.3208 1.79491 9.00229 2.33537 7.87495C2.87583 6.7476 4.02619 6.06234 6.32691 4.69181L7.71175 3.86687C9.80104 2.62229 10.8457 2 12 2C13.1543 2 14.199 2.62229 16.2882 3.86687L17.6731 4.69181C19.9738 6.06234 21.1242 6.7476 21.6646 7.87495" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
-                    </svg>
-                </span>
-                <span class="menu-label">Inicio</span>
-            </a>
+            <div class="accordion">
+                <button type="button" class="accordion-header" id="inicio-btn" data-menu-name="Inicio" data-route="/inicio">
+                    <span class="menu-indicator">
+                        <span class="menu-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M9 16C9.85038 16.6303 10.8846 17 12 17C13.1154 17 14.1496 16.6303 15 16" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
+                                <path d="M21.6359 12.9579L21.3572 14.8952C20.8697 18.2827 20.626 19.9764 19.451 20.9882C18.2759 22 16.5526 22 13.1061 22H10.8939C7.44737 22 5.72409 22 4.54903 20.9882C3.37396 19.9764 3.13025 18.2827 2.64284 14.8952L2.36407 12.9579C1.98463 10.3208 1.79491 9.00229 2.33537 7.87495C2.87583 6.7476 4.02619 6.06234 6.32691 4.69181L7.71175 3.86687C9.80104 2.62229 10.8457 2 12 2C13.1543 2 14.199 2.62229 16.2882 3.86687L17.6731 4.69181C19.9738 6.06234 21.1242 6.7476 21.6646 7.87495" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
+                            </svg>
+                        </span>
+                        <span>Inicio</span>
+                    </span>
+                    <span id="inicio-toggle">+</span>
+                </button>
+                <div class="accordion-content" id="inicio-submenu">
+                    <a href="/inicio/departamentos" class="submenu" data-menu-name="Departamentos" data-route="/inicio/departamentos" data-floating-screen="areas"><span>Departamentos</span></a>
+                    <a href="/inicio/regiones" class="submenu" data-menu-name="Regiones" data-route="/inicio/regiones"><span>Regiones</span></a>
+                    <a href="/inicio/sucursales" class="submenu" data-menu-name="Sucursales" data-route="/inicio/sucursales"><span>Sucursales</span></a>
+                    <a href="/inicio/colaboradores" class="submenu usuario-view-link" data-menu-name="Colaboradores" data-route="/inicio/colaboradores" data-view="form" data-floating-screen="usuarios"><span>Colaboradores</span></a>
+                </div>
+            </div>
             <div class="accordion">
                 <button type="button" class="accordion-header" id="proyectando-btn" data-menu-name="Proyectando" data-route="/proyectando">
                     <span class="menu-indicator">
@@ -2084,6 +2095,7 @@
                 <div class="accordion-content" id="proyectando-submenu">
                     <a href="/proyectando" class="submenu" data-menu-name="Tablero de Control" data-route="/proyectando"><span>Tablero de Control</span></a>
                     <a href="/proyectando/datos-preliminares" class="submenu" data-menu-name="Datos preliminares" data-route="/proyectando/datos-preliminares"><span>Datos preliminares</span></a>
+                    <a href="/proyectando/crecimiento-general" class="submenu" data-menu-name="Crecimiento general" data-route="/proyectando/crecimiento-general"><span>Crecimiento general</span></a>
                 </div>
             </div>
             <div class="accordion">
@@ -2158,8 +2170,6 @@
                 </button>
                 <div class="sidebar-section-content" id="empresa-section-content">
                     <a href="/identidad-institucional" class="submenu" data-menu-name="Identidad institucional" data-route="/identidad-institucional"><span>Identidad institucional</span></a>
-                    <a href="/areas-organizacionales" class="submenu" data-menu-name="Áreas organizacionales" data-route="/areas-organizacionales" data-floating-screen="areas"><span>Áreas organizacionales</span></a>
-                    <a href="/usuarios-sistema" class="submenu usuario-view-link" data-menu-name="Usuarios de sistema" data-route="/usuarios-sistema" data-view="form" data-floating-screen="usuarios"><span>Usuarios de sistema</span></a>
                     <a href="/plantillas" class="submenu" data-menu-name="Plantillas" data-route="/plantillas" data-floating-screen="plantillas"><span>Plantillas</span></a>
                 </div>
             </div>
@@ -2343,6 +2353,9 @@
             const reportesBtn = document.getElementById('reportes-btn');
             const reportesToggle = document.getElementById('reportes-toggle');
             const reportesSubmenu = document.getElementById('reportes-submenu');
+            const inicioBtn = document.getElementById('inicio-btn');
+            const inicioToggle = document.getElementById('inicio-toggle');
+            const inicioSubmenu = document.getElementById('inicio-submenu');
             const submenuLinks = document.querySelectorAll('.submenu[data-menu-name]');
             const menuLinks = document.querySelectorAll('nav > a[data-menu-name]');
             const navbarMenuName = document.querySelector('.navbar-menu-name');
@@ -2494,6 +2507,31 @@
                     setMenuInfo(personalizarBtn);
                     setFloatingScreen('personalization');
                 });
+            }
+            if (inicioBtn && inicioSubmenu && inicioToggle) {
+                inicioBtn.addEventListener('click', function(event) {
+                    event.preventDefault();
+                    const accordion = inicioBtn.closest('.accordion');
+                    const isOpen = accordion.classList.toggle('open');
+                    inicioSubmenu.style.display = isOpen ? 'flex' : 'none';
+                    inicioToggle.textContent = isOpen ? '−' : '+';
+                    setMenuInfo(inicioBtn);
+                });
+                const currentPath = window.location.pathname;
+                const inicioLinks = inicioSubmenu.querySelectorAll('a[href]');
+                const shouldOpenInicio = Array.from(inicioLinks).some(link => link.getAttribute('href') === currentPath);
+                if (shouldOpenInicio) {
+                    const accordion = inicioBtn.closest('.accordion');
+                    accordion && accordion.classList.add('open');
+                    inicioSubmenu.style.display = 'flex';
+                    inicioToggle.textContent = '−';
+                    const activeInicioLink = Array.from(inicioLinks).find(link => link.getAttribute('href') === currentPath);
+                    if (activeInicioLink) {
+                        setMenuInfo(activeInicioLink);
+                    }
+                } else if (currentPath === '/inicio') {
+                    setMenuInfo(inicioBtn);
+                }
             }
             if (diagnosticoBtn && diagnosticoSubmenu && diagnosticoToggle) {
                 diagnosticoBtn.addEventListener('click', function(event) {
@@ -3952,7 +3990,7 @@
                 event.preventDefault();
                 setUsuarioView(link.dataset.view || 'form');
             }));
-            const isUsuariosRoute = window.location.pathname === '/usuarios-sistema' || window.location.pathname === '/usuarios';
+            const isUsuariosRoute = window.location.pathname === '/usuarios-sistema' || window.location.pathname === '/usuarios' || window.location.pathname === '/inicio/colaboradores';
             if (isUsuariosRoute && usuarioPanel && usuarioView) {
                 const activeUsuarioLink = Array.from(usuarioLinks).find(link => link.getAttribute('href') === window.location.pathname);
                 if (activeUsuarioLink) {
@@ -3962,9 +4000,9 @@
                 await loadRolesSistemaDisponibles();
                 setUsuarioView('form');
             }
-            const isAreasRoute = window.location.pathname === '/areas-organizacionales';
+            const isAreasRoute = window.location.pathname === '/areas-organizacionales' || window.location.pathname === '/inicio/departamentos';
             if (isAreasRoute && areaPanel && areaView) {
-                const areaMenuLink = document.querySelector('a[data-route="/areas-organizacionales"]');
+                const areaMenuLink = document.querySelector(`a[data-route="${window.location.pathname}"]`) || document.querySelector('a[data-route="/areas-organizacionales"]');
                 if (areaMenuLink) {
                     setMenuInfo(areaMenuLink);
                 }

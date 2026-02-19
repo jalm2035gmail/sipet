@@ -52,6 +52,169 @@ DEFAULT_LOGIN_IDENTITY = {
 PLANTILLAS_STORE_PATH = "fastapi_modulo/plantillas_store.json"
 SYSTEM_REPORT_HEADER_TEMPLATE_ID = "system-report-header"
 AUTH_COOKIE_NAME = "auth_session"
+DATOS_PRELIMINARES_STORE_PATH = "fastapi_modulo/datos_preliminares_store.json"
+REGIONES_STORE_PATH = "fastapi_modulo/regiones_store.json"
+SUCURSALES_STORE_PATH = "fastapi_modulo/sucursales_store.json"
+DEFAULT_DATOS_GENERALES = {
+    "responsable_general": "",
+    "primer_anio_proyeccion": "",
+    "anios_proyeccion": "3",
+    "sociedad": "",
+    "figura_juridica": "",
+    "calle": "",
+    "numero_exterior": "",
+    "numero_interior": "",
+    "colonia": "",
+    "ciudad": "",
+    "municipio": "",
+    "estado": "",
+    "cp": "",
+    "pais": "",
+    "ifb_activos_m3": "",
+    "ifb_activos_m2": "",
+    "ifb_activos_m1": "",
+    "ifb_pasivos_m3": "",
+    "ifb_pasivos_m2": "",
+    "ifb_pasivos_m1": "",
+    "ifb_capital_m3": "",
+    "ifb_capital_m2": "",
+    "ifb_capital_m1": "",
+    "ifb_ingresos_m3": "",
+    "ifb_ingresos_m2": "",
+    "ifb_ingresos_m1": "",
+    "ifb_egresos_m3": "",
+    "ifb_egresos_m2": "",
+    "ifb_egresos_m1": "",
+    "ifb_resultado_m3": "",
+    "ifb_resultado_m2": "",
+    "ifb_resultado_m1": "",
+}
+SIPET_PREMIUM_UI_TEMPLATE_CSS = dedent("""
+    .sipet-ui-template .table-excel {
+        width: 100% !important;
+        border-collapse: collapse !important;
+        border-spacing: 0 !important;
+        background: transparent !important;
+    }
+    .sipet-ui-template .table-excel thead th {
+        text-align: left !important;
+        font-size: 13px !important;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+        color: rgba(15,23,42,.75) !important;
+        background: linear-gradient(180deg, rgba(255,255,255,.92), rgba(255,255,255,.74)) !important;
+        border-bottom: 1px solid rgba(15,23,42,.10) !important;
+        border-right: 1px solid rgba(15,23,42,.10) !important;
+        padding: 14px 16px !important;
+    }
+    .sipet-ui-template .table-excel thead th:last-child {
+        border-right: 0 !important;
+    }
+    .sipet-ui-template .table-excel tbody td {
+        border-bottom: 1px solid rgba(15,23,42,.08) !important;
+        border-right: 1px solid rgba(15,23,42,.10) !important;
+        background: #ffffff !important;
+        padding: 12px !important;
+        vertical-align: middle !important;
+    }
+    .sipet-ui-template .table-excel tbody td:last-child {
+        border-right: 0 !important;
+    }
+    .sipet-ui-template .table-excel tbody tr:nth-child(even) td {
+        background: #ecfdf3 !important;
+    }
+    .sipet-ui-template .table-excel tbody tr:hover td {
+        background: #dcfce7 !important;
+    }
+    .sipet-ui-template .table-excel tbody tr:last-child td {
+        border-bottom: 0 !important;
+    }
+    .sipet-ui-template .table-excel--compact tbody td {
+        padding: 8px !important;
+    }
+    .sipet-ui-template .table-excel--compact tbody td.year {
+        font-size: 16px !important;
+        font-weight: 750 !important;
+        letter-spacing: 0 !important;
+        padding: 8px 12px !important;
+    }
+    .sipet-ui-template .table-excel--compact .macro-input {
+        min-height: 34px !important;
+        padding: 8px 10px !important;
+    }
+    .sipet-ui-template .table-excel .table-input {
+        width: 100%;
+        height: 36px;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        padding: 0 10px;
+        background: #ffffff;
+        color: #0f172a;
+    }
+    .sipet-ui-template .table-excel .table-input.num {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+    }
+    .sipet-ui-template .table-excel .table-actions-cell,
+    .sipet-ui-template .table-excel .table-actions-head {
+        text-align: center;
+    }
+    .sipet-ui-template .table-excel .table-add-btn {
+        width: 34px;
+        height: 34px;
+        border-radius: 8px;
+        border: 1px solid #0f172a;
+        background: #ffffff;
+        color: #0f172a;
+        font-size: 1.1rem;
+        font-weight: 700;
+        cursor: pointer;
+    }
+    .sipet-ui-template .table-excel .table-delete-btn {
+        width: 34px;
+        height: 34px;
+        border-radius: 8px;
+        border: 1px solid #991b1b;
+        background: #ffffff;
+        color: #991b1b;
+        font-size: 1rem;
+        font-weight: 700;
+        cursor: pointer;
+    }
+    .sipet-ui-template .table-primary-btn {
+        height: 36px;
+        padding: 0 12px;
+        border-radius: 8px;
+        border: 1px solid #0f172a;
+        background: #0f172a;
+        color: #ffffff;
+        font-size: 0.95rem;
+        font-weight: 600;
+        cursor: pointer;
+    }
+    .sipet-ui-template .table-excel .ifb-row-label {
+        font-weight: 600;
+        color: #0f172a;
+    }
+    .sipet-ui-template .table-excel .ifb-validation-cell {
+        padding: 10px;
+    }
+    .sipet-ui-template .table-excel .ifb-validation-output {
+        font-size: 0.85rem;
+        line-height: 1.35;
+    }
+    .sipet-ui-template .dg-grid > label {
+        border: 1px solid rgba(15, 23, 42, .10);
+        border-radius: 14px;
+        padding: 10px;
+    }
+    .sipet-ui-template .dg-grid > label:nth-child(odd) {
+        background: #ffffff;
+    }
+    .sipet-ui-template .dg-grid > label:nth-child(even) {
+        background: #ecfdf3;
+    }
+""")
 
 
 def _require_secret(name: str) -> str:
@@ -280,6 +443,134 @@ def _load_login_identity() -> Dict[str, str]:
 def _save_login_identity(data: Dict[str, str]) -> None:
     with open(IDENTIDAD_LOGIN_CONFIG_PATH, "w", encoding="utf-8") as fh:
         json.dump(data, fh, ensure_ascii=False, indent=2)
+
+
+def _load_datos_preliminares_store() -> Dict[str, str]:
+    data = dict(DEFAULT_DATOS_GENERALES)
+    if not os.path.exists(DATOS_PRELIMINARES_STORE_PATH):
+        return data
+    try:
+        with open(DATOS_PRELIMINARES_STORE_PATH, "r", encoding="utf-8") as fh:
+            loaded = json.load(fh)
+        if isinstance(loaded, dict):
+            for key in data.keys():
+                if key in loaded and loaded[key] is not None:
+                    data[key] = str(loaded[key]).strip()
+    except (OSError, json.JSONDecodeError):
+        pass
+    return data
+
+
+def _save_datos_preliminares_store(data: Dict[str, str]) -> None:
+    safe_payload: Dict[str, str] = {}
+    for key, default_value in DEFAULT_DATOS_GENERALES.items():
+        safe_payload[key] = str(data.get(key, default_value) or "").strip()
+    with open(DATOS_PRELIMINARES_STORE_PATH, "w", encoding="utf-8") as fh:
+        json.dump(safe_payload, fh, ensure_ascii=False, indent=2)
+
+
+def _load_regiones_store() -> List[Dict[str, str]]:
+    if not os.path.exists(REGIONES_STORE_PATH):
+        return []
+    try:
+        with open(REGIONES_STORE_PATH, "r", encoding="utf-8") as fh:
+            loaded = json.load(fh)
+    except (OSError, json.JSONDecodeError):
+        return []
+    if not isinstance(loaded, list):
+        return []
+    rows: List[Dict[str, str]] = []
+    for item in loaded:
+        if not isinstance(item, dict):
+            continue
+        nombre = str(item.get("nombre") or "").strip()
+        codigo = str(item.get("codigo") or "").strip()
+        descripcion = str(item.get("descripcion") or "").strip()
+        if not nombre and not codigo and not descripcion:
+            continue
+        rows.append(
+            {
+                "nombre": nombre,
+                "codigo": codigo,
+                "descripcion": descripcion,
+            }
+        )
+    return rows
+
+
+def _save_regiones_store(rows: List[Dict[str, str]]) -> None:
+    safe_rows: List[Dict[str, str]] = []
+    for item in rows:
+        if not isinstance(item, dict):
+            continue
+        nombre = str(item.get("nombre") or "").strip()
+        codigo = str(item.get("codigo") or "").strip()
+        descripcion = str(item.get("descripcion") or "").strip()
+        if not nombre and not codigo and not descripcion:
+            continue
+        safe_rows.append(
+            {
+                "nombre": nombre,
+                "codigo": codigo,
+                "descripcion": descripcion,
+            }
+        )
+    with open(REGIONES_STORE_PATH, "w", encoding="utf-8") as fh:
+        json.dump(safe_rows, fh, ensure_ascii=False, indent=2)
+
+
+def _load_sucursales_store() -> List[Dict[str, str]]:
+    if not os.path.exists(SUCURSALES_STORE_PATH):
+        return []
+    try:
+        with open(SUCURSALES_STORE_PATH, "r", encoding="utf-8") as fh:
+            loaded = json.load(fh)
+    except (OSError, json.JSONDecodeError):
+        return []
+    if not isinstance(loaded, list):
+        return []
+    rows: List[Dict[str, str]] = []
+    for item in loaded:
+        if not isinstance(item, dict):
+            continue
+        nombre = str(item.get("nombre") or "").strip()
+        region = str(item.get("region") or "").strip()
+        codigo = str(item.get("codigo") or "").strip()
+        descripcion = str(item.get("descripcion") or "").strip()
+        if not nombre and not region and not codigo and not descripcion:
+            continue
+        rows.append(
+            {
+                "nombre": nombre,
+                "region": region,
+                "codigo": codigo,
+                "descripcion": descripcion,
+            }
+        )
+    return rows
+
+
+def _save_sucursales_store(rows: List[Dict[str, str]]) -> None:
+    safe_rows: List[Dict[str, str]] = []
+    for item in rows:
+        if not isinstance(item, dict):
+            continue
+        nombre = str(item.get("nombre") or "").strip()
+        region = str(item.get("region") or "").strip()
+        codigo = str(item.get("codigo") or "").strip()
+        descripcion = str(item.get("descripcion") or "").strip()
+        if not nombre and not region and not codigo and not descripcion:
+            continue
+        safe_rows.append(
+            {
+                "nombre": nombre,
+                "region": region,
+                "codigo": codigo,
+                "descripcion": descripcion,
+            }
+        )
+    with open(SUCURSALES_STORE_PATH, "w", encoding="utf-8") as fh:
+        json.dump(safe_rows, fh, ensure_ascii=False, indent=2)
 
 
 def _get_upload_ext(upload: UploadFile) -> str:
@@ -8401,7 +8692,11 @@ def kpis_page(request: Request):
 
 
 # --- NUEVO: Endpoint dinámico para usuarios desde BD ---
-def _render_usuarios_page(request: Request) -> HTMLResponse:
+def _render_usuarios_page(
+    request: Request,
+    title: str = "Usuarios",
+    description: str = "Gestiona usuarios, roles y permisos desde la misma pantalla",
+) -> HTMLResponse:
     db = SessionLocal()
     usuarios = db.query(Usuario).all()
     db.close()
@@ -8412,8 +8707,8 @@ def _render_usuarios_page(request: Request) -> HTMLResponse:
     """
     return render_backend_page(
         request,
-        title="Usuarios",
-        description="Gestiona usuarios, roles y permisos desde la misma pantalla",
+        title=title,
+        description=description,
         content=usuarios_content,
         hide_floating_actions=False,
         view_buttons=[
@@ -10979,7 +11274,11 @@ def listar_usuarios_sanitizados(request: Request):
         db.close()
 
 
-def _render_areas_page(request: Request) -> HTMLResponse:
+def _render_areas_page(
+    request: Request,
+    title: str = "Áreas organizacionales",
+    description: str = "Administra la estructura de áreas de la organización",
+) -> HTMLResponse:
     areas_content = """
         <section id="area-panel" class="usuario-panel">
             <div id="area-view"></div>
@@ -10987,8 +11286,8 @@ def _render_areas_page(request: Request) -> HTMLResponse:
     """
     return render_backend_page(
         request,
-        title="Áreas organizacionales",
-        description="Administra la estructura de áreas de la organización",
+        title=title,
+        description=description,
         content=areas_content,
         hide_floating_actions=False,
         view_buttons=[
@@ -11023,6 +11322,34 @@ def inicio_page(request: Request):
     )
 
 
+@app.get("/inicio/departamentos", response_class=HTMLResponse)
+def inicio_departamentos_page(request: Request):
+    return _render_areas_page(
+        request,
+        title="Departamentos",
+        description="Administra la estructura de departamentos de la organización",
+    )
+
+
+@app.get("/inicio/regiones", response_class=HTMLResponse)
+def inicio_regiones_page(request: Request):
+    return _render_regiones_page(request)
+
+
+@app.get("/inicio/sucursales", response_class=HTMLResponse)
+def inicio_sucursales_page(request: Request):
+    return _render_sucursales_page(request)
+
+
+@app.get("/inicio/colaboradores", response_class=HTMLResponse)
+def inicio_colaboradores_page(request: Request):
+    return _render_usuarios_page(
+        request,
+        title="Colaboradores",
+        description="Gestiona colaboradores, roles y permisos desde la misma pantalla",
+    )
+
+
 @app.get("/proyectando", response_class=HTMLResponse)
 def proyectando_page(request: Request):
     return render_backend_page(
@@ -11041,25 +11368,1084 @@ def proyectando_page(request: Request):
     )
 
 
+@app.post("/api/proyectando/datos-preliminares/datos-generales")
+async def guardar_datos_preliminares_generales(data: dict = Body(...)):
+    current = _load_datos_preliminares_store()
+    updated = dict(current)
+    for key in DEFAULT_DATOS_GENERALES.keys():
+        if key in data:
+            updated[key] = str(data.get(key) or "").strip()
+    _save_datos_preliminares_store(updated)
+    return {"success": True, "data": updated}
+
+
+@app.get("/api/inicio/regiones")
+def listar_regiones():
+    return {"success": True, "data": _load_regiones_store()}
+
+
+@app.post("/api/inicio/regiones")
+async def guardar_regiones(data: dict = Body(...)):
+    incoming = data.get("data", [])
+    if not isinstance(incoming, list):
+        raise HTTPException(status_code=400, detail="Formato inválido")
+    _save_regiones_store(incoming)
+    return {"success": True, "data": _load_regiones_store()}
+
+
+@app.get("/api/inicio/sucursales")
+def listar_sucursales():
+    return {"success": True, "data": _load_sucursales_store()}
+
+
+@app.post("/api/inicio/sucursales")
+async def guardar_sucursales(data: dict = Body(...)):
+    incoming = data.get("data", [])
+    if not isinstance(incoming, list):
+        raise HTTPException(status_code=400, detail="Formato inválido")
+    _save_sucursales_store(incoming)
+    return {"success": True, "data": _load_sucursales_store()}
+
+
 @app.get("/proyectando/datos-preliminares", response_class=HTMLResponse)
 def proyectando_datos_preliminares_page(request: Request):
     login_identity = _get_login_identity_context()
     logo_url = escape((login_identity.get("login_logo_url") or "").strip())
+    datos_generales = _load_datos_preliminares_store()
+    responsable_actual = (datos_generales.get("responsable_general") or "").strip()
+    primer_anio_actual = (datos_generales.get("primer_anio_proyeccion") or "").strip()
+    anios_proyeccion_actual = (datos_generales.get("anios_proyeccion") or "3").strip() or "3"
+    db = SessionLocal()
+    try:
+        users = db.query(Usuario).all()
+    finally:
+        db.close()
+    responsables_options: List[str] = []
+    for user in users:
+        if user.is_active is False:
+            continue
+        username_plain = (_decrypt_sensitive(user.usuario or "") or "").strip()
+        full_name_plain = (user.nombre or "").strip()
+        if not username_plain and not full_name_plain:
+            continue
+        if full_name_plain and username_plain:
+            label = f"{full_name_plain} ({username_plain})"
+        else:
+            label = full_name_plain or username_plain
+        selected_attr = " selected" if username_plain == responsable_actual else ""
+        responsables_options.append(
+            f'<option value="{escape(username_plain)}"{selected_attr}>{escape(label)}</option>'
+        )
+    if not responsables_options:
+        responsables_options.append('<option value="">Sin usuarios disponibles</option>')
+    anio_actual = datetime.now().year
+    anios_options = "".join(
+        f'<option value="{year}"{" selected" if str(year) == primer_anio_actual else ""}>{year}</option>'
+        for year in range(anio_actual, anio_actual + 3)
+    )
+    try:
+        primer_anio_num = int(primer_anio_actual)
+    except (TypeError, ValueError):
+        primer_anio_num = anio_actual
+    anios_proyeccion_options = "".join(
+        f'<option value="{years}"{" selected" if str(years) == anios_proyeccion_actual else ""}>{years}</option>'
+        for years in range(1, 6)
+    )
+    macro_rows = []
+    for row_idx, offset in enumerate((-2, -1, 0, 1, 2, 3)):
+        year_value = anio_actual + offset
+        macro_rows.append(
+            f"""
+            <tr data-macro-row="{row_idx}">
+                <td class="year" style="padding:10px; border-bottom:1px solid #e2e8f0; color:#0f172a; font-weight:600;">{year_value}</td>
+                <td class="num" style="padding:10px; border-bottom:1px solid #e2e8f0;">
+                    <input class="macro-input" data-row="{row_idx}" data-col="0" type="text" name="inflacion_{year_value}" inputmode="decimal" autocomplete="off" placeholder="Ej. 4.50%" style="width:100%; height:36px; border:1px solid #cbd5e1; border-radius:8px; padding:0 10px;">
+                </td>
+                <td class="num" style="padding:10px; border-bottom:1px solid #e2e8f0;">
+                    <input class="macro-input" data-row="{row_idx}" data-col="1" type="text" name="udi_{year_value}" inputmode="decimal" autocomplete="off" placeholder="Ej. 8.15" style="width:100%; height:36px; border:1px solid #cbd5e1; border-radius:8px; padding:0 10px;">
+                </td>
+            </tr>
+            """
+        )
+    macro_table_rows = "".join(macro_rows)
+    activos_fijos_defaults = [
+        ("Terrenos", "0"),
+        ("Construcciones", "20"),
+        ("Construcciones en proceso", "5"),
+        ("Equipo de transporte", "4"),
+        ("Equipo de cómputo", "3"),
+        ("Mobiliario", "3"),
+        ("Otras propiedades, mobiliario y equipo", "2"),
+    ]
+    activos_fijos_rows = []
+    for idx, (rubro, depreciacion) in enumerate(activos_fijos_defaults, start=1):
+        activos_fijos_rows.append(
+            f"""
+            <tr>
+                <td>
+                    <input class="table-input" type="text" name="activo_fijo_rubro_{idx}" value="{escape(rubro)}">
+                </td>
+                <td>
+                    <input class="table-input num" type="number" min="0" step="1" name="activo_fijo_anios_{idx}" value="{escape(depreciacion)}">
+                </td>
+                <td class="table-actions-cell">
+                    <button type="button" class="delete-activo-fijo-row table-delete-btn">−</button>
+                </td>
+            </tr>
+            """
+        )
+    activos_fijos_table_rows = "".join(activos_fijos_rows)
+    initial_sucursal_row = """
+        <tr>
+            <td><input class="table-input" type="text" name="sucursal_nombre_1" placeholder="Nombre de la sucursal"></td>
+            <td><input class="table-input num" type="number" min="0" step="1" name="sucursal_socios_1" placeholder="0"></td>
+            <td><input class="table-input num" type="number" min="0" step="1" name="sucursal_menores_ahorradores_1" placeholder="0"></td>
+            <td><input class="table-input num" type="number" min="0" step="0.01" name="sucursal_ahorro_menor_1" placeholder="0.00"></td>
+            <td><input class="table-input num" type="number" min="0" step="0.01" name="sucursal_captacion_vista_1" placeholder="0.00"></td>
+            <td><input class="table-input num" type="number" min="0" step="0.01" name="sucursal_inversiones_1" placeholder="0.00"></td>
+            <td><input class="table-input num" type="number" min="0" step="0.01" name="sucursal_colocacion_1" placeholder="0.00"></td>
+            <td><input class="table-input num" type="number" min="0" step="0.01" name="sucursal_cartera_vencida_1" placeholder="0.00"></td>
+            <td class="table-actions-cell"><button type="button" class="add-sucursal-row table-add-btn">+</button></td>
+        </tr>
+    """
     logo_html = (
         f'<img src="{logo_url}" alt="Logo de la empresa" '
-        'style="width:min(220px, 34vw); max-width:100%; height:auto; object-fit:contain;">'
+        'style="width:min(88px, 14vw); max-width:100%; height:auto; object-fit:contain;">'
         if logo_url
         else ""
     )
     preliminares_content = dedent(f"""
-        <section style="padding: 12px 4px 8px;">
-            <div style="display:flex; justify-content:flex-end; margin-bottom: 32px;">
-                {logo_html}
+        <section class="sipet-ui-template" style="padding: 12px 4px 8px;">
+            <style>
+                {SIPET_PREMIUM_UI_TEMPLATE_CSS}
+                .avan-premium {{
+                    --bg: #f6f8fc;
+                    --card: rgba(255,255,255,.86);
+                    --border: rgba(15, 23, 42, .10);
+                    --border-strong: rgba(15, 23, 42, .16);
+                    --text: var(--body-text, #0f172a);
+                    --muted: #475569;
+                    --field: rgba(255,255,255,.92);
+                    --shadow: 0 18px 60px rgba(2, 6, 23, .12);
+                    --ring: 0 0 0 4px rgba(37, 99, 235, .16);
+                    --radius: 22px;
+                    --radius-sm: 14px;
+                    --gap: 18px;
+                    --pad: 20px;
+                    color: var(--text);
+                    background:
+                        radial-gradient(1200px 700px at 10% 0%, rgba(37,99,235,.10), transparent 55%),
+                        radial-gradient(900px 520px at 95% 10%, rgba(14,165,233,.10), transparent 55%),
+                        var(--bg);
+                    border-radius: calc(var(--radius) + 8px);
+                }}
+                .avan-premium .form-grid {{
+                    display: grid;
+                    grid-template-columns: repeat(3, minmax(0, 1fr));
+                    gap: var(--gap);
+                }}
+                .avan-premium label {{
+                    font-size: 13px;
+                    font-weight: 700;
+                    color: var(--text);
+                }}
+                .avan-premium input[type="text"],
+                .avan-premium select {{
+                    width: 100%;
+                    background: var(--field) !important;
+                    border: 1px solid var(--border) !important;
+                    border-radius: var(--radius-sm) !important;
+                    padding: 12px 14px !important;
+                    font-size: 15px;
+                    color: var(--text);
+                    transition: border-color .18s ease, box-shadow .18s ease, background .18s ease;
+                }}
+                .avan-premium input:hover,
+                .avan-premium select:hover {{
+                    border-color: var(--border-strong) !important;
+                }}
+                .avan-premium input:focus,
+                .avan-premium select:focus {{
+                    border-color: rgba(37,99,235,.55) !important;
+                    box-shadow: var(--ring) !important;
+                    background: rgba(255,255,255,.98) !important;
+                    outline: none;
+                }}
+                .tab-status {{
+                    display:inline-flex;
+                    align-items:center;
+                    justify-content:center;
+                    width:20px;
+                    height:20px;
+                    border-radius:999px;
+                    text-align:center;
+                    font-size: 0.8rem;
+                    font-weight: 900;
+                    color:#ffffff;
+                    background:#dc2626;
+                    box-shadow: inset 0 -1px 0 rgba(0,0,0,0.15);
+                }}
+                .tab-status.is-complete {{
+                    background:#16a34a;
+                }}
+                [data-param-panel] input[type="number"],
+                [data-param-panel] .macro-input {{
+                    text-align: right !important;
+                    font-variant-numeric: tabular-nums;
+                }}
+                @media (max-width: 1100px) {{
+                    .avan-premium .form-grid {{ grid-template-columns: repeat(2, minmax(0, 1fr)); }}
+                }}
+                @media (max-width: 720px) {{
+                    .avan-premium .form-grid {{ grid-template-columns: 1fr; }}
+                }}
+                .macro-premium {{
+                    --card: rgba(255,255,255,.86);
+                    --border: rgba(15, 23, 42, .10);
+                    --border-strong: rgba(15, 23, 42, .16);
+                    --text: #0f172a;
+                    --field: rgba(255,255,255,.92);
+                    --shadow: 0 18px 60px rgba(2, 6, 23, .12);
+                    --ring: 0 0 0 4px rgba(37, 99, 235, .16);
+                    --radius: 22px;
+                }}
+                .macro-premium.table-card {{
+                    background: var(--card) !important;
+                    border: 1px solid var(--border) !important;
+                    border-radius: var(--radius) !important;
+                    box-shadow: var(--shadow) !important;
+                    backdrop-filter: blur(10px);
+                    -webkit-backdrop-filter: blur(10px);
+                    overflow: hidden;
+                }}
+                .macro-premium .section-title {{
+                    font-size: 28px !important;
+                    line-height: 1.15;
+                    font-weight: 850 !important;
+                    letter-spacing: -0.02em;
+                    margin: 0 0 14px 0 !important;
+                }}
+                .macro-premium .table-wrap {{
+                    overflow: auto;
+                    border: 1px solid var(--border);
+                    border-radius: calc(var(--radius) - 6px);
+                    background: rgba(255,255,255,.65);
+                }}
+                .macro-premium #macroeconomia-table {{
+                    width: 100% !important;
+                    border-collapse: collapse !important;
+                    border-spacing: 0 !important;
+                    min-width: 720px !important;
+                    border: 0 !important;
+                    background: transparent !important;
+                    table-layout: fixed;
+                }}
+                .macro-premium #macroeconomia-table thead th {{
+                    position: sticky;
+                    top: 0;
+                    z-index: 2;
+                    text-align: left !important;
+                    font-size: 13px !important;
+                    letter-spacing: .08em;
+                    text-transform: uppercase;
+                    color: rgba(15,23,42,.75) !important;
+                    background: linear-gradient(180deg, rgba(255,255,255,.92), rgba(255,255,255,.74)) !important;
+                    border-bottom: 1px solid var(--border) !important;
+                    border-right: 1px solid var(--border) !important;
+                    padding: 14px 16px !important;
+                }}
+                .macro-premium #macroeconomia-table thead th:last-child {{
+                    border-right: 0 !important;
+                }}
+                .macro-premium #macroeconomia-table thead th:first-child {{
+                    border-top-left-radius: calc(var(--radius) - 8px);
+                }}
+                .macro-premium #macroeconomia-table thead tr th:last-child {{
+                    border-top-right-radius: calc(var(--radius) - 8px);
+                }}
+                .macro-premium #macroeconomia-table tbody td {{
+                    padding: 0 !important;
+                    border-bottom: 1px solid rgba(15,23,42,.08) !important;
+                    border-right: 1px solid rgba(15,23,42,.10) !important;
+                    vertical-align: middle;
+                    background: #ffffff !important;
+                }}
+                .macro-premium #macroeconomia-table tbody tr:nth-child(even) td {{
+                    background: #ecfdf3 !important;
+                }}
+                .macro-premium #macroeconomia-table tbody td:last-child {{
+                    border-right: 0 !important;
+                }}
+                .macro-premium #macroeconomia-table tbody td:first-child {{
+                    font-weight: 850 !important;
+                    font-size: 16px !important;
+                    letter-spacing: 0;
+                    color: var(--text) !important;
+                    width: 160px;
+                    padding: 8px 12px !important;
+                    background: rgba(248,250,252,.85) !important;
+                }}
+                .macro-premium #macroeconomia-table tbody tr:hover td {{
+                    background: #dcfce7 !important;
+                }}
+                .macro-premium #macroeconomia-table tbody tr:last-child td {{
+                    border-bottom: 0 !important;
+                }}
+                .macro-premium #macroeconomia-table tbody tr:last-child td:first-child {{
+                    border-bottom-left-radius: calc(var(--radius) - 8px);
+                }}
+                .macro-premium #macroeconomia-table tbody tr:last-child td:last-child {{
+                    border-bottom-right-radius: calc(var(--radius) - 8px);
+                }}
+                .macro-premium #macroeconomia-table .macro-input {{
+                    width: 100% !important;
+                    max-width: none;
+                    background: transparent !important;
+                    border: 0 !important;
+                    border-radius: 0 !important;
+                    padding: 8px 10px !important;
+                    font-size: 15px !important;
+                    color: var(--text) !important;
+                    outline: none;
+                    box-shadow: none !important;
+                    transition: box-shadow .15s ease, background .15s ease;
+                    min-height: 34px;
+                    font-variant-numeric: tabular-nums;
+                }}
+                .macro-premium #macroeconomia-table .macro-input:focus {{
+                    box-shadow: inset 0 0 0 2px rgba(37,99,235,.45) !important;
+                    background: rgba(239,246,255,.9) !important;
+                }}
+                .macro-premium #macroeconomia-table tbody td.num .macro-input {{
+                    text-align: right;
+                    font-variant-numeric: tabular-nums;
+                }}
+                @media (max-width: 860px) {{
+                    .macro-premium #macroeconomia-table {{ min-width: 640px !important; }}
+                    .macro-premium #macroeconomia-table tbody td:first-child {{ font-size: 14px !important; width: 120px; }}
+                    .macro-premium #macroeconomia-table .macro-input {{ padding: 7px 9px !important; }}
+                }}
+            </style>
+            <div style="display:flex; flex-wrap:wrap; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom: 12px;">
+                <div style="flex:1 1 480px; min-width:280px; display:flex; align-items:flex-start; gap:16px;">
+                    <div style="flex:0 0 auto;">
+                        {logo_html}
+                    </div>
+                    <div style="flex:1 1 auto; padding-top: 2px;">
+                        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+                            <h2 style="margin:0; font-size: clamp(1.4rem, 2.5vw, 2rem); color:#0f172a;">Fase 1: Parametrización</h2>
+                            <div style="display:flex; align-items:baseline; gap:8px; color:#334155; font-weight:700;">
+                                <span style="font-size:0.95rem;">Avance parcial</span>
+                                <span id="param-avance-parcial" style="font-size:1.55rem; line-height:1; color:#0f172a;">0%</span>
+                            </div>
+                        </div>
+                        <p style="margin:0; font-size: clamp(1rem, 1.5vw, 1.1rem); color:#334155;">Capture los datos requeridos</p>
+                    </div>
+                </div>
             </div>
-            <div>
-                <h2 style="margin:0 0 8px; font-size: clamp(1.4rem, 2.5vw, 2rem); color:#0f172a;">Fase 1: Parametrización</h2>
-                <p style="margin:0; font-size: clamp(1rem, 1.5vw, 1.1rem); color:#334155;">Capture los datos requeridos</p>
+            <div id="param-tabs" role="tablist" aria-label="Secciones de parametrización" style="display:flex; align-items:center; justify-content:flex-start; gap:8px; flex-wrap:wrap; overflow:visible; white-space:normal; width:100%; margin: 10px 0 4px; padding:0 0 8px; border-bottom:1px solid #cbd5e1;">
+                <button type="button" data-param-tab="datos-generales" aria-selected="true" style="display:inline-flex; align-items:center; gap:10px; flex:0 0 auto; border:1px solid var(--sidebar-bottom, #0f172a); border-bottom:4px solid var(--sidebar-bottom, #0f172a); border-radius:10px; background:var(--sidebar-text, #ffffff); padding:12px 14px; color:var(--sidebar-bottom, #0f172a); font-weight:700; cursor:pointer; outline:none; box-shadow:none;">
+                    <span id="tab-status-datos-generales" class="tab-status">✕</span>
+                    <img src="/templates/icon/datos_generales.svg" alt="" style="width:22px; height:22px; object-fit:contain;">
+                    <span>Datos generales</span>
+                </button>
+                <button type="button" data-param-tab="macroeconomia" aria-selected="false" style="display:inline-flex; align-items:center; gap:10px; flex:0 0 auto; border:1px solid transparent; border-bottom:4px solid transparent; border-radius:10px; background:transparent; padding:12px 14px; color:var(--body-text, #0f172a); font-weight:600; cursor:pointer; outline:none; box-shadow:none;">
+                    <span id="tab-status-macroeconomia" class="tab-status">✕</span>
+                    <img src="/templates/icon/macroeconomia.svg" alt="" style="width:22px; height:22px; object-fit:contain;">
+                    <span>Macroeconomia</span>
+                </button>
+                <button type="button" data-param-tab="sucursales" aria-selected="false" style="display:inline-flex; align-items:center; gap:10px; flex:0 0 auto; border:1px solid transparent; border-bottom:4px solid transparent; border-radius:10px; background:transparent; padding:12px 14px; color:var(--body-text, #0f172a); font-weight:600; cursor:pointer; outline:none; box-shadow:none;">
+                    <span id="tab-status-sucursales" class="tab-status">✕</span>
+                    <img src="/templates/icon/sucursales.svg" alt="" style="width:22px; height:22px; object-fit:contain;">
+                    <span>Sucursales</span>
+                </button>
+                <button type="button" data-param-tab="info-financiera" aria-selected="false" style="display:inline-flex; align-items:center; gap:10px; flex:0 0 auto; border:1px solid transparent; border-bottom:4px solid transparent; border-radius:10px; background:transparent; padding:12px 14px; color:var(--body-text, #0f172a); font-weight:600; cursor:pointer; outline:none; box-shadow:none;">
+                    <span id="tab-status-info-financiera" class="tab-status">✕</span>
+                    <img src="/templates/icon/informacion_financiera.svg" alt="" style="width:22px; height:22px; object-fit:contain;">
+                    <span>Información financiera</span>
+                </button>
+                <button type="button" data-param-tab="activo-fijo" aria-selected="false" style="display:inline-flex; align-items:center; gap:10px; flex:0 0 auto; border:1px solid transparent; border-bottom:4px solid transparent; border-radius:10px; background:transparent; padding:12px 14px; color:var(--body-text, #0f172a); font-weight:600; cursor:pointer; outline:none; box-shadow:none;">
+                    <span id="tab-status-activo-fijo" class="tab-status">✕</span>
+                    <img src="/templates/icon/activo_fijo.svg" alt="" style="width:22px; height:22px; object-fit:contain;">
+                    <span>Activo fijo</span>
+                </button>
+                <button type="button" data-param-tab="gastos" aria-selected="false" style="display:inline-flex; align-items:center; gap:10px; flex:0 0 auto; border:1px solid transparent; border-bottom:4px solid transparent; border-radius:10px; background:transparent; padding:12px 14px; color:var(--body-text, #0f172a); font-weight:600; cursor:pointer; outline:none; box-shadow:none;">
+                    <span id="tab-status-gastos" class="tab-status">✕</span>
+                    <img src="/templates/icon/gastos.svg" alt="" style="width:22px; height:22px; object-fit:contain;">
+                    <span>Gastos</span>
+                </button>
             </div>
+            <div data-param-panel="datos-generales" class="avan-premium" style="display:block; margin-top: 22px; border: 1px solid #cbd5e1; border-radius: 14px; padding: 16px; background:#f8fafc;">
+                <h3 style="margin:0 0 14px; font-size: 1.1rem; color:#0f172a;">Datos generales</h3>
+                <div class="form-grid dg-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px;">
+                    <label style="display:flex; flex-direction:column; gap:6px; font-weight:600; color:#1e293b;">
+                        Responsable general
+                        <select id="dg-responsable-general" name="responsable_general" style="height:40px; border:1px solid #cbd5e1; border-radius:10px; padding:0 10px; background:#ffffff; color:#0f172a;">
+                            <option value="">Seleccione un usuario</option>
+                            {"".join(responsables_options)}
+                        </select>
+                    </label>
+                    <label style="display:flex; flex-direction:column; gap:6px; font-weight:600; color:#1e293b;">
+                        Primer año de proyección
+                        <select id="dg-primer-anio-proyeccion" name="primer_anio_proyeccion" style="height:40px; border:1px solid #cbd5e1; border-radius:10px; padding:0 10px; background:#ffffff; color:#0f172a;">
+                            {anios_options}
+                        </select>
+                    </label>
+                    <label style="display:flex; flex-direction:column; gap:6px; font-weight:600; color:#1e293b;">
+                        Años de proyección
+                        <select id="anios-proyeccion" name="anios_proyeccion" style="height:40px; border:1px solid #cbd5e1; border-radius:10px; padding:0 10px; background:#ffffff; color:#0f172a;">
+                            {anios_proyeccion_options}
+                        </select>
+                    </label>
+                </div>
+                <div class="form-grid dg-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin-top: 14px;">
+                    <label style="display:flex; flex-direction:column; gap:6px; font-weight:600; color:#1e293b;">
+                        Sociedad
+                        <input id="dg-sociedad" type="text" value="{escape(datos_generales.get('sociedad', ''))}" style="height:40px; border:1px solid #cbd5e1; border-radius:10px; padding:0 10px; background:#ffffff; color:#0f172a;">
+                    </label>
+                    <label style="display:flex; flex-direction:column; gap:6px; font-weight:600; color:#1e293b;">
+                        Figura jurídica
+                        <input id="dg-figura-juridica" type="text" value="{escape(datos_generales.get('figura_juridica', ''))}" style="height:40px; border:1px solid #cbd5e1; border-radius:10px; padding:0 10px; background:#ffffff; color:#0f172a;">
+                    </label>
+                    <label style="display:flex; flex-direction:column; gap:6px; font-weight:600; color:#1e293b;">
+                        Calle
+                        <input id="dg-calle" type="text" value="{escape(datos_generales.get('calle', ''))}" style="height:40px; border:1px solid #cbd5e1; border-radius:10px; padding:0 10px; background:#ffffff; color:#0f172a;">
+                    </label>
+                    <label style="display:flex; flex-direction:column; gap:6px; font-weight:600; color:#1e293b;">
+                        Número exterior
+                        <input id="dg-numero-exterior" type="text" value="{escape(datos_generales.get('numero_exterior', ''))}" style="height:40px; border:1px solid #cbd5e1; border-radius:10px; padding:0 10px; background:#ffffff; color:#0f172a;">
+                    </label>
+                    <label style="display:flex; flex-direction:column; gap:6px; font-weight:600; color:#1e293b;">
+                        Número interior
+                        <input id="dg-numero-interior" type="text" value="{escape(datos_generales.get('numero_interior', ''))}" style="height:40px; border:1px solid #cbd5e1; border-radius:10px; padding:0 10px; background:#ffffff; color:#0f172a;">
+                    </label>
+                    <label style="display:flex; flex-direction:column; gap:6px; font-weight:600; color:#1e293b;">
+                        Colonia
+                        <input id="dg-colonia" type="text" value="{escape(datos_generales.get('colonia', ''))}" style="height:40px; border:1px solid #cbd5e1; border-radius:10px; padding:0 10px; background:#ffffff; color:#0f172a;">
+                    </label>
+                    <label style="display:flex; flex-direction:column; gap:6px; font-weight:600; color:#1e293b;">
+                        Ciudad
+                        <input id="dg-ciudad" type="text" value="{escape(datos_generales.get('ciudad', ''))}" style="height:40px; border:1px solid #cbd5e1; border-radius:10px; padding:0 10px; background:#ffffff; color:#0f172a;">
+                    </label>
+                    <label style="display:flex; flex-direction:column; gap:6px; font-weight:600; color:#1e293b;">
+                        Municipio
+                        <input id="dg-municipio" type="text" value="{escape(datos_generales.get('municipio', ''))}" style="height:40px; border:1px solid #cbd5e1; border-radius:10px; padding:0 10px; background:#ffffff; color:#0f172a;">
+                    </label>
+                    <label style="display:flex; flex-direction:column; gap:6px; font-weight:600; color:#1e293b;">
+                        Estado
+                        <input id="dg-estado" type="text" value="{escape(datos_generales.get('estado', ''))}" style="height:40px; border:1px solid #cbd5e1; border-radius:10px; padding:0 10px; background:#ffffff; color:#0f172a;">
+                    </label>
+                    <label style="display:flex; flex-direction:column; gap:6px; font-weight:600; color:#1e293b;">
+                        C.P.
+                        <input id="dg-cp" type="text" value="{escape(datos_generales.get('cp', ''))}" style="height:40px; border:1px solid #cbd5e1; border-radius:10px; padding:0 10px; background:#ffffff; color:#0f172a;">
+                    </label>
+                    <label style="display:flex; flex-direction:column; gap:6px; font-weight:600; color:#1e293b;">
+                        País
+                        <input id="dg-pais" type="text" value="{escape(datos_generales.get('pais', ''))}" style="height:40px; border:1px solid #cbd5e1; border-radius:10px; padding:0 10px; background:#ffffff; color:#0f172a;">
+                    </label>
+                </div>
+                <div style="display:flex; align-items:center; gap:10px; margin-top:14px;">
+                    <button type="button" id="dg-save-btn" style="height:38px; padding:0 14px; border-radius:10px; border:1px solid #0f172a; background:#0f172a; color:#fff; font-weight:600; cursor:pointer;">Guardar datos generales</button>
+                    <span id="dg-save-status" style="font-size:0.9rem; color:#334155;"></span>
+                </div>
+            </div>
+            <div data-param-panel="macroeconomia" class="avan-premium macro-premium table-card" style="display:none; margin-top: 18px; border: 1px solid #cbd5e1; border-radius: 14px; padding: 16px; background:#f8fafc;">
+                <h3 class="section-title" style="margin:0 0 14px; font-size: 1.1rem; color:#0f172a;">Macroeconomía</h3>
+                <div class="table-wrap" style="overflow-x:auto;">
+                    <table id="macroeconomia-table" class="table-excel table-excel--compact" style="width:100%; border-collapse:collapse; min-width:680px; background:#ffffff; border:1px solid #e2e8f0; border-radius:10px;">
+                        <thead>
+                            <tr>
+                                <th style="text-align:left; padding:10px; border-bottom:1px solid #cbd5e1; color:#1e293b; font-size:0.95rem;">Año</th>
+                                <th style="text-align:left; padding:10px; border-bottom:1px solid #cbd5e1; color:#1e293b; font-size:0.95rem;">Inflación</th>
+                                <th style="text-align:left; padding:10px; border-bottom:1px solid #cbd5e1; color:#1e293b; font-size:0.95rem;">Valor de la UDI</th>
+                            </tr>
+                        </thead>
+                        <tbody id="macroeconomia-rows">
+                            {macro_table_rows}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div data-param-panel="sucursales" style="display:none; margin-top:18px;">
+                <h3 style="margin:0 0 14px; font-size: 1.1rem; color:#0f172a;">Participación de las sucursales al año (<span id="sucursales-anio-titulo">{escape(primer_anio_actual or str(anio_actual))}</span>)</h3>
+                <div class="table-wrap" style="overflow-x:auto;">
+                    <table id="sucursales-table" class="table-excel" style="width:100%; min-width:1200px;">
+                        <thead>
+                            <tr>
+                                <th>Nombre de la sucursal</th>
+                                <th>Socios</th>
+                                <th>Menores ahorradores</th>
+                                <th>Ahorro menor</th>
+                                <th>Captación a la vista (sin ahorro menor)</th>
+                                <th>Inversiones</th>
+                                <th>Colocación</th>
+                                <th>Cartera vencida</th>
+                                <th class="table-actions-head">+</th>
+                            </tr>
+                        </thead>
+                        <tbody id="sucursales-rows">{initial_sucursal_row}</tbody>
+                    </table>
+                </div>
+            </div>
+            <div data-param-panel="info-financiera" style="display:none; margin-top:18px;">
+                <h3 style="margin:0 0 14px; font-size: 1.1rem; color:#0f172a;">Información financiera</h3>
+                <div class="table-wrap" style="overflow-x:auto;">
+                    <table id="info-financiera-basica-table" class="table-excel" style="width:100%; min-width:760px;">
+                        <thead>
+                            <tr>
+                                <th>Rubro</th>
+                                <th><span id="ifb-year-m3">{primer_anio_num - 3}</span></th>
+                                <th><span id="ifb-year-m2">{primer_anio_num - 2}</span></th>
+                                <th><span id="ifb-year-m1">{primer_anio_num - 1}</span></th>
+                            </tr>
+                        </thead>
+                        <tbody id="info-financiera-basica-rows">
+                            <tr>
+                                <td class="ifb-row-label">Activos</td>
+                                <td><input id="ifb-activos-m3" class="table-input num" type="number" step="0.01" value="{escape(datos_generales.get('ifb_activos_m3', ''))}" placeholder="0.00"></td>
+                                <td><input id="ifb-activos-m2" class="table-input num" type="number" step="0.01" value="{escape(datos_generales.get('ifb_activos_m2', ''))}" placeholder="0.00"></td>
+                                <td><input id="ifb-activos-m1" class="table-input num" type="number" step="0.01" value="{escape(datos_generales.get('ifb_activos_m1', ''))}" placeholder="0.00"></td>
+                            </tr>
+                            <tr>
+                                <td class="ifb-row-label">Pasivos</td>
+                                <td><input id="ifb-pasivos-m3" class="table-input num" type="number" step="0.01" value="{escape(datos_generales.get('ifb_pasivos_m3', ''))}" placeholder="0.00"></td>
+                                <td><input id="ifb-pasivos-m2" class="table-input num" type="number" step="0.01" value="{escape(datos_generales.get('ifb_pasivos_m2', ''))}" placeholder="0.00"></td>
+                                <td><input id="ifb-pasivos-m1" class="table-input num" type="number" step="0.01" value="{escape(datos_generales.get('ifb_pasivos_m1', ''))}" placeholder="0.00"></td>
+                            </tr>
+                            <tr>
+                                <td class="ifb-row-label">Capital contable</td>
+                                <td><input id="ifb-capital-m3" class="table-input num" type="number" step="0.01" value="{escape(datos_generales.get('ifb_capital_m3', ''))}" placeholder="0.00"></td>
+                                <td><input id="ifb-capital-m2" class="table-input num" type="number" step="0.01" value="{escape(datos_generales.get('ifb_capital_m2', ''))}" placeholder="0.00"></td>
+                                <td><input id="ifb-capital-m1" class="table-input num" type="number" step="0.01" value="{escape(datos_generales.get('ifb_capital_m1', ''))}" placeholder="0.00"></td>
+                            </tr>
+                            <tr>
+                                <td class="ifb-row-label">Ingresos</td>
+                                <td><input id="ifb-ingresos-m3" class="table-input num" type="number" step="0.01" value="{escape(datos_generales.get('ifb_ingresos_m3', ''))}" placeholder="0.00"></td>
+                                <td><input id="ifb-ingresos-m2" class="table-input num" type="number" step="0.01" value="{escape(datos_generales.get('ifb_ingresos_m2', ''))}" placeholder="0.00"></td>
+                                <td><input id="ifb-ingresos-m1" class="table-input num" type="number" step="0.01" value="{escape(datos_generales.get('ifb_ingresos_m1', ''))}" placeholder="0.00"></td>
+                            </tr>
+                            <tr>
+                                <td class="ifb-row-label">Egresos</td>
+                                <td><input id="ifb-egresos-m3" class="table-input num" type="number" step="0.01" value="{escape(datos_generales.get('ifb_egresos_m3', ''))}" placeholder="0.00"></td>
+                                <td><input id="ifb-egresos-m2" class="table-input num" type="number" step="0.01" value="{escape(datos_generales.get('ifb_egresos_m2', ''))}" placeholder="0.00"></td>
+                                <td><input id="ifb-egresos-m1" class="table-input num" type="number" step="0.01" value="{escape(datos_generales.get('ifb_egresos_m1', ''))}" placeholder="0.00"></td>
+                            </tr>
+                            <tr>
+                                <td class="ifb-row-label">Resultado</td>
+                                <td><input id="ifb-resultado-m3" class="table-input num" type="number" step="0.01" value="{escape(datos_generales.get('ifb_resultado_m3', ''))}" placeholder="0.00"></td>
+                                <td><input id="ifb-resultado-m2" class="table-input num" type="number" step="0.01" value="{escape(datos_generales.get('ifb_resultado_m2', ''))}" placeholder="0.00"></td>
+                                <td><input id="ifb-resultado-m1" class="table-input num" type="number" step="0.01" value="{escape(datos_generales.get('ifb_resultado_m1', ''))}" placeholder="0.00"></td>
+                            </tr>
+                            <tr>
+                                <td class="ifb-row-label">Validación</td>
+                                <td class="ifb-validation-cell">
+                                    <div id="ifb-val-m3" class="ifb-validation-output"></div>
+                                </td>
+                                <td class="ifb-validation-cell">
+                                    <div id="ifb-val-m2" class="ifb-validation-output"></div>
+                                </td>
+                                <td class="ifb-validation-cell">
+                                    <div id="ifb-val-m1" class="ifb-validation-output"></div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div data-param-panel="activo-fijo" style="display:none; margin-top:18px;">
+                <h3 style="margin:0 0 14px; font-size: 1.1rem; color:#0f172a;">Activo fijo</h3>
+                <div class="table-wrap" style="overflow-x:auto;">
+                    <table id="activo-fijo-table" class="table-excel" style="width:100%; min-width:620px;">
+                        <thead>
+                            <tr>
+                                <th>Rubro</th>
+                                <th>Años de depreciación</th>
+                                <th class="table-actions-head">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody id="activo-fijo-rows">
+                            {activos_fijos_table_rows}
+                        </tbody>
+                    </table>
+                </div>
+                <div style="margin-top:12px;">
+                    <button type="button" id="add-activo-fijo-row" class="table-primary-btn">+ Agregar rubro</button>
+                </div>
+            </div>
+            <div data-param-panel="gastos" style="display:none; margin-top:18px;">
+                <h3 style="margin:0 0 14px; font-size: 1.1rem; color:#0f172a;">Gastos</h3>
+                <div class="table-wrap" style="overflow-x:auto;">
+                    <table id="gastos-table" class="table-excel" style="width:100%; min-width:620px;">
+                        <thead>
+                            <tr>
+                                <th>Rubro</th>
+                                <th><span id="gastos-year-m2">{primer_anio_num - 2}</span></th>
+                                <th><span id="gastos-year-m1">{primer_anio_num - 1}</span></th>
+                                <th><span id="gastos-year-0">{primer_anio_num}</span></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="ifb-row-label">Gastos</td>
+                                <td><input id="ifb-gastos-m2" class="table-input num" type="number" step="0.01" placeholder="0.00"></td>
+                                <td><input id="ifb-gastos-m1" class="table-input num" type="number" step="0.01" placeholder="0.00"></td>
+                                <td><input id="ifb-gastos-0" class="table-input num" type="number" step="0.01" placeholder="0.00"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <script>
+                (function() {{
+                    const currentYear = {anio_actual};
+                    const projectionYearsSelect = document.getElementById("anios-proyeccion");
+                    const macroRowsContainer = document.getElementById("macroeconomia-rows");
+                    const primerAnioProyeccionSelect = document.getElementById("dg-primer-anio-proyeccion");
+                    const sucursalesAnioTitulo = document.getElementById("sucursales-anio-titulo");
+                    const ifbYearM3 = document.getElementById("ifb-year-m3");
+                    const ifbYearM2 = document.getElementById("ifb-year-m2");
+                    const ifbYearM1 = document.getElementById("ifb-year-m1");
+                    const gastosYearM2 = document.getElementById("gastos-year-m2");
+                    const gastosYearM1 = document.getElementById("gastos-year-m1");
+                    const gastosYear0 = document.getElementById("gastos-year-0");
+                    const sucursalesRows = document.getElementById("sucursales-rows");
+                    const activoFijoRows = document.getElementById("activo-fijo-rows");
+                    const addActivoFijoRowBtn = document.getElementById("add-activo-fijo-row");
+                    const infoFinancieraBasicaTable = document.getElementById("info-financiera-basica-table");
+                    const saveDatosGeneralesBtn = document.getElementById("dg-save-btn");
+                    const saveDatosGeneralesStatus = document.getElementById("dg-save-status");
+                    const avanceParcialElem = document.getElementById("param-avance-parcial");
+                    const datosGeneralesTabStatus = document.getElementById("tab-status-datos-generales");
+                    const macroeconomiaTabStatus = document.getElementById("tab-status-macroeconomia");
+                    const sucursalesTabStatus = document.getElementById("tab-status-sucursales");
+                    const infoFinancieraTabStatus = document.getElementById("tab-status-info-financiera");
+                    const activoFijoTabStatus = document.getElementById("tab-status-activo-fijo");
+                    const gastosTabStatus = document.getElementById("tab-status-gastos");
+                    const paramTabButtons = Array.from(document.querySelectorAll("[data-param-tab]"));
+                    const paramPanels = Array.from(document.querySelectorAll("[data-param-panel]"));
+                    const totalSeccionesParam = 6;
+                    const datosGeneralesRequiredIds = [
+                        "dg-responsable-general",
+                        "dg-primer-anio-proyeccion",
+                        "anios-proyeccion",
+                        "dg-sociedad",
+                        "dg-figura-juridica",
+                        "dg-calle",
+                        "dg-numero-exterior",
+                        "dg-numero-interior",
+                        "dg-colonia",
+                        "dg-ciudad",
+                        "dg-municipio",
+                        "dg-estado",
+                        "dg-cp",
+                        "dg-pais",
+                    ];
+
+                    function setActiveParamTab(tabName) {{
+                        paramTabButtons.forEach((button) => {{
+                            const isActive = button.getAttribute("data-param-tab") === tabName;
+                            button.setAttribute("aria-selected", isActive ? "true" : "false");
+                            button.style.borderColor = isActive ? "var(--sidebar-bottom, #0f172a)" : "transparent";
+                            button.style.borderBottomColor = isActive ? "var(--sidebar-bottom, #0f172a)" : "transparent";
+                            button.style.background = isActive ? "var(--sidebar-text, #ffffff)" : "transparent";
+                            button.style.color = isActive ? "var(--sidebar-bottom, #0f172a)" : "var(--body-text, #0f172a)";
+                            button.style.fontWeight = isActive ? "700" : "600";
+                            button.style.outline = "none";
+                            button.style.boxShadow = "none";
+                        }});
+                        paramPanels.forEach((panel) => {{
+                            panel.style.display = panel.getAttribute("data-param-panel") === tabName ? "block" : "none";
+                        }});
+                    }}
+
+                    function isFieldComplete(id) {{
+                        const elem = document.getElementById(id);
+                        if (!elem) return false;
+                        return String(elem.value || "").trim().length > 0;
+                    }}
+
+                    function isDatosGeneralesComplete() {{
+                        return datosGeneralesRequiredIds.every(isFieldComplete);
+                    }}
+
+                    function areAllFilled(selector) {{
+                        const elems = Array.from(document.querySelectorAll(selector));
+                        if (!elems.length) return false;
+                        return elems.every((elem) => String(elem.value || "").trim().length > 0);
+                    }}
+
+                    function setTabStatus(tabElem, isComplete) {{
+                        if (!tabElem) return;
+                        tabElem.textContent = isComplete ? "✓" : "✕";
+                        tabElem.classList.toggle("is-complete", isComplete);
+                    }}
+
+                    function updateParamProgress() {{
+                        const datosGeneralesComplete = isDatosGeneralesComplete();
+                        const macroeconomiaComplete = areAllFilled("#macroeconomia-table tbody input");
+                        const sucursalesComplete = areAllFilled("#sucursales-table tbody input");
+                        const infoFinancieraComplete = areAllFilled("#info-financiera-basica-table tbody input");
+                        const activoFijoComplete = areAllFilled("#activo-fijo-table tbody input");
+                        const gastosComplete = areAllFilled("#ifb-gastos-m2, #ifb-gastos-m1, #ifb-gastos-0");
+
+                        setTabStatus(datosGeneralesTabStatus, datosGeneralesComplete);
+                        setTabStatus(macroeconomiaTabStatus, macroeconomiaComplete);
+                        setTabStatus(sucursalesTabStatus, sucursalesComplete);
+                        setTabStatus(infoFinancieraTabStatus, infoFinancieraComplete);
+                        setTabStatus(activoFijoTabStatus, activoFijoComplete);
+                        setTabStatus(gastosTabStatus, gastosComplete);
+
+                        if (!avanceParcialElem) return;
+                        const completed = [
+                            datosGeneralesComplete,
+                            macroeconomiaComplete,
+                            sucursalesComplete,
+                            infoFinancieraComplete,
+                            activoFijoComplete,
+                            gastosComplete,
+                        ].filter(Boolean).length;
+                        const percent = Math.round((completed / totalSeccionesParam) * 100);
+                        avanceParcialElem.textContent = percent + "%";
+                    }}
+
+                    datosGeneralesRequiredIds.forEach((id) => {{
+                        const elem = document.getElementById(id);
+                        if (!elem) return;
+                        elem.addEventListener("input", updateParamProgress);
+                        elem.addEventListener("change", updateParamProgress);
+                    }});
+                    document.getElementById("macroeconomia-table")?.addEventListener("input", updateParamProgress);
+                    document.getElementById("macroeconomia-table")?.addEventListener("change", updateParamProgress);
+                    document.getElementById("sucursales-table")?.addEventListener("input", updateParamProgress);
+                    document.getElementById("sucursales-table")?.addEventListener("change", updateParamProgress);
+                    document.getElementById("activo-fijo-table")?.addEventListener("input", updateParamProgress);
+                    document.getElementById("activo-fijo-table")?.addEventListener("change", updateParamProgress);
+                    document.getElementById("info-financiera-basica-table")?.addEventListener("input", updateParamProgress);
+                    document.getElementById("info-financiera-basica-table")?.addEventListener("change", updateParamProgress);
+                    document.getElementById("ifb-gastos-m2")?.addEventListener("input", updateParamProgress);
+                    document.getElementById("ifb-gastos-m1")?.addEventListener("input", updateParamProgress);
+                    document.getElementById("ifb-gastos-0")?.addEventListener("input", updateParamProgress);
+
+                    if (paramTabButtons.length && paramPanels.length) {{
+                        paramTabButtons.forEach((button) => {{
+                            button.addEventListener("click", () => {{
+                                const tabName = button.getAttribute("data-param-tab") || "";
+                                if (!tabName) return;
+                                setActiveParamTab(tabName);
+                            }});
+                        }});
+                        setActiveParamTab("datos-generales");
+                    }}
+                    updateParamProgress();
+
+                    if (!projectionYearsSelect || !macroRowsContainer) return;
+
+                    function buildMacroRows(futureYears) {{
+                        const safeFutureYears = Math.min(5, Math.max(1, Number(futureYears) || 3));
+                        const offsets = [-2, -1, 0];
+                        for (let i = 1; i <= safeFutureYears; i += 1) offsets.push(i);
+
+                        const rowsHtml = offsets.map((offset, rowIndex) => {{
+                            const yearValue = currentYear + offset;
+                            return (
+                                '<tr data-macro-row="' + rowIndex + '">'
+                                + '<td class="year" style="padding:10px; border-bottom:1px solid #e2e8f0; color:#0f172a; font-weight:600;">'
+                                + yearValue + '</td>'
+                                + '<td class="num" style="padding:10px; border-bottom:1px solid #e2e8f0;">'
+                                + '<input class="macro-input" data-row="' + rowIndex + '" data-col="0" type="text" name="inflacion_' + yearValue + '" inputmode="decimal" autocomplete="off" placeholder="Ej. 4.50%" style="width:100%; height:36px; border:1px solid #cbd5e1; border-radius:8px; padding:0 10px;">'
+                                + '</td>'
+                                + '<td class="num" style="padding:10px; border-bottom:1px solid #e2e8f0;">'
+                                + '<input class="macro-input" data-row="' + rowIndex + '" data-col="1" type="text" name="udi_' + yearValue + '" inputmode="decimal" autocomplete="off" placeholder="Ej. 8.15" style="width:100%; height:36px; border:1px solid #cbd5e1; border-radius:8px; padding:0 10px;">'
+                                + '</td>'
+                                + '</tr>'
+                            );
+                        }}).join("");
+                        macroRowsContainer.innerHTML = rowsHtml;
+                        updateParamProgress();
+                    }}
+
+                    function getMacroMatrix() {{
+                        const rows = Array.from(macroRowsContainer.querySelectorAll("tr"));
+                        return rows.map((row, rowIndex) => {{
+                            const cells = Array.from(row.querySelectorAll(".macro-input"));
+                            cells.forEach((input, colIndex) => {{
+                                input.dataset.row = String(rowIndex);
+                                input.dataset.col = String(colIndex);
+                            }});
+                            return cells;
+                        }});
+                    }}
+
+                    function focusMacroCell(rowIndex, colIndex) {{
+                        const matrix = getMacroMatrix();
+                        const row = matrix[rowIndex];
+                        if (!row) return;
+                        const cell = row[colIndex];
+                        if (!cell) return;
+                        cell.focus();
+                        cell.select();
+                    }}
+
+                    macroRowsContainer.addEventListener("keydown", (event) => {{
+                        const target = event.target;
+                        if (!(target instanceof HTMLInputElement)) return;
+                        if (!target.classList.contains("macro-input")) return;
+                        const row = Number(target.dataset.row || "0");
+                        const col = Number(target.dataset.col || "0");
+                        if (event.key === "ArrowUp") {{
+                            event.preventDefault();
+                            focusMacroCell(Math.max(0, row - 1), col);
+                        }} else if (event.key === "ArrowDown" || event.key === "Enter") {{
+                            event.preventDefault();
+                            focusMacroCell(row + 1, col);
+                        }} else if (event.key === "ArrowLeft") {{
+                            if (target.selectionStart === 0 && target.selectionEnd === 0) {{
+                                event.preventDefault();
+                                focusMacroCell(row, Math.max(0, col - 1));
+                            }}
+                        }} else if (event.key === "ArrowRight") {{
+                            const atEnd = target.selectionStart === target.value.length && target.selectionEnd === target.value.length;
+                            if (atEnd) {{
+                                event.preventDefault();
+                                focusMacroCell(row, col + 1);
+                            }}
+                        }}
+                    }});
+
+                    macroRowsContainer.addEventListener("paste", (event) => {{
+                        const target = event.target;
+                        if (!(target instanceof HTMLInputElement)) return;
+                        if (!target.classList.contains("macro-input")) return;
+                        const clipboard = event.clipboardData?.getData("text");
+                        if (!clipboard) return;
+                        const rows = clipboard
+                            .split(/\\r?\\n/)
+                            .map((line) => line.trim())
+                            .filter((line) => line.length > 0)
+                            .map((line) => line.split("\t"));
+                        if (!rows.length) return;
+                        event.preventDefault();
+                        const startRow = Number(target.dataset.row || "0");
+                        const startCol = Number(target.dataset.col || "0");
+                        const matrix = getMacroMatrix();
+                        rows.forEach((rowValues, rowOffset) => {{
+                            rowValues.forEach((value, colOffset) => {{
+                                const r = startRow + rowOffset;
+                                const c = startCol + colOffset;
+                                const cell = matrix[r]?.[c];
+                                if (!cell) return;
+                                cell.value = value.trim();
+                            }});
+                        }});
+                        updateParamProgress();
+                    }});
+
+                    projectionYearsSelect.addEventListener("change", () => {{
+                        buildMacroRows(projectionYearsSelect.value);
+                    }});
+                    if (primerAnioProyeccionSelect && sucursalesAnioTitulo) {{
+                        const syncSucursalYearTitle = () => {{
+                            sucursalesAnioTitulo.textContent = String(primerAnioProyeccionSelect.value || currentYear);
+                        }};
+                        primerAnioProyeccionSelect.addEventListener("change", syncSucursalYearTitle);
+                        syncSucursalYearTitle();
+                    }}
+                    if (
+                        primerAnioProyeccionSelect &&
+                        ifbYearM3 && ifbYearM2 && ifbYearM1 &&
+                        gastosYearM2 && gastosYearM1 && gastosYear0
+                    ) {{
+                        const syncFinancialYearHeaders = () => {{
+                            const baseYear = Number(primerAnioProyeccionSelect.value) || currentYear;
+                            ifbYearM3.textContent = String(baseYear - 3);
+                            ifbYearM2.textContent = String(baseYear - 2);
+                            ifbYearM1.textContent = String(baseYear - 1);
+                            gastosYearM2.textContent = String(baseYear - 2);
+                            gastosYearM1.textContent = String(baseYear - 1);
+                            gastosYear0.textContent = String(baseYear);
+                        }};
+                        primerAnioProyeccionSelect.addEventListener("change", syncFinancialYearHeaders);
+                        syncFinancialYearHeaders();
+                    }}
+
+                    function createSucursalRow(rowIndex) {{
+                        const tr = document.createElement("tr");
+                        tr.innerHTML =
+                            '<td><input class="table-input" type="text" name="sucursal_nombre_' + rowIndex + '" placeholder="Nombre de la sucursal"></td>'
+                            + '<td><input class="table-input num" type="number" min="0" step="1" name="sucursal_socios_' + rowIndex + '" placeholder="0"></td>'
+                            + '<td><input class="table-input num" type="number" min="0" step="1" name="sucursal_menores_ahorradores_' + rowIndex + '" placeholder="0"></td>'
+                            + '<td><input class="table-input num" type="number" min="0" step="0.01" name="sucursal_ahorro_menor_' + rowIndex + '" placeholder="0.00"></td>'
+                            + '<td><input class="table-input num" type="number" min="0" step="0.01" name="sucursal_captacion_vista_' + rowIndex + '" placeholder="0.00"></td>'
+                            + '<td><input class="table-input num" type="number" min="0" step="0.01" name="sucursal_inversiones_' + rowIndex + '" placeholder="0.00"></td>'
+                            + '<td><input class="table-input num" type="number" min="0" step="0.01" name="sucursal_colocacion_' + rowIndex + '" placeholder="0.00"></td>'
+                            + '<td><input class="table-input num" type="number" min="0" step="0.01" name="sucursal_cartera_vencida_' + rowIndex + '" placeholder="0.00"></td>'
+                            + '<td class="table-actions-cell"><button type="button" class="add-sucursal-row table-add-btn">+</button></td>';
+                        return tr;
+                    }}
+
+                    if (sucursalesRows) {{
+                        let sucursalIndex = Math.max(1, sucursalesRows.querySelectorAll("tr").length);
+                        sucursalesRows.addEventListener("click", (event) => {{
+                            const target = event.target;
+                            if (!(target instanceof HTMLElement)) return;
+                            if (!target.classList.contains("add-sucursal-row")) return;
+                            sucursalIndex += 1;
+                            const currentRow = target.closest("tr");
+                            const newRow = createSucursalRow(sucursalIndex);
+                            if (currentRow && currentRow.parentNode) {{
+                                currentRow.parentNode.insertBefore(newRow, currentRow.nextSibling);
+                            }} else {{
+                                sucursalesRows.appendChild(newRow);
+                            }}
+                        }});
+                    }}
+
+                    function createActivoFijoRow(rowIndex, rubroValue = "", aniosValue = "") {{
+                        const tr = document.createElement("tr");
+                        tr.innerHTML =
+                            '<td><input class="table-input" type="text" name="activo_fijo_rubro_' + rowIndex + '" value="' + rubroValue.replace(/"/g, '&quot;') + '"></td>'
+                            + '<td><input class="table-input num" type="number" min="0" step="1" name="activo_fijo_anios_' + rowIndex + '" value="' + aniosValue.replace(/"/g, '&quot;') + '"></td>'
+                            + '<td class="table-actions-cell"><button type="button" class="delete-activo-fijo-row table-delete-btn">−</button></td>';
+                        return tr;
+                    }}
+
+                    if (activoFijoRows) {{
+                        let activoFijoIndex = Math.max(1, activoFijoRows.querySelectorAll("tr").length);
+                        addActivoFijoRowBtn && addActivoFijoRowBtn.addEventListener("click", () => {{
+                            activoFijoIndex += 1;
+                            activoFijoRows.appendChild(createActivoFijoRow(activoFijoIndex));
+                        }});
+                        activoFijoRows.addEventListener("click", (event) => {{
+                            const target = event.target;
+                            if (!(target instanceof HTMLElement)) return;
+                            if (!target.classList.contains("delete-activo-fijo-row")) return;
+                            const row = target.closest("tr");
+                            if (!row) return;
+                            if (activoFijoRows.querySelectorAll("tr").length <= 1) {{
+                                const rubroInput = row.querySelector('input[name^="activo_fijo_rubro_"]');
+                                const aniosInput = row.querySelector('input[name^="activo_fijo_anios_"]');
+                                if (rubroInput) rubroInput.value = "";
+                                if (aniosInput) aniosInput.value = "";
+                                return;
+                            }}
+                            row.remove();
+                        }});
+                    }}
+
+                    function parseNumber(value) {{
+                        const parsed = Number(value);
+                        return Number.isFinite(parsed) ? parsed : 0;
+                    }}
+
+                    function renderValidationCell(targetId, activos, pasivos, capital) {{
+                        const target = document.getElementById(targetId);
+                        if (!target) return;
+                        const validBalance = Math.abs(activos - (pasivos + capital)) < 0.0001;
+                        const okStyle = "display:block; text-align:center; font-style:italic; color:#0f172a; padding:6px 4px;";
+                        const errStyle = "display:block; text-align:center; color:#991b1b; background:#fee2e2; border:1px solid #fca5a5; border-radius:6px; padding:6px 8px;";
+                        target.innerHTML = validBalance
+                            ? '<span style="' + okStyle + '">Ok</span>'
+                            : '<span style="' + errStyle + '">Revisar activos, pasivos y capital</span>';
+                    }}
+
+                    function validateInformacionFinanciera() {{
+                        const periods = ['m3', 'm2', 'm1'];
+                        periods.forEach((period) => {{
+                            const activos = parseNumber(document.getElementById('ifb-activos-' + period)?.value);
+                            const pasivos = parseNumber(document.getElementById('ifb-pasivos-' + period)?.value);
+                            const capital = parseNumber(document.getElementById('ifb-capital-' + period)?.value);
+                            renderValidationCell('ifb-val-' + period, activos, pasivos, capital);
+                        }});
+                    }}
+                    function isInformacionFinancieraCorrecta() {{
+                        const periods = ['m3', 'm2', 'm1'];
+                        return periods.every((period) => {{
+                            const activos = parseNumber(document.getElementById('ifb-activos-' + period)?.value);
+                            const pasivos = parseNumber(document.getElementById('ifb-pasivos-' + period)?.value);
+                            const capital = parseNumber(document.getElementById('ifb-capital-' + period)?.value);
+                            return Math.abs(activos - (pasivos + capital)) < 0.0001;
+                        }});
+                    }}
+
+                    if (infoFinancieraBasicaTable) {{
+                        infoFinancieraBasicaTable.addEventListener('input', (event) => {{
+                            const target = event.target;
+                            if (!(target instanceof HTMLElement)) return;
+                            if (target.tagName !== 'INPUT') return;
+                            validateInformacionFinanciera();
+                        }});
+                        validateInformacionFinanciera();
+                    }}
+
+                    function getValue(id) {{
+                        const elem = document.getElementById(id);
+                        if (!elem) return "";
+                        return (elem.value || "").trim();
+                    }}
+
+                    async function saveDatosGenerales() {{
+                        if (!saveDatosGeneralesBtn) return;
+                        saveDatosGeneralesBtn.disabled = true;
+                        if (saveDatosGeneralesStatus) saveDatosGeneralesStatus.textContent = "Guardando...";
+                        const payload = {{
+                            responsable_general: getValue("dg-responsable-general"),
+                            primer_anio_proyeccion: getValue("dg-primer-anio-proyeccion"),
+                            anios_proyeccion: getValue("anios-proyeccion"),
+                            sociedad: getValue("dg-sociedad"),
+                            figura_juridica: getValue("dg-figura-juridica"),
+                            calle: getValue("dg-calle"),
+                            numero_exterior: getValue("dg-numero-exterior"),
+                            numero_interior: getValue("dg-numero-interior"),
+                            colonia: getValue("dg-colonia"),
+                            ciudad: getValue("dg-ciudad"),
+                            municipio: getValue("dg-municipio"),
+                            estado: getValue("dg-estado"),
+                            cp: getValue("dg-cp"),
+                            pais: getValue("dg-pais"),
+                            ifb_activos_m3: getValue("ifb-activos-m3"),
+                            ifb_activos_m2: getValue("ifb-activos-m2"),
+                            ifb_activos_m1: getValue("ifb-activos-m1"),
+                            ifb_pasivos_m3: getValue("ifb-pasivos-m3"),
+                            ifb_pasivos_m2: getValue("ifb-pasivos-m2"),
+                            ifb_pasivos_m1: getValue("ifb-pasivos-m1"),
+                            ifb_capital_m3: getValue("ifb-capital-m3"),
+                            ifb_capital_m2: getValue("ifb-capital-m2"),
+                            ifb_capital_m1: getValue("ifb-capital-m1"),
+                            ifb_ingresos_m3: getValue("ifb-ingresos-m3"),
+                            ifb_ingresos_m2: getValue("ifb-ingresos-m2"),
+                            ifb_ingresos_m1: getValue("ifb-ingresos-m1"),
+                            ifb_egresos_m3: getValue("ifb-egresos-m3"),
+                            ifb_egresos_m2: getValue("ifb-egresos-m2"),
+                            ifb_egresos_m1: getValue("ifb-egresos-m1"),
+                            ifb_resultado_m3: getValue("ifb-resultado-m3"),
+                            ifb_resultado_m2: getValue("ifb-resultado-m2"),
+                            ifb_resultado_m1: getValue("ifb-resultado-m1"),
+                        }};
+                        try {{
+                            const res = await fetch("/api/proyectando/datos-preliminares/datos-generales", {{
+                                method: "POST",
+                                headers: {{ "Content-Type": "application/json" }},
+                                body: JSON.stringify(payload),
+                            }});
+                            const json = await res.json();
+                            if (!res.ok || !json?.success) throw new Error(json?.error || "No se pudo guardar");
+                            if (saveDatosGeneralesStatus) {{
+                                saveDatosGeneralesStatus.textContent = isInformacionFinancieraCorrecta()
+                                    ? "Información financiera correcta. Guardado correctamente."
+                                    : "Información financiera incorrecta. Guardado con observaciones.";
+                            }}
+                        }} catch (error) {{
+                            if (saveDatosGeneralesStatus) saveDatosGeneralesStatus.textContent = "Error al guardar.";
+                        }} finally {{
+                            saveDatosGeneralesBtn.disabled = false;
+                        }}
+                    }}
+
+                    saveDatosGeneralesBtn && saveDatosGeneralesBtn.addEventListener("click", saveDatosGenerales);
+
+                    buildMacroRows(projectionYearsSelect.value);
+                }})();
+            </script>
         </section>
     """)
     return render_backend_page(
@@ -11070,6 +12456,225 @@ def proyectando_datos_preliminares_page(request: Request):
         hide_floating_actions=True,
         show_page_header=False,
     )
+
+
+@app.get("/proyectando/crecimiento-general", response_class=HTMLResponse)
+def proyectando_crecimiento_general_page(request: Request):
+    preliminares = _load_datos_preliminares_store()
+    current_year = datetime.now().year
+    try:
+        base_year = int((preliminares.get("primer_anio_proyeccion") or "").strip() or current_year)
+    except (TypeError, ValueError):
+        base_year = current_year
+    try:
+        projection_years = int((preliminares.get("anios_proyeccion") or "").strip() or 3)
+    except (TypeError, ValueError):
+        projection_years = 3
+    projection_years = max(1, min(projection_years, 10))
+
+    def _to_float(raw: Any) -> float:
+        text = str(raw or "").strip().replace(",", "")
+        if not text:
+            return 0.0
+        try:
+            return float(text)
+        except ValueError:
+            return 0.0
+
+    activos_m3 = _to_float(preliminares.get("ifb_activos_m3"))
+    activos_m2 = _to_float(preliminares.get("ifb_activos_m2"))
+    activos_m1 = _to_float(preliminares.get("ifb_activos_m1"))
+    activos_y0_raw = str(preliminares.get("ifb_activos_0") or "").strip()
+    activos_y0 = _to_float(activos_y0_raw) if activos_y0_raw else activos_m1
+    historical_activos = {
+        "m3": activos_m3,
+        "m2": activos_m2,
+        "m1": activos_m1,
+        "y0": activos_y0,
+    }
+    historical_activos_json = json.dumps(historical_activos)
+
+    login_identity = _get_login_identity_context()
+    logo_url = escape((login_identity.get("login_logo_url") or "").strip())
+    logo_html = (
+        f'<img src="{logo_url}" alt="Logo de la empresa" '
+        'style="width:min(88px, 14vw); max-width:100%; height:auto; object-fit:contain;">'
+        if logo_url
+        else ""
+    )
+    content = dedent(f"""
+        <section class="sipet-ui-template" style="padding: 12px 4px 8px;">
+            <style>
+                {SIPET_PREMIUM_UI_TEMPLATE_CSS}
+            </style>
+            <div style="display:flex; flex-wrap:wrap; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom: 12px;">
+                <div style="flex:1 1 480px; min-width:280px; display:flex; align-items:flex-start; gap:16px;">
+                    <div style="flex:0 0 auto;">
+                        {logo_html}
+                    </div>
+                    <div style="flex:1 1 auto; padding-top: 2px;">
+                        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+                            <h2 style="margin:0; font-size: clamp(1.4rem, 2.5vw, 2rem); color:#0f172a;">Fase 2: Crecimiento General</h2>
+                            <div style="display:flex; align-items:baseline; gap:10px; color:#334155; font-weight:700;">
+                                <span style="font-size: clamp(1.2rem, 2vw, 2rem);">Avance parcial</span>
+                                <span id="crecimiento-avance-parcial" style="font-size: clamp(1.8rem, 3.2vw, 3.2rem); line-height:1; color:#0f172a;">0%</span>
+                            </div>
+                        </div>
+                        <p style="margin:0; font-size: clamp(1rem, 1.5vw, 1.1rem); color:#334155;">Capture los datos requeridos</p>
+                    </div>
+                </div>
+            </div>
+            <div id="cg-tabs" role="tablist" aria-label="Secciones de crecimiento general" style="display:flex; align-items:center; justify-content:flex-start; gap:8px; flex-wrap:wrap; overflow:visible; white-space:normal; width:100%; margin: 10px 0 4px; padding:0 0 8px; border-bottom:1px solid #cbd5e1;">
+                <button type="button" data-cg-tab="activo-total" aria-selected="true" style="display:inline-flex; align-items:center; gap:10px; flex:0 0 auto; border:1px solid var(--sidebar-bottom, #0f172a); border-bottom:4px solid var(--sidebar-bottom, #0f172a); border-radius:10px; background:var(--sidebar-text, #ffffff); padding:12px 14px; color:var(--sidebar-bottom, #0f172a); font-weight:700; cursor:pointer; outline:none; box-shadow:none;">
+                    <img src="/templates/icon/crecimiento.svg" alt="" style="width:20px; height:20px; object-fit:contain;">
+                    <span>Crecimiento del activo total</span>
+                </button>
+            </div>
+            <div data-cg-panel="activo-total" style="display:block; margin-top:18px;">
+                <div class="table-wrap" style="overflow-x:auto;">
+                    <table class="table-excel" style="width:100%; min-width:980px;">
+                        <thead>
+                            <tr>
+                                <th style="width:26%;">Periodo</th>
+                                <th>Saldo</th>
+                                <th>Crecimiento</th>
+                                <th>%</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cg-activo-total-rows"></tbody>
+                    </table>
+                </div>
+            </div>
+            <script>
+                (function() {{
+                    const tabButtons = Array.from(document.querySelectorAll("[data-cg-tab]"));
+                    const panels = Array.from(document.querySelectorAll("[data-cg-panel]"));
+                    if (!tabButtons.length) return;
+                    function setActiveTab(tabName) {{
+                        tabButtons.forEach((button) => {{
+                            const isActive = button.getAttribute("data-cg-tab") === tabName;
+                            button.setAttribute("aria-selected", isActive ? "true" : "false");
+                            button.style.borderColor = isActive ? "var(--sidebar-bottom, #0f172a)" : "transparent";
+                            button.style.borderBottomColor = isActive ? "var(--sidebar-bottom, #0f172a)" : "transparent";
+                            button.style.background = isActive ? "var(--sidebar-text, #ffffff)" : "transparent";
+                            button.style.color = isActive ? "var(--sidebar-bottom, #0f172a)" : "var(--body-text, #0f172a)";
+                            button.style.fontWeight = isActive ? "700" : "600";
+                            button.style.outline = "none";
+                            button.style.boxShadow = "none";
+                        }});
+                        panels.forEach((panel) => {{
+                            panel.style.display = panel.getAttribute("data-cg-panel") === tabName ? "block" : "none";
+                        }});
+                    }}
+                    tabButtons.forEach((button) => {{
+                        button.addEventListener("click", () => {{
+                            const tabName = button.getAttribute("data-cg-tab") || "";
+                            if (!tabName) return;
+                            setActiveTab(tabName);
+                        }});
+                    }});
+
+                    const cgRows = document.getElementById("cg-activo-total-rows");
+                    const baseYear = {base_year};
+                    const projectionYears = {projection_years};
+                    const historicalActivos = {historical_activos_json};
+                    const offsets = [-3, -2, -1, 0].concat(Array.from({{ length: projectionYears }}, (_, idx) => idx + 1));
+                    const futureGrowthPct = {{}};
+                    offsets.forEach((offset) => {{
+                        if (offset > 0) futureGrowthPct[offset] = 0;
+                    }});
+
+                    const fmtNumber = (value) => Number(value || 0).toLocaleString("en-US", {{
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                    }});
+                    const fmtPercent = (value) => Number(value || 0).toLocaleString("en-US", {{
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                    }}) + "%";
+                    const periodLabel = (offset) => {{
+                        if (offset === 0) return `Año actual (${{baseYear}})`;
+                        if (offset < 0) return `${{offset}} (${{baseYear + offset}})`;
+                        return `+${{offset}} (${{baseYear + offset}})`;
+                    }};
+                    const computeRows = () => {{
+                        const rows = [];
+                        let prevSaldo = null;
+                        offsets.forEach((offset) => {{
+                            let saldo = 0;
+                            let crecimiento = null;
+                            let pct = null;
+                            if (offset === -3) {{
+                                saldo = Number(historicalActivos.m3 || 0);
+                            }} else if (offset === -2) {{
+                                saldo = Number(historicalActivos.m2 || 0);
+                            }} else if (offset === -1) {{
+                                saldo = Number(historicalActivos.m1 || 0);
+                            }} else if (offset === 0) {{
+                                saldo = Number(historicalActivos.y0 || 0);
+                            }} else {{
+                                const userPct = Number(futureGrowthPct[offset] || 0);
+                                crecimiento = Number((Number(prevSaldo || 0) * (userPct / 100)).toFixed(2));
+                                saldo = Number((Number(prevSaldo || 0) + crecimiento).toFixed(2));
+                                pct = userPct;
+                            }}
+                            if (offset <= 0 && prevSaldo !== null) {{
+                                crecimiento = Number((saldo - prevSaldo).toFixed(2));
+                                pct = prevSaldo !== 0 ? Number(((crecimiento / prevSaldo) * 100).toFixed(4)) : 0;
+                            }}
+                            rows.push({{ offset, saldo, crecimiento, pct }});
+                            prevSaldo = saldo;
+                        }});
+                        return rows;
+                    }};
+                    const renderRows = () => {{
+                        if (!cgRows) return;
+                        const rows = computeRows();
+                        cgRows.innerHTML = rows.map((row) => {{
+                            const crecimientoValue = row.crecimiento === null ? "-" : fmtNumber(row.crecimiento);
+                            const pctReadonly = row.pct === null ? "-" : fmtPercent(row.pct);
+                            const pctCell = row.offset > 0
+                                ? `<input class="table-input num cg-growth-input" data-offset="${{row.offset}}" type="number" step="0.01" min="-100" value="${{Number(futureGrowthPct[row.offset] || 0).toFixed(2)}}" style="background:#dbeafe; border-color:#93c5fd; font-weight:700;">`
+                                : `<input class="table-input num" type="text" value="${{pctReadonly}}" readonly>`;
+                            return `
+                                <tr>
+                                    <td class="year">${{periodLabel(row.offset)}}</td>
+                                    <td><input class="table-input num" type="text" value="${{fmtNumber(row.saldo)}}" readonly></td>
+                                    <td><input class="table-input num" type="text" value="${{crecimientoValue}}" readonly></td>
+                                    <td>${{pctCell}}</td>
+                                </tr>
+                            `;
+                        }}).join("");
+                    }};
+                    document.addEventListener("input", (event) => {{
+                        const target = event.target;
+                        if (!(target instanceof HTMLInputElement)) return;
+                        if (!target.classList.contains("cg-growth-input")) return;
+                        const offset = Number(target.dataset.offset || "0");
+                        if (offset <= 0) return;
+                        futureGrowthPct[offset] = Number(target.value || 0);
+                        renderRows();
+                    }});
+
+                    setActiveTab("activo-total");
+                    renderRows();
+                }})();
+            </script>
+        </section>
+    """)
+    return render_backend_page(
+        request,
+        title="Crecimiento general",
+        description="",
+        content=content,
+        hide_floating_actions=True,
+        show_page_header=False,
+    )
+
+
+@app.get("/proyectando/crecimiento-general/activo-total", response_class=HTMLResponse)
+def proyectando_crecimiento_activo_total_page(request: Request):
+    return RedirectResponse(url="/proyectando/crecimiento-general", status_code=307)
 
 
 @app.get("/planes", response_class=HTMLResponse)
@@ -11132,6 +12737,1205 @@ def _render_blank_management_screen(request: Request, title: str) -> HTMLRespons
         content="",
         hide_floating_actions=True,
         show_page_header=False,
+    )
+
+
+def _render_regiones_page(request: Request) -> HTMLResponse:
+    regiones_content = dedent("""
+        <section id="regiones-module" style="display:grid; gap:14px;">
+            <style>
+                .reg-card {
+                    background:#ffffff;
+                    border:1px solid #dbe3ef;
+                    border-radius:14px;
+                    padding:14px;
+                }
+                .reg-title {
+                    margin:0 0 10px;
+                    font-size:1.02rem;
+                    color:#0f172a;
+                }
+                .reg-grid {
+                    display:grid;
+                    grid-template-columns:repeat(3, minmax(0, 1fr));
+                    gap:12px;
+                }
+                .reg-field {
+                    display:flex;
+                    flex-direction:column;
+                    gap:6px;
+                }
+                .reg-field label {
+                    font-size:0.85rem;
+                    font-weight:700;
+                    color:#334155;
+                }
+                .reg-field input,
+                .reg-field textarea {
+                    width:100%;
+                    border:1px solid #cbd5e1;
+                    border-radius:10px;
+                    padding:10px;
+                    color:#0f172a;
+                    background:#ffffff;
+                    font-size:0.95rem;
+                }
+                .reg-field textarea {
+                    min-height:82px;
+                    resize:vertical;
+                }
+                .reg-actions {
+                    margin-top:12px;
+                    display:flex;
+                    gap:10px;
+                    align-items:center;
+                }
+                .reg-actions button {
+                    height:36px;
+                    padding:0 14px;
+                    border:1px solid #0f172a;
+                    background:#0f172a;
+                    color:#ffffff;
+                    border-radius:10px;
+                    font-weight:600;
+                    cursor:pointer;
+                }
+                .reg-msg {
+                    font-size:0.88rem;
+                    color:#334155;
+                }
+                .reg-table {
+                    width:100%;
+                    border-collapse:collapse;
+                }
+                .reg-table th,
+                .reg-table td {
+                    border-bottom:1px solid #e2e8f0;
+                    padding:10px;
+                    text-align:left;
+                    vertical-align:top;
+                }
+                .reg-table th {
+                    color:#334155;
+                    font-size:0.85rem;
+                    text-transform:uppercase;
+                    letter-spacing:.04em;
+                }
+                .reg-kanban {
+                    display:grid;
+                    grid-template-columns:repeat(3, minmax(0, 1fr));
+                    gap:12px;
+                }
+                .reg-col {
+                    border:1px solid #dbe3ef;
+                    border-radius:12px;
+                    background:#f8fafc;
+                    padding:10px;
+                }
+                .reg-col h4 {
+                    margin:0 0 10px;
+                    font-size:0.9rem;
+                    color:#0f172a;
+                }
+                .reg-item {
+                    border:1px solid #dbe3ef;
+                    border-radius:10px;
+                    background:#ffffff;
+                    padding:10px;
+                    margin-bottom:8px;
+                }
+                .reg-item strong {
+                    color:#0f172a;
+                    display:block;
+                    margin-bottom:4px;
+                }
+                .reg-item p {
+                    margin:0;
+                    color:#475569;
+                    font-size:0.9rem;
+                }
+                @media (max-width: 980px) {
+                    .reg-grid { grid-template-columns:1fr; }
+                    .reg-kanban { grid-template-columns:1fr; }
+                }
+            </style>
+            <div id="regiones-view"></div>
+        </section>
+        <script>
+            (() => {
+                const mount = document.getElementById('regiones-view');
+                if (!mount) return;
+                const data = [];
+                let currentView = 'form';
+                let editingIndex = -1;
+
+                const escapeHtml = (value) => String(value || '').replace(/[&<>"']/g, (char) => (
+                    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char] || char
+                ));
+                const normalizeRegion = (row) => {
+                    const item = row && typeof row === 'object' ? row : {};
+                    return {
+                        nombre: String(item.nombre || '').trim(),
+                        codigo: String(item.codigo || '').trim(),
+                        descripcion: String(item.descripcion || '').trim(),
+                    };
+                };
+                const replaceData = (rows) => {
+                    const normalized = Array.isArray(rows) ? rows.map(normalizeRegion) : [];
+                    data.splice(0, data.length, ...normalized);
+                };
+                const loadRegiones = async () => {
+                    try {
+                        const res = await fetch('/api/inicio/regiones');
+                        const json = await res.json().catch(() => ({}));
+                        if (!res.ok || json?.success === false) throw new Error('No se pudieron cargar regiones');
+                        replaceData(json?.data || []);
+                    } catch (_error) {
+                        replaceData([]);
+                    }
+                };
+                const persistRegiones = async () => {
+                    try {
+                        const res = await fetch('/api/inicio/regiones', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ data }),
+                        });
+                        const json = await res.json().catch(() => ({}));
+                        if (!res.ok || json?.success === false) throw new Error('No se pudieron guardar regiones');
+                        replaceData(json?.data || []);
+                        return true;
+                    } catch (_error) {
+                        return false;
+                    }
+                };
+
+                const renderForm = () => {
+                    const current = editingIndex >= 0 ? data[editingIndex] : { nombre: '', codigo: '', descripcion: '' };
+                    mount.innerHTML = `
+                        <article class="reg-card">
+                            <h3 class="reg-title">Formulario de regiones</h3>
+                            <form id="regiones-form">
+                                <div class="reg-grid">
+                                    <div class="reg-field">
+                                        <label for="region-nombre">Nombre</label>
+                                        <input id="region-nombre" type="text" value="${escapeHtml(current.nombre)}" required>
+                                    </div>
+                                    <div class="reg-field">
+                                        <label for="region-codigo">Código</label>
+                                        <input id="region-codigo" type="text" value="${escapeHtml(current.codigo)}" required>
+                                    </div>
+                                    <div class="reg-field">
+                                        <label for="region-descripcion">Descripción</label>
+                                        <textarea id="region-descripcion">${escapeHtml(current.descripcion)}</textarea>
+                                    </div>
+                                </div>
+                                <div class="reg-actions">
+                                    <button type="submit">${editingIndex >= 0 ? 'Actualizar' : 'Guardar'} región</button>
+                                    <span class="reg-msg">${data.length} registro(s)</span>
+                                </div>
+                            </form>
+                        </article>
+                    `;
+                    const form = document.getElementById('regiones-form');
+                    form && form.addEventListener('submit', async (event) => {
+                        event.preventDefault();
+                        const nombre = (document.getElementById('region-nombre')?.value || '').trim();
+                        const codigo = (document.getElementById('region-codigo')?.value || '').trim();
+                        const descripcion = (document.getElementById('region-descripcion')?.value || '').trim();
+                        if (!nombre || !codigo) return;
+                        const payload = { nombre, codigo, descripcion };
+                        if (editingIndex >= 0) {
+                            data[editingIndex] = payload;
+                        } else {
+                            data.push(payload);
+                        }
+                        editingIndex = -1;
+                        await persistRegiones();
+                        renderForm();
+                    });
+                };
+
+                const renderList = () => {
+                    mount.innerHTML = `
+                        <article class="reg-card">
+                            <h3 class="reg-title">Lista de regiones</h3>
+                            <table class="reg-table">
+                                <thead>
+                                    <tr>
+                                        <th>Nombre</th>
+                                        <th>Código</th>
+                                        <th>Descripción</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${data.length ? data.map((row) => `
+                                        <tr>
+                                            <td>${escapeHtml(row.nombre)}</td>
+                                            <td>${escapeHtml(row.codigo)}</td>
+                                            <td>${escapeHtml(row.descripcion)}</td>
+                                        </tr>
+                                    `).join('') : `
+                                        <tr><td colspan="3" style="color:#64748b;">Sin registros.</td></tr>
+                                    `}
+                                </tbody>
+                            </table>
+                        </article>
+                    `;
+                };
+
+                const laneName = (nombre) => {
+                    const first = (nombre || '').trim().charAt(0).toUpperCase();
+                    if (!first) return 'Sin clasificar';
+                    if (first <= 'H') return 'A - H';
+                    if (first <= 'P') return 'I - P';
+                    return 'Q - Z';
+                };
+
+                const renderKanban = () => {
+                    const lanes = { 'A - H': [], 'I - P': [], 'Q - Z': [], 'Sin clasificar': [] };
+                    data.forEach((row, index) => { lanes[laneName(row.nombre)].push({ ...row, index }); });
+                    mount.innerHTML = `
+                        <article class="reg-card">
+                            <h3 class="reg-title">Kanban de regiones</h3>
+                            <div class="reg-kanban">
+                                ${Object.keys(lanes).map((key) => `
+                                    <div class="reg-col">
+                                        <h4>${key}</h4>
+                                        ${lanes[key].length ? lanes[key].map((row) => `
+                                            <article class="reg-item">
+                                                <strong>${escapeHtml(row.nombre)}</strong>
+                                                <p>${escapeHtml(row.codigo)}</p>
+                                                <p>${escapeHtml(row.descripcion)}</p>
+                                            </article>
+                                        `).join('') : '<p class="reg-msg">Sin registros.</p>'}
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </article>
+                    `;
+                };
+
+                const render = (view) => {
+                    currentView = ['form', 'list', 'kanban'].includes(view) ? view : 'form';
+                    if (currentView === 'list') return renderList();
+                    if (currentView === 'kanban') return renderKanban();
+                    return renderForm();
+                };
+
+                document.addEventListener('backend-view-change', (event) => {
+                    const view = event.detail?.view;
+                    if (!view) return;
+                    render(view);
+                });
+
+                (async () => {
+                    await loadRegiones();
+                    render('form');
+                })();
+            })();
+        </script>
+    """)
+    return render_backend_page(
+        request,
+        title="Regiones",
+        description="Registro y visualización de regiones.",
+        content=regiones_content,
+        hide_floating_actions=True,
+        show_page_header=True,
+        view_buttons=[
+            {"label": "Form", "icon": "/templates/icon/formulario.svg", "view": "form", "active": True},
+            {"label": "Lista", "icon": "/templates/icon/list.svg", "view": "list"},
+            {"label": "Kanban", "icon": "/templates/icon/kanban.svg", "view": "kanban"},
+        ],
+    )
+
+
+def _render_sucursales_page(request: Request) -> HTMLResponse:
+    preliminares = _load_datos_preliminares_store()
+    current_year = datetime.now().year
+    try:
+        base_year = int((preliminares.get("primer_anio_proyeccion") or "").strip() or current_year)
+    except (TypeError, ValueError):
+        base_year = current_year
+    try:
+        projection_years = int((preliminares.get("anios_proyeccion") or "").strip() or 3)
+    except (TypeError, ValueError):
+        projection_years = 3
+    projection_years = max(1, min(projection_years, 10))
+    column_offsets = [-4, -3, -2, -1, 0] + list(range(1, projection_years))
+
+    def _header_label(offset: int) -> str:
+        if offset < 0:
+            return f"{offset} ({base_year + offset})"
+        if offset == 0:
+            return f"Año actual ({base_year})"
+        return f"+{offset} ({base_year + offset})"
+
+    header_cells = "".join(f"<th>{escape(_header_label(offset))}</th>" for offset in column_offsets)
+    rubros = [
+        "Socios",
+        "Menores Ahorradores",
+        "Ahorro menores",
+        "Captación a la vista",
+        "Inversión",
+        "Cartera de préstamos",
+        "Cartera vencida",
+    ]
+    results_rows = []
+    for row_idx, rubro in enumerate(rubros, start=1):
+        inputs = "".join(
+            (
+                f'<td><input class="suc-result-input" type="number" step="0.01" min="0" '
+                f'name="suc_result_{row_idx}_{offset}" placeholder="0.00"></td>'
+            )
+            for offset in column_offsets
+        )
+        results_rows.append(
+            f"""
+            <tr>
+                <td class="suc-result-rubro">{escape(rubro)}</td>
+                {inputs}
+            </tr>
+            """
+        )
+    resultados_rows_html = "".join(results_rows)
+    activo_fijo_catalog = [
+        {"rubro": "Terrenos", "years": 0},
+        {"rubro": "Construcciones", "years": 20},
+        {"rubro": "Construcciones en proceso", "years": 5},
+        {"rubro": "Equipo de transporte", "years": 4},
+        {"rubro": "Equipo de cómputo", "years": 3},
+        {"rubro": "Mobiliario", "years": 3},
+        {"rubro": "Otras propiedades, mobiliario y equipo", "years": 2},
+    ]
+    activo_fijo_catalog_json = json.dumps(activo_fijo_catalog, ensure_ascii=False)
+
+    sucursales_content = dedent(f"""
+        <section id="sucursales-module" style="display:grid; gap:14px;">
+            <style>
+                .suc-tabs {{
+                    display:flex;
+                    flex-wrap:wrap;
+                    gap:10px;
+                    border-bottom:1px solid #cbd5e1;
+                    padding-bottom:8px;
+                }}
+                .suc-tab-btn {{
+                    display:inline-flex;
+                    align-items:center;
+                    gap:8px;
+                    border:1px solid transparent;
+                    border-bottom:3px solid transparent;
+                    border-radius:10px;
+                    background:transparent;
+                    padding:10px 12px;
+                    color:#334155;
+                    font-weight:700;
+                    cursor:pointer;
+                }}
+                .suc-tab-btn img {{
+                    width:18px;
+                    height:18px;
+                    object-fit:contain;
+                }}
+                .suc-tab-btn.active {{
+                    border-color: var(--sidebar-bottom, #0f172a);
+                    border-bottom-color: var(--sidebar-bottom, #0f172a);
+                    background: var(--sidebar-text, #ffffff);
+                    color: var(--sidebar-bottom, #0f172a);
+                }}
+                .suc-tab-panel {{
+                    display:none;
+                }}
+                .suc-tab-panel.active {{
+                    display:block;
+                }}
+                .suc-card {{
+                    background:#ffffff;
+                    border:1px solid #dbe3ef;
+                    border-radius:14px;
+                    padding:14px;
+                }}
+                .suc-title {{
+                    margin:0 0 10px;
+                    font-size:1.02rem;
+                    color:#0f172a;
+                }}
+                .suc-grid {{
+                    display:grid;
+                    grid-template-columns:repeat(4, minmax(0, 1fr));
+                    gap:12px;
+                }}
+                .suc-field {{
+                    display:flex;
+                    flex-direction:column;
+                    gap:6px;
+                }}
+                .suc-field label {{
+                    font-size:0.85rem;
+                    font-weight:700;
+                    color:#334155;
+                }}
+                .suc-field input,
+                .suc-field select,
+                .suc-field textarea {{
+                    width:100%;
+                    border:1px solid #cbd5e1;
+                    border-radius:10px;
+                    padding:10px;
+                    color:#0f172a;
+                    background:#ffffff;
+                    font-size:0.95rem;
+                }}
+                .suc-field textarea {{
+                    min-height:82px;
+                    resize:vertical;
+                }}
+                .suc-actions {{
+                    margin-top:12px;
+                    display:flex;
+                    gap:10px;
+                    align-items:center;
+                }}
+                .suc-actions button {{
+                    height:36px;
+                    padding:0 14px;
+                    border:1px solid #0f172a;
+                    background:#0f172a;
+                    color:#ffffff;
+                    border-radius:10px;
+                    font-weight:600;
+                    cursor:pointer;
+                }}
+                .suc-actions .suc-btn-alt {{
+                    border:1px solid #cbd5e1;
+                    background:#ffffff;
+                    color:#0f172a;
+                }}
+                .suc-msg {{
+                    font-size:0.88rem;
+                    color:#334155;
+                }}
+                .suc-table {{
+                    width:100%;
+                    border-collapse:collapse;
+                }}
+                .suc-table th,
+                .suc-table td {{
+                    border-bottom:1px solid #e2e8f0;
+                    padding:10px;
+                    text-align:left;
+                    vertical-align:top;
+                }}
+                .suc-table th {{
+                    color:#334155;
+                    font-size:0.85rem;
+                    text-transform:uppercase;
+                    letter-spacing:.04em;
+                }}
+                .suc-kanban {{
+                    display:grid;
+                    grid-template-columns:repeat(3, minmax(0, 1fr));
+                    gap:12px;
+                }}
+                .suc-col {{
+                    border:1px solid #dbe3ef;
+                    border-radius:12px;
+                    background:#f8fafc;
+                    padding:10px;
+                }}
+                .suc-col h4 {{
+                    margin:0 0 10px;
+                    font-size:0.9rem;
+                    color:#0f172a;
+                }}
+                .suc-item {{
+                    border:1px solid #dbe3ef;
+                    border-radius:10px;
+                    background:#ffffff;
+                    padding:10px;
+                    margin-bottom:8px;
+                    cursor:pointer;
+                }}
+                .suc-item strong {{
+                    color:#0f172a;
+                    display:block;
+                    margin-bottom:4px;
+                }}
+                .suc-item p {{
+                    margin:0;
+                    color:#475569;
+                    font-size:0.9rem;
+                }}
+                .suc-results-wrap {{
+                    overflow-x:auto;
+                }}
+                .suc-results-table {{
+                    width:100%;
+                    min-width:980px;
+                    border-collapse:collapse;
+                    border-spacing:0;
+                }}
+                .suc-results-table thead th {{
+                    text-align:left;
+                    font-size:13px;
+                    letter-spacing:.08em;
+                    text-transform:uppercase;
+                    color:rgba(15,23,42,.75);
+                    background:linear-gradient(180deg, rgba(255,255,255,.92), rgba(255,255,255,.74));
+                    border-bottom:1px solid rgba(15,23,42,.10);
+                    border-right:1px solid rgba(15,23,42,.10);
+                    padding:14px 12px;
+                    white-space:nowrap;
+                }}
+                .suc-results-table thead th:last-child {{
+                    border-right:0;
+                }}
+                .suc-results-table tbody td {{
+                    border-bottom:1px solid rgba(15,23,42,.08);
+                    border-right:1px solid rgba(15,23,42,.10);
+                    background:#ffffff;
+                    padding:10px 12px;
+                    vertical-align:middle;
+                }}
+                .suc-results-table tbody td:last-child {{
+                    border-right:0;
+                }}
+                .suc-results-table tbody tr:nth-child(even) td {{
+                    background:#ecfdf3;
+                }}
+                .suc-results-table tbody tr:hover td {{
+                    background:#dcfce7;
+                }}
+                .suc-result-rubro {{
+                    font-weight:700;
+                    color:#0f172a;
+                    white-space:nowrap;
+                }}
+                .suc-result-input {{
+                    width:100%;
+                    height:34px;
+                    border:1px solid #cbd5e1;
+                    border-radius:8px;
+                    padding:0 10px;
+                    background:#ffffff;
+                    color:#0f172a;
+                    text-align:right;
+                    font-variant-numeric:tabular-nums;
+                }}
+                .suc-af-toolbar {{
+                    display:flex;
+                    align-items:center;
+                    gap:10px;
+                    margin-bottom:10px;
+                    flex-wrap:wrap;
+                }}
+                .suc-af-btn {{
+                    height:36px;
+                    padding:0 12px;
+                    border:1px solid #0f172a;
+                    border-radius:8px;
+                    background:#0f172a;
+                    color:#ffffff;
+                    font-weight:600;
+                    cursor:pointer;
+                }}
+                .suc-af-note {{
+                    font-size:0.82rem;
+                    color:#64748b;
+                }}
+                .suc-af-input,
+                .suc-af-select {{
+                    width:100%;
+                    height:34px;
+                    border:1px solid #cbd5e1;
+                    border-radius:8px;
+                    padding:0 8px;
+                    background:#ffffff;
+                    color:#0f172a;
+                }}
+                .suc-af-input.num {{
+                    text-align:right;
+                    font-variant-numeric:tabular-nums;
+                }}
+                @media (max-width: 1100px) {{
+                    .suc-grid {{ grid-template-columns:repeat(2, minmax(0, 1fr)); }}
+                }}
+                @media (max-width: 980px) {{
+                    .suc-grid {{ grid-template-columns:1fr; }}
+                    .suc-kanban {{ grid-template-columns:1fr; }}
+                }}
+            </style>
+            <div id="sucursales-view"></div>
+        </section>
+        <script>
+            (() => {{
+                const mount = document.getElementById('sucursales-view');
+                if (!mount) return;
+                const data = [];
+                const activoFijoCatalog = {activo_fijo_catalog_json};
+                const projectionYears = {projection_years};
+                const baseYear = {base_year};
+                const purchaseYearOptions = Array.from({{ length: projectionYears }}, (_, idx) => baseYear + idx);
+                const monthOptions = [
+                    "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+                    "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+                ];
+                const statusOptions = ["Solicitado", "Autorizado", "Comprado"];
+                const activoFijoRowsData = [];
+                const regionCatalog = [];
+                const regionRowsData = [];
+                let currentView = 'list';
+                let editingIndex = -1;
+                let formTab = 'captura';
+
+                const escapeHtml = (value) => String(value || '').replace(/[&<>"']/g, (char) => (
+                    {{ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }}[char] || char
+                ));
+                const normalizeSucursal = (row) => {{
+                    const item = row && typeof row === 'object' ? row : {{}};
+                    return {{
+                        nombre: String(item.nombre || '').trim(),
+                        region: String(item.region || '').trim(),
+                        codigo: String(item.codigo || '').trim(),
+                        descripcion: String(item.descripcion || '').trim(),
+                    }};
+                }};
+                const replaceData = (rows) => {{
+                    const normalized = Array.isArray(rows) ? rows.map(normalizeSucursal) : [];
+                    data.splice(0, data.length, ...normalized);
+                }};
+                const normalizeRegionName = (value) => String(value || '').trim();
+                const replaceRegionCatalog = (rows) => {{
+                    const source = Array.isArray(rows) ? rows : [];
+                    const cleanedRows = source
+                        .filter((row) => row && typeof row === 'object')
+                        .map((row) => ({{
+                            nombre: normalizeRegionName(row.nombre),
+                            codigo: String(row.codigo || '').trim(),
+                            descripcion: String(row.descripcion || '').trim(),
+                        }}))
+                        .filter((row) => Boolean(row.nombre));
+                    regionRowsData.splice(0, regionRowsData.length, ...cleanedRows);
+                    const values = cleanedRows.map((row) => row.nombre);
+                    const unique = Array.from(new Set(values)).sort((a, b) => a.localeCompare(b, 'es', {{ sensitivity: 'base' }}));
+                    regionCatalog.splice(0, regionCatalog.length, ...unique);
+                }};
+                const loadSucursales = async () => {{
+                    try {{
+                        const res = await fetch('/api/inicio/sucursales');
+                        const json = await res.json().catch(() => ({{}}));
+                        if (!res.ok || json?.success === false) throw new Error('No se pudieron cargar sucursales');
+                        replaceData(json?.data || []);
+                    }} catch (_error) {{
+                        replaceData([]);
+                    }}
+                }};
+                const persistSucursales = async () => {{
+                    try {{
+                        const res = await fetch('/api/inicio/sucursales', {{
+                            method: 'POST',
+                            headers: {{ 'Content-Type': 'application/json' }},
+                            body: JSON.stringify({{ data }}),
+                        }});
+                        const json = await res.json().catch(() => ({{}}));
+                        if (!res.ok || json?.success === false) throw new Error('No se pudieron guardar sucursales');
+                        replaceData(json?.data || []);
+                        return true;
+                    }} catch (_error) {{
+                        return false;
+                    }}
+                }};
+                const loadRegionesCatalog = async () => {{
+                    try {{
+                        const res = await fetch('/api/inicio/regiones');
+                        const json = await res.json().catch(() => ({{}}));
+                        if (!res.ok || json?.success === false) throw new Error('No se pudieron cargar regiones');
+                        replaceRegionCatalog(json?.data || []);
+                    }} catch (_error) {{
+                        replaceRegionCatalog([]);
+                    }}
+                }};
+                const persistRegionesCatalog = async () => {{
+                    try {{
+                        const res = await fetch('/api/inicio/regiones', {{
+                            method: 'POST',
+                            headers: {{ 'Content-Type': 'application/json' }},
+                            body: JSON.stringify({{ data: regionRowsData }}),
+                        }});
+                        const json = await res.json().catch(() => ({{}}));
+                        if (!res.ok || json?.success === false) throw new Error('No se pudieron guardar regiones');
+                        replaceRegionCatalog(json?.data || []);
+                        return true;
+                    }} catch (_error) {{
+                        return false;
+                    }}
+                }};
+
+                const renderForm = () => {{
+                    const current = editingIndex >= 0
+                        ? data[editingIndex]
+                        : {{ nombre: '', region: '', codigo: '', descripcion: '' }};
+                    const currentRegion = normalizeRegionName(current.region);
+                    const regionValues = Array.from(new Set([
+                        ...regionCatalog,
+                        ...(currentRegion ? [currentRegion] : []),
+                    ]));
+                    const regionOptionsHtml = regionValues
+                        .sort((a, b) => a.localeCompare(b, 'es', {{ sensitivity: 'base' }}))
+                        .map((name) => `<option value="${{escapeHtml(name)}}" ${{name === currentRegion ? 'selected' : ''}}>${{escapeHtml(name)}}</option>`)
+                        .join('');
+                    const isCaptura = formTab === 'captura';
+                    const isResultados = formTab === 'resultados';
+                    const isActivoFijo = formTab === 'activo-fijo';
+                    const isReparaciones = formTab === 'reparaciones';
+                    mount.innerHTML = `
+                        <article class="suc-card">
+                            <h3 class="suc-title">Formulario de sucursales</h3>
+                            <div class="suc-tabs" role="tablist" aria-label="Control por sucursal">
+                                <button type="button" class="suc-tab-btn ${{isCaptura ? 'active' : ''}}" data-suc-form-tab="captura" aria-selected="${{isCaptura ? 'true' : 'false'}}">Captura</button>
+                                <button type="button" class="suc-tab-btn ${{isResultados ? 'active' : ''}}" data-suc-form-tab="resultados" aria-selected="${{isResultados ? 'true' : 'false'}}">
+                                    <img src="/templates/icon/resultados.svg" alt="">
+                                    Resultados
+                                </button>
+                                <button type="button" class="suc-tab-btn ${{isActivoFijo ? 'active' : ''}}" data-suc-form-tab="activo-fijo" aria-selected="${{isActivoFijo ? 'true' : 'false'}}">
+                                    <img src="/templates/icon/activo_fijo.svg" alt="">
+                                    Compras de activo fijo
+                                </button>
+                                <button type="button" class="suc-tab-btn ${{isReparaciones ? 'active' : ''}}" data-suc-form-tab="reparaciones" aria-selected="${{isReparaciones ? 'true' : 'false'}}">
+                                    <img src="/templates/icon/reparaciones.svg" alt="">
+                                    Reparaciones
+                                </button>
+                            </div>
+                            <div class="suc-tab-panel ${{isCaptura ? 'active' : ''}}" data-suc-form-panel="captura">
+                            <form id="sucursales-form">
+                                <div class="suc-grid">
+                                    <div class="suc-field">
+                                        <label for="sucursal-nombre">Nombre</label>
+                                        <input id="sucursal-nombre" type="text" value="${{escapeHtml(current.nombre)}}" required>
+                                    </div>
+                                    <div class="suc-field">
+                                        <label for="sucursal-region-select">Región</label>
+                                        <select id="sucursal-region-select" required>
+                                            <option value="">Seleccione región</option>
+                                            ${{regionOptionsHtml}}
+                                            <option value="__new__">+ Agregar región</option>
+                                        </select>
+                                        <input id="sucursal-region-new" type="text" placeholder="Nueva región" style="display:none; margin-top:6px;">
+                                    </div>
+                                    <div class="suc-field">
+                                        <label for="sucursal-codigo">Código</label>
+                                        <input id="sucursal-codigo" type="text" value="${{escapeHtml(current.codigo)}}" required>
+                                    </div>
+                                    <div class="suc-field">
+                                        <label for="sucursal-descripcion">Descripción</label>
+                                        <textarea id="sucursal-descripcion">${{escapeHtml(current.descripcion)}}</textarea>
+                                    </div>
+                                </div>
+                                <div class="suc-actions">
+                                    <button type="button" class="suc-btn-alt" id="suc-btn-new">Nuevo</button>
+                                    <button type="button" class="suc-btn-alt" id="suc-btn-edit">Editar</button>
+                                    <button type="submit" id="suc-btn-save">Guardar</button>
+                                    <button type="button" class="suc-btn-alt" id="suc-btn-delete">Eliminar</button>
+                                    <span class="suc-msg" id="suc-form-msg">${{data.length}} registro(s)</span>
+                                </div>
+                            </form>
+                            </div>
+                            <div class="suc-tab-panel ${{isResultados ? 'active' : ''}}" data-suc-form-panel="resultados">
+                                <h3 class="suc-title">Resultados</h3>
+                                <div class="suc-results-wrap">
+                                    <table class="suc-results-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Rubro</th>
+                                                {header_cells}
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {resultados_rows_html}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div class="suc-tab-panel ${{isActivoFijo ? 'active' : ''}}" data-suc-form-panel="activo-fijo">
+                                <h3 class="suc-title">Activo fijo</h3>
+                                <div class="suc-af-toolbar">
+                                    <button type="button" class="suc-af-btn" id="suc-af-add-btn">Compra de activo fijo</button>
+                                    <span class="suc-af-note">Procedimiento de autorización pendiente.</span>
+                                </div>
+                                <div class="suc-results-wrap">
+                                    <table class="suc-results-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Código</th>
+                                                <th>Artículo</th>
+                                                <th>Rubro</th>
+                                                <th>Precio</th>
+                                                <th>Año de compra</th>
+                                                <th>Mes de compra</th>
+                                                <th>Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="suc-af-rows"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div class="suc-tab-panel ${{isReparaciones ? 'active' : ''}}" data-suc-form-panel="reparaciones">
+                                <h3 class="suc-title">Reparaciones</h3>
+                                <p class="suc-msg">Aquí se llevará el registro de las solicitudes de reparación de la sucursal.</p>
+                                <p class="suc-msg">Lógica y código pendientes.</p>
+                            </div>
+                        </article>
+                    `;
+                    const tabButtons = Array.from(mount.querySelectorAll('[data-suc-form-tab]'));
+                    tabButtons.forEach((button) => {{
+                        button.addEventListener('click', () => {{
+                            formTab = button.getAttribute('data-suc-form-tab') || 'captura';
+                            renderForm();
+                        }});
+                    }});
+                    const form = document.getElementById('sucursales-form');
+                    const formMsg = document.getElementById('suc-form-msg');
+                    const newBtn = document.getElementById('suc-btn-new');
+                    const editBtn = document.getElementById('suc-btn-edit');
+                    const deleteBtn = document.getElementById('suc-btn-delete');
+                    const regionSelect = document.getElementById('sucursal-region-select');
+                    const regionNewInput = document.getElementById('sucursal-region-new');
+                    const upsertRegionOption = (name) => {{
+                        if (!regionSelect) return;
+                        const normalized = normalizeRegionName(name);
+                        if (!normalized) return;
+                        const options = Array.from(regionSelect.querySelectorAll('option'));
+                        const exists = options.some((opt) => normalizeRegionName(opt.value) === normalized);
+                        if (!exists) {{
+                            const newOption = document.createElement('option');
+                            newOption.value = normalized;
+                            newOption.textContent = normalized;
+                            const newMarker = regionSelect.querySelector('option[value="__new__"]');
+                            if (newMarker) {{
+                                regionSelect.insertBefore(newOption, newMarker);
+                            }} else {{
+                                regionSelect.appendChild(newOption);
+                            }}
+                        }}
+                        regionSelect.value = normalized;
+                    }};
+                    const syncRegionNewVisibility = () => {{
+                        if (!regionSelect || !regionNewInput) return;
+                        const isNew = regionSelect.value === '__new__';
+                        regionNewInput.style.display = isNew ? 'block' : 'none';
+                        regionNewInput.required = isNew;
+                    }};
+                    regionSelect && regionSelect.addEventListener('change', syncRegionNewVisibility);
+                    syncRegionNewVisibility();
+                    const readValues = () => {{
+                        const nombre = (document.getElementById('sucursal-nombre')?.value || '').trim();
+                        const selectedRegion = (regionSelect?.value || '').trim();
+                        const newRegion = (regionNewInput?.value || '').trim();
+                        const region = selectedRegion === '__new__' ? newRegion : selectedRegion;
+                        const codigo = (document.getElementById('sucursal-codigo')?.value || '').trim();
+                        const descripcion = (document.getElementById('sucursal-descripcion')?.value || '').trim();
+                        return {{ nombre, region, codigo, descripcion }};
+                    }};
+                    const setFormMsg = (text) => {{
+                        if (!formMsg) return;
+                        formMsg.textContent = text || `${{data.length}} registro(s)`;
+                    }};
+                    const resetCapturaInputs = () => {{
+                        const nombreInput = document.getElementById('sucursal-nombre');
+                        const codigoInput = document.getElementById('sucursal-codigo');
+                        const descripcionInput = document.getElementById('sucursal-descripcion');
+                        if (nombreInput) nombreInput.value = '';
+                        if (codigoInput) codigoInput.value = '';
+                        if (descripcionInput) descripcionInput.value = '';
+                        if (regionSelect) regionSelect.value = '';
+                        if (regionNewInput) regionNewInput.value = '';
+                        syncRegionNewVisibility();
+                    }};
+                    form && form.addEventListener('submit', async (event) => {{
+                        event.preventDefault();
+                        const {{ nombre, region, codigo, descripcion }} = readValues();
+                        if (!nombre || !region || !codigo) return;
+                        const normalizedRegion = normalizeRegionName(region);
+                        let regionSaved = true;
+                        if (normalizedRegion && !regionCatalog.includes(normalizedRegion)) {{
+                            regionRowsData.push({{ nombre: normalizedRegion, codigo: '', descripcion: '' }});
+                            regionSaved = await persistRegionesCatalog();
+                            if (!regionSaved) {{
+                                setFormMsg('No se pudo guardar la nueva región.');
+                                return;
+                            }}
+                            upsertRegionOption(normalizedRegion);
+                        }}
+                        const payload = {{ nombre, region: normalizedRegion, codigo, descripcion }};
+                        if (editingIndex >= 0) {{
+                            data[editingIndex] = payload;
+                        }} else {{
+                            data.push(payload);
+                        }}
+                        editingIndex = -1;
+                        const saved = await persistSucursales();
+                        if (saved) resetCapturaInputs();
+                        setFormMsg(saved ? `Sucursal guardada. Total: ${{data.length}}` : 'No se pudo guardar en la BD/store.');
+                    }});
+                    newBtn && newBtn.addEventListener('click', () => {{
+                        editingIndex = -1;
+                        renderForm();
+                    }});
+                    editBtn && editBtn.addEventListener('click', () => {{
+                        const {{ codigo }} = readValues();
+                        if (!codigo) {{
+                            setFormMsg('Capture el código para editar.');
+                            return;
+                        }}
+                        const idx = data.findIndex((row) => String(row.codigo).trim() === codigo);
+                        if (idx < 0) {{
+                            setFormMsg('No se encontró sucursal con ese código.');
+                            return;
+                        }}
+                        editingIndex = idx;
+                        renderForm();
+                        setTimeout(() => {{
+                            const msg = document.getElementById('suc-form-msg');
+                            if (msg) msg.textContent = `Editando sucursal: ${{codigo}}`;
+                        }}, 0);
+                    }});
+                    deleteBtn && deleteBtn.addEventListener('click', async () => {{
+                        const {{ codigo }} = readValues();
+                        const idx = editingIndex >= 0
+                            ? editingIndex
+                            : data.findIndex((row) => String(row.codigo).trim() === codigo);
+                        if (idx < 0) {{
+                            setFormMsg('No hay sucursal para eliminar.');
+                            return;
+                        }}
+                        data.splice(idx, 1);
+                        editingIndex = -1;
+                        const saved = await persistSucursales();
+                        if (saved) resetCapturaInputs();
+                        setFormMsg(saved ? `Sucursal eliminada. Total: ${{data.length}}` : 'No se pudo guardar eliminación en la BD/store.');
+                    }});
+                    const afAddBtn = document.getElementById('suc-af-add-btn');
+                    const afRowsEl = document.getElementById('suc-af-rows');
+                    afAddBtn && afAddBtn.addEventListener('click', addActivoFijoRow);
+                    afRowsEl && afRowsEl.addEventListener('input', (event) => {{
+                        const target = event.target;
+                        if (!(target instanceof HTMLElement)) return;
+                        const rowElem = target.closest('tr[data-af-row]');
+                        if (!rowElem) return;
+                        const rowIndex = Number(rowElem.getAttribute('data-af-row'));
+                        const row = activoFijoRowsData[rowIndex];
+                        if (!row) return;
+                        const field = target.getAttribute('data-field');
+                        if (!field) return;
+                        row[field] = target.value;
+                    }});
+                    afRowsEl && afRowsEl.addEventListener('change', (event) => {{
+                        const target = event.target;
+                        if (!(target instanceof HTMLElement)) return;
+                        const rowElem = target.closest('tr[data-af-row]');
+                        if (!rowElem) return;
+                        const rowIndex = Number(rowElem.getAttribute('data-af-row'));
+                        const row = activoFijoRowsData[rowIndex];
+                        if (!row) return;
+                        const field = target.getAttribute('data-field');
+                        if (!field) return;
+                        row[field] = target.value;
+                    }});
+                    renderActivoFijoRows();
+                }};
+
+                const renderList = () => {{
+                    mount.innerHTML = `
+                        <article class="suc-card">
+                            <h3 class="suc-title">Lista de sucursales</h3>
+                            <table class="suc-table">
+                                <thead>
+                                    <tr>
+                                        <th>Nombre</th>
+                                        <th>Región</th>
+                                        <th>Código</th>
+                                        <th>Descripción</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${{data.length ? data.map((row) => `
+                                        <tr class="suc-open-form-row" data-row-code="${{escapeHtml(row.codigo)}}">
+                                            <td>${{escapeHtml(row.nombre)}}</td>
+                                            <td>${{escapeHtml(row.region)}}</td>
+                                            <td>${{escapeHtml(row.codigo)}}</td>
+                                            <td>${{escapeHtml(row.descripcion)}}</td>
+                                        </tr>
+                                    `).join('') : `
+                                        <tr><td colspan="4" style="color:#64748b;">Sin registros.</td></tr>
+                                    `}}
+                                </tbody>
+                            </table>
+                        </article>
+                    `;
+                }};
+
+                const laneName = (region) => {{
+                    const key = (region || '').trim();
+                    return key || 'Sin región';
+                }};
+
+                const renderKanban = () => {{
+                    const lanes = {{}};
+                    data.forEach((row) => {{
+                        const lane = laneName(row.region);
+                        if (!lanes[lane]) lanes[lane] = [];
+                        lanes[lane].push(row);
+                    }});
+                    if (!Object.keys(lanes).length) lanes['Sin región'] = [];
+                    mount.innerHTML = `
+                        <article class="suc-card">
+                            <h3 class="suc-title">Kanban de sucursales</h3>
+                            <div class="suc-kanban">
+                                ${{Object.keys(lanes).map((key) => `
+                                    <div class="suc-col">
+                                        <h4>${{escapeHtml(key)}}</h4>
+                                        ${{lanes[key].length ? lanes[key].map((row) => `
+                                            <article class="suc-item" data-row-code="${{escapeHtml(row.codigo)}}">
+                                                <strong>${{escapeHtml(row.nombre)}}</strong>
+                                                <p>${{escapeHtml(row.codigo)}}</p>
+                                                <p>${{escapeHtml(row.descripcion)}}</p>
+                                            </article>
+                                        `).join('') : '<p class="suc-msg">Sin registros.</p>'}}
+                                    </div>
+                                `).join('')}}
+                            </div>
+                        </article>
+                    `;
+                }};
+
+                const render = (view) => {{
+                    currentView = ['form', 'list', 'kanban'].includes(view) ? view : 'form';
+                    if (currentView === 'list') return renderList();
+                    if (currentView === 'kanban') return renderKanban();
+                    return renderForm();
+                }};
+                const openFormByCode = (codigo) => {{
+                    const targetCode = String(codigo || '').trim();
+                    if (!targetCode) return;
+                    const idx = data.findIndex((row) => String(row.codigo || '').trim() === targetCode);
+                    if (idx < 0) return;
+                    editingIndex = idx;
+                    formTab = 'captura';
+                    render('form');
+                    const msg = document.getElementById('suc-form-msg');
+                    if (msg) msg.textContent = `Editando sucursal: ${{targetCode}}`;
+                }};
+
+                const normalizeSucursalCode = () => {{
+                    const raw = String(data[0]?.codigo || '').trim();
+                    if (!raw) return "001";
+                    const digits = raw.replace(/\\D+/g, "");
+                    if (digits) return digits;
+                    const normalized = raw.toUpperCase().replace(/[^A-Z0-9]+/g, "");
+                    return normalized || "001";
+                }};
+
+                const generateActivoFijoCode = () => {{
+                    const branchCode = normalizeSucursalCode();
+                    const sequence = String(activoFijoRowsData.length + 1).padStart(3, "0");
+                    return `${{branchCode}}-${{sequence}}`;
+                }};
+
+                const rubroSelectOptions = (selected) => activoFijoCatalog.map((item) => {{
+                    const isSelected = item.rubro === selected ? "selected" : "";
+                    return `<option value="${{escapeHtml(item.rubro)}}" ${{isSelected}}>${{escapeHtml(item.rubro)}}</option>`;
+                }}).join("");
+                const yearSelectOptions = (selected) => purchaseYearOptions.map((year) => {{
+                    const isSelected = Number(selected) === Number(year) ? "selected" : "";
+                    return `<option value="${{year}}" ${{isSelected}}>${{year}}</option>`;
+                }}).join("");
+                const monthSelectOptions = (selected) => monthOptions.map((month, idx) => {{
+                    const value = idx + 1;
+                    const isSelected = Number(selected) === value ? "selected" : "";
+                    return `<option value="${{value}}" ${{isSelected}}>${{month}}</option>`;
+                }}).join("");
+                const statusSelectOptions = (selected) => statusOptions.map((status) => {{
+                    const isSelected = status === selected ? "selected" : "";
+                    return `<option value="${{escapeHtml(status)}}" ${{isSelected}}>${{escapeHtml(status)}}</option>`;
+                }}).join("");
+
+                const renderActivoFijoRows = () => {{
+                    const activoFijoRows = document.getElementById('suc-af-rows');
+                    if (!activoFijoRows) return;
+                    if (!activoFijoRowsData.length) {{
+                        activoFijoRows.innerHTML = '<tr><td colspan="7" style="color:#64748b;">Sin registros de compras.</td></tr>';
+                        return;
+                    }}
+                    activoFijoRows.innerHTML = activoFijoRowsData.map((row, idx) => `
+                        <tr data-af-row="${{idx}}">
+                            <td><input class="suc-af-input" type="text" data-field="code" value="${{escapeHtml(row.code)}}" readonly></td>
+                            <td><input class="suc-af-input" type="text" data-field="article" value="${{escapeHtml(row.article)}}"></td>
+                            <td><select class="suc-af-select" data-field="rubro">${{rubroSelectOptions(row.rubro)}}</select></td>
+                            <td><input class="suc-af-input num" type="number" min="0" step="0.01" data-field="price" value="${{escapeHtml(row.price)}}"></td>
+                            <td><select class="suc-af-select" data-field="year">${{yearSelectOptions(row.year)}}</select></td>
+                            <td><select class="suc-af-select" data-field="month">${{monthSelectOptions(row.month)}}</select></td>
+                            <td><select class="suc-af-select" data-field="status">${{statusSelectOptions(row.status)}}</select></td>
+                        </tr>
+                    `).join("");
+                }};
+
+                const addActivoFijoRow = () => {{
+                    const firstRubro = activoFijoCatalog[0]?.rubro || "";
+                    const newRow = {{
+                        code: generateActivoFijoCode(),
+                        article: "",
+                        rubro: firstRubro,
+                        price: "",
+                        year: purchaseYearOptions[0] || baseYear,
+                        month: 1,
+                        status: "Solicitado",
+                    }};
+                    activoFijoRowsData.push(newRow);
+                    renderActivoFijoRows();
+                }};
+
+                document.addEventListener('backend-view-change', (event) => {{
+                    const view = event.detail?.view;
+                    if (!view) return;
+                    render(view);
+                }});
+                mount.addEventListener('click', (event) => {{
+                    const target = event.target;
+                    if (!(target instanceof HTMLElement)) return;
+                    const listRow = target.closest('.suc-open-form-row');
+                    if (listRow instanceof HTMLElement) {{
+                        openFormByCode(listRow.getAttribute('data-row-code') || '');
+                        return;
+                    }}
+                    const kanbanCard = target.closest('.suc-item');
+                    if (kanbanCard instanceof HTMLElement) {{
+                        const codeText = (kanbanCard.getAttribute('data-row-code') || '').trim();
+                        openFormByCode(codeText);
+                    }}
+                }});
+
+                (async () => {{
+                    await loadRegionesCatalog();
+                    await loadSucursales();
+                    render('list');
+                }})();
+            }})();
+        </script>
+    """)
+    return render_backend_page(
+        request,
+        title="Sucursales",
+        description="Registro y visualización de sucursales.",
+        content=sucursales_content,
+        hide_floating_actions=True,
+        show_page_header=True,
+        view_buttons=[
+            {"label": "Form", "icon": "/templates/icon/formulario.svg", "view": "form"},
+            {"label": "Lista", "icon": "/templates/icon/list.svg", "view": "list", "active": True},
+            {"label": "Kanban", "icon": "/templates/icon/kanban.svg", "view": "kanban"},
+        ],
     )
 
 

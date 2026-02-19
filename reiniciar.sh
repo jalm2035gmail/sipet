@@ -14,11 +14,19 @@ if [ -f ".env" ]; then
     set +a
 fi
 
-# Fallback local para evitar que FastAPI falle al iniciar por secreto faltante
+# Asegurar secreto estable para login/hash de usuarios.
+# Si falta, se persiste en .env para que no cambie entre reinicios.
 if [ -z "${AUTH_COOKIE_SECRET:-}" ]; then
     AUTH_COOKIE_SECRET=$(python3 -c 'import secrets; print(secrets.token_urlsafe(48))')
     export AUTH_COOKIE_SECRET
-    echo "Aviso: AUTH_COOKIE_SECRET no estaba definida. Se generó una temporal para este reinicio."
+    if [ -f ".env" ]; then
+        if ! grep -q '^AUTH_COOKIE_SECRET=' ".env"; then
+            printf '\nAUTH_COOKIE_SECRET=%s\n' "$AUTH_COOKIE_SECRET" >> ".env"
+        fi
+    else
+        printf 'AUTH_COOKIE_SECRET=%s\n' "$AUTH_COOKIE_SECRET" > ".env"
+    fi
+    echo "Aviso: AUTH_COOKIE_SECRET no estaba definida. Se generó y guardó en .env."
 fi
 
 # Instalar dependencias
