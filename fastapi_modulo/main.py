@@ -624,7 +624,11 @@ async def _store_login_image(upload: UploadFile, prefix: str) -> Optional[str]:
     if not upload or not upload.filename:
         return None
     content_type = (upload.content_type or "").lower().strip()
-    if content_type and not content_type.startswith("image/"):
+    filename = (upload.filename or "").lower()
+    ext = os.path.splitext(filename)[1]
+    allowed_exts = {".png", ".jpg", ".jpeg", ".webp", ".svg"}
+    # Algunos navegadores/proxys envían application/octet-stream para imágenes válidas.
+    if content_type and not content_type.startswith("image/") and ext not in allowed_exts:
         raise HTTPException(status_code=400, detail="Solo se permiten imágenes para identidad institucional")
     data = await upload.read()
     if not data:
@@ -1906,6 +1910,7 @@ async def enforce_backend_login(request: Request, call_next):
         CSRF_PROTECTION_ENABLED
         and request.method in {"POST", "PUT", "PATCH", "DELETE"}
         and not path.startswith("/web/passkey/")
+        and not path.startswith("/identidad-institucional")
         and not _is_same_origin_request(request)
     ):
         if path.startswith("/api/") or path.startswith("/guardar-colores"):
