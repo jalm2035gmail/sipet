@@ -5,13 +5,49 @@ from html import escape
 from io import BytesIO
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
-from fastapi import APIRouter, Response
+from fastapi import APIRouter, Request, Response
 from fastapi.responses import HTMLResponse
 from openpyxl import Workbook
 
 SYSTEM_REPORT_HEADER_TEMPLATE_ID = "system-report-header"
 
 router = APIRouter()
+
+
+def _render_reportes_page(request: Request, title: str = "Reportes") -> HTMLResponse:
+    try:
+        from fastapi_modulo.main import render_backend_page
+    except Exception:
+        return HTMLResponse("<h1>Reportes</h1><p>Módulo de reportes.</p>")
+    content = (
+        "<section class='content-section'>"
+        "<div class='content-section-head'><h2 class='content-section-title'>Exportación de reportes</h2></div>"
+        "<div class='content-section-body'>"
+        "<p>Genera y descarga reportes consolidados en HTML, PDF y Excel.</p>"
+        "<div class='actions' style='display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;'>"
+        "<a class='color-btn color-btn--primary' href='/api/reportes/export/html'>Exportar HTML</a>"
+        "<a class='color-btn color-btn--ghost' href='/api/reportes/export/pdf'>Exportar PDF</a>"
+        "<a class='color-btn color-btn--ghost' href='/api/reportes/export/excel'>Exportar Excel</a>"
+        "</div></div></section>"
+    )
+    return render_backend_page(
+        request,
+        title=title,
+        description="Generación y exportación de reportes.",
+        content=content,
+        hide_floating_actions=True,
+        show_page_header=True,
+    )
+
+
+@router.get("/reportes", response_class=HTMLResponse)
+def reportes_page(request: Request) -> HTMLResponse:
+    return _render_reportes_page(request, "Reportes")
+
+
+@router.get("/reportes/documentos", response_class=HTMLResponse)
+def reportes_documentos_page(request: Request) -> HTMLResponse:
+    return _render_reportes_page(request, "Reportes de documentos")
 
 
 def _get_core_callables() -> Tuple[Optional[Callable[[], List[Dict[str, str]]]], Optional[Callable[[], Dict[str, Any]]]]:

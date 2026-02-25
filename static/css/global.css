@@ -2703,9 +2703,13 @@ select.campo-personalizado {
     flex: 0 0 auto;
 }
 .proyectando-notebook-oficial .notebook-content {
-    border: 0;
-    padding: 14px 0 0;
-    background: transparent;
+    border: 1px solid #d1d5db;
+    border-top: none;
+    padding: 14px 12px 12px;
+    background: #ffffff;
+}
+.proyectando-notebook-oficial .tab-panel {
+    background: #ffffff;
 }
 .notebook-content {
     margin-top: 0;

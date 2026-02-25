@@ -12,12 +12,8 @@ def _bind_core_symbols() -> None:
         return
     from fastapi_modulo import main as core
 
-    names = [
-        'render_backend_page',
-        '_render_blank_management_screen',
-    ]
-    for name in names:
-        globals()[name] = getattr(core, name)
+    globals()['render_backend_page'] = getattr(core, 'render_backend_page')
+    globals()['_render_blank_management_screen'] = getattr(core, '_render_blank_management_screen', None)
     globals()['_CORE_BOUND'] = True
 
 
@@ -33,7 +29,16 @@ def _load_template(filename: str) -> str:
 @router.get('/diagnostico', response_class=HTMLResponse)
 def diagnostico_page(request: Request):
     _bind_core_symbols()
-    return _render_blank_management_screen(request, 'Diagnóstico')
+    if callable(globals().get('_render_blank_management_screen')):
+        return _render_blank_management_screen(request, 'Diagnóstico')
+    return render_backend_page(
+        request,
+        title='Diagnóstico',
+        description='Selecciona una herramienta de diagnóstico para comenzar.',
+        content='<p>Selecciona FODA, PESTEL, PORTER o Percepción del cliente desde el menú.</p>',
+        hide_floating_actions=True,
+        show_page_header=True,
+    )
 
 
 @router.get('/diagnostico/foda', response_class=HTMLResponse)

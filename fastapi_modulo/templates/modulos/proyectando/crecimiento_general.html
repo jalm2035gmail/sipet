@@ -11,29 +11,13 @@
         <table class="tabla-oficial">
           <thead>
             <tr>
-              <th>Rubro</th>
-              <th class="tabla-oficial-num">Año actual</th>
-              <th class="tabla-oficial-num">+1</th>
-              <th class="tabla-oficial-num">+2</th>
-              <th class="tabla-oficial-num">+3</th>
+              <th>Año</th>
+              <th class="tabla-oficial-num">Saldo</th>
+              <th class="tabla-oficial-num">Crecimiento</th>
+              <th class="tabla-oficial-num">%</th>
             </tr>
           </thead>
-          <tbody>
-            <tr>
-              <td>Efectivo y equivalentes</td>
-              <td class="tabla-oficial-num">0</td>
-              <td class="tabla-oficial-num">0</td>
-              <td class="tabla-oficial-num">0</td>
-              <td class="tabla-oficial-num">0</td>
-            </tr>
-            <tr>
-              <td>Cartera de créditos</td>
-              <td class="tabla-oficial-num">0</td>
-              <td class="tabla-oficial-num">0</td>
-              <td class="tabla-oficial-num">0</td>
-              <td class="tabla-oficial-num">0</td>
-            </tr>
-          </tbody>
+          <tbody id="cg-activo-total-tbody"></tbody>
         </table>
       </div>
     </section>
@@ -44,28 +28,12 @@
           <thead>
             <tr>
               <th>Rubro</th>
-              <th class="tabla-oficial-num">Año actual</th>
-              <th class="tabla-oficial-num">+1</th>
-              <th class="tabla-oficial-num">+2</th>
-              <th class="tabla-oficial-num">+3</th>
+              <th class="tabla-oficial-num">Y0</th>
+              <th class="tabla-oficial-num">Y1</th>
+              <th class="tabla-oficial-num">Proyección</th>
             </tr>
           </thead>
-          <tbody>
-            <tr>
-              <td>Obligaciones financieras</td>
-              <td class="tabla-oficial-num">0</td>
-              <td class="tabla-oficial-num">0</td>
-              <td class="tabla-oficial-num">0</td>
-              <td class="tabla-oficial-num">0</td>
-            </tr>
-            <tr>
-              <td>Cuentas por pagar</td>
-              <td class="tabla-oficial-num">0</td>
-              <td class="tabla-oficial-num">0</td>
-              <td class="tabla-oficial-num">0</td>
-              <td class="tabla-oficial-num">0</td>
-            </tr>
-          </tbody>
+          <tbody id="cg-pasivo-total-tbody"></tbody>
         </table>
       </div>
     </section>
@@ -76,30 +44,108 @@
           <thead>
             <tr>
               <th>Rubro</th>
-              <th class="tabla-oficial-num">Año actual</th>
-              <th class="tabla-oficial-num">+1</th>
-              <th class="tabla-oficial-num">+2</th>
-              <th class="tabla-oficial-num">+3</th>
+              <th class="tabla-oficial-num">Y0</th>
+              <th class="tabla-oficial-num">Y1</th>
+              <th class="tabla-oficial-num">Proyección</th>
             </tr>
           </thead>
-          <tbody>
-            <tr>
-              <td>Capital social</td>
-              <td class="tabla-oficial-num">0</td>
-              <td class="tabla-oficial-num">0</td>
-              <td class="tabla-oficial-num">0</td>
-              <td class="tabla-oficial-num">0</td>
-            </tr>
-            <tr>
-              <td>Reservas y resultados</td>
-              <td class="tabla-oficial-num">0</td>
-              <td class="tabla-oficial-num">0</td>
-              <td class="tabla-oficial-num">0</td>
-              <td class="tabla-oficial-num">0</td>
-            </tr>
-          </tbody>
+          <tbody id="cg-patrimonio-tbody"></tbody>
         </table>
       </div>
     </section>
   </div>
 </section>
+
+<script>
+(function () {
+  var tbodyActivo = document.getElementById("cg-activo-total-tbody");
+  var tbodyPasivo = document.getElementById("cg-pasivo-total-tbody");
+  var tbodyPatrimonio = document.getElementById("cg-patrimonio-tbody");
+
+  function esc(v) {
+    return String(v == null ? "" : v)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function parseJson(raw, fallback) {
+    try {
+      var parsed = JSON.parse(raw || "");
+      return parsed == null ? fallback : parsed;
+    } catch (_) {
+      return fallback;
+    }
+  }
+
+  function num(v) {
+    if (v == null || v === "") return "";
+    return String(v);
+  }
+
+  function renderActivo(rows) {
+    if (!tbodyActivo) return;
+    if (!Array.isArray(rows) || !rows.length) {
+      tbodyActivo.innerHTML = '<tr><td colspan="4">Sin datos</td></tr>';
+      return;
+    }
+    tbodyActivo.innerHTML = rows.map(function (r) {
+      return "<tr>" +
+        "<td>" + esc(r.year) + "</td>" +
+        "<td class=\"tabla-oficial-num\">" + esc(num(r.saldo)) + "</td>" +
+        "<td class=\"tabla-oficial-num\">" + esc(num(r.crecimiento)) + "</td>" +
+        "<td class=\"tabla-oficial-num\">" + esc(num(r.pct)) + "</td>" +
+      "</tr>";
+    }).join("");
+  }
+
+  function renderFinanciamiento(data) {
+    if (!data || typeof data !== "object") {
+      if (tbodyPasivo) tbodyPasivo.innerHTML = '<tr><td colspan="4">Sin datos</td></tr>';
+      if (tbodyPatrimonio) tbodyPatrimonio.innerHTML = '<tr><td colspan="4">Sin datos</td></tr>';
+      return;
+    }
+    var pasivoRows = [];
+    var patrimonioRows = [];
+    Object.keys(data).forEach(function (key) {
+      var item = data[key] || {};
+      var row = {
+        rubro: key.replace(/_/g, " "),
+        y0: item.y0_amount || "",
+        y1: item.y1_amount || "",
+        proj: item.proj_amount || ""
+      };
+      if (key.indexOf("pasivos_") === 0) pasivoRows.push(row);
+      if (key.indexOf("capital_") === 0) patrimonioRows.push(row);
+    });
+    if (tbodyPasivo) {
+      tbodyPasivo.innerHTML = pasivoRows.length ? pasivoRows.map(function (r) {
+        return "<tr><td>" + esc(r.rubro) + "</td><td class=\"tabla-oficial-num\">" + esc(r.y0) + "</td><td class=\"tabla-oficial-num\">" + esc(r.y1) + "</td><td class=\"tabla-oficial-num\">" + esc(r.proj) + "</td></tr>";
+      }).join("") : '<tr><td colspan="4">Sin datos</td></tr>';
+    }
+    if (tbodyPatrimonio) {
+      tbodyPatrimonio.innerHTML = patrimonioRows.length ? patrimonioRows.map(function (r) {
+        return "<tr><td>" + esc(r.rubro) + "</td><td class=\"tabla-oficial-num\">" + esc(r.y0) + "</td><td class=\"tabla-oficial-num\">" + esc(r.y1) + "</td><td class=\"tabla-oficial-num\">" + esc(r.proj) + "</td></tr>";
+      }).join("") : '<tr><td colspan="4">Sin datos</td></tr>';
+    }
+  }
+
+  async function load() {
+    try {
+      var res = await fetch("/api/proyectando/datos-preliminares");
+      var json = await res.json();
+      var data = (json && json.data) || {};
+      var activoRows = parseJson(data.cg_activo_total_rows_json, []);
+      var financiamiento = parseJson(data.cg_financiamiento_rows_json, {});
+      renderActivo(activoRows);
+      renderFinanciamiento(financiamiento);
+    } catch (_) {
+      renderActivo([]);
+      renderFinanciamiento({});
+    }
+  }
+
+  load();
+})();
+</script>

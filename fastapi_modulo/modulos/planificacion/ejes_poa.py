@@ -671,6 +671,9 @@ EJES_ESTRATEGICOS_HTML = dedent("""
 """)
 
 
+@router.get("/planes", response_class=HTMLResponse)
+@router.get("/plan-estrategico", response_class=HTMLResponse)
+@router.get("/poa", response_class=HTMLResponse)
 @router.get("/ejes-estrategicos", response_class=HTMLResponse)
 def ejes_estrategicos_page(request: Request):
     _bind_core_symbols()
@@ -1688,5 +1691,3 @@ def delete_poa_subactivity(request: Request, subactivity_id: int):
         return JSONResponse({"success": True})
     finally:
         db.close()
-
-

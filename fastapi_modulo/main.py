@@ -207,11 +207,29 @@ SIPET_PREMIUM_UI_TEMPLATE_CSS = dedent("""
 
 def _require_secret(name: str) -> str:
     value = (os.environ.get(name) or "").strip()
-    if not value:
+    if value:
+        return value
+    fallback_names = {
+        "AUTH_COOKIE_SECRET": ["SENSITIVE_DATA_SECRET", "SECRET_KEY", "SESSION_SECRET", "JWT_SECRET"],
+    }
+    for candidate in fallback_names.get(name, []):
+        candidate_value = (os.environ.get(candidate) or "").strip()
+        if candidate_value:
+            print(f"[secrets] {name} no definida; usando {candidate} como fallback.")
+            return candidate_value
+    strict = (os.environ.get("STRICT_REQUIRED_SECRETS") or "").strip().lower() in {"1", "true", "yes", "on"}
+    if strict:
         raise RuntimeError(
             f"{name} no está configurada. Define esta variable de entorno antes de iniciar la aplicación."
         )
-    return value
+    derived = hashlib.sha256(
+        f"{name}:{os.environ.get('APP_ENV', 'development')}:{os.environ.get('RAILWAY_SERVICE_ID', 'local')}".encode("utf-8")
+    ).hexdigest()
+    print(
+        f"[secrets] {name} no definida; usando secreto derivado temporal. "
+        "Configura la variable en producción para persistencia de sesión."
+    )
+    return derived
 
 
 AUTH_COOKIE_SECRET = _require_secret("AUTH_COOKIE_SECRET")

@@ -11,87 +11,89 @@
   <div class="notebook-content">
     <section class="tab-panel" data-panel="datos-generales">
       <div>
+      <div>
         <label for="dp-responsable-general">Responsable general</label>
-        <input id="dp-responsable-general" type="text">
+        <input id="dp-responsable-general" class="campo-personalizado" type="text">
       </div>
       <div>
         <label for="dp-primer-anio">Primer año de proyección</label>
-        <input id="dp-primer-anio" type="number">
+        <input id="dp-primer-anio" class="campo-personalizado" type="number">
       </div>
       <div>
         <label for="dp-anios">Años de proyección</label>
-        <input id="dp-anios" type="number">
+        <input id="dp-anios" class="campo-personalizado" type="number">
       </div>
       <div>
         <label for="dp-moneda">Moneda</label>
-        <input id="dp-moneda" type="text">
+        <input id="dp-moneda" class="campo-personalizado" type="text">
       </div>
       <div>
         <label for="dp-inflacion">Inflación estimada (%)</label>
-        <input id="dp-inflacion" type="text">
+        <input id="dp-inflacion" class="campo-personalizado" type="text">
       </div>
       <div>
         <label for="dp-tasa">Tasa de crecimiento (%)</label>
-        <input id="dp-tasa" type="text">
+        <input id="dp-tasa" class="campo-personalizado" type="text">
       </div>
       <div>
         <label for="dp-observaciones">Observaciones</label>
-        <input id="dp-observaciones" type="text">
+        <input id="dp-observaciones" class="campo-personalizado" type="text">
       </div>
       <div>
         <label for="dp-sociedad">Sociedad</label>
-        <input id="dp-sociedad" type="text">
+        <input id="dp-sociedad" class="campo-personalizado" type="text">
       </div>
       <div>
         <label for="dp-figura-juridica">Figura jurídica</label>
-        <input id="dp-figura-juridica" type="text">
+        <input id="dp-figura-juridica" class="campo-personalizado" type="text">
       </div>
       <div>
         <label for="dp-calle">Calle</label>
-        <input id="dp-calle" type="text">
+        <input id="dp-calle" class="campo-personalizado" type="text">
       </div>
       <div>
         <label for="dp-numero-exterior">Número exterior</label>
-        <input id="dp-numero-exterior" type="text">
+        <input id="dp-numero-exterior" class="campo-personalizado" type="text">
       </div>
       <div>
         <label for="dp-numero-interior">Número interior</label>
-        <input id="dp-numero-interior" type="text">
+        <input id="dp-numero-interior" class="campo-personalizado" type="text">
       </div>
       <div>
         <label for="dp-colonia">Colonia</label>
-        <input id="dp-colonia" type="text">
+        <input id="dp-colonia" class="campo-personalizado" type="text">
       </div>
       <div>
         <label for="dp-ciudad">Ciudad</label>
-        <input id="dp-ciudad" type="text">
+        <input id="dp-ciudad" class="campo-personalizado" type="text">
       </div>
       <div>
         <label for="dp-municipio">Municipio</label>
-        <input id="dp-municipio" type="text">
+        <input id="dp-municipio" class="campo-personalizado" type="text">
       </div>
       <div>
         <label for="dp-estado">Estado</label>
-        <input id="dp-estado" type="text">
+        <input id="dp-estado" class="campo-personalizado" type="text">
       </div>
       <div>
         <label for="dp-cp">CP</label>
-        <input id="dp-cp" type="text">
+        <input id="dp-cp" class="campo-personalizado" type="text">
       </div>
       <div>
         <label for="dp-pais">País</label>
-        <input id="dp-pais" type="text">
+        <input id="dp-pais" class="campo-personalizado" type="text">
+      </div>
       </div>
     </section>
 
     <section class="tab-panel" data-panel="macroeconomia" hidden>
-      <div>
-        <label for="dp-macro-inflacion-json">macro_inflacion_json</label>
-        <textarea id="dp-macro-inflacion-json" rows="8"></textarea>
-      </div>
-      <div>
-        <label for="dp-macro-udi-json">macro_udi_json</label>
-        <textarea id="dp-macro-udi-json" rows="8"></textarea>
+      <input id="dp-macro-inflacion-json" type="hidden">
+      <input id="dp-macro-udi-json" type="hidden">
+      <div class="tabla-oficial-wrap">
+        <table id="dp-macro-table" class="tabla-oficial">
+          <thead id="dp-macro-thead"></thead>
+          <tbody id="dp-macro-tbody"></tbody>
+        </table>
       </div>
     </section>
 
@@ -100,104 +102,102 @@
     </section>
 
     <section class="tab-panel" data-panel="informacion-financiera" hidden>
-      <div>
-        <label for="dp-ifb-activos-m3">ifb_activos_m3</label>
-        <input id="dp-ifb-activos-m3" type="text">
+      <div class="tabla-oficial-wrap">
+        <table class="tabla-oficial">
+          <thead>
+            <tr>
+              <th>Concepto</th>
+              <th>M-3</th>
+              <th>M-2</th>
+              <th>M-1</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Activos</td>
+              <td><input id="dp-ifb-activos-m3" class="tabla-oficial-input" type="text"></td>
+              <td><input id="dp-ifb-activos-m2" class="tabla-oficial-input" type="text"></td>
+              <td><input id="dp-ifb-activos-m1" class="tabla-oficial-input" type="text"></td>
+            </tr>
+            <tr>
+              <td>Pasivos</td>
+              <td><input id="dp-ifb-pasivos-m3" class="tabla-oficial-input" type="text"></td>
+              <td><input id="dp-ifb-pasivos-m2" class="tabla-oficial-input" type="text"></td>
+              <td><input id="dp-ifb-pasivos-m1" class="tabla-oficial-input" type="text"></td>
+            </tr>
+            <tr>
+              <td>Capital</td>
+              <td><input id="dp-ifb-capital-m3" class="tabla-oficial-input" type="text"></td>
+              <td><input id="dp-ifb-capital-m2" class="tabla-oficial-input" type="text"></td>
+              <td><input id="dp-ifb-capital-m1" class="tabla-oficial-input" type="text"></td>
+            </tr>
+            <tr>
+              <td>Ingresos</td>
+              <td><input id="dp-ifb-ingresos-m3" class="tabla-oficial-input" type="text"></td>
+              <td><input id="dp-ifb-ingresos-m2" class="tabla-oficial-input" type="text"></td>
+              <td><input id="dp-ifb-ingresos-m1" class="tabla-oficial-input" type="text"></td>
+            </tr>
+            <tr>
+              <td>Egresos</td>
+              <td><input id="dp-ifb-egresos-m3" class="tabla-oficial-input" type="text"></td>
+              <td><input id="dp-ifb-egresos-m2" class="tabla-oficial-input" type="text"></td>
+              <td><input id="dp-ifb-egresos-m1" class="tabla-oficial-input" type="text"></td>
+            </tr>
+            <tr>
+              <td>Resultado</td>
+              <td><input id="dp-ifb-resultado-m3" class="tabla-oficial-input" type="text"></td>
+              <td><input id="dp-ifb-resultado-m2" class="tabla-oficial-input" type="text"></td>
+              <td><input id="dp-ifb-resultado-m1" class="tabla-oficial-input" type="text"></td>
+            </tr>
+          </tbody>
+        </table>
       </div>
-      <div>
-        <label for="dp-ifb-activos-m2">ifb_activos_m2</label>
-        <input id="dp-ifb-activos-m2" type="text">
+      <div class="tabla-oficial-wrap">
+        <table class="tabla-oficial">
+          <tbody>
+            <tr>
+              <th>ifb_rows_json</th>
+              <td><textarea id="dp-ifb-rows-json" rows="8" style="width:100%;"></textarea></td>
+            </tr>
+            <tr>
+              <th>ifb_conceptos_json</th>
+              <td><textarea id="dp-ifb-conceptos-json" rows="8" style="width:100%;"></textarea></td>
+            </tr>
+            <tr>
+              <th>cg_activo_total_growth_json</th>
+              <td><textarea id="dp-cg-activo-total-growth-json" rows="6" style="width:100%;"></textarea></td>
+            </tr>
+            <tr>
+              <th>cg_activo_total_rows_json</th>
+              <td><textarea id="dp-cg-activo-total-rows-json" rows="6" style="width:100%;"></textarea></td>
+            </tr>
+            <tr>
+              <th>cg_financiamiento_rows_json</th>
+              <td><textarea id="dp-cg-financiamiento-rows-json" rows="6" style="width:100%;"></textarea></td>
+            </tr>
+          </tbody>
+        </table>
       </div>
-      <div>
-        <label for="dp-ifb-activos-m1">ifb_activos_m1</label>
-        <input id="dp-ifb-activos-m1" type="text">
-      </div>
-      <div>
-        <label for="dp-ifb-pasivos-m3">ifb_pasivos_m3</label>
-        <input id="dp-ifb-pasivos-m3" type="text">
-      </div>
-      <div>
-        <label for="dp-ifb-pasivos-m2">ifb_pasivos_m2</label>
-        <input id="dp-ifb-pasivos-m2" type="text">
-      </div>
-      <div>
-        <label for="dp-ifb-pasivos-m1">ifb_pasivos_m1</label>
-        <input id="dp-ifb-pasivos-m1" type="text">
-      </div>
-      <div>
-        <label for="dp-ifb-capital-m3">ifb_capital_m3</label>
-        <input id="dp-ifb-capital-m3" type="text">
-      </div>
-      <div>
-        <label for="dp-ifb-capital-m2">ifb_capital_m2</label>
-        <input id="dp-ifb-capital-m2" type="text">
-      </div>
-      <div>
-        <label for="dp-ifb-capital-m1">ifb_capital_m1</label>
-        <input id="dp-ifb-capital-m1" type="text">
-      </div>
-      <div>
-        <label for="dp-ifb-ingresos-m3">ifb_ingresos_m3</label>
-        <input id="dp-ifb-ingresos-m3" type="text">
-      </div>
-      <div>
-        <label for="dp-ifb-ingresos-m2">ifb_ingresos_m2</label>
-        <input id="dp-ifb-ingresos-m2" type="text">
-      </div>
-      <div>
-        <label for="dp-ifb-ingresos-m1">ifb_ingresos_m1</label>
-        <input id="dp-ifb-ingresos-m1" type="text">
-      </div>
-      <div>
-        <label for="dp-ifb-egresos-m3">ifb_egresos_m3</label>
-        <input id="dp-ifb-egresos-m3" type="text">
-      </div>
-      <div>
-        <label for="dp-ifb-egresos-m2">ifb_egresos_m2</label>
-        <input id="dp-ifb-egresos-m2" type="text">
-      </div>
-      <div>
-        <label for="dp-ifb-egresos-m1">ifb_egresos_m1</label>
-        <input id="dp-ifb-egresos-m1" type="text">
-      </div>
-      <div>
-        <label for="dp-ifb-resultado-m3">ifb_resultado_m3</label>
-        <input id="dp-ifb-resultado-m3" type="text">
-      </div>
-      <div>
-        <label for="dp-ifb-resultado-m2">ifb_resultado_m2</label>
-        <input id="dp-ifb-resultado-m2" type="text">
-      </div>
-      <div>
-        <label for="dp-ifb-resultado-m1">ifb_resultado_m1</label>
-        <input id="dp-ifb-resultado-m1" type="text">
-      </div>
-      <div>
-        <label for="dp-ifb-rows-json">ifb_rows_json</label>
-        <textarea id="dp-ifb-rows-json" rows="8"></textarea>
-      </div>
-      <div>
-        <label for="dp-ifb-conceptos-json">ifb_conceptos_json</label>
-        <textarea id="dp-ifb-conceptos-json" rows="8"></textarea>
-      </div>
-      <div>
-        <label for="dp-cg-activo-total-growth-json">cg_activo_total_growth_json</label>
-        <textarea id="dp-cg-activo-total-growth-json" rows="6"></textarea>
-      </div>
-      <div>
-        <label for="dp-cg-activo-total-rows-json">cg_activo_total_rows_json</label>
-        <textarea id="dp-cg-activo-total-rows-json" rows="6"></textarea>
-      </div>
-      <div>
-        <label for="dp-cg-financiamiento-rows-json">cg_financiamiento_rows_json</label>
-        <textarea id="dp-cg-financiamiento-rows-json" rows="6"></textarea>
+      <div class="tabla-oficial-wrap">
+        <table class="tabla-oficial" id="dp-ifb-detalle-table">
+          <thead id="dp-ifb-detalle-thead"></thead>
+          <tbody id="dp-ifb-detalle-tbody"></tbody>
+        </table>
       </div>
     </section>
 
     <section class="tab-panel" data-panel="activo-fijo" hidden>
-      <div>
-        <label for="dp-activo-fijo-json">activo_fijo_json</label>
-        <textarea id="dp-activo-fijo-json" rows="10"></textarea>
+      <input id="dp-activo-fijo-json" type="hidden">
+      <div class="tabla-oficial-wrap">
+        <table class="tabla-oficial" id="dp-activo-fijo-table">
+          <thead>
+            <tr>
+              <th>Rubro</th>
+              <th>Años</th>
+            </tr>
+          </thead>
+          <tbody id="dp-activo-fijo-tbody"></tbody>
+        </table>
       </div>
     </section>
 
@@ -269,6 +269,181 @@
   var saveBtn = document.getElementById("dp-save-btn");
   var clearBtn = document.getElementById("dp-clear-btn");
   var msg = document.getElementById("dp-msg");
+  var macroThead = document.getElementById("dp-macro-thead");
+  var macroTbody = document.getElementById("dp-macro-tbody");
+  var activoFijoTbody = document.getElementById("dp-activo-fijo-tbody");
+  var ifbDetalleThead = document.getElementById("dp-ifb-detalle-thead");
+  var ifbDetalleTbody = document.getElementById("dp-ifb-detalle-tbody");
+
+  function parseMacroMap(raw) {
+    try {
+      var parsed = JSON.parse(raw || "{}");
+      return parsed && typeof parsed === "object" ? parsed : {};
+    } catch (_) {
+      return {};
+    }
+  }
+
+  function writeMacroMaps(inflacionMap, udiMap) {
+    var inflacionEl = document.getElementById("dp-macro-inflacion-json");
+    var udiEl = document.getElementById("dp-macro-udi-json");
+    if (inflacionEl) inflacionEl.value = JSON.stringify(inflacionMap || {});
+    if (udiEl) udiEl.value = JSON.stringify(udiMap || {});
+  }
+
+  function getMacroYears(inflacionMap, udiMap) {
+    var yearsSet = {};
+    Object.keys(inflacionMap || {}).forEach(function (y) { if (/^\d{4}$/.test(y)) yearsSet[y] = true; });
+    Object.keys(udiMap || {}).forEach(function (y) { if (/^\d{4}$/.test(y)) yearsSet[y] = true; });
+    var years = Object.keys(yearsSet).sort();
+    if (years.length) return years;
+    var primer = parseInt((document.getElementById("dp-primer-anio") || {}).value || "", 10);
+    if (!Number.isFinite(primer)) primer = new Date().getFullYear();
+    return [primer - 2, primer - 1, primer, primer + 1, primer + 2, primer + 3].map(function (n) { return String(n); });
+  }
+
+  function renderMacroTable() {
+    if (!macroThead || !macroTbody) return;
+    var inflacionEl = document.getElementById("dp-macro-inflacion-json");
+    var udiEl = document.getElementById("dp-macro-udi-json");
+    var inflacionMap = parseMacroMap(inflacionEl ? inflacionEl.value : "");
+    var udiMap = parseMacroMap(udiEl ? udiEl.value : "");
+    var years = getMacroYears(inflacionMap, udiMap);
+
+    macroThead.innerHTML =
+      "<tr><th>Variable</th>" +
+      years.map(function (y) { return "<th>" + y + "</th>"; }).join("") +
+      "</tr>";
+
+    function rowHtml(label, rowKey, mapObj, placeholder) {
+      return "<tr>" +
+        "<td>" + label + "</td>" +
+        years.map(function (y) {
+          var val = mapObj[y] != null ? String(mapObj[y]) : "";
+          return "<td><input class=\"tabla-oficial-input\" data-macro-row=\"" + rowKey + "\" data-year=\"" + y + "\" placeholder=\"" + placeholder + "\" value=\"" +
+            val.replace(/&/g, "&amp;").replace(/\"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;") +
+            "\"></td>";
+        }).join("") +
+      "</tr>";
+    }
+
+    macroTbody.innerHTML =
+      rowHtml("Inflación", "inflacion", inflacionMap, "0.00%") +
+      rowHtml("UDI", "udi", udiMap, "0.000000");
+
+    macroTbody.querySelectorAll("input[data-macro-row]").forEach(function (input) {
+      input.addEventListener("input", function () {
+        var row = this.getAttribute("data-macro-row");
+        var year = this.getAttribute("data-year");
+        var value = (this.value || "").trim();
+        if (row === "inflacion") {
+          if (value) inflacionMap[year] = value; else delete inflacionMap[year];
+        } else {
+          if (value) udiMap[year] = value; else delete udiMap[year];
+        }
+        writeMacroMaps(inflacionMap, udiMap);
+      });
+    });
+    writeMacroMaps(inflacionMap, udiMap);
+  }
+
+  function parseActivoFijoRows(raw) {
+    try {
+      var parsed = JSON.parse(raw || "[]");
+      if (!Array.isArray(parsed)) return [];
+      return parsed
+        .filter(function (row) { return row && typeof row === "object"; })
+        .map(function (row) {
+          return {
+            rubro: String(row.rubro || "").trim(),
+            anios: String(row.anios || "").trim()
+          };
+        });
+    } catch (_) {
+      return [];
+    }
+  }
+
+  function ensureActivoFijoDefaultRows(rows) {
+    if (Array.isArray(rows) && rows.length) return rows;
+    return [
+      { rubro: "Terrenos", anios: "0" },
+      { rubro: "Construcciones", anios: "20" },
+      { rubro: "Construcciones en proceso", anios: "5" },
+      { rubro: "Equipo de transporte", anios: "4" },
+      { rubro: "Equipo de cómputo", anios: "3" },
+      { rubro: "Mobiliario", anios: "3" },
+      { rubro: "Otras propiedades, mobiliario y equipo", anios: "2" }
+    ];
+  }
+
+  function writeActivoFijoRows(rows) {
+    var activoFijoEl = document.getElementById("dp-activo-fijo-json");
+    if (activoFijoEl) activoFijoEl.value = JSON.stringify(rows || []);
+  }
+
+  function renderActivoFijoTable() {
+    if (!activoFijoTbody) return;
+    var activoFijoEl = document.getElementById("dp-activo-fijo-json");
+    var rows = ensureActivoFijoDefaultRows(parseActivoFijoRows(activoFijoEl ? activoFijoEl.value : "[]"));
+    activoFijoTbody.innerHTML = rows.map(function (row, idx) {
+      var rubro = String(row.rubro || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+      var anios = String(row.anios || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+      return "<tr>" +
+        "<td><input class=\"tabla-oficial-input\" data-af-row=\"" + idx + "\" data-af-col=\"rubro\" value=\"" + rubro + "\"></td>" +
+        "<td><input class=\"tabla-oficial-input\" data-af-row=\"" + idx + "\" data-af-col=\"anios\" value=\"" + anios + "\"></td>" +
+      "</tr>";
+    }).join("");
+    activoFijoTbody.querySelectorAll("input[data-af-row]").forEach(function (input) {
+      input.addEventListener("input", function () {
+        var idx = parseInt(this.getAttribute("data-af-row") || "", 10);
+        var col = this.getAttribute("data-af-col");
+        if (!Number.isFinite(idx) || idx < 0 || idx >= rows.length) return;
+        rows[idx][col] = (this.value || "").trim();
+        writeActivoFijoRows(rows);
+      });
+    });
+    writeActivoFijoRows(rows);
+  }
+
+  function renderIfbDetalleTable() {
+    if (!ifbDetalleThead || !ifbDetalleTbody) return;
+    var raw = (document.getElementById("dp-ifb-rows-json") || {}).value || "[]";
+    var rows;
+    try {
+      rows = JSON.parse(raw);
+      if (!Array.isArray(rows)) rows = [];
+    } catch (_) {
+      rows = [];
+    }
+    if (!rows.length) {
+      ifbDetalleThead.innerHTML = "";
+      ifbDetalleTbody.innerHTML = "<tr><td>Sin filas en ifb_rows_json</td></tr>";
+      return;
+    }
+    var maxVals = rows.reduce(function (acc, row) {
+      var values = Array.isArray(row && row.values) ? row.values : [];
+      return Math.max(acc, values.length);
+    }, 0);
+    var labels = ["M-3", "M-2", "M-1", "0", "+1", "+2", "+3", "+4"];
+    var cols = [];
+    for (var i = 0; i < maxVals; i++) cols.push(labels[i] || ("Col " + (i + 1)));
+    ifbDetalleThead.innerHTML =
+      "<tr><th>Cod</th><th>Rubro</th>" +
+      cols.map(function (c) { return "<th class=\"tabla-oficial-num\">" + c + "</th>"; }).join("") +
+      "</tr>";
+    ifbDetalleTbody.innerHTML = rows.map(function (row) {
+      var vals = Array.isArray(row && row.values) ? row.values : [];
+      return "<tr>" +
+        "<td>" + String(row && row.cod != null ? row.cod : "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") + "</td>" +
+        "<td>" + String(row && row.rubro != null ? row.rubro : "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") + "</td>" +
+        cols.map(function (_, idx) {
+          var v = vals[idx] != null ? String(vals[idx]) : "";
+          return "<td class=\"tabla-oficial-num\">" + v.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") + "</td>";
+        }).join("") +
+      "</tr>";
+    }).join("");
+  }
 
   async function loadData() {
     try {
@@ -282,6 +457,9 @@
         var key = keyById[id];
         el.value = data[key] != null ? String(data[key]) : "";
       });
+      renderMacroTable();
+      renderActivoFijoTable();
+      renderIfbDetalleTable();
     } catch (_) {}
   }
 
@@ -314,11 +492,24 @@
       var el = document.getElementById(id);
       if (el) el.value = "";
     });
+    renderMacroTable();
+    renderActivoFijoTable();
+    renderIfbDetalleTable();
     if (msg) msg.textContent = "Campos limpiados.";
   }
 
   if (saveBtn) saveBtn.addEventListener("click", saveData);
   if (clearBtn) clearBtn.addEventListener("click", clearData);
+  var primerAnioInput = document.getElementById("dp-primer-anio");
+  if (primerAnioInput) {
+    primerAnioInput.addEventListener("change", renderMacroTable);
+    primerAnioInput.addEventListener("input", renderMacroTable);
+  }
+  var ifbRowsTextarea = document.getElementById("dp-ifb-rows-json");
+  if (ifbRowsTextarea) {
+    ifbRowsTextarea.addEventListener("input", renderIfbDetalleTable);
+    ifbRowsTextarea.addEventListener("change", renderIfbDetalleTable);
+  }
   loadData();
 })();
 </script>
