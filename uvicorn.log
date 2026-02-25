@@ -1,192 +1,136 @@
-INFO:     Started server process [25627]
+INFO:     Started server process [36096]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
-INFO:     127.0.0.1:57632 - "GET /inicio/departamentos HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57635 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57632 - "GET /api/inicio/departamentos HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57633 - "GET /personalizar/estado HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57632 - "GET /api/colaboradores HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57767 - "GET /vendor/d3.min.js HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:57767 - "GET /vendor/d3-org-chart.min.js HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:57767 - "GET /inicio/departamentos HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57767 - "GET /api/inicio/departamentos HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57805 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57804 - "GET /personalizar/estado HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57804 - "GET /api/colaboradores HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58209 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:58535 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58750 - "GET /inicio/departamentos HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58750 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:58751 - "GET /css/global.css HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:58751 - "GET /api/inicio/departamentos HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58755 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58750 - "GET /personalizar/estado HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58750 - "GET /api/colaboradores HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58861 - "GET /vendor/d3.min.js HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:58861 - "GET /vendor/d3-org-chart.min.js HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:58932 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:59586 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60048 - "GET /inicio/departamentos HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60048 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:60049 - "GET /api/inicio/departamentos HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60051 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60050 - "GET /personalizar/estado HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60050 - "GET /api/colaboradores HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60050 - "GET /vendor/d3.min.js HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:60050 - "GET /vendor/d3-flextree.min.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60050 - "GET /vendor/d3-org-chart.min.js HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:60789 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61501 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62173 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62293 - "GET /inicio/departamentos HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62293 - "GET /css/global.css HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:62293 - "GET /api/inicio/departamentos HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62293 - "GET /personalizar/estado HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62293 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62293 - "GET /api/colaboradores HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62293 - "GET /vendor/d3.min.js HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:62293 - "GET /vendor/d3-flextree.min.js HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:62293 - "GET /vendor/d3-org-chart.min.js HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:62294 - "GET /inicio/regiones HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62512 - "GET /api/inicio/regiones HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62516 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62294 - "GET /personalizar/estado HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62589 - "GET /inicio/departamentos HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62589 - "GET /api/inicio/departamentos HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62593 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62592 - "GET /personalizar/estado HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62592 - "GET /api/colaboradores HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62592 - "GET /inicio/regiones HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62592 - "GET /api/inicio/regiones HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62589 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62593 - "GET /personalizar/estado HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62893 - "GET /inicio/departamentos HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62893 - "GET /api/inicio/departamentos HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62896 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62893 - "GET /api/colaboradores HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62895 - "GET /personalizar/estado HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62895 - "GET /vendor/d3.min.js HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:62895 - "GET /vendor/d3-flextree.min.js HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:62895 - "GET /vendor/d3-org-chart.min.js HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:63403 - "GET /inicio/regiones HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63403 - "GET /api/inicio/regiones HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63407 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63405 - "GET /personalizar/estado HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63464 - "GET /inicio/departamentos HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63468 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63464 - "GET /api/inicio/departamentos HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63467 - "GET /personalizar/estado HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63467 - "GET /api/colaboradores HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63601 - "GET /inicio/regiones HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63601 - "GET /api/inicio/regiones HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63604 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63603 - "GET /personalizar/estado HTTP/1.1" 200 OK
-INFO:     127.0.0.1:64208 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:64915 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:65054 - "GET /inicio/regiones HTTP/1.1" 200 OK
-INFO:     127.0.0.1:65054 - "GET /css/global.css HTTP/1.1" 200 OK
-INFO:     127.0.0.1:65054 - "GET /api/inicio/regiones HTTP/1.1" 200 OK
-INFO:     127.0.0.1:65055 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:65054 - "GET /personalizar/estado HTTP/1.1" 200 OK
-INFO:     127.0.0.1:65054 - "GET /inicio/sucursales HTTP/1.1" 200 OK
-INFO:     127.0.0.1:65054 - "GET /api/inicio/regiones HTTP/1.1" 200 OK
-INFO:     127.0.0.1:65054 - "GET /personalizar/estado HTTP/1.1" 200 OK
-INFO:     127.0.0.1:65054 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:65054 - "GET /api/inicio/sucursales HTTP/1.1" 200 OK
-INFO:     127.0.0.1:65055 - "GET /icon/activo_fijo.svg HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:65054 - "GET /icon/resultados.svg HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:65091 - "GET /icon/reparaciones.svg HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:65335 - "GET /inicio/regiones HTTP/1.1" 200 OK
-INFO:     127.0.0.1:65335 - "GET /css/global.css HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:65335 - "GET /api/inicio/regiones HTTP/1.1" 200 OK
-INFO:     127.0.0.1:65337 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:65335 - "GET /personalizar/estado HTTP/1.1" 200 OK
-INFO:     127.0.0.1:65335 - "GET /inicio/sucursales HTTP/1.1" 200 OK
-INFO:     127.0.0.1:65335 - "GET /api/inicio/regiones HTTP/1.1" 200 OK
-INFO:     127.0.0.1:65353 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:65335 - "GET /api/inicio/sucursales HTTP/1.1" 200 OK
-INFO:     127.0.0.1:65337 - "GET /personalizar/estado HTTP/1.1" 200 OK
-INFO:     127.0.0.1:65337 - "GET /inicio/colaboradores HTTP/1.1" 200 OK
-INFO:     127.0.0.1:65335 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:65386 - "GET /organigrama.svg HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:65353 - "GET /api/usuarios HTTP/1.1" 200 OK
-INFO:     127.0.0.1:65337 - "GET /personalizar/estado HTTP/1.1" 200 OK
-INFO:     127.0.0.1:65337 - "GET /api/inicio/departamentos HTTP/1.1" 200 OK
-INFO:     127.0.0.1:49482 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50194 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50882 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51459 - "GET /inicio/colaboradores HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51459 - "GET /css/global.css HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:51459 - "GET /api/usuarios HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51459 - "GET /personalizar/estado HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51462 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51462 - "GET /api/inicio/departamentos HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52180 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52792 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53496 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:54243 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:54770 - "GET /inicio/colaboradores HTTP/1.1" 200 OK
-INFO:     127.0.0.1:54770 - "GET /icon/icon.png HTTP/1.1" 200 OK
-INFO:     127.0.0.1:54771 - "GET /dist/output.css HTTP/1.1" 200 OK
-INFO:     127.0.0.1:54773 - "GET /css/global.css HTTP/1.1" 200 OK
-INFO:     127.0.0.1:54770 - "GET /proyectando.svg HTTP/1.1" 200 OK
-INFO:     127.0.0.1:54773 - "GET /inicio.svg HTTP/1.1" 200 OK
-INFO:     127.0.0.1:54774 - "GET /plan.svg HTTP/1.1" 200 OK
-INFO:     127.0.0.1:54776 - "GET /diagnostico.svg HTTP/1.1" 200 OK
-INFO:     127.0.0.1:54771 - "GET /api/usuarios HTTP/1.1" 200 OK
-INFO:     127.0.0.1:54775 - "GET /kpi.svg HTTP/1.1" 200 OK
-INFO:     127.0.0.1:54771 - "GET /icon/kanban.svg HTTP/1.1" 200 OK
-INFO:     127.0.0.1:54770 - "GET /settings.svg HTTP/1.1" 200 OK
-INFO:     127.0.0.1:54774 - "GET /icon/list.svg HTTP/1.1" 200 OK
-INFO:     127.0.0.1:54773 - "GET /notificaciones.svg HTTP/1.1" 200 OK
-INFO:     127.0.0.1:54776 - "GET /empresa.svg HTTP/1.1" 200 OK
-INFO:     127.0.0.1:54775 - "GET /organigrama.svg HTTP/1.1" 200 OK
-INFO:     127.0.0.1:54771 - "GET /icon/formulario.svg HTTP/1.1" 200 OK
-INFO:     127.0.0.1:54770 - "GET /reporte.svg HTTP/1.1" 200 OK
-INFO:     127.0.0.1:54773 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:54774 - "GET /personalizar/estado HTTP/1.1" 200 OK
-INFO:     127.0.0.1:54775 - "GET /icon/notificaciones.svg HTTP/1.1" 200 OK
-INFO:     127.0.0.1:54776 - "GET /personalizar/uploads/logo_empresa.png HTTP/1.1" 200 OK
-INFO:     127.0.0.1:54771 - "GET /personalizar/uploads/logo_usuario.png HTTP/1.1" 200 OK
-INFO:     127.0.0.1:54771 - "GET /imagenes/icon.png?v=1770659882 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:54771 - "GET /api/inicio/departamentos HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55392 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56052 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56656 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57505 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57592 - "GET /inicio/colaboradores HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57592 - "GET /css/global.css HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:57592 - "GET /api/usuarios HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57593 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57592 - "GET /personalizar/estado HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57592 - "GET /api/inicio/departamentos HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57613 - "GET /eliminar.svg HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57612 - "GET /editar.svg HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57593 - "GET /usuario.png HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57762 - "POST /api/colaboradores/foto HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:57762 - "POST /api/colaboradores HTTP/1.1" 405 Method Not Allowed
-INFO:     127.0.0.1:58234 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58886 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59557 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60043 - "GET /inicio/colaboradores HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60043 - "GET /css/global.css HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:60050 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60043 - "GET /api/usuarios HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60044 - "GET /personalizar/estado HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60044 - "GET /api/inicio/departamentos HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60248 - "POST /api/colaboradores HTTP/1.1" 405 Method Not Allowed
-INFO:     127.0.0.1:60248 - "POST /api/usuarios/registro-seguro HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60248 - "GET /api/usuarios HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60248 - "GET /api/inicio/departamentos HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60332 - "POST /api/colaboradores/foto HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:60332 - "GET /api/inicio/departamentos HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60332 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61283 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61636 - "GET /api/inicio/departamentos HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61750 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62379 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63048 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63775 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:64491 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:65139 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55567 - "GET /proyectando HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55567 - "GET /css/global.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:55568 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55567 - "GET /personalizar/estado HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55656 - "GET /css/global.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:55656 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:55656 - "GET /proyectando HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55656 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:55708 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55700 - "GET /personalizar/estado HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56423 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57115 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57825 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58541 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59252 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59970 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60661 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61352 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62049 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62740 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63445 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64146 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64843 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49168 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49873 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50587 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51284 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51971 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52654 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53354 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54052 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54755 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55454 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56159 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56871 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57572 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58278 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58978 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59248 - "GET /proyectando HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59248 - "GET /css/global.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59250 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59248 - "GET /personalizar/estado HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59884 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60596 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61301 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61843 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62006 - "GET /personalizar HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62006 - "GET /css/global.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:62006 - "GET /guardar-colores HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62006 - "GET /personalizar/estado HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62019 - "GET /personalizar/uploads/svg_fondo.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62009 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62020 - "GET /personalizar/uploads/favicon.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62006 - "GET /personalizar/estado HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62006 - "GET /personalizar/uploads/svg_defecto.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62022 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63029 - "POST /personalizar/guardar HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63185 - "POST /personalizar/guardar HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63185 - "GET /personalizar HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63185 - "GET /guardar-colores HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63185 - "GET /personalizar/estado HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63185 - "GET /personalizar/estado HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63232 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63298 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:63895 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64009 - "GET /proyectando HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64009 - "GET /personalizar/estado HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64010 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64107 - "GET /inicio/regiones HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64109 - "GET /api/inicio/regiones HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64111 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64107 - "GET /personalizar/estado HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64107 - "GET /proyectando HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64107 - "GET /css/global.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:64111 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64107 - "GET /personalizar/estado HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64875 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65164 - "GET /proyectando/datos-preliminares HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65164 - "GET /personalizar/estado HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65164 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49402 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50074 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50320 - "GET /proyectando/datos-preliminares HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50320 - "GET /css/global.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50321 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50320 - "GET /personalizar/estado HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50994 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51663 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52163 - "GET /proyectando/datos-preliminares HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52163 - "GET /css/global.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:52163 - "GET /personalizar/estado HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52163 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52827 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52886 - "GET /proyectando/presupuesto HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52886 - "GET /css/global.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:52889 - "GET /icon/calendario.svg HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:52886 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52889 - "GET /personalizar/estado HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53432 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53959 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54013 - "GET /proyectando/presupuesto HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54013 - "GET /dist/output.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54014 - "GET /icon/icon.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54013 - "GET /css/global.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54018 - "GET /icon/usuario.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54013 - "GET /icon/calendario.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54014 - "GET /icon/financiamiento.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54020 - "GET /icon/crecimiento.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54021 - "GET /inicio.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54022 - "GET /proyectando.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54014 - "GET /reporte.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54013 - "GET /settings.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54020 - "GET /diagnostico.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54018 - "GET /empresa.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54021 - "GET /notificaciones.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54022 - "GET /kpi.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54013 - "GET /plan.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54020 - "GET /icon/notificaciones.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54020 - "GET /personalizar/uploads/logo_empresa.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54013 - "GET /personalizar/uploads/logo_usuario.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54021 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54022 - "GET /personalizar/estado HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54022 - "GET /icon/icon.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54194 - "GET /personalizar HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54194 - "GET /guardar-colores HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54194 - "GET /personalizar/estado HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54197 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54194 - "GET /personalizar/estado HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54693 - "POST /guardar-colores HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54840 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54965 - "POST /guardar-colores HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54966 - "POST /personalizar/guardar HTTP/1.1" 200 OK

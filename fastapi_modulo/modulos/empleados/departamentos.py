@@ -73,7 +73,10 @@ def listar_departamentos():
         db.close()
 
 @router.post("/api/inicio/departamentos")
-async def guardar_departamentos(data: dict = Body(...)):
+async def guardar_departamentos(request: Request, data: dict = Body(...)):
+    from fastapi_modulo.main import require_admin_or_superadmin
+
+    require_admin_or_superadmin(request)
     incoming = data.get("data", [])
     if not isinstance(incoming, list):
         raise HTTPException(status_code=400, detail="Formato inválido")
@@ -88,7 +91,7 @@ async def guardar_departamentos(data: dict = Body(...)):
         parent = str(item.get("parent") or "N/A").strip() or "N/A"
         manager = str(item.get("manager") or "").strip()
         color = str(item.get("color") or "#1d4ed8").strip() or "#1d4ed8"
-        status = str(item.get("status") or "Activo").strip() or "Activo"
+        status = "Activo"
         if not name or not code:
             continue
         code_key = code.lower()

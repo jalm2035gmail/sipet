@@ -9,6 +9,11 @@ CRECIMIENTO_GENERAL_TEMPLATE_PATH = os.path.join(
 )
 
 
+def _get_colores_context() -> dict:
+    from fastapi_modulo.main import get_colores_context
+    return get_colores_context()
+
+
 @router.get("/proyectando/crecimiento-general", response_class=HTMLResponse)
 def proyectando_crecimiento_general_page(request: Request):
     try:
@@ -30,6 +35,7 @@ def proyectando_crecimiento_general_page(request: Request):
             "hide_floating_actions": True,
             "show_page_header": False,
             "view_buttons_html": "",
+            "colores": _get_colores_context(),
         },
     )
 

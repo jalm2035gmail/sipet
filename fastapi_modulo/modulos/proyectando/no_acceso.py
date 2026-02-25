@@ -5,6 +5,11 @@ from fastapi.responses import HTMLResponse
 router = APIRouter()
 NO_ACCESO_TEMPLATE_PATH = os.path.join("fastapi_modulo", "templates", "no_acceso.html")
 
+
+def _get_colores_context() -> dict:
+    from fastapi_modulo.main import get_colores_context
+    return get_colores_context()
+
 @router.get("/proyectando/no-acceso", response_class=HTMLResponse)
 def proyectando_no_acceso_page(request: Request):
     try:
@@ -26,5 +31,6 @@ def proyectando_no_acceso_page(request: Request):
             "hide_floating_actions": True,
             "show_page_header": False,
             "view_buttons_html": "",
+            "colores": _get_colores_context(),
         },
     )

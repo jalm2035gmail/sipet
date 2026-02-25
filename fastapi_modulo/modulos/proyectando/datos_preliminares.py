@@ -14,6 +14,11 @@ DATOS_PRELIMINARES_TEMPLATE_PATH = os.path.join(
 )
 
 
+def _get_colores_context() -> dict:
+    from fastapi_modulo.main import get_colores_context
+    return get_colores_context()
+
+
 @router.post("/api/proyectando/datos-preliminares/datos-generales")
 async def guardar_datos_preliminares_generales(data: dict = Body(...)):
     current = load_datos_preliminares_store()
@@ -47,5 +52,6 @@ def proyectando_datos_preliminares_page(request: Request):
             "hide_floating_actions": True,
             "show_page_header": False,
             "view_buttons_html": "",
+            "colores": _get_colores_context(),
         },
     )

@@ -1869,16 +1869,5 @@
       });
     });
 
-    const reportesTab = document.querySelector('.notebook-tabs .tab[data-tab="reportes"]');
-    const reportesPanel = document.querySelector('.tab-panel[data-panel="reportes"]');
-    if (reportesTab && reportesPanel && typeof reportesPanel.requestFullscreen === "function") {
-      reportesTab.addEventListener("click", () => {
-        setTimeout(() => {
-          if (!document.fullscreenElement) {
-            reportesPanel.requestFullscreen().catch(() => {});
-          }
-        }, 0);
-      });
-    }
   });
 </script>

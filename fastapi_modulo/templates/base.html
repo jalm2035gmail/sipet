@@ -10,33 +10,6 @@
     <link rel="stylesheet" href="/static/css/global.css">
     <style>
         :root {
-            color-scheme: light;
-            /* defaults */
-            --navbar-bg: #ffffff;
-            --navbar-text: #1f172a;
-            --sidebar-top: #1f2a3d;
-            --sidebar-bottom: #0f172a;
-            --sidebar-text: #ffffff;
-            --sidebar-icon: #f5f7fb;
-            --sidebar-hover: #16a34a;
-            --floating-toggle-text-color: var(--sidebar-text);
-            --floating-icon-color: var(--sidebar-bottom);
-            --floating-action-border: var(--sidebar-bottom);
-            --floating-action-text: var(--sidebar-bottom);
-            --floating-action-bg: var(--sidebar-text);
-            --view-pill-border: var(--sidebar-bottom);
-            --view-pill-bg: var(--sidebar-text);
-            --view-pill-text: var(--sidebar-bottom);
-            --view-pill-icon: var(--sidebar-bottom);
-            --view-pill-hover-bg: var(--sidebar-bottom);
-            --view-pill-hover-text: var(--sidebar-text);
-            --view-pill-hover-icon: var(--sidebar-text);
-            --page-bg: #f4f6fb;
-            --content-bg: #ffffff;
-            --body-text: #0f172a;
-            --page-title-color: var(--sidebar-bottom);
-            --sidebar-block-title-size: 1.05rem;
-            --sidebar-submenu-size: calc(var(--sidebar-block-title-size) * 0.85);
             {% if colores %}
             {% for key, value in colores.items() %}
             --{{ key }}: {{ value }};
@@ -44,16 +17,29 @@
             {% endif %}
         }
     </style>
+    <script>
+        window.__sipet_server_colors = {{ colores | default({}, true) | tojson }};
+    </script>
 </head>
 <body>
+    <script>
+        (function() {
+            var colors = window.__sipet_server_colors || {};
+            var rootStyle = document.documentElement.style;
+            for (var key in colors) {
+                if (!Object.prototype.hasOwnProperty.call(colors, key)) continue;
+                rootStyle.setProperty('--' + key, String(colors[key]));
+            }
+        })();
+    </script>
     {% set hide_floating_actions = hide_floating_actions | default(false) %}
     <div class="sidebar" id="sidebar">
         <div class="sidebar-header">
             <div class="sidebar-user">
                 <img
                     id="sidebar-user-img"
-                    src="{{ login_logo_url | default('/templates/icon/icon.png') }}"
-                    data-default="{{ login_logo_url | default('/templates/icon/icon.png') }}"
+                    src="{{ login_logo_url | default('/templates/icon/icon.png', true) }}"
+                    data-default="{{ login_logo_url | default('/templates/icon/icon.png', true) }}"
                     alt="Logo empresa"
                 />
             </div>
@@ -78,22 +64,34 @@
                 <summary>
                     <span class="sidebar-main-left">
                         <span class="sidebar-main-icon" style="--icon-src: url('/icon/proyectando.svg');" aria-hidden="true"></span>
-                        <span class="sidebar-main-label">Proyectando</span>
+                        <span class="sidebar-main-label">Datos financieros</span>
                     </span>
                     <span class="sidebar-main-caret">▾</span>
                 </summary>
                 <div class="sidebar-submenu">
                     <a href="/proyectando">Tablero de control</a>
-                    <a href="/proyectando/datos-preliminares">Datos preliminares</a>
-                    <a href="/proyectando/presupuesto">Presupuesto</a>
-                    <a href="/proyectando/crecimiento-general">Crecimiento General</a>
-                    <a href="/proyectando/activo-fijo">Activo Fijo</a>
-                    <a href="/proyectando/otras-cuentas-activo">Otras cuentas de activo</a>
-                    <a href="/proyectando/cartera-prestamos">Cartera de préstamos</a>
-                    <a href="/proyectando/recursos-liquidos">Recursos líquidos</a>
-                    <a href="/proyectando/pasivos">Pasivos</a>
-                    <a href="/proyectando/gastos">Gastos</a>
-                    <a href="/proyectando/tasa-referencia">Tasa de referencia</a>
+                    <details class="sidebar-submenu-group">
+                        <summary>Proyectando</summary>
+                        <div class="sidebar-submenu-level3">
+                            <a href="/proyectando/datos-preliminares">1. Datos preliminares</a>
+                            <a href="/proyectando/crecimiento-general">2. Crecimiento general</a>
+                            <a href="/proyectando/activo-fijo">3. Activo fijo</a>
+                            <a href="/proyectando/otras-cuentas-activo">4. Otras cuentas de activo</a>
+                            <a href="/proyectando/cartera-prestamos">5. Cartera de préstamos</a>
+                            <a href="/proyectando/recursos-liquidos">6. Liquidez</a>
+                            <a href="/proyectando/pasivos">7. Pasivos</a>
+                            <a href="/proyectando/gastos">8. Gastos</a>
+                            <a href="/proyectando/tasa-referencia">9. Tasa de referencia</a>
+                        </div>
+                    </details>
+                    <details class="sidebar-submenu-group">
+                        <summary>Presupuesto</summary>
+                        <div class="sidebar-submenu-level3">
+                            <a href="/proyectando/presupuesto">Vista general</a>
+                            <a href="/proyectando/presupuesto#presupuesto-anual">Presupuesto anual</a>
+                            <a href="/proyectando/presupuesto#control-mensual">Control mensual</a>
+                        </div>
+                    </details>
                 </div>
             </details>
             <details class="sidebar-block">
@@ -226,8 +224,8 @@
                 <button class="navbar-avatar" id="navbar-avatar-btn" aria-label="Menú de usuario" aria-expanded="false">
                     <img
                         id="navbar-avatar-img"
-                        src="{{ login_logo_url | default('/templates/icon/icon.png') }}"
-                        data-default="{{ login_logo_url | default('/templates/icon/icon.png') }}"
+                        src="{{ login_logo_url | default('/templates/icon/usuario.png', true) }}"
+                        data-default="{{ login_logo_url | default('/templates/icon/usuario.png', true) }}"
                         alt="Usuario"
                     />
                 </button>
@@ -249,7 +247,7 @@
                 <h1 class="page-title">{{ page_title or title }}</h1>
                 <p class="page-description">{{ page_description or description }}</p>
                 {% if view_buttons_html %}
-                <div class="view-buttons" style="display: flex; gap: 12px; margin-top: 16px;">
+                <div class="view-buttons page-view-buttons">
                     {{ view_buttons_html | safe }}
                 </div>
                 {% endif %}
@@ -260,7 +258,7 @@
             {% if section_label or section_title %}
             <!-- header de sección eliminado -->
             {% endif %}
-            <div class="content-section-body" style="color: var(--texto-color, var(--navbar-text, #1f172a));">
+            <div class="content-section-body">
                 {{ content|safe }}
             </div>
         </section>
@@ -1212,7 +1210,17 @@
                             const input = inputId ? document.getElementById(inputId) : null;
                             const removeFlag = removeId ? document.getElementById(removeId) : null;
                             if (removeFlag) removeFlag.value = '0';
-                            if (input) input.click();
+                            if (input) {
+                                try {
+                                    if (typeof input.showPicker === 'function') {
+                                        input.showPicker();
+                                    } else {
+                                        input.click();
+                                    }
+                                } catch (e) {
+                                    input.click();
+                                }
+                            }
                         });
                     });
                     deleteButtons.forEach((btn) => {
@@ -1234,7 +1242,27 @@
                             const removeId = input.getAttribute('data-target-remove');
                             const removeFlag = removeId ? document.getElementById(removeId) : null;
                             if (removeFlag) removeFlag.value = '0';
-                            await guardarAssets();
+                            const field = (input.getAttribute('name') || '').trim();
+                            const refs = field ? assetConfig[field] : null;
+                            const file = input.files[0];
+                            if (refs && file) {
+                                const filenameEl = document.getElementById(refs.filenameId);
+                                const linkEl = document.getElementById(refs.linkId);
+                                const thumbEl = document.getElementById(refs.thumbId);
+                                if (filenameEl) filenameEl.textContent = file.name;
+                                if (linkEl) {
+                                    linkEl.hidden = true;
+                                    linkEl.removeAttribute('href');
+                                }
+                                if (thumbEl instanceof HTMLImageElement && file.type && file.type.startsWith('image/')) {
+                                    try {
+                                        thumbEl.src = URL.createObjectURL(file);
+                                    } catch (e) {
+                                        // Ignorar errores de vista previa local.
+                                    }
+                                }
+                            }
+                            showMessage('Archivo listo para guardar.', 'success');
                         });
                     });
                     guardarAssets = async function() {

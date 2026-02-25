@@ -7,6 +7,11 @@ router = APIRouter()
 TABLERO_TEMPLATE_PATH = os.path.join("fastapi_modulo", "templates", "modulos", "proyectando", "tablero.html")
 
 
+def _get_colores_context() -> dict:
+    from fastapi_modulo.main import get_colores_context
+    return get_colores_context()
+
+
 @router.get("/proyectando", response_class=HTMLResponse)
 def proyectando_page(request: Request):
     try:
@@ -28,5 +33,6 @@ def proyectando_page(request: Request):
             "hide_floating_actions": True,
             "show_page_header": True,
             "view_buttons_html": "",
+            "colores": _get_colores_context(),
         },
     )
