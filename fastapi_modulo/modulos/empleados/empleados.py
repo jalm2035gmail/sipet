@@ -30,11 +30,19 @@ def _save_colab_meta(meta: Dict[str, Dict[str, Any]]) -> None:
 
 def _is_admin_role(role_name: str) -> bool:
     role = (role_name or "").strip().lower()
+    if role == "admin":
+        role = "administrador"
+    if role == "super_admin":
+        role = "superadministrador"
     return role in {"superadministrador", "administrador"}
 
 
 def _allowed_role_assignments(viewer_role: str) -> set[str]:
     role = (viewer_role or "").strip().lower()
+    if role == "admin":
+        role = "administrador"
+    if role == "super_admin":
+        role = "superadministrador"
     if role == "superadministrador":
         return {"superadministrador", "usuario", "autoridades", "departamento"}
     if role == "administrador":
@@ -60,7 +68,7 @@ def api_listar_colaboradores(request: Request):
         meta = _load_colab_meta()
         rows = db.query(Usuario).all()
         roles_by_id = {role.id: normalize_role_name(role.nombre) for role in db.query(Rol).all()}
-        viewer_role = (getattr(request.state, "user_role", None) or "").strip().lower()
+        viewer_role = normalize_role_name((getattr(request.state, "user_role", None) or "").strip().lower())
         assignable_roles = sorted(_allowed_role_assignments(viewer_role))
         data: List[Dict[str, Any]] = [
             {
@@ -140,7 +148,7 @@ def api_organigrama_colaboradores(request: Request):
         all_rows = [row for row in all_rows if bool(row.get("colaborador"))]
 
         viewer_username = (getattr(request.state, "user_name", None) or "").strip().lower()
-        viewer_role = (getattr(request.state, "user_role", None) or "").strip().lower()
+        viewer_role = normalize_role_name((getattr(request.state, "user_role", None) or "").strip().lower())
         can_view_all = _is_admin_role(viewer_role)
         if viewer_role == "administrador":
             all_rows = [row for row in all_rows if (row.get("rol") or "").strip().lower() != "superadministrador"]
@@ -190,9 +198,14 @@ def api_guardar_colaborador(request: Request, data: dict = Body(...)):
         require_admin_or_superadmin,
     )
     require_admin_or_superadmin(request)
-    viewer_role = (getattr(request.state, "user_role", None) or "").strip().lower()
+    viewer_role = normalize_role_name((getattr(request.state, "user_role", None) or "").strip().lower())
     allowed_assignments = _allowed_role_assignments(viewer_role)
     nombre = (data.get("nombre") or "").strip()
+    incoming_id = data.get("id")
+    try:
+        incoming_id = int(incoming_id) if incoming_id not in (None, "") else None
+    except Exception:
+        incoming_id = None
     usuario_login = (data.get("usuario") or "").strip()
     correo = (data.get("correo") or "").strip()
     departamento = (data.get("departamento") or "").strip()
@@ -227,11 +240,15 @@ def api_guardar_colaborador(request: Request, data: dict = Body(...)):
         user_hash = _sensitive_lookup_hash(usuario_login)
         email_hash = _sensitive_lookup_hash(correo)
 
-        existing = (
-            db.query(Usuario)
-            .filter((Usuario.usuario_hash == user_hash) | (Usuario.correo_hash == email_hash))
-            .first()
-        )
+        existing = None
+        if incoming_id:
+            existing = db.query(Usuario).filter(Usuario.id == incoming_id).first()
+        if not existing:
+            existing = (
+                db.query(Usuario)
+                .filter((Usuario.usuario_hash == user_hash) | (Usuario.correo_hash == email_hash))
+                .first()
+            )
         if not existing:
             existing = (
                 db.query(Usuario)
@@ -324,6 +341,45 @@ def api_guardar_colaborador(request: Request, data: dict = Body(...)):
                 "estado": "Activo",
             },
         }
+    finally:
+        db.close()
+
+
+@router.delete("/api/colaboradores/{colaborador_id}", response_class=JSONResponse)
+def api_eliminar_colaborador(request: Request, colaborador_id: int):
+    from fastapi_modulo.main import (
+        Usuario,
+        Rol,
+        normalize_role_name,
+        require_admin_or_superadmin,
+        is_superadmin,
+    )
+
+    require_admin_or_superadmin(request)
+    db = SessionLocal()
+    try:
+        user = db.query(Usuario).filter(Usuario.id == colaborador_id).first()
+        if not user:
+            return JSONResponse({"success": False, "error": "Colaborador no encontrado"}, status_code=404)
+        roles_by_id = {role.id: normalize_role_name(role.nombre) for role in db.query(Rol).all()}
+        target_role = (
+            roles_by_id.get(getattr(user, "rol_id", None))
+            or normalize_role_name(getattr(user, "role", "") or "usuario")
+            or "usuario"
+        )
+        if target_role == "superadministrador" and not is_superadmin(request):
+            return JSONResponse(
+                {"success": False, "error": "Solo superadministrador puede eliminar superadministradores"},
+                status_code=403,
+            )
+        db.delete(user)
+        db.commit()
+        meta = _load_colab_meta()
+        key = str(colaborador_id)
+        if key in meta:
+            del meta[key]
+            _save_colab_meta(meta)
+        return {"success": True}
     finally:
         db.close()
 

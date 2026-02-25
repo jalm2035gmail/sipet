@@ -561,6 +561,7 @@
             var correo = document.getElementById('colab-correo');
             var nivel = document.getElementById('colab-nivel');
             var dept = document.getElementById('departamento-select');
+            var colabId = document.getElementById('colab-id');
             var foto = document.getElementById('colab-photo-preview');
             var fotoUrl = document.getElementById('colab-imagen-url');
             var colaboradorCheck = document.getElementById('colab-colaborador-check');
@@ -570,6 +571,7 @@
             if (celular) celular.value = user.celular || '';
             if (usuario) usuario.value = user.usuario || '';
             if (correo) correo.value = user.correo || '';
+            if (colabId) colabId.value = user.id || '';
             if (nivel) nivel.value = user.nivel_organizacional || '';
             if (colaboradorCheck) colaboradorCheck.checked = !!user.colaborador;
             if (fotoUrl) fotoUrl.value = user.imagen || '';
@@ -659,6 +661,7 @@
                         <div class="emp-field">
                             <label for="colab-usuario">Usuario</label>
                             <input id="colab-usuario" type="text" name="usuario" required>
+                            <input id="colab-id" type="hidden" name="id" value="">
                         </div>
                         <div class="emp-field">
                             <label for="colab-correo">Correo electrónico</label>
@@ -698,6 +701,7 @@
                     <div class="actions">
                         <button type="button" class="btn" onclick="window.nuevoColaborador()">Nuevo</button>
                         <button type="button" class="btn" onclick="window.editarColaborador()">Editar</button>
+                        <button type="button" class="btn" onclick="window.eliminarColaborador()">Eliminar</button>
                         <button type="submit" class="btn primary">Guardar</button>
                         <span id="colaborador-form-msg" class="emp-empty"></span>
                     </div>
@@ -779,6 +783,7 @@
                 form.onsubmit = async function(e) {
                     e.preventDefault();
                     var payload = {
+                        id: (document.getElementById('colab-id')?.value || '').trim(),
                         nombre: (document.getElementById('colab-nombre')?.value || '').trim(),
                         puesto: (document.getElementById('colab-puesto')?.value || '').trim(),
                         celular: (document.getElementById('colab-celular')?.value || '').trim(),
@@ -991,12 +996,55 @@
         // Funciones globales para los botones del formulario
         window.nuevoColaborador = function() {
             var form = document.getElementById('colaborador-form');
+            var msg = document.getElementById('colaborador-form-msg');
             if (form) form.reset();
-            alert('Funcionalidad de nuevo colaborador no implementada.');
+            var idInput = document.getElementById('colab-id');
+            var foto = document.getElementById('colab-photo-preview');
+            var fotoUrl = document.getElementById('colab-imagen-url');
+            if (idInput) idInput.value = '';
+            if (fotoUrl) fotoUrl.value = '';
+            if (foto) foto.src = '/icon/usuario.png';
+            currentAccessState = { rol: 'usuario', menu_blocks: [] };
+            var panel = document.getElementById('colaborador-notebook-panel');
+            var activeTab = document.querySelector('.emp-notebook-tab.active');
+            renderNotebookPanel(activeTab ? activeTab.getAttribute('data-tab') : 'cv', panel);
+            if (msg) msg.textContent = 'Formulario limpio.';
         };
         
         window.editarColaborador = function() {
             alert('Funcionalidad de edición no implementada.');
+        };
+
+        window.eliminarColaborador = async function() {
+            var idInput = document.getElementById('colab-id');
+            var msg = document.getElementById('colaborador-form-msg');
+            var colabId = (idInput && idInput.value) ? String(idInput.value).trim() : '';
+            if (!colabId) {
+                if (msg) msg.textContent = 'Selecciona un colaborador para eliminar.';
+                return;
+            }
+            if (!confirm('¿Eliminar este colaborador?')) return;
+            if (msg) msg.textContent = 'Eliminando...';
+            try {
+                var res = await fetch('/api/colaboradores/' + encodeURIComponent(colabId), { method: 'DELETE' });
+                var json = await res.json().catch(function() { return {}; });
+                if (!res.ok || json?.success === false) {
+                    throw new Error((json && (json.error || json.detail)) || 'No se pudo eliminar');
+                }
+                if (msg) msg.textContent = 'Colaborador eliminado.';
+                await load();
+                setView('form');
+                setTimeout(function() {
+                    var form = document.getElementById('colaborador-form');
+                    if (form) form.reset();
+                    var photo = document.getElementById('colab-photo-preview');
+                    if (photo) photo.src = '/icon/usuario.png';
+                    var idEl = document.getElementById('colab-id');
+                    if (idEl) idEl.value = '';
+                }, 80);
+            } catch (err) {
+                if (msg) msg.textContent = (err && err.message) ? err.message : 'Error al eliminar.';
+            }
         };
         
         // Cargar datos

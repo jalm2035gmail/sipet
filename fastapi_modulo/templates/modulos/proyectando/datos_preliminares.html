@@ -1,87 +1,324 @@
-<section class="notebook-section proyectando-scope">
+<section class="notebook-section proyectando-scope proyectando-notebook-oficial">
   <div class="notebook-tabs" role="tablist" aria-label="Datos preliminares">
-    <button type="button" class="tab active" data-tab="datos-generales">Datos generales</button>
-    <button type="button" class="tab" data-tab="macroeconomia">Macroeconomia</button>
-    <button type="button" class="tab" data-tab="sucursales">Sucursales</button>
-    <button type="button" class="tab" data-tab="informacion-financiera">Información financiera</button>
-    <button type="button" class="tab" data-tab="activo-fijo">Activo fijo</button>
-    <button type="button" class="tab" data-tab="gastos">Gastos</button>
+    <button type="button" class="tab active" data-tab="datos-generales"><img src="/templates/icon/datos_generales.svg" alt="" class="tab-icon">Datos generales</button>
+    <button type="button" class="tab" data-tab="macroeconomia"><img src="/templates/icon/macroeconomia.svg" alt="" class="tab-icon">Macroeconomía</button>
+    <button type="button" class="tab" data-tab="sucursales"><img src="/templates/icon/sucursales.svg" alt="" class="tab-icon">Sucursales</button>
+    <button type="button" class="tab" data-tab="informacion-financiera"><img src="/templates/icon/informacion_financiera.svg" alt="" class="tab-icon">Información financiera</button>
+    <button type="button" class="tab" data-tab="activo-fijo"><img src="/templates/icon/activo_fijo.svg" alt="" class="tab-icon">Activo fijo</button>
+    <button type="button" class="tab" data-tab="gastos"><img src="/templates/icon/gastos.svg" alt="" class="tab-icon">Gastos</button>
   </div>
 
   <div class="notebook-content">
     <section class="tab-panel" data-panel="datos-generales">
-      <form class="proyectando-form" autocomplete="off">
-        <div class="proyectando-form-row">
-          <div class="form-field">
-            <label for="dp-primer-anio">Primer año de proyección</label>
-            <input id="dp-primer-anio" class="campo-personalizado" type="number" min="2000" step="1" placeholder="2026">
-          </div>
-          <div class="form-field">
-            <label for="dp-anios">Años de proyección</label>
-            <input id="dp-anios" class="campo-personalizado" type="number" min="1" max="10" step="1" placeholder="3">
-          </div>
-          <div class="form-field">
-            <label for="dp-moneda">Moneda</label>
-            <select id="dp-moneda" class="campo-personalizado">
-              <option value="$">$</option>
-              <option value="USD">USD</option>
-            </select>
-          </div>
-        </div>
-        <div class="proyectando-form-row">
-          <div class="form-field">
-            <label for="dp-inflacion">Inflación estimada (%)</label>
-            <input id="dp-inflacion" class="campo-personalizado" type="number" step="0.01" min="0" placeholder="0.00">
-          </div>
-          <div class="form-field">
-            <label for="dp-tasa">Tasa de crecimiento (%)</label>
-            <input id="dp-tasa" class="campo-personalizado" type="number" step="0.01" placeholder="0.00">
-          </div>
-          <div class="form-field">
-            <label for="dp-observaciones">Observaciones</label>
-            <input id="dp-observaciones" class="campo-personalizado" type="text" placeholder="Notas del escenario">
-          </div>
-        </div>
-        <div class="proyectando-actions">
-          <button type="button" class="proyectando-btn">Guardar</button>
-          <button type="button" class="proyectando-btn alt">Limpiar</button>
-        </div>
-      </form>
+      <div>
+        <label for="dp-responsable-general">Responsable general</label>
+        <input id="dp-responsable-general" type="text">
+      </div>
+      <div>
+        <label for="dp-primer-anio">Primer año de proyección</label>
+        <input id="dp-primer-anio" type="number">
+      </div>
+      <div>
+        <label for="dp-anios">Años de proyección</label>
+        <input id="dp-anios" type="number">
+      </div>
+      <div>
+        <label for="dp-moneda">Moneda</label>
+        <input id="dp-moneda" type="text">
+      </div>
+      <div>
+        <label for="dp-inflacion">Inflación estimada (%)</label>
+        <input id="dp-inflacion" type="text">
+      </div>
+      <div>
+        <label for="dp-tasa">Tasa de crecimiento (%)</label>
+        <input id="dp-tasa" type="text">
+      </div>
+      <div>
+        <label for="dp-observaciones">Observaciones</label>
+        <input id="dp-observaciones" type="text">
+      </div>
+      <div>
+        <label for="dp-sociedad">Sociedad</label>
+        <input id="dp-sociedad" type="text">
+      </div>
+      <div>
+        <label for="dp-figura-juridica">Figura jurídica</label>
+        <input id="dp-figura-juridica" type="text">
+      </div>
+      <div>
+        <label for="dp-calle">Calle</label>
+        <input id="dp-calle" type="text">
+      </div>
+      <div>
+        <label for="dp-numero-exterior">Número exterior</label>
+        <input id="dp-numero-exterior" type="text">
+      </div>
+      <div>
+        <label for="dp-numero-interior">Número interior</label>
+        <input id="dp-numero-interior" type="text">
+      </div>
+      <div>
+        <label for="dp-colonia">Colonia</label>
+        <input id="dp-colonia" type="text">
+      </div>
+      <div>
+        <label for="dp-ciudad">Ciudad</label>
+        <input id="dp-ciudad" type="text">
+      </div>
+      <div>
+        <label for="dp-municipio">Municipio</label>
+        <input id="dp-municipio" type="text">
+      </div>
+      <div>
+        <label for="dp-estado">Estado</label>
+        <input id="dp-estado" type="text">
+      </div>
+      <div>
+        <label for="dp-cp">CP</label>
+        <input id="dp-cp" type="text">
+      </div>
+      <div>
+        <label for="dp-pais">País</label>
+        <input id="dp-pais" type="text">
+      </div>
     </section>
 
     <section class="tab-panel" data-panel="macroeconomia" hidden>
-      <div class="proyectando-card">
-        <h3 class="proyectando-title">Macroeconomía</h3>
-        <p class="proyectando-muted">Variables macroeconómicas relevantes para la proyección.</p>
+      <div>
+        <label for="dp-macro-inflacion-json">macro_inflacion_json</label>
+        <textarea id="dp-macro-inflacion-json" rows="8"></textarea>
+      </div>
+      <div>
+        <label for="dp-macro-udi-json">macro_udi_json</label>
+        <textarea id="dp-macro-udi-json" rows="8"></textarea>
       </div>
     </section>
 
     <section class="tab-panel" data-panel="sucursales" hidden>
-      <div class="proyectando-card">
-        <h3 class="proyectando-title">Sucursales</h3>
-        <p class="proyectando-muted">Gestión y proyección de sucursales.</p>
-      </div>
+      <p>Las sucursales se guardan en su propio store de sucursales.</p>
     </section>
 
     <section class="tab-panel" data-panel="informacion-financiera" hidden>
-      <div class="proyectando-card">
-        <h3 class="proyectando-title">Información financiera</h3>
-        <p class="proyectando-muted">Datos y supuestos financieros clave.</p>
+      <div>
+        <label for="dp-ifb-activos-m3">ifb_activos_m3</label>
+        <input id="dp-ifb-activos-m3" type="text">
+      </div>
+      <div>
+        <label for="dp-ifb-activos-m2">ifb_activos_m2</label>
+        <input id="dp-ifb-activos-m2" type="text">
+      </div>
+      <div>
+        <label for="dp-ifb-activos-m1">ifb_activos_m1</label>
+        <input id="dp-ifb-activos-m1" type="text">
+      </div>
+      <div>
+        <label for="dp-ifb-pasivos-m3">ifb_pasivos_m3</label>
+        <input id="dp-ifb-pasivos-m3" type="text">
+      </div>
+      <div>
+        <label for="dp-ifb-pasivos-m2">ifb_pasivos_m2</label>
+        <input id="dp-ifb-pasivos-m2" type="text">
+      </div>
+      <div>
+        <label for="dp-ifb-pasivos-m1">ifb_pasivos_m1</label>
+        <input id="dp-ifb-pasivos-m1" type="text">
+      </div>
+      <div>
+        <label for="dp-ifb-capital-m3">ifb_capital_m3</label>
+        <input id="dp-ifb-capital-m3" type="text">
+      </div>
+      <div>
+        <label for="dp-ifb-capital-m2">ifb_capital_m2</label>
+        <input id="dp-ifb-capital-m2" type="text">
+      </div>
+      <div>
+        <label for="dp-ifb-capital-m1">ifb_capital_m1</label>
+        <input id="dp-ifb-capital-m1" type="text">
+      </div>
+      <div>
+        <label for="dp-ifb-ingresos-m3">ifb_ingresos_m3</label>
+        <input id="dp-ifb-ingresos-m3" type="text">
+      </div>
+      <div>
+        <label for="dp-ifb-ingresos-m2">ifb_ingresos_m2</label>
+        <input id="dp-ifb-ingresos-m2" type="text">
+      </div>
+      <div>
+        <label for="dp-ifb-ingresos-m1">ifb_ingresos_m1</label>
+        <input id="dp-ifb-ingresos-m1" type="text">
+      </div>
+      <div>
+        <label for="dp-ifb-egresos-m3">ifb_egresos_m3</label>
+        <input id="dp-ifb-egresos-m3" type="text">
+      </div>
+      <div>
+        <label for="dp-ifb-egresos-m2">ifb_egresos_m2</label>
+        <input id="dp-ifb-egresos-m2" type="text">
+      </div>
+      <div>
+        <label for="dp-ifb-egresos-m1">ifb_egresos_m1</label>
+        <input id="dp-ifb-egresos-m1" type="text">
+      </div>
+      <div>
+        <label for="dp-ifb-resultado-m3">ifb_resultado_m3</label>
+        <input id="dp-ifb-resultado-m3" type="text">
+      </div>
+      <div>
+        <label for="dp-ifb-resultado-m2">ifb_resultado_m2</label>
+        <input id="dp-ifb-resultado-m2" type="text">
+      </div>
+      <div>
+        <label for="dp-ifb-resultado-m1">ifb_resultado_m1</label>
+        <input id="dp-ifb-resultado-m1" type="text">
+      </div>
+      <div>
+        <label for="dp-ifb-rows-json">ifb_rows_json</label>
+        <textarea id="dp-ifb-rows-json" rows="8"></textarea>
+      </div>
+      <div>
+        <label for="dp-ifb-conceptos-json">ifb_conceptos_json</label>
+        <textarea id="dp-ifb-conceptos-json" rows="8"></textarea>
+      </div>
+      <div>
+        <label for="dp-cg-activo-total-growth-json">cg_activo_total_growth_json</label>
+        <textarea id="dp-cg-activo-total-growth-json" rows="6"></textarea>
+      </div>
+      <div>
+        <label for="dp-cg-activo-total-rows-json">cg_activo_total_rows_json</label>
+        <textarea id="dp-cg-activo-total-rows-json" rows="6"></textarea>
+      </div>
+      <div>
+        <label for="dp-cg-financiamiento-rows-json">cg_financiamiento_rows_json</label>
+        <textarea id="dp-cg-financiamiento-rows-json" rows="6"></textarea>
       </div>
     </section>
 
     <section class="tab-panel" data-panel="activo-fijo" hidden>
-      <div class="proyectando-card">
-        <h3 class="proyectando-title">Activo fijo</h3>
-        <p class="proyectando-muted">Detalle y proyección de activos fijos.</p>
+      <div>
+        <label for="dp-activo-fijo-json">activo_fijo_json</label>
+        <textarea id="dp-activo-fijo-json" rows="10"></textarea>
       </div>
     </section>
 
     <section class="tab-panel" data-panel="gastos" hidden>
-      <div class="proyectando-card">
-        <h3 class="proyectando-title">Gastos</h3>
-        <p class="proyectando-muted">Proyección y desglose de gastos.</p>
+      <div>
+        <label for="dp-gastos-rows-json">gastos_rows_json</label>
+        <textarea id="dp-gastos-rows-json" rows="12"></textarea>
       </div>
     </section>
   </div>
+
+  <div style="margin-top:12px;display:flex;gap:8px;align-items:center;">
+    <button type="button" id="dp-save-btn">Guardar</button>
+    <button type="button" id="dp-clear-btn">Limpiar</button>
+    <span id="dp-msg"></span>
+  </div>
 </section>
+
+<script>
+(function () {
+  var keyById = {
+    "dp-responsable-general": "responsable_general",
+    "dp-primer-anio": "primer_anio_proyeccion",
+    "dp-anios": "anios_proyeccion",
+    "dp-moneda": "moneda",
+    "dp-inflacion": "inflacion_estimada",
+    "dp-tasa": "tasa_crecimiento",
+    "dp-observaciones": "observaciones",
+    "dp-sociedad": "sociedad",
+    "dp-figura-juridica": "figura_juridica",
+    "dp-calle": "calle",
+    "dp-numero-exterior": "numero_exterior",
+    "dp-numero-interior": "numero_interior",
+    "dp-colonia": "colonia",
+    "dp-ciudad": "ciudad",
+    "dp-municipio": "municipio",
+    "dp-estado": "estado",
+    "dp-cp": "cp",
+    "dp-pais": "pais",
+    "dp-macro-inflacion-json": "macro_inflacion_json",
+    "dp-macro-udi-json": "macro_udi_json",
+    "dp-ifb-activos-m3": "ifb_activos_m3",
+    "dp-ifb-activos-m2": "ifb_activos_m2",
+    "dp-ifb-activos-m1": "ifb_activos_m1",
+    "dp-ifb-pasivos-m3": "ifb_pasivos_m3",
+    "dp-ifb-pasivos-m2": "ifb_pasivos_m2",
+    "dp-ifb-pasivos-m1": "ifb_pasivos_m1",
+    "dp-ifb-capital-m3": "ifb_capital_m3",
+    "dp-ifb-capital-m2": "ifb_capital_m2",
+    "dp-ifb-capital-m1": "ifb_capital_m1",
+    "dp-ifb-ingresos-m3": "ifb_ingresos_m3",
+    "dp-ifb-ingresos-m2": "ifb_ingresos_m2",
+    "dp-ifb-ingresos-m1": "ifb_ingresos_m1",
+    "dp-ifb-egresos-m3": "ifb_egresos_m3",
+    "dp-ifb-egresos-m2": "ifb_egresos_m2",
+    "dp-ifb-egresos-m1": "ifb_egresos_m1",
+    "dp-ifb-resultado-m3": "ifb_resultado_m3",
+    "dp-ifb-resultado-m2": "ifb_resultado_m2",
+    "dp-ifb-resultado-m1": "ifb_resultado_m1",
+    "dp-ifb-rows-json": "ifb_rows_json",
+    "dp-ifb-conceptos-json": "ifb_conceptos_json",
+    "dp-cg-activo-total-growth-json": "cg_activo_total_growth_json",
+    "dp-cg-activo-total-rows-json": "cg_activo_total_rows_json",
+    "dp-cg-financiamiento-rows-json": "cg_financiamiento_rows_json",
+    "dp-activo-fijo-json": "activo_fijo_json",
+    "dp-gastos-rows-json": "gastos_rows_json"
+  };
+
+  var saveBtn = document.getElementById("dp-save-btn");
+  var clearBtn = document.getElementById("dp-clear-btn");
+  var msg = document.getElementById("dp-msg");
+
+  async function loadData() {
+    try {
+      var res = await fetch("/api/proyectando/datos-preliminares");
+      var json = await res.json();
+      if (!res.ok || !json || json.success === false) return;
+      var data = json.data || {};
+      Object.keys(keyById).forEach(function (id) {
+        var el = document.getElementById(id);
+        if (!el) return;
+        var key = keyById[id];
+        el.value = data[key] != null ? String(data[key]) : "";
+      });
+    } catch (_) {}
+  }
+
+  async function saveData() {
+    if (msg) msg.textContent = "Guardando...";
+    var payload = {};
+    Object.keys(keyById).forEach(function (id) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      payload[keyById[id]] = (el.value || "").trim();
+    });
+    try {
+      var res = await fetch("/api/proyectando/datos-preliminares/datos-generales", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      var json = await res.json().catch(function () { return {}; });
+      if (!res.ok || !json || json.success === false) {
+        throw new Error((json && (json.error || json.detail)) || "No se pudo guardar");
+      }
+      if (msg) msg.textContent = "Guardado.";
+    } catch (err) {
+      if (msg) msg.textContent = (err && err.message) ? err.message : "Error al guardar.";
+    }
+  }
+
+  function clearData() {
+    Object.keys(keyById).forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.value = "";
+    });
+    if (msg) msg.textContent = "Campos limpiados.";
+  }
+
+  if (saveBtn) saveBtn.addEventListener("click", saveData);
+  if (clearBtn) clearBtn.addEventListener("click", clearData);
+  loadData();
+})();
+</script>

@@ -17,6 +17,10 @@ DEFAULT_DATOS_GENERALES = {
     "responsable_general": "",
     "primer_anio_proyeccion": "",
     "anios_proyeccion": "3",
+    "moneda": "$",
+    "inflacion_estimada": "",
+    "tasa_crecimiento": "",
+    "observaciones": "",
     "sociedad": "",
     "figura_juridica": "",
     "calle": "",
@@ -46,6 +50,15 @@ DEFAULT_DATOS_GENERALES = {
     "ifb_resultado_m3": "",
     "ifb_resultado_m2": "",
     "ifb_resultado_m1": "",
+    "macro_inflacion_json": "",
+    "macro_udi_json": "",
+    "activo_fijo_json": "",
+    "gastos_rows_json": "",
+    "ifb_rows_json": "",
+    "ifb_conceptos_json": "",
+    "cg_activo_total_growth_json": "",
+    "cg_activo_total_rows_json": "",
+    "cg_financiamiento_rows_json": "",
 }
 
 

@@ -30,6 +30,11 @@ async def guardar_datos_preliminares_generales(data: dict = Body(...)):
     return {"success": True, "data": updated}
 
 
+@router.get("/api/proyectando/datos-preliminares")
+async def obtener_datos_preliminares():
+    return {"success": True, "data": load_datos_preliminares_store()}
+
+
 @router.get("/proyectando/datos-preliminares", response_class=HTMLResponse)
 def proyectando_datos_preliminares_page(request: Request):
     try:
