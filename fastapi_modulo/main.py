@@ -5678,6 +5678,12 @@ def identidad_institucional_page(request: Request):
     return _render_identidad_institucional_page(request)
 
 
+@app.get("/identidad-institucional/", response_class=HTMLResponse)
+def identidad_institucional_page_slash(request: Request):
+    require_superadmin(request)
+    return RedirectResponse(url="/identidad-institucional", status_code=307)
+
+
 @app.post("/identidad-institucional", response_class=HTMLResponse)
 async def identidad_institucional_save(
     request: Request,

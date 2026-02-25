@@ -32,6 +32,15 @@ def _is_admin_role(role_name: str) -> bool:
     role = (role_name or "").strip().lower()
     return role in {"superadministrador", "administrador"}
 
+
+def _allowed_role_assignments(viewer_role: str) -> set[str]:
+    role = (viewer_role or "").strip().lower()
+    if role == "superadministrador":
+        return {"superadministrador", "usuario", "autoridades", "departamento"}
+    if role == "administrador":
+        return {"administrador", "usuario", "autoridades", "departamento"}
+    return set()
+
 EMPLEADOS_TEMPLATE_PATH = os.path.join(
     "fastapi_modulo",
     "templates",
@@ -44,12 +53,15 @@ EMPLEADOS_TEMPLATE_PATH = os.path.join(
 @router.get("/api/colaboradores", response_class=JSONResponse)
 def api_listar_colaboradores(request: Request):
     # Import diferido para evitar importación circular con fastapi_modulo.main.
-    from fastapi_modulo.main import Usuario, _decrypt_sensitive
+    from fastapi_modulo.main import Usuario, Rol, _decrypt_sensitive, normalize_role_name
 
     db = SessionLocal()
     try:
         meta = _load_colab_meta()
         rows = db.query(Usuario).all()
+        roles_by_id = {role.id: normalize_role_name(role.nombre) for role in db.query(Rol).all()}
+        viewer_role = (getattr(request.state, "user_role", None) or "").strip().lower()
+        assignable_roles = sorted(_allowed_role_assignments(viewer_role))
         data: List[Dict[str, Any]] = [
             {
                 "id": u.id,
@@ -60,17 +72,36 @@ def api_listar_colaboradores(request: Request):
                 "imagen": u.imagen or "",
                 "jefe": u.jefe or "",
                 "puesto": u.puesto or "",
+                "rol": (
+                    roles_by_id.get(u.rol_id)
+                    or normalize_role_name(getattr(u, "role", "") or "usuario")
+                    or "usuario"
+                ),
                 "colaborador": bool(meta.get(str(u.id), {}).get("colaborador", False)),
+                "menu_blocks": meta.get(str(u.id), {}).get("menu_blocks", []),
                 "estado": "Activo" if getattr(u, "is_active", True) else "Inactivo",
             }
             for u in rows
         ]
-        viewer_username = (getattr(request.state, "user_name", None) or "").strip().lower()
-        viewer_role = (getattr(request.state, "user_role", None) or "").strip().lower()
         can_view_all = _is_admin_role(viewer_role)
-        if not can_view_all:
+        viewer_username = (getattr(request.state, "user_name", None) or "").strip().lower()
+        if viewer_role == "superadministrador":
+            pass
+        elif viewer_role == "administrador":
+            data = [row for row in data if (row.get("rol") or "").strip().lower() != "superadministrador"]
+        else:
             data = [row for row in data if (row.get("usuario") or "").strip().lower() == viewer_username]
-        return {"success": True, "data": data, "viewer_role": viewer_role, "can_view_all": can_view_all}
+            for row in data:
+                if (row.get("rol") or "").strip().lower() == "superadministrador":
+                    row["rol"] = ""
+        return {
+            "success": True,
+            "data": data,
+            "viewer_role": viewer_role,
+            "can_view_all": can_view_all,
+            "can_manage_access": can_view_all,
+            "assignable_roles": assignable_roles,
+        }
     finally:
         db.close()
 
@@ -78,12 +109,13 @@ def api_listar_colaboradores(request: Request):
 @router.get("/api/colaboradores/organigrama", response_class=JSONResponse)
 def api_organigrama_colaboradores(request: Request):
     # Import diferido para evitar importación circular con fastapi_modulo.main.
-    from fastapi_modulo.main import Usuario, _decrypt_sensitive
+    from fastapi_modulo.main import Usuario, Rol, _decrypt_sensitive, normalize_role_name
 
     db = SessionLocal()
     try:
         meta = _load_colab_meta()
         rows = db.query(Usuario).all()
+        roles_by_id = {role.id: normalize_role_name(role.nombre) for role in db.query(Rol).all()}
         all_rows: List[Dict[str, Any]] = [
             {
                 "id": u.id,
@@ -94,6 +126,11 @@ def api_organigrama_colaboradores(request: Request):
                 "imagen": u.imagen or "",
                 "jefe": u.jefe or "",
                 "puesto": u.puesto or "",
+                "rol": (
+                    roles_by_id.get(u.rol_id)
+                    or normalize_role_name(getattr(u, "role", "") or "usuario")
+                    or "usuario"
+                ),
                 "colaborador": bool(meta.get(str(u.id), {}).get("colaborador", False)),
                 "estado": "Activo" if getattr(u, "is_active", True) else "Inactivo",
             }
@@ -105,6 +142,8 @@ def api_organigrama_colaboradores(request: Request):
         viewer_username = (getattr(request.state, "user_name", None) or "").strip().lower()
         viewer_role = (getattr(request.state, "user_role", None) or "").strip().lower()
         can_view_all = _is_admin_role(viewer_role)
+        if viewer_role == "administrador":
+            all_rows = [row for row in all_rows if (row.get("rol") or "").strip().lower() != "superadministrador"]
         if can_view_all:
             return {"success": True, "data": all_rows, "viewer_role": viewer_role, "can_view_all": True}
 
@@ -147,9 +186,12 @@ def api_guardar_colaborador(request: Request, data: dict = Body(...)):
         _encrypt_sensitive,
         _sensitive_lookup_hash,
         hash_password,
+        normalize_role_name,
         require_admin_or_superadmin,
     )
     require_admin_or_superadmin(request)
+    viewer_role = (getattr(request.state, "user_role", None) or "").strip().lower()
+    allowed_assignments = _allowed_role_assignments(viewer_role)
     nombre = (data.get("nombre") or "").strip()
     usuario_login = (data.get("usuario") or "").strip()
     correo = (data.get("correo") or "").strip()
@@ -159,6 +201,16 @@ def api_guardar_colaborador(request: Request, data: dict = Body(...)):
     nivel_organizacional = (data.get("nivel_organizacional") or "").strip()
     imagen = (data.get("imagen") or "").strip()
     colaborador = bool(data.get("colaborador"))
+    requested_role = normalize_role_name((data.get("rol") or "").strip() or "usuario")
+    if requested_role not in allowed_assignments:
+        requested_role = "usuario"
+    raw_menu_blocks = data.get("menu_blocks")
+    menu_blocks: List[str] = []
+    if isinstance(raw_menu_blocks, list):
+        menu_blocks = [str(item).strip() for item in raw_menu_blocks if str(item).strip()]
+    elif isinstance(raw_menu_blocks, str) and raw_menu_blocks.strip():
+        menu_blocks = [raw_menu_blocks.strip()]
+    menu_blocks = sorted(set(menu_blocks))
 
     if not nombre or not usuario_login or not correo:
         return JSONResponse(
@@ -168,8 +220,10 @@ def api_guardar_colaborador(request: Request, data: dict = Body(...)):
 
     db = SessionLocal()
     try:
-        role_usuario = db.query(Rol).filter(Rol.nombre == "usuario").first()
-        rol_id = role_usuario.id if role_usuario else None
+        target_role = db.query(Rol).filter(Rol.nombre == requested_role).first()
+        if not target_role:
+            return JSONResponse({"success": False, "error": "Rol no encontrado"}, status_code=404)
+        rol_id = target_role.id
         user_hash = _sensitive_lookup_hash(usuario_login)
         email_hash = _sensitive_lookup_hash(correo)
 
@@ -196,14 +250,17 @@ def api_guardar_colaborador(request: Request, data: dict = Body(...)):
             existing.celular = celular
             existing.coach = nivel_organizacional
             existing.imagen = imagen or None
-            existing.role = existing.role or "usuario"
-            existing.rol_id = existing.rol_id or rol_id
+            existing.role = requested_role
+            existing.rol_id = rol_id
             existing.is_active = True
             db.add(existing)
             db.commit()
             db.refresh(existing)
             meta = _load_colab_meta()
-            meta[str(existing.id)] = {"colaborador": colaborador}
+            meta[str(existing.id)] = {
+                "colaborador": colaborador,
+                "menu_blocks": menu_blocks,
+            }
             _save_colab_meta(meta)
             return {
                 "success": True,
@@ -217,7 +274,9 @@ def api_guardar_colaborador(request: Request, data: dict = Body(...)):
                     "celular": existing.celular or "",
                     "nivel_organizacional": existing.coach or "",
                     "imagen": existing.imagen or "",
+                    "rol": requested_role,
                     "colaborador": colaborador,
+                    "menu_blocks": menu_blocks,
                     "estado": "Activo" if bool(getattr(existing, "is_active", True)) else "Inactivo",
                 },
             }
@@ -234,7 +293,7 @@ def api_guardar_colaborador(request: Request, data: dict = Body(...)):
             celular=celular,
             coach=nivel_organizacional,
             imagen=imagen or None,
-            role="usuario",
+            role=requested_role,
             rol_id=rol_id,
             is_active=True,
         )
@@ -242,7 +301,10 @@ def api_guardar_colaborador(request: Request, data: dict = Body(...)):
         db.commit()
         db.refresh(nuevo)
         meta = _load_colab_meta()
-        meta[str(nuevo.id)] = {"colaborador": colaborador}
+        meta[str(nuevo.id)] = {
+            "colaborador": colaborador,
+            "menu_blocks": menu_blocks,
+        }
         _save_colab_meta(meta)
         return {
             "success": True,
@@ -256,7 +318,9 @@ def api_guardar_colaborador(request: Request, data: dict = Body(...)):
                 "celular": nuevo.celular or "",
                 "nivel_organizacional": nuevo.coach or "",
                 "imagen": nuevo.imagen or "",
+                "rol": requested_role,
                 "colaborador": colaborador,
+                "menu_blocks": menu_blocks,
                 "estado": "Activo",
             },
         }

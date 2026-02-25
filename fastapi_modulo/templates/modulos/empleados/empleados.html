@@ -190,33 +190,57 @@
         }
         .emp-notebook {
             margin-top: 8px;
-            border: 1px solid #dbe3ef;
+            border: 1px solid color-mix(in srgb, var(--sidebar-bottom, #0f172a) 16%, #ffffff 84%);
             border-radius: 12px;
             background: #ffffff;
             overflow: hidden;
         }
         .emp-notebook-tabs {
             display: flex;
-            gap: 0;
-            border-bottom: 1px solid #e2e8f0;
-            background: #f8fafc;
+            align-items: center;
+            gap: 2px;
+            border-bottom: 1px solid color-mix(in srgb, var(--sidebar-bottom, #0f172a) 28%, #ffffff 72%);
+            background: #ffffff;
         }
         .emp-notebook-tab {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
             border: 0;
-            border-right: 1px solid #e2e8f0;
             background: transparent;
-            color: #334155;
-            font-weight: 700;
-            padding: 10px 14px;
+            color: #1f2937;
+            font-weight: 600;
+            font-size: 1rem;
+            padding: 12px 16px 14px;
             cursor: pointer;
         }
+        .emp-notebook-tab::after {
+            content: "";
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: -1px;
+            height: 4px;
+            background: transparent;
+            transition: background 0.18s ease;
+        }
         .emp-notebook-tab.active {
-            background: #ffffff;
-            color: #0f172a;
+            color: var(--sidebar-bottom, #0f172a);
+            background: transparent;
+        }
+        .emp-notebook-tab.active::after {
+            background: var(--sidebar-bottom, #0f172a);
+        }
+        .emp-notebook-tab .tab-icon {
+            width: 18px;
+            height: 18px;
+            display: inline-block;
+            flex: 0 0 auto;
         }
         .emp-notebook-panel {
             min-height: 180px;
-            padding: 16px;
+            padding: 14px 16px 16px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -230,7 +254,7 @@
         .emp-kanban-card {
             position: relative;
             display: grid;
-            grid-template-columns: 210px minmax(0, 1fr);
+            grid-template-columns: 150px minmax(0, 1fr);
             border: 1px solid #cbd5e1;
             border-radius: 16px;
             background: #f8fafc;
@@ -251,12 +275,12 @@
         .emp-kanban-status-dot.pendiente { background: #f59e0b; }
         .emp-kanban-avatar {
             background: color-mix(in srgb, var(--sidebar-bottom, #0f172a) 78%, #34d399 22%);
-            min-height: 190px;
+            min-height: 130px;
             display: flex;
             align-items: center;
             justify-content: center;
             color: #ffffff;
-            font-size: 5.1rem;
+            font-size: 3rem;
             font-weight: 700;
             letter-spacing: 0.02em;
             overflow: hidden;
@@ -275,16 +299,16 @@
         }
         .emp-kanban-name {
             margin: 0;
-            font-size: 2.95rem;
-            line-height: 1.02;
+            font-size: 1.08rem;
+            line-height: 1.2;
             color: #3f4852;
             font-weight: 700;
             max-width: calc(100% - 40px);
         }
         .emp-kanban-puesto {
             margin: 0;
-            font-size: 2.1rem;
-            line-height: 1.08;
+            font-size: 0.96rem;
+            line-height: 1.3;
             color: #46505a;
             font-weight: 500;
         }
@@ -294,7 +318,7 @@
             align-items: center;
             gap: 10px;
             color: #46505a;
-            font-size: 2rem;
+            font-size: 0.9rem;
             font-weight: 500;
         }
         .emp-kanban-email a {
@@ -305,15 +329,15 @@
             text-decoration: underline;
         }
         .emp-kanban-mail-icon {
-            width: 40px;
-            height: 40px;
+            width: 22px;
+            height: 22px;
             border-radius: 8px;
             background: #2f3f4e;
             display: inline-flex;
             align-items: center;
             justify-content: center;
             color: #ffffff;
-            font-size: 1.5rem;
+            font-size: 0.85rem;
             line-height: 1;
             flex: 0 0 auto;
         }
@@ -333,31 +357,31 @@
             line-height: 1;
         }
         .emp-kanban-action.main {
-            width: 52px;
-            height: 52px;
+            width: 42px;
+            height: 42px;
             border-radius: 10px;
             background: #42a37f;
             color: #ffffff;
-            font-size: 2rem;
+            font-size: 1.4rem;
             font-weight: 700;
         }
         .emp-kanban-action.clock {
-            width: 40px;
-            height: 40px;
+            width: 32px;
+            height: 32px;
             border-radius: 999px;
             border: 1px solid #9ca3af;
-            font-size: 1.45rem;
+            font-size: 1rem;
             display: inline-flex;
             align-items: center;
             justify-content: center;
         }
         @media (max-width: 1200px) {
             .emp-kanban-card {
-                grid-template-columns: 160px minmax(0, 1fr);
+                grid-template-columns: 130px minmax(0, 1fr);
             }
-            .emp-kanban-name { font-size: 2rem; }
-            .emp-kanban-puesto { font-size: 1.5rem; }
-            .emp-kanban-email { font-size: 1.28rem; }
+            .emp-kanban-name { font-size: 1.02rem; }
+            .emp-kanban-puesto { font-size: 0.9rem; }
+            .emp-kanban-email { font-size: 0.84rem; }
         }
         @media (max-width: 760px) {
             .emp-kanban-card {
@@ -420,6 +444,9 @@
         
         var empleadosData = [];
         var viewerCanViewAll = false;
+        var viewerCanManageAccess = false;
+        var viewerAssignableRoles = [];
+        var currentAccessState = { rol: 'usuario', menu_blocks: [] };
         
         // Función para escapar caracteres HTML
         function esc(v) {
@@ -443,6 +470,88 @@
             if (key === 'inactivo') return 'inactivo';
             return 'pendiente';
         }
+        function detectMenuBlocks() {
+            var nodes = document.querySelectorAll('.sidebar-menu > details > summary .sidebar-item-label, .sidebar-menu > .sidebar-link .sidebar-item-label');
+            var labels = [];
+            for (var i = 0; i < nodes.length; i++) {
+                var txt = (nodes[i].textContent || '').trim();
+                if (txt && labels.indexOf(txt) === -1) labels.push(txt);
+            }
+            return labels;
+        }
+        function labelFromRole(role) {
+            var normalized = String(role || '').trim().toLowerCase();
+            if (normalized === 'superadministrador') return 'Superadministrador';
+            if (normalized === 'administrador') return 'Administrador';
+            if (normalized === 'autoridades') return 'Autoridades';
+            if (normalized === 'departamento') return 'Departamento';
+            return 'Usuario';
+        }
+        function renderNotebookPanel(tabName, panel) {
+            if (!panel) return;
+            if (tabName === 'cv' || tabName === 'habilidades') {
+                panel.textContent = 'Sin acceso';
+                return;
+            }
+            if (!viewerCanManageAccess) {
+                panel.textContent = 'Sin acceso';
+                return;
+            }
+            var menuBlocks = detectMenuBlocks();
+            var roleChoices = [];
+            for (var r = 0; r < viewerAssignableRoles.length; r++) {
+                roleChoices.push(
+                    '<label style="display:inline-flex;align-items:center;gap:8px;font-weight:600;">' +
+                        '<input type="radio" name="colab-role" value="' + esc(viewerAssignableRoles[r]) + '">' +
+                        esc(labelFromRole(viewerAssignableRoles[r])) +
+                    '</label>'
+                );
+            }
+            if (!roleChoices.length) {
+                roleChoices.push('<span class="emp-empty">Sin roles asignables</span>');
+            }
+            panel.innerHTML =
+                '<div style="width:100%;display:grid;gap:14px;align-items:start;">' +
+                    '<div style="display:grid;gap:8px;">' +
+                        '<strong>Roles</strong>' +
+                        '<div style="display:flex;flex-wrap:wrap;gap:12px;">' + roleChoices.join('') + '</div>' +
+                    '</div>' +
+                    '<div style="display:grid;gap:8px;">' +
+                        '<strong>Bloques del menú</strong>' +
+                        '<div style="display:grid;gap:6px;">' +
+                            menuBlocks.map(function(block) {
+                                return '<label style="display:inline-flex;align-items:center;gap:8px;font-weight:500;">' +
+                                    '<input type="checkbox" name="colab-menu-block" value="' + esc(block) + '">' +
+                                    esc(block) +
+                                '</label>';
+                            }).join('') +
+                        '</div>' +
+                    '</div>' +
+                '</div>';
+            var roleInputs = panel.querySelectorAll('input[name="colab-role"]');
+            for (var i = 0; i < roleInputs.length; i++) {
+                if (roleInputs[i].value === (currentAccessState.rol || 'usuario')) {
+                    roleInputs[i].checked = true;
+                }
+                roleInputs[i].addEventListener('change', function() {
+                    if (this.checked) currentAccessState.rol = this.value;
+                });
+            }
+            var blockInputs = panel.querySelectorAll('input[name="colab-menu-block"]');
+            for (var j = 0; j < blockInputs.length; j++) {
+                if ((currentAccessState.menu_blocks || []).indexOf(blockInputs[j].value) !== -1) {
+                    blockInputs[j].checked = true;
+                }
+                blockInputs[j].addEventListener('change', function() {
+                    var value = this.value;
+                    var list = Array.isArray(currentAccessState.menu_blocks) ? currentAccessState.menu_blocks : [];
+                    var idx = list.indexOf(value);
+                    if (this.checked && idx === -1) list.push(value);
+                    if (!this.checked && idx !== -1) list.splice(idx, 1);
+                    currentAccessState.menu_blocks = list;
+                });
+            }
+        }
         function fillFormWithColaborador(user) {
             if (!user) return;
             var nombre = document.getElementById('colab-nombre');
@@ -455,6 +564,7 @@
             var foto = document.getElementById('colab-photo-preview');
             var fotoUrl = document.getElementById('colab-imagen-url');
             var colaboradorCheck = document.getElementById('colab-colaborador-check');
+            var notebookPanel = document.getElementById('colaborador-notebook-panel');
             if (nombre) nombre.value = user.nombre || '';
             if (puesto) puesto.value = user.puesto || '';
             if (celular) celular.value = user.celular || '';
@@ -464,6 +574,10 @@
             if (colaboradorCheck) colaboradorCheck.checked = !!user.colaborador;
             if (fotoUrl) fotoUrl.value = user.imagen || '';
             if (foto) foto.src = user.imagen || '/icon/usuario.png';
+            currentAccessState = {
+                rol: String(user.rol || 'usuario').trim().toLowerCase() || 'usuario',
+                menu_blocks: Array.isArray(user.menu_blocks) ? user.menu_blocks.slice() : [],
+            };
             if (dept) {
                 var deptValue = user.departamento || '';
                 if (deptValue && !Array.from(dept.options).some(function(opt) { return opt.value === deptValue; })) {
@@ -474,6 +588,8 @@
                 }
                 dept.value = deptValue;
             }
+            var activeTab = document.querySelector('.emp-notebook-tab.active');
+            renderNotebookPanel(activeTab ? activeTab.getAttribute('data-tab') : 'cv', notebookPanel);
         }
         function openColaboradorFromKanban(index) {
             var pos = Number(index);
@@ -485,8 +601,10 @@
         
         // Renderizar vista de lista
         function renderList(rows) {
+            var listBody = document.getElementById('empleados-tbody') || tbody;
+            if (!listBody) return;
             if (!rows || !rows.length) {
-                tbody.innerHTML = '<tr><td colspan="6" class="emp-empty">Sin registros.</td></tr>';
+                listBody.innerHTML = '<tr><td colspan="6" class="emp-empty">Sin registros.</td></tr>';
                 return;
             }
             
@@ -502,7 +620,7 @@
                     '<td>' + esc(u.estado) + '</td>' +
                 '</tr>';
             }
-            tbody.innerHTML = html;
+            listBody.innerHTML = html;
         }
         
         // Renderizar vista de formulario
@@ -571,9 +689,9 @@
                     </section>
                     <div class="emp-notebook" id="colaborador-notebook">
                         <div class="emp-notebook-tabs">
-                            <button type="button" class="emp-notebook-tab active" data-tab="cv">CV</button>
-                            <button type="button" class="emp-notebook-tab" data-tab="habilidades">Habilidades</button>
-                            <button type="button" class="emp-notebook-tab" data-tab="acceso">Acceso</button>
+                            <button type="button" class="emp-notebook-tab active" data-tab="cv"><img src="/templates/icon/cv.svg" alt="" class="tab-icon">CV</button>
+                            <button type="button" class="emp-notebook-tab" data-tab="habilidades"><img src="/templates/icon/habilidades.svg" alt="" class="tab-icon">Habilidades</button>
+                            ${viewerCanManageAccess ? '<button type="button" class="emp-notebook-tab" data-tab="acceso"><img src="/templates/icon/acceso.svg" alt="" class="tab-icon">Acceso</button>' : ''}
                         </div>
                         <div class="emp-notebook-panel" id="colaborador-notebook-panel">Sin acceso</div>
                     </div>
@@ -596,6 +714,7 @@
             var imagenInput = document.getElementById('colab-imagen-url');
             var notebookTabs = empCard.querySelectorAll('.emp-notebook-tab');
             var notebookPanel = document.getElementById('colaborador-notebook-panel');
+            currentAccessState = { rol: 'usuario', menu_blocks: [] };
             if (notebookTabs.length && notebookPanel) {
                 for (var t = 0; t < notebookTabs.length; t++) {
                     notebookTabs[t].addEventListener('click', function() {
@@ -603,9 +722,10 @@
                             notebookTabs[j].classList.remove('active');
                         }
                         this.classList.add('active');
-                        notebookPanel.textContent = 'Sin acceso';
+                        renderNotebookPanel(this.getAttribute('data-tab'), notebookPanel);
                     });
                 }
+                renderNotebookPanel('cv', notebookPanel);
             }
             // Cargar departamentos y llenar el select
             if (deptSelect) {
@@ -667,7 +787,9 @@
                         departamento: (document.getElementById('departamento-select')?.value || '').trim(),
                         nivel_organizacional: (document.getElementById('colab-nivel')?.value || '').trim(),
                         imagen: (document.getElementById('colab-imagen-url')?.value || '').trim(),
-                        colaborador: !!document.getElementById('colab-colaborador-check')?.checked
+                        colaborador: !!document.getElementById('colab-colaborador-check')?.checked,
+                        rol: (currentAccessState.rol || 'usuario'),
+                        menu_blocks: Array.isArray(currentAccessState.menu_blocks) ? currentAccessState.menu_blocks : []
                     };
                     if (!payload.nombre || !payload.usuario || !payload.correo) {
                         if (formMsg) formMsg.textContent = 'Nombre, usuario y correo son obligatorios.';
@@ -845,6 +967,7 @@
                         '</thead>' +
                         '<tbody id="empleados-tbody"></tbody>' +
                     '</table>';
+                tbody = document.getElementById('empleados-tbody');
                 renderList(empleadosData);
             } else if (view === 'form') {
                 renderForm();
@@ -884,6 +1007,8 @@
                 if (!res.ok || json?.success === false) throw new Error();
                 empleadosData = Array.isArray(json?.data) ? json.data : [];
                 viewerCanViewAll = !!json?.can_view_all;
+                viewerCanManageAccess = !!json?.can_manage_access;
+                viewerAssignableRoles = Array.isArray(json?.assignable_roles) ? json.assignable_roles : [];
                 setView('list');
             } catch (e) {
                 empCard.innerHTML = '<p class="emp-empty">No se pudo cargar colaboradores.</p>';
