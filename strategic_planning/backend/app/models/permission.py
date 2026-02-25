@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, Column, Integer, String, Text, Table, ForeignKey
+from sqlalchemy import Boolean, Column, Integer, String, Text, Table, ForeignKey, DateTime
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
@@ -10,7 +10,7 @@ role_permission = Table(
     BaseModel.metadata,
     Column("role_id", Integer, ForeignKey("roles.id"), primary_key=True),
     Column("permission_id", Integer, ForeignKey("permissions.id"), primary_key=True),
-    Column("granted_at", func.now(), nullable=False),
+    Column("granted_at", DateTime(timezone=True), server_default=func.now(), nullable=False),
     Column("granted_by", Integer, ForeignKey("users.id"), nullable=True),
 )
 

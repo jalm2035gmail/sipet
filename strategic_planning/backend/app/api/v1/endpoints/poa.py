@@ -1,8 +1,10 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Response
+import os
 from app.schemas.operational.poa import ActivityCreate
 from app.services.poa_service import POAService, get_poa_service
 
 router = APIRouter(prefix="/poas", tags=["poa"])
+
 
 @router.post("/{poa_id}/activities/")
 async def create_activity(

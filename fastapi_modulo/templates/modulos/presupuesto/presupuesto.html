@@ -1,0 +1,305 @@
+<style>
+  .presupuesto-notebook .notebook-tabs {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    border-bottom: 1px solid color-mix(in srgb, var(--sidebar-bottom, #0f172a) 28%, #ffffff 72%);
+    margin-bottom: 0;
+    padding: 0;
+  }
+  .presupuesto-notebook .notebook-tabs .tab {
+    position: relative;
+    border: 0;
+    background: transparent;
+    color: #1f2937;
+    font-weight: 600;
+    font-size: 1rem;
+    padding: 12px 16px 14px;
+    border-radius: 0;
+    margin: 0;
+  }
+  .presupuesto-notebook .notebook-tabs .tab::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -1px;
+    height: 4px;
+    background: transparent;
+    transition: background 0.18s ease;
+  }
+  .presupuesto-notebook .notebook-tabs .tab.active {
+    color: var(--sidebar-bottom, #0f172a);
+    background: transparent;
+  }
+  .presupuesto-notebook .notebook-tabs .tab.active::after {
+    background: var(--sidebar-bottom, #0f172a);
+  }
+  .presupuesto-notebook .notebook-content {
+    border: 0;
+    padding: 14px 0 0;
+    background: transparent;
+  }
+  .cod-toggle-wrap {
+    position: relative;
+  }
+  .cod-toggle-btn {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    z-index: 2;
+    width: 26px;
+    height: 26px;
+    border-radius: 999px;
+    border: 1px solid var(--sidebar-bottom, #0f172a);
+    background: var(--sidebar-bottom, #0f172a);
+    color: var(--sidebar-text, #ffffff);
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+  }
+  #presupuesto-table th:nth-child(3),
+  #presupuesto-table th:nth-child(4),
+  #presupuesto-table td:nth-child(3),
+  #presupuesto-table td:nth-child(4) {
+    width: 100px;
+    min-width: 100px;
+    max-width: 100px;
+  }
+  #control-mensual-table {
+    min-width: 2800px;
+  }
+  .month-group-head {
+    white-space: nowrap;
+  }
+  .month-toggle-btn {
+    width: 20px;
+    height: 20px;
+    margin-right: 6px;
+    border-radius: 999px;
+    border: 1px solid rgba(15, 23, 42, 0.3);
+    background: #ffffff;
+    color: #0f172a;
+    font-size: 12px;
+    line-height: 1;
+    cursor: pointer;
+    vertical-align: middle;
+  }
+  .month-group-head.is-collapsed {
+    opacity: 0.85;
+  }
+  .tabla-oficial-wrap {
+    overflow: auto;
+    max-height: 65vh;
+  }
+  .tabla-oficial-wrap::-webkit-scrollbar {
+    height: 10px;
+    width: 10px;
+  }
+  .tabla-oficial-wrap::-webkit-scrollbar-thumb {
+    background: rgba(15, 23, 42, 0.35);
+    border-radius: 999px;
+  }
+  .tabla-oficial-wrap::-webkit-scrollbar-track {
+    background: rgba(15, 23, 42, 0.08);
+  }
+</style>
+
+<section>
+  <div style="margin-bottom: 24px;">
+    <a href="/proyectando/descargar-csv-presupuesto" class="color-btn color-btn--primary" download>Descargar CSV</a>
+    <button type="button" id="presupuesto-import-btn" class="color-btn color-btn--ghost">Importar CSV o Excel</button>
+    <button type="button" id="presupuesto-export-pdf-btn" class="color-btn color-btn--ghost">Exportar PDF</button>
+    <input type="file" id="presupuesto-import-file" accept=".csv,.xlsx,.xlsm,.xltx,.xltm" style="display:none;">
+    <span id="presupuesto-action-status"></span>
+  </div>
+
+  <section class="form-section">
+    <div class="section-title">
+      <h2>Fase 9: Presupuesto anual</h2>
+    </div>
+    <section class="notebook-section presupuesto-notebook">
+      <div class="notebook-tabs">
+        <button type="button" class="tab active" data-tab="presupuesto-anual">Presupuesto anual</button>
+        <button type="button" class="tab" data-tab="control-mensual">Control mensual</button>
+        <button type="button" class="tab" data-tab="reportes">Reportes</button>
+      </div>
+      <div class="notebook-content">
+        <div class="tab-panel" data-panel="presupuesto-anual">
+          <div class="tabla-oficial-wrap cod-toggle-wrap">
+            <button type="button" id="toggle-cod-col-btn" class="cod-toggle-btn" aria-label="Mostrar u ocultar columna Cod">+</button>
+            <table id="presupuesto-table" class="tabla-oficial">
+              <thead>
+                <tr>
+                  <th class="cod-col" style="display:none;">Cod</th>
+                  <th>Rubro</th>
+                  <th class="tabla-oficial-num">Monto</th>
+                  <th class="tabla-oficial-num">Mensual</th>
+                </tr>
+              </thead>
+              <tbody>
+                {{ presupuesto_table_rows|safe }}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="tab-panel" data-panel="control-mensual" hidden>
+          <div class="tabla-oficial-wrap">
+            <table id="control-mensual-table" class="tabla-oficial">
+              <thead>
+                <tr>
+                  <th rowspan="2">Rubro</th>
+                  {{ control_mensual_header_top|safe }}
+                </tr>
+                <tr>
+                  {{ control_mensual_header_bottom|safe }}
+                </tr>
+              </thead>
+              <tbody>
+                {{ control_mensual_rows|safe }}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="tab-panel" data-panel="reportes" hidden>
+        </div>
+      </div>
+    </section>
+    <div style="margin-top: 24px;">
+      <button type="button" class="color-btn color-btn--primary dg-save-trigger">Guardar presupuesto</button>
+      <span class="dg-save-status"></span>
+    </div>
+  </section>
+</section>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    const btn = document.getElementById("toggle-cod-col-btn");
+    const codCols = document.querySelectorAll("#presupuesto-table .cod-col");
+    let visible = false;
+    if (btn) {
+      btn.addEventListener("click", function() {
+        visible = !visible;
+        codCols.forEach((col) => {
+          col.style.display = visible ? "table-cell" : "none";
+        });
+        btn.textContent = visible ? "-" : "+";
+      });
+    }
+
+    const normalizeInteger = (rawValue) => {
+      const raw = String(rawValue || "").trim();
+      if (!raw) return "";
+      const normalized = raw.replace(/,/g, "");
+      const value = Number(normalized);
+      if (!Number.isFinite(value)) return raw;
+      return Math.round(value).toLocaleString("en-US", { maximumFractionDigits: 0 });
+    };
+
+    document.querySelectorAll("#presupuesto-table .presupuesto-num-input").forEach((input) => {
+      input.value = normalizeInteger(input.value);
+      input.style.setProperty("text-align", "right", "important");
+    });
+
+    document.querySelectorAll("#presupuesto-table .presupuesto-mensual").forEach((cell) => {
+      cell.textContent = normalizeInteger(cell.textContent);
+      cell.style.setProperty("text-align", "right", "important");
+    });
+
+    const controlMensualTable = document.getElementById("control-mensual-table");
+    const presupuestoTable = document.getElementById("presupuesto-table");
+    const months = ["01","02","03","04","05","06","07","08","09","10","11","12"];
+    const parseIntegerValue = (rawValue) => {
+      const raw = String(rawValue || "").trim();
+      if (!raw) return 0;
+      const normalized = raw.replace(/,/g, "");
+      const value = Number(normalized);
+      if (!Number.isFinite(value)) return 0;
+      return Math.round(value);
+    };
+    const formatIntegerValue = (value) => {
+      const numeric = Number(value || 0);
+      return Number.isFinite(numeric) ? numeric.toLocaleString("en-US", { maximumFractionDigits: 0 }) : "0";
+    };
+    const buildControlMonthlyCells = (rowIndex, mensualBase) => {
+      const cells = [];
+      const base = parseIntegerValue(mensualBase);
+      let saldo = 0;
+      months.forEach((month) => {
+        saldo = month === "01" ? base : saldo + base;
+        const projectedValue = formatIntegerValue(saldo);
+        cells.push(`<td class="tabla-oficial-num month-col month-${month}" data-month-col="${month}"><input class="tabla-oficial-input num" type="text" name="cm_${rowIndex}_${month}_proyectado" value="${projectedValue}" inputmode="numeric"></td>`);
+        cells.push(`<td class="tabla-oficial-num month-col month-${month}" data-month-col="${month}"><input class="tabla-oficial-input num" type="text" name="cm_${rowIndex}_${month}_realizado" value="0" inputmode="numeric"></td>`);
+        cells.push(`<td class="tabla-oficial-num month-col month-${month}" data-month-col="${month}"><input class="tabla-oficial-input num cm-percent-input" type="text" name="cm_${rowIndex}_${month}_percent" value="0%" inputmode="numeric" readonly></td>`);
+      });
+      return cells.join("");
+    };
+    const computePercentValue = (projectedRaw, realizedRaw) => {
+      const projected = parseIntegerValue(projectedRaw);
+      const realized = parseIntegerValue(realizedRaw);
+      if (projected <= 0) return "0%";
+      const pct = (realized / projected) * 100;
+      return `${pct.toFixed(2)}%`;
+    };
+    const recalcControlMensualRow = (row) => {
+      if (!row) return;
+      months.forEach((month) => {
+        const projectedInput = row.querySelector(`input[name*="_${month}_proyectado"]`);
+        const realizedInput = row.querySelector(`input[name*="_${month}_realizado"]`);
+        const percentInput = row.querySelector(`input[name*="_${month}_percent"]`);
+        if (!projectedInput || !realizedInput || !percentInput) return;
+        percentInput.value = computePercentValue(projectedInput.value, realizedInput.value);
+      });
+    };
+    const bindControlMensualFormula = () => {
+      if (!controlMensualTable) return;
+      const rows = Array.from(controlMensualTable.querySelectorAll("tbody tr"));
+      rows.forEach((row) => {
+        const projectedAndRealInputs = row.querySelectorAll('input[name*="_proyectado"], input[name*="_realizado"]');
+        projectedAndRealInputs.forEach((input) => {
+          input.addEventListener("input", () => recalcControlMensualRow(row));
+        });
+        recalcControlMensualRow(row);
+      });
+    };
+    const syncControlMensualRubrosFromAnual = () => {
+      if (!controlMensualTable || !presupuestoTable) return;
+      const anualRows = Array.from(presupuestoTable.querySelectorAll("tbody tr"));
+      const controlBody = controlMensualTable.querySelector("tbody");
+      if (!controlBody) return;
+      const rubros = anualRows.map((row) => {
+        const rubroCell = row.querySelector("td:nth-child(2)");
+        const mensualCell = row.querySelector(".presupuesto-mensual");
+        return {
+          rubro: (rubroCell?.textContent || "").trim(),
+          mensualBase: normalizeInteger((mensualCell?.textContent || "").trim()) || "0",
+        };
+      }).filter((item) => item.rubro);
+      controlBody.innerHTML = rubros.map((item, index) => (
+        `<tr><td>${item.rubro}</td>${buildControlMonthlyCells(index + 1, item.mensualBase)}</tr>`
+      )).join("");
+      bindControlMensualFormula();
+    };
+    syncControlMensualRubrosFromAnual();
+
+    const monthToggleButtons = Array.from(document.querySelectorAll("[data-month-toggle]"));
+    const setMonthVisibility = (month, visible) => {
+      document.querySelectorAll(`.month-col.month-${month}`).forEach((cell) => {
+        cell.style.display = visible ? "table-cell" : "none";
+      });
+      const monthHead = document.querySelector(`.month-group-head.month-${month}`);
+      const button = document.querySelector(`[data-month-toggle="${month}"]`);
+      if (monthHead) monthHead.classList.toggle("is-collapsed", !visible);
+      if (button) button.textContent = visible ? "▾" : "▸";
+    };
+    monthToggleButtons.forEach((button) => {
+      const month = button.getAttribute("data-month-toggle");
+      if (!month) return;
+      let isVisible = true;
+      button.addEventListener("click", () => {
+        isVisible = !isVisible;
+        setMonthVisibility(month, isVisible);
+      });
+    });
+  });
+</script>

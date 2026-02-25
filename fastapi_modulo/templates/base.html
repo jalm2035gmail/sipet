@@ -1,3 +1,8 @@
+        .tabla-oficial th:nth-child(2),
+        .tabla-oficial td:nth-child(2) {
+            min-width: 480px;
+            width: 480px;
+        }
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -6,7 +11,7 @@
     <link rel="shortcut icon" type="image/x-icon" href="{{ app_favicon_url | default('/templates/icon/icon.png') }}">
     <title>{{ title }}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="/templates/areas.css">
+    <link rel="stylesheet" href="/static/dist/output.css">
     <style>
         :root {
             color-scheme: light;
@@ -17,11 +22,7 @@
             --sidebar-bottom: #0f172a;
             --sidebar-text: #ffffff;
             --sidebar-icon: #f5f7fb;
-            --sidebar-hover: #2a3a52;
-            --field-color: #e7d7da;
-            --floating-panel-bg: var(--sidebar-text);
-            --floating-scale: 0.75;
-            --floating-toggle-color: var(--sidebar-bottom);
+            --sidebar-hover: #16a34a;
             --floating-toggle-text-color: var(--sidebar-text);
             --floating-icon-color: var(--sidebar-bottom);
             --floating-action-border: var(--sidebar-bottom);
@@ -67,7 +68,7 @@
             top: 0;
             left: 0;
             height: 100vh;
-            overflow: hidden;
+            overflow: visible;
             display: flex;
             flex-direction: column;
             transition: width 0.3s ease;
@@ -89,8 +90,8 @@
             width: 96px;
             height: 96px;
             border-radius: 24px;
-            background: var(--sidebar-icon, #ffffff);
-            border: 2px solid rgba(255,255,255,0.4);
+            background: transparent;
+            border: 0;
         }
         .sidebar-user img {
             width: 88px;
@@ -145,39 +146,10 @@
         nav::-webkit-scrollbar {
             width: 8px;
         }
-        nav::-webkit-scrollbar-track {
-            background: transparent;
-        }
-        nav::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.3);
-            border-radius: 999px;
-        }
-        nav::-webkit-scrollbar-thumb:hover {
-            background: rgba(255, 255, 255, 0.45);
-        }
-        nav a,
-        .accordion-header,
-        .sidebar-section-toggle {
-            display: flex;
-            align-items: center;
-            padding: 12px 24px;
-            text-decoration: none;
-            color: inherit;
-            font-size: var(--sidebar-block-title-size);
-            background: none;
-            border: none;
-            width: 100%;
-            cursor: pointer;
-            font-family: inherit;
-        }
-        nav a {
-            justify-content: flex-start;
-            gap: 12px;
-        }
         nav a:hover,
         .accordion-header:hover,
         .sidebar-section-toggle:hover {
-            background: rgba(255, 255, 255, 0.08);
+            background: var(--sidebar-hover, rgba(255, 255, 255, 0.08));
         }
         .accordion-header {
             justify-content: space-between;
@@ -210,80 +182,12 @@
         }
         .submenu:hover {
             color: #ffcb2b;
-            background: rgba(255, 255, 255, 0.05);
-        }
-        .submenu span {
-            display: block;
-            width: 100%;
-            text-align: right;
-        }
-        .sidebar-section-title-with-icon {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            font-size: var(--sidebar-block-title-size);
-            letter-spacing: 0.02em;
-            text-transform: none;
-            color: inherit;
-            justify-content: flex-start;
-        }
-        .sidebar-section-title-with-icon .menu-icon img,
-        .menu-indicator .menu-icon img {
-            width: 18px;
-            height: 18px;
-            filter: brightness(0) invert(1);
-        }
-        .sidebar-section-toggle {
-            justify-content: space-between;
-        }
-        .sidebar-section-toggle .menu-icon img {
-            width: 20px;
-            height: 20px;
-        }
-        .menu-indicator,
-        .sidebar-section-title-with-icon {
-            display: inline-flex;
-            align-items: center;
-            gap: 12px;
-            font-size: var(--sidebar-block-title-size);
-            letter-spacing: 0.02em;
-            text-transform: none;
-        }
-        .sidebar-section-content.open {
-            display: flex;
+            background: var(--sidebar-hover, rgba(255, 255, 255, 0.05));
         }
         .menu-icon {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 30px;
-            height: 30px;
-        }
-        .menu-icon svg {
-            width: 22px;
-            height: 22px;
-            stroke: currentColor;
-        }
-        .menu-icon img {
-            width: 22px;
-            height: 22px;
-            display: block;
-            object-fit: contain;
-            filter: brightness(0) invert(1);
-        }
-        .menu-icon-mask {
-            width: 100%;
-            height: 100%;
-            display: block;
-            background: var(--sidebar-icon, var(--sidebar-text, #ffffff));
-            -webkit-mask-image: var(--icon-mask-url);
-            mask-image: var(--icon-mask-url);
-            -webkit-mask-repeat: no-repeat;
-            mask-repeat: no-repeat;
-            -webkit-mask-position: center;
-            mask-position: center;
-            -webkit-mask-size: 22px 22px;
+            display: inline-block;
             mask-size: 22px 22px;
+            -webkit-mask-size: 22px 22px;
         }
         .menu-label {
             flex: 1;
@@ -321,7 +225,7 @@
             position: sticky;
             top: 0;
             z-index: 2;
-            transition: margin-left 0.3s ease;
+            transition: margin-left 0.34s cubic-bezier(0.22, 1, 0.36, 1);
             font-weight: 600;
             color: var(--navbar-text, #1f2933);
             display: flex;
@@ -340,11 +244,53 @@
             align-items: center;
             gap: 12px;
         }
+        .navbar-hamburger {
+            width: 40px;
+            height: 40px;
+            border: 0;
+            border-radius: 10px;
+            background: transparent;
+            display: inline-flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 5px;
+            padding: 0 10px;
+            cursor: pointer;
+            transition: background 0.22s ease, transform 0.22s ease;
+        }
+        .navbar-hamburger:hover,
+        .navbar-hamburger:focus-visible {
+            background: rgba(15, 23, 42, 0.08);
+            outline: none;
+        }
+        .navbar-hamburger .bar {
+            display: block;
+            width: 100%;
+            height: 2px;
+            border-radius: 999px;
+            background: var(--navbar-text, #1f2933);
+            transition: transform 0.34s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.22s ease;
+            transform-origin: center;
+        }
+        .navbar-hamburger.is-open .bar:nth-child(1) {
+            transform: translateY(7px) rotate(45deg);
+        }
+        .navbar-hamburger.is-open .bar:nth-child(2) {
+            opacity: 0;
+        }
+        .navbar-hamburger.is-open .bar:nth-child(3) {
+            transform: translateY(-7px) rotate(-45deg);
+        }
         .navbar-title {
             display: flex;
-            align-items: baseline;
-            gap: 8px;
-            font-size: 1.35rem;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 2px;
+            font-weight: 700;
+            line-height: 1.15;
+        }
+        .navbar-menu-name {
+            font-size: 1.18rem;
             font-weight: 700;
         }
         .navbar-avatar {
@@ -352,7 +298,7 @@
             height: 38px;
             border-radius: 50%;
             background: #ffffff;
-            box-shadow: inset 0 0 0 2px rgba(15, 23, 42, 0.6);
+            box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.45);
             overflow: hidden;
             display: flex;
             align-items: center;
@@ -360,6 +306,13 @@
             border: 0;
             cursor: pointer;
             padding: 0;
+            transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
+        }
+        .navbar-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
         }
         .navbar-notifications-btn {
             width: 38px;
@@ -374,6 +327,7 @@
             position: relative;
             padding: 0;
             z-index: 2;
+            transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
         }
         .navbar-notifications-icon {
             width: 20px;
@@ -388,6 +342,15 @@
         .navbar-notifications-btn:hover,
         .navbar-notifications-btn:focus-visible {
             background: var(--sidebar-text, #ffffff);
+            transform: translateY(-1px) scale(1.04);
+            box-shadow: 0 8px 18px rgba(15, 23, 42, 0.22);
+            outline: none;
+        }
+        .navbar-avatar:hover,
+        .navbar-avatar:focus-visible {
+            transform: translateY(-1px) scale(1.04);
+            box-shadow: 0 8px 18px rgba(15, 23, 42, 0.22), inset 0 0 0 2px rgba(15, 23, 42, 0.6);
+            filter: saturate(1.08);
             outline: none;
         }
         .navbar-notifications-btn:hover .navbar-notifications-icon,
@@ -414,11 +377,14 @@
         .navbar-notifications-badge.visible {
             display: inline-block;
         }
-        .navbar-avatar img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
+        .navbar-avatar-icon {
+            width: 20px;
+            height: 20px;
             display: block;
+            background: #1f2933;
+            -webkit-mask: url("/templates/icon/usuarios.svg") center / contain no-repeat;
+            mask: url("/templates/icon/usuarios.svg") center / contain no-repeat;
+            opacity: 0.9;
         }
         .navbar-user-menu {
             position: relative;
@@ -550,32 +516,206 @@
             font-size: 0.72rem;
             color: #64748b;
         }
+        .sidebar {
+            width: 220px;
+            background: linear-gradient(180deg, var(--sidebar-top, #22c55e), var(--sidebar-bottom, #15803d));
+            color: var(--sidebar-text, #ffffff);
+            position: fixed;
+            height: 100vh;
+            top: 0;
+            left: 0;
+            transition: transform 0.34s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.24s ease, opacity 0.24s ease;
+            overflow-x: hidden;
+            overflow-y: auto;
+            z-index: 3;
+            box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+            will-change: transform;
+        }
+        .sidebar.is-collapsed {
+            width: 72px;
+            box-shadow: 2px 0 12px rgba(15, 23, 42, 0.2);
+        }
+        .sidebar nav {
             display: flex;
             flex-direction: column;
             gap: 6px;
+            margin-top: 18px;
+            padding: 0 10px 14px;
+            transition: opacity 0.2s ease, transform 0.2s ease;
+        }
+        .sidebar.is-collapsed nav {
+            opacity: 1;
+            transform: none;
+            margin-top: 8px;
+            padding: 0 8px 14px;
+            overflow: visible;
+        }
+        .sidebar nav a,
+        .sidebar .accordion-header,
+        .sidebar .sidebar-section-toggle {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--sidebar-text, #ffffff);
+            text-decoration: none;
+            padding: 10px 12px;
+            border-radius: 10px;
+            font-size: 0.92rem;
+            font-weight: 600;
+        }
+        .sidebar-block {
+            border: 1px solid rgba(255, 255, 255, 0);
+            border-radius: 12px;
+            background: transparent;
+            overflow: hidden;
+        }
+        .sidebar-block > summary {
+            list-style: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            color: var(--sidebar-text, #ffffff);
+            font-size: 0.9rem;
+            font-weight: 700;
+        }
+        .sidebar-block > summary::-webkit-details-marker {
+            display: none;
+        }
+        .sidebar-block > summary:hover {
+            background: var(--sidebar-hover, rgba(255, 255, 255, 0.08));
+        }
+        .sidebar-main-left {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 0;
+        }
+        .sidebar-main-icon {
+            width: 16px;
+            height: 16px;
+            flex: 0 0 16px;
+            display: inline-block;
+            background-color: var(--sidebar-icon, #f5f7fb);
+            -webkit-mask: var(--icon-src) center / contain no-repeat;
+            mask: var(--icon-src) center / contain no-repeat;
+        }
+        .sidebar-block:hover .sidebar-main-icon,
+        .sidebar-block > summary:hover .sidebar-main-icon {
+            background-color: var(--sidebar-hover, #16a34a);
+        }
+        .sidebar-main-label {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .sidebar-main-caret {
+            font-size: 0.88rem;
+            opacity: 0.88;
+            transition: transform 0.2s ease;
+        }
+        .sidebar-block[open] .sidebar-main-caret {
+            transform: rotate(180deg);
+        }
+        .sidebar-submenu {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            padding: 2px 8px 6px;
+        }
+        .sidebar-submenu a {
+            justify-content: flex-end;
+            text-align: right;
+            font-size: 0.84rem;
+            font-weight: 500;
+            padding: 6px 10px;
+            color: rgba(255, 255, 255, 0.94);
+            border-radius: 8px;
+        }
+        .sidebar-submenu a:hover {
+            background: var(--sidebar-hover, rgba(255, 255, 255, 0.1));
+            color: #ffffff;
+        }
+        .sidebar.is-collapsed .sidebar-header {
+            display: none;
+        }
+        .sidebar.is-collapsed .sidebar-block {
+            position: relative;
+            overflow: visible;
+        }
+        .sidebar.is-collapsed .sidebar-block > summary {
+            justify-content: center;
+            padding: 10px 8px;
+        }
+        .sidebar.is-collapsed .sidebar-main-left {
+            gap: 0;
+        }
+        .sidebar.is-collapsed .sidebar-main-label,
+        .sidebar.is-collapsed .sidebar-main-caret {
+            display: none;
+        }
+        .sidebar.is-collapsed .sidebar-submenu {
+            display: none;
+            position: absolute;
+            left: calc(100% + 8px);
+            top: 0;
+            min-width: 220px;
+            padding: 6px 0;
+            background: transparent;
+            border: none;
+            box-shadow: none;
+            z-index: 20;
+        }
+        .sidebar.is-collapsed .sidebar-block[open] .sidebar-submenu,
+        .sidebar.is-collapsed .sidebar-block.is-flyout-open .sidebar-submenu {
+            display: flex;
+        }
+        .sidebar.is-collapsed .sidebar-submenu a {
+            justify-content: flex-start;
+            text-align: left;
+            padding: 8px 10px;
+            background: rgba(15, 23, 42, 0.35);
+            backdrop-filter: blur(2px);
+        }
+        .sidebar.is-collapsed .sidebar-block:hover .sidebar-main-icon,
+        .sidebar.is-collapsed .sidebar-block > summary:hover .sidebar-main-icon {
+            background-color: var(--sidebar-icon, #f5f7fb);
         }
         .main-content {
             margin-left: 220px;
             padding: 32px 40px 48px;
             min-height: 100vh;
             background: #f4f6fb;
-            transition: margin-left 0.3s ease;
+            transition: margin-left 0.34s cubic-bezier(0.22, 1, 0.36, 1);
             overflow-x: hidden;
             overflow-y: auto;
             width: calc(100vw - 220px);
             box-sizing: border-box;
         }
         .content-shell {
-            width: min(80%, 1280px);
+            width: min(94%, 1520px);
             max-width: 100%;
             margin: 0 auto;
+            background: var(--navbar-bg, #ecfdf3);
+            border-radius: 28px;
+            border: 1px solid color-mix(in srgb, var(--button-bg, #0f172a) 16%, #ffffff 84%);
+            box-shadow: 0 24px 56px rgba(15, 23, 42, 0.12);
+            padding: 18px;
         }
         .navbar-route {
-            font-size: 1rem;
+            font-size: 0.84rem;
+            color: #0f172a;
+            text-decoration: none;
+            opacity: 0.82;
             font-style: italic;
-            color: #4b5563;
-            display: none;
-            transition: opacity 0.15s ease;
+            transition: opacity 0.15s ease, text-decoration-color 0.15s ease;
+        }
+        .navbar-route:hover,
+        .navbar-route:focus-visible {
+            opacity: 1;
+            text-decoration: underline;
+            outline: none;
         }
         .message-box {
             position: fixed;
@@ -598,11 +738,12 @@
             transform: translateY(0);
         }
         .page-header {
-            max-width: 900px;
-            margin: 0 auto 32px;
+            max-width: 100%;
+            margin: 0 0 18px;
             display: flex;
-            flex-direction: column;
-            gap: 12px;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 14px;
         }
         .page-header-text {
             display: flex;
@@ -617,14 +758,311 @@
             color: #475569;
         }
         .page-header-text h1 {
-            font-size: 2rem;
+            font-size: clamp(1.6rem, 2.2vw, 2.35rem);
             margin: 0;
             color: var(--page-title-color, var(--sidebar-bottom, #0f172a));
         }
         .page-header-description {
             margin: 0;
             color: #475569;
+            font-size: 1.05rem;
+        }
+        .content-section {
+            border: 1px solid color-mix(in srgb, var(--button-bg, #0f172a) 14%, #ffffff 86%);
+            border-radius: 22px;
+            background: var(--field-color, #ffffff);
+            padding: 18px 18px 20px;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), 0 10px 24px rgba(15, 23, 42, 0.06);
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+        .content-section-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 0;
+        }
+        .content-section-kicker {
+            display: inline-flex;
+            align-self: flex-start;
+            margin: 0;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 0.74rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            background: var(--button-bg, #0f172a);
+            color: var(--button-text, #ffffff);
+        }
+        .content-section-title {
+            margin: 0;
+            font-size: 1.3rem;
+            color: var(--sidebar-bottom, #0f172a);
+        }
+        .content-section-body {
+            color: var(--navbar-text, #1f172a);
+        }
+        .subsection-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 16px;
+        }
+        .subsection-card {
+            border: 1px solid color-mix(in srgb, var(--button-bg, #0f172a) 12%, #ffffff 88%);
+            border-radius: 26px;
+            background: var(--field-color, #f8fafc);
+            padding: 22px 22px 20px;
+            box-shadow: 0 10px 22px rgba(15, 23, 42, 0.05);
+        }
+        .subsection-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+        .subsection-title {
+            margin: 0;
+            font-size: clamp(1.5rem, 3.2vw, 2.2rem);
+            line-height: 1.05;
+            color: var(--sidebar-bottom, #0f172a);
+        }
+        .subsection-description {
+            margin: 0;
+            color: var(--navbar-text, #475569);
+            opacity: 0.78;
+            font-size: 0.98rem;
+        }
+        .subsection-value {
+            margin: 2px 0 0;
+            font-size: clamp(2rem, 3.8vw, 3.2rem);
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            color: var(--sidebar-bottom, #0f172a);
+        }
+        .subsection-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            border-radius: 999px;
+            border: 1px solid color-mix(in srgb, var(--button-bg, #0f172a) 20%, #ffffff 80%);
+            background: color-mix(in srgb, var(--navbar-bg, #e9edf5) 72%, #ffffff 28%);
+            color: var(--button-bg, #0f172a);
+            font-size: 0.94rem;
+            font-weight: 700;
+            padding: 8px 14px;
+            white-space: nowrap;
+        }
+        .content-section-body > :first-child {
+            margin-top: 0;
+        }
+        .content-section-body > :last-child {
+            margin-bottom: 0;
+        }
+        .personalization-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            width: 100%;
+        }
+        .personalization-head {
+            border: 1px solid color-mix(in srgb, var(--button-bg, #0f172a) 12%, #ffffff 88%);
+            border-radius: 16px;
+            background: color-mix(in srgb, var(--navbar-bg, #ffffff) 82%, #eef2ff 18%);
+            padding: 14px 16px;
+        }
+        .personalization-head h2 {
+            margin: 0;
+            font-size: 1.2rem;
+            color: var(--sidebar-bottom, #0f172a);
+        }
+        .personalization-head p {
+            margin: 6px 0 0;
+            color: var(--navbar-text, #475569);
+            opacity: 0.9;
+            font-size: 0.92rem;
+        }
+        .color-group {
+            border: 1px solid color-mix(in srgb, var(--button-bg, #0f172a) 11%, #ffffff 89%);
+            border-radius: 18px;
+            padding: 14px;
+            background: #ffffff;
+            box-shadow: 0 8px 20px rgba(15, 23, 42, 0.05);
+        }
+        .color-group h3 {
+            margin: 0 0 10px;
             font-size: 1rem;
+            color: var(--sidebar-bottom, #0f172a);
+        }
+        .asset-group-description {
+            margin: -2px 0 10px;
+            color: var(--navbar-text, #475569);
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        .asset-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .asset-file-input {
+            display: none;
+        }
+        .asset-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            border: 1px solid color-mix(in srgb, var(--button-bg, #0f172a) 12%, #ffffff 88%);
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.8);
+            padding: 10px 12px;
+        }
+        .asset-row-preview {
+            width: 56px;
+            height: 56px;
+            flex-shrink: 0;
+            border-radius: 12px;
+            border: 1px solid color-mix(in srgb, var(--button-bg, #0f172a) 18%, #ffffff 82%);
+            background: #f8fafc;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        .asset-thumb {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: block;
+        }
+        .asset-row-main {
+            flex: 1;
+            min-width: 0;
+        }
+        .asset-row-main h4 {
+            margin: 0;
+            font-size: 0.95rem;
+            color: var(--sidebar-bottom, #0f172a);
+        }
+        .asset-filename {
+            margin: 2px 0 0;
+            color: var(--navbar-text, #334155);
+            font-size: 0.84rem;
+        }
+        .asset-link {
+            display: inline-block;
+            margin-top: 2px;
+            font-size: 0.8rem;
+            color: var(--button-bg, #0f172a);
+            text-decoration: underline;
+            text-underline-offset: 2px;
+        }
+        .asset-row-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+        .color-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 10px;
+        }
+        .color-option {
+            border: 1px solid color-mix(in srgb, var(--button-bg, #0f172a) 12%, #ffffff 88%);
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.78);
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .color-option label {
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: var(--navbar-text, #334155);
+        }
+        .color-option input[type="color"] {
+            width: 100%;
+            height: 38px;
+            border: 1px solid color-mix(in srgb, var(--button-bg, #0f172a) 20%, #ffffff 80%);
+            border-radius: 10px;
+            background: #ffffff;
+            padding: 3px;
+            cursor: pointer;
+        }
+        .color-preview {
+            height: 18px;
+            border-radius: 999px;
+            border: 1px solid color-mix(in srgb, var(--button-bg, #0f172a) 20%, #ffffff 80%);
+        }
+        .color-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-top: 2px;
+        }
+        .color-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            border-radius: 12px;
+            padding: 10px 14px;
+            font-weight: 700;
+            cursor: pointer;
+            border: 1px solid var(--button-bg, #0f172a);
+            transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+        }
+        .color-btn__icon {
+            width: 14px;
+            height: 14px;
+            object-fit: contain;
+            display: block;
+        }
+        .color-btn--icon-toggle {
+            min-width: 40px;
+            width: auto;
+            padding: 10px;
+            border-radius: 999px;
+            overflow: hidden;
+        }
+        .color-btn__label {
+            max-width: 0;
+            opacity: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            transition: max-width 0.18s ease, opacity 0.18s ease;
+        }
+        .color-btn--icon-toggle:hover {
+            padding: 10px 14px;
+        }
+        .color-btn--icon-toggle:hover .color-btn__label {
+            max-width: 96px;
+            opacity: 1;
+        }
+        .color-btn--primary {
+            background: var(--button-bg, #0f172a);
+            color: var(--button-text, #ffffff);
+        }
+        .color-btn--primary:hover {
+            background: var(--button-text, #ffffff);
+            color: var(--button-bg, #0f172a);
+            border-color: var(--button-bg, #0f172a);
+        }
+        .color-btn--ghost {
+            background: #ffffff;
+            color: var(--button-bg, #0f172a);
+            border-color: color-mix(in srgb, var(--button-bg, #0f172a) 35%, #ffffff 65%);
+        }
+        .color-btn--ghost:hover {
+            background: var(--button-bg, #0f172a);
+            color: var(--button-text, #ffffff);
+            border-color: var(--button-bg, #0f172a);
         }
         .view-buttons {
             display: flex;
@@ -731,49 +1169,61 @@
         }
         .action-button {
             position: relative;
-            background: transparent;
-            border: none;
-            padding: 6px 12px;
+            background: var(--floating-action-bg, #ffffff);
+            border: 1px solid var(--floating-action-border, var(--button-bg, #0f172a));
+            width: 44px;
+            height: 44px;
+            padding: 0;
             border-radius: 999px;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 8px;
-            color: inherit;
+            color: var(--floating-action-text, var(--button-bg, #0f172a));
             cursor: pointer;
             font-weight: 600;
-            transition: background 0.2s;
+            transition: background 0.2s, color 0.2s, width 0.2s, border-color 0.2s;
             overflow: hidden;
         }
         .action-button:hover {
-            background: var(--floating-toggle-color, #1f2a3d);
-            color: var(--floating-toggle-text-color, #ffffff);
+            width: 156px;
+            background: var(--button-bg, #0f172a);
+            color: var(--button-text, #ffffff);
+            border-color: var(--button-bg, #0f172a);
         }
         .action-button img,
         .action-button svg {
-            width: 32px;
-            height: 32px;
+            width: 36px;
+            height: 36px;
             transition: opacity 0.2s;
             opacity: 1;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
         }
         .action-icon-mask {
-            width: 32px;
-            height: 32px;
+            width: 36px;
+            height: 36px;
             display: inline-block;
-            background: var(--floating-icon-color, #1f2a3d);
+            background: var(--floating-icon-color, var(--button-bg, #0f172a));
             -webkit-mask: var(--action-icon-url) center / contain no-repeat;
             mask: var(--action-icon-url) center / contain no-repeat;
             transition: opacity 0.2s;
             opacity: 1;
-            flex: 0 0 32px;
+            flex: 0 0 36px;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
         }
         .action-button svg {
             fill: var(--floating-icon-color, #1f2a3d);
             stroke: var(--floating-icon-color, #1f2a3d);
         }
         .action-label {
-            font-size: 1.3rem;
-            font-style: italic;
+            font-size: 0.95rem;
+            font-style: normal;
             letter-spacing: 0.02em;
             opacity: 0;
             position: absolute;
@@ -796,52 +1246,6 @@
         .action-button:hover img,
         .action-button:hover .action-icon-mask {
             opacity: 0;
-        }
-        .floating-actions-group[data-floating-screen="usuarios"] .action-button,
-        .floating-actions-group[data-floating-screen="areas"] .action-button,
-        .floating-actions-group[data-floating-screen="plantillas"] .action-button {
-            width: 156px;
-            min-width: 156px;
-            max-width: 156px;
-            justify-content: center;
-            border: 1px solid var(--floating-action-border, #cbd5e1);
-            background: var(--floating-action-bg, #ffffff);
-            color: var(--floating-action-text, #0f172a);
-        }
-        .floating-actions-group[data-floating-screen="usuarios"] .action-label,
-        .floating-actions-group[data-floating-screen="areas"] .action-label,
-        .floating-actions-group[data-floating-screen="plantillas"] .action-label {
-            position: absolute;
-            inset: 0;
-            opacity: 0;
-            font-style: italic;
-            pointer-events: none;
-            color: var(--floating-action-text, #0f172a);
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .floating-actions-group[data-floating-screen="usuarios"] .action-button:hover img,
-        .floating-actions-group[data-floating-screen="usuarios"] .action-button:hover svg,
-        .floating-actions-group[data-floating-screen="areas"] .action-button:hover img,
-        .floating-actions-group[data-floating-screen="areas"] .action-button:hover svg,
-        .floating-actions-group[data-floating-screen="plantillas"] .action-button:hover img,
-        .floating-actions-group[data-floating-screen="plantillas"] .action-button:hover svg {
-            opacity: 0;
-        }
-        .floating-actions-group[data-floating-screen="usuarios"] .action-button:hover .action-label,
-        .floating-actions-group[data-floating-screen="areas"] .action-button:hover .action-label,
-        .floating-actions-group[data-floating-screen="plantillas"] .action-button:hover .action-label {
-            opacity: 1;
-            color: var(--floating-action-bg, #ffffff);
-        }
-        .floating-actions-group[data-floating-screen="usuarios"] .action-button:hover,
-        .floating-actions-group[data-floating-screen="areas"] .action-button:hover,
-        .floating-actions-group[data-floating-screen="plantillas"] .action-button:hover {
-            background: var(--floating-action-text, #0f172a);
-            color: var(--floating-action-bg, #ffffff);
-            border-color: var(--floating-action-text, #0f172a);
         }
         .floating-actions-group[data-floating-screen="areas"].active {
             display: flex !important;
@@ -884,69 +1288,6 @@
         }
         .floating-toggle:hover {
             filter: brightness(1.15);
-        }
-        .action-button:hover .action-label {
-            opacity: 1;
-            transform: translateX(0);
-        }
-        .personalization-panel {
-            max-width: 1200px;
-            margin-top: 40px;
-            background: #ffffff;
-            border-radius: 16px;
-            padding: 32px;
-            box-shadow: 0 20px 60px rgba(15, 23, 42, 0.15);
-        }
-        .personalization-panel.hidden {
-            display: none;
-        }
-        .personalization-panel h2 {
-            font-size: 1.5rem;
-            margin: 0 0 12px;
-            color: #111827;
-        }
-        .personalization-panel p {
-            color: #475569;
-            margin: 0 0 24px;
-        }
-        .color-group {
-            margin-top: 24px;
-        }
-        .color-group h3 {
-            font-size: 1.15rem;
-            margin-bottom: 12px;
-            color: #0f172a;
-        }
-        .color-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 16px;
-        }
-        .color-option {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-            padding: 12px 14px;
-            border-radius: 12px;
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
-        }
-        .color-option label {
-            font-size: 0.85rem;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            color: #475569;
-        }
-        .color-option strong {
-            font-size: 1rem;
-            color: #0f172a;
-        }
-        .color-preview {
-            width: 90%;
-            height: 34px;
-            border-radius: 8px;
-            border: 1px solid #d1d5db;
-            box-shadow: inset 0 0 6px rgba(15, 23, 42, 0.25);
         }
         .usuario-panel {
             margin-top: 32px;
@@ -1661,6 +2002,46 @@
             grid-template-columns: minmax(0, 1fr) 110px;
             align-items: start;
         }
+        .tabla-oficial-wrap {
+            width: 100%;
+            overflow-x: auto;
+        }
+        .tabla-oficial {
+            width: auto;
+            min-width: 100%;
+            border-collapse: collapse;
+            background: #ffffff;
+            table-layout: auto;
+        }
+        .tabla-oficial th,
+        .tabla-oficial td {
+            border: 1px solid rgba(15, 23, 42, 0.25);
+            padding: 8px 10px;
+            vertical-align: middle;
+        }
+        .tabla-oficial tbody tr:nth-child(odd) td {
+            background: #ffffff;
+        }
+        .tabla-oficial tbody tr:nth-child(even) td {
+            background: var(--field-color, #e7d7da);
+        }
+        .tabla-oficial th.tabla-oficial-num,
+        .tabla-oficial td.tabla-oficial-num {
+            text-align: right;
+        }
+        .tabla-oficial-input {
+            width: 100%;
+            text-align: right;
+            border: 0;
+            outline: 0;
+            padding: 0;
+            margin: 0;
+            background: transparent;
+            border-radius: 0;
+            box-shadow: none;
+            font: inherit;
+            color: inherit;
+        }
         .column {
             display: flex;
             flex-direction: column;
@@ -2063,6 +2444,45 @@
             }
             .content-shell {
                 width: 100%;
+                padding: 14px;
+                border-radius: 18px;
+            }
+            .page-header {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .content-section-head {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .subsection-grid {
+                grid-template-columns: 1fr;
+            }
+            .color-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+            .color-actions {
+                justify-content: flex-start;
+            }
+            .asset-row {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .asset-row-actions {
+                width: 100%;
+                justify-content: flex-start;
+                flex-wrap: wrap;
+            }
+        }
+        @media (max-width: 640px) {
+            .color-grid {
+                grid-template-columns: 1fr;
+            }
+            .color-btn {
+                width: 100%;
+            }
+            .color-actions {
+                flex-direction: column;
             }
         }
     </style>
@@ -2072,142 +2492,140 @@
     <div class="sidebar" id="sidebar">
         <div class="sidebar-header">
             <div class="sidebar-user">
-                <img id="sidebar-user-img" src="/templates/icon/usuario.png" data-default="/templates/icon/usuario.png" alt="Usuario">
+                <img
+                    id="sidebar-user-img"
+                    src="{{ login_logo_url | default('/templates/icon/icon.png') }}"
+                    data-default="{{ login_logo_url | default('/templates/icon/icon.png') }}"
+                    alt="Logo empresa"
+                />
             </div>
         </div>
         <nav>
-            <div class="accordion">
-                <button type="button" class="accordion-header" id="inicio-btn" data-menu-name="Inicio" data-route="/inicio">
-                    <span class="menu-indicator">
-                        <span class="menu-icon" aria-hidden="true">
-                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M9 16C9.85038 16.6303 10.8846 17 12 17C13.1154 17 14.1496 16.6303 15 16" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
-                                <path d="M21.6359 12.9579L21.3572 14.8952C20.8697 18.2827 20.626 19.9764 19.451 20.9882C18.2759 22 16.5526 22 13.1061 22H10.8939C7.44737 22 5.72409 22 4.54903 20.9882C3.37396 19.9764 3.13025 18.2827 2.64284 14.8952L2.36407 12.9579C1.98463 10.3208 1.79491 9.00229 2.33537 7.87495C2.87583 6.7476 4.02619 6.06234 6.32691 4.69181L7.71175 3.86687C9.80104 2.62229 10.8457 2 12 2C13.1543 2 14.199 2.62229 16.2882 3.86687L17.6731 4.69181C19.9738 6.06234 21.1242 6.7476 21.6646 7.87495" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
-                            </svg>
-                        </span>
-                        <span>Inicio</span>
+            <details class="sidebar-block" open>
+                <summary>
+                    <span class="sidebar-main-left">
+                        <span class="sidebar-main-icon" style="--icon-src: url('/icon/inicio.svg');" aria-hidden="true"></span>
+                        <span class="sidebar-main-label">Organización</span>
                     </span>
-                    <span id="inicio-toggle">+</span>
-                </button>
-                <div class="accordion-content" id="inicio-submenu">
-                    <a href="/inicio/departamentos" class="submenu" data-menu-name="Departamentos" data-route="/inicio/departamentos" data-floating-screen="areas"><span>Departamentos</span></a>
-                    <a href="/inicio/regiones" class="submenu" data-menu-name="Regiones" data-route="/inicio/regiones"><span>Regiones</span></a>
-                    <a href="/inicio/sucursales" class="submenu" data-menu-name="Sucursales" data-route="/inicio/sucursales"><span>Sucursales</span></a>
-                    <a href="/inicio/colaboradores" class="submenu usuario-view-link" data-menu-name="Colaboradores" data-route="/inicio/colaboradores" data-view="form" data-floating-screen="usuarios"><span>Colaboradores</span></a>
+                    <span class="sidebar-main-caret">▾</span>
+                </summary>
+                <div class="sidebar-submenu">
+                    <a href="/inicio/departamentos">Departamentos</a>
+                    <a href="/inicio/regiones">Regiones</a>
+                    <a href="/inicio/sucursales">Sucursales</a>
+                    <a href="/inicio/colaboradores">Colaboradores</a>
                 </div>
-            </div>
-            <div class="accordion">
-                <button type="button" class="accordion-header" id="proyectando-btn" data-menu-name="Proyectando" data-route="/proyectando">
-                    <span class="menu-indicator">
-                        <span class="menu-icon" aria-hidden="true">
-                            <img src="/templates/icon/proyectando.svg" alt="Proyectando">
-                        </span>
-                        <span>Proyectando</span>
+            </details>
+            <details class="sidebar-block">
+                <summary>
+                    <span class="sidebar-main-left">
+                        <span class="sidebar-main-icon" style="--icon-src: url('/icon/proyectando.svg');" aria-hidden="true"></span>
+                        <span class="sidebar-main-label">Proyectando</span>
                     </span>
-                    <span id="proyectando-toggle">+</span>
-                </button>
-                <div class="accordion-content" id="proyectando-submenu">
-                    <a href="/proyectando" class="submenu" data-menu-name="Tablero de Control" data-route="/proyectando"><span>Tablero de Control</span></a>
-                    <a href="/proyectando/datos-preliminares" class="submenu" data-menu-name="Datos preliminares" data-route="/proyectando/datos-preliminares"><span>Datos preliminares</span></a>
-                    <a href="/proyectando/crecimiento-general" class="submenu" data-menu-name="Crecimiento general" data-route="/proyectando/crecimiento-general"><span>Crecimiento general</span></a>
+                    <span class="sidebar-main-caret">▾</span>
+                </summary>
+                <div class="sidebar-submenu">
+                    <a href="/proyectando">Tablero de control</a>
+                    <a href="/proyectando/datos-preliminares">Datos preliminares</a>
+                    <a href="/proyectando/crecimiento-general">Crecimiento General</a>
+                    <a href="/proyectando/presupuesto">Presupuesto</a>
                 </div>
-            </div>
-            <div class="accordion">
-                <button type="button" class="accordion-header" id="planificacion-btn" data-menu-name="Planificación" data-route="/planes">
-                    <span class="menu-indicator">
-                        <span class="menu-icon" aria-hidden="true">
-                            <img src="/templates/icon/plan.svg" alt="Planificación">
-                        </span>
-                        <span>Planificación</span>
+            </details>
+            <details class="sidebar-block">
+                <summary>
+                    <span class="sidebar-main-left">
+                        <span class="sidebar-main-icon" style="--icon-src: url('/icon/plan.svg');" aria-hidden="true"></span>
+                        <span class="sidebar-main-label">Planificación</span>
                     </span>
-                    <span id="planificacion-toggle">+</span>
-                </button>
-                <div class="accordion-content" id="planificacion-submenu">
-                    <a href="/planes" class="submenu" data-menu-name="Plan estratégico" data-route="/planes"><span>Plan estratégico</span></a>
-                    <a href="/poa" class="submenu" data-menu-name="POA" data-route="/poa"><span>POA</span></a>
+                    <span class="sidebar-main-caret">▾</span>
+                </summary>
+                <div class="sidebar-submenu">
+                    <a href="/planes">Plan estratégico</a>
+                    <a href="/poa">POA</a>
                 </div>
-            </div>
-            <div class="accordion">
-                <button type="button" class="accordion-header" id="diagnostico-btn" data-menu-name="Diagnóstico" data-route="/diagnostico">
-                    <span class="menu-indicator">
-                        <span class="menu-icon" aria-hidden="true">
-                            <img src="/templates/icon/diagnostico.svg" alt="Diagnóstico">
-                        </span>
-                        <span>Diagnóstico</span>
+            </details>
+            <details class="sidebar-block">
+                <summary>
+                    <span class="sidebar-main-left">
+                        <span class="sidebar-main-icon" style="--icon-src: url('/icon/diagnostico.svg');" aria-hidden="true"></span>
+                        <span class="sidebar-main-label">Diagnóstico</span>
                     </span>
-                    <span id="diagnostico-toggle">+</span>
-                </button>
-                <div class="accordion-content" id="diagnostico-submenu">
-                    <a href="/diagnostico/foda" class="submenu" data-menu-name="FODA" data-route="/diagnostico/foda"><span>FODA</span></a>
-                    <a href="/diagnostico/pestel" class="submenu" data-menu-name="PESTEL" data-route="/diagnostico/pestel"><span>PESTEL</span></a>
-                    <a href="/diagnostico/porter" class="submenu" data-menu-name="PORTER" data-route="/diagnostico/porter"><span>PORTER</span></a>
-                    <a href="/diagnostico/percepcion-cliente" class="submenu" data-menu-name="Percepción del cliente" data-route="/diagnostico/percepcion-cliente"><span>Percepción del cliente</span></a>
+                    <span class="sidebar-main-caret">▾</span>
+                </summary>
+                <div class="sidebar-submenu">
+                    <a href="/diagnostico/foda">FODA</a>
+                    <a href="/diagnostico/pestel">PESTEL</a>
+                    <a href="/diagnostico/porter">PORTER</a>
+                    <a href="/diagnostico/percepcion-cliente">Percepción del cliente</a>
                 </div>
-            </div>
-            <a href="/kpis" data-menu-name="KPIs" data-route="/kpis">
-                <span class="menu-icon" aria-hidden="true">
-                    <img src="/templates/icon/kpi.svg" alt="KPIs">
-                </span>
-                <span class="menu-label">KPIs</span>
-            </a>
-            <a href="#" id="sidebar-notifications-trigger" class="menu-notification-link" data-menu-name="Notificaciones" data-route="/notificaciones">
-                <span class="menu-icon" aria-hidden="true">
-                    <img src="/templates/icon/notificaciones.svg" alt="Notificaciones">
-                </span>
-                <span class="menu-label">Notificaciones</span>
-                <span class="menu-notification-badge" id="sidebar-notifications-badge">0</span>
-            </a>
-            <div class="accordion">
-                <button type="button" class="accordion-header" id="reportes-btn" data-menu-name="Reportes" data-route="/reportes">
-                    <span class="menu-indicator">
-                        <span class="menu-icon" aria-hidden="true">
-                            <img src="/templates/icon/reporte.svg" alt="Reportes">
-                        </span>
-                        <span>Reportes</span>
+            </details>
+            <details class="sidebar-block">
+                <summary>
+                    <span class="sidebar-main-left">
+                        <span class="sidebar-main-icon" style="--icon-src: url('/icon/kpi.svg');" aria-hidden="true"></span>
+                        <span class="sidebar-main-label">KPI's</span>
                     </span>
-                    <span id="reportes-toggle">+</span>
-                </button>
-                <div class="accordion-content" id="reportes-submenu">
-                    <a href="/reportes" class="submenu" data-menu-name="Reportes" data-route="/reportes"><span>Resumen</span></a>
-                    <a href="/reportes/documentos" class="submenu" data-menu-name="Documentos" data-route="/reportes/documentos"><span>Documentos</span></a>
+                    <span class="sidebar-main-caret">▾</span>
+                </summary>
+                <div class="sidebar-submenu">
+                    <a href="https://cajapolotitlan.circulocooperativo.com/kpis">KPI's</a>
                 </div>
-            </div>
-            <div class="sidebar-section">
-                <button type="button" class="sidebar-section-toggle" aria-expanded="false" id="empresa-section-toggle">
-                    <span class="sidebar-section-title-with-icon" aria-hidden="true">
-                        <span class="menu-icon" aria-hidden="true">
-                            <img src="/templates/icon/empresa.svg" alt="Empresa">
-                        </span>
-                        <span>Empresa</span>
+            </details>
+            <details class="sidebar-block">
+                <summary>
+                    <span class="sidebar-main-left">
+                        <span class="sidebar-main-icon" style="--icon-src: url('/icon/notificaciones.svg');" aria-hidden="true"></span>
+                        <span class="sidebar-main-label">Notificaciones</span>
                     </span>
-                    <span class="toggle-indicator">+</span>
-                </button>
-                <div class="sidebar-section-content" id="empresa-section-content">
-                    <a href="/identidad-institucional" class="submenu" data-menu-name="Identidad institucional" data-route="/identidad-institucional"><span>Identidad institucional</span></a>
-                    <a href="/plantillas" class="submenu" data-menu-name="Plantillas" data-route="/plantillas" data-floating-screen="plantillas"><span>Plantillas</span></a>
+                    <span class="sidebar-main-caret">▾</span>
+                </summary>
+                <div class="sidebar-submenu">
+                    <a href="#">Submenu 1</a>
+                    <a href="#">Submenu 2</a>
+                    <a href="#">Submenu 3</a>
                 </div>
-            </div>
-            {% if can_manage_personalization %}
-            <div class="accordion">
-                <button type="button" class="accordion-header" id="personalizar-btn" data-menu-name="Personalización" data-route="/personalizacion">
-                    <span class="menu-indicator">
-                        <span class="menu-icon" aria-hidden="true">
-                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path fill-rule="evenodd" clip-rule="evenodd" d="M9.75195 12.0128C9.75175 11.0587 10.4087 10.2372 11.3211 10.0509C12.2335 9.86458 13.1472 10.3652 13.5034 11.2467C13.8595 12.1282 13.559 13.1449 12.7856 13.6752C12.0121 14.2054 10.9812 14.1014 10.3233 13.4268C9.95757 13.0518 9.75206 12.5432 9.75195 12.0128Z" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                                <path fill-rule="evenodd" clip-rule="evenodd" d="M10.3077 5.46781C10.2943 4.94809 10.557 4.46185 10.9937 4.19793C11.4305 3.93402 11.9725 3.93402 12.4092 4.19793C12.8459 4.46185 13.1086 4.94809 13.0952 5.46781V6.18481C14.1532 6.45066 15.1177 7.01454 15.8798 7.81281L16.4346 7.47881C16.7552 7.28632 17.1379 7.23446 17.4962 7.33495C17.8545 7.43544 18.1583 7.6798 18.3388 8.01281C18.7238 8.70718 18.4973 9.58984 17.8288 9.99981L17.3121 10.3108C17.6296 11.4207 17.6296 12.6009 17.3121 13.7108L17.8288 14.0218C18.4996 14.4319 18.7264 15.3175 18.3388 16.0128C18.1579 16.3455 17.8541 16.5894 17.4958 16.6895C17.1375 16.7896 16.7549 16.7375 16.4346 16.5448L15.8798 16.2108C15.1177 17.01 14.1528 17.5746 13.0942 17.8408V18.5578C13.1076 19.0775 12.845 19.5638 12.4082 19.8277C11.9715 20.0916 11.4295 20.0916 10.9927 19.8277C10.556 19.5638 10.2933 19.0775 10.3067 18.5578V17.8408C9.24871 17.575 8.28422 17.0111 7.52212 16.2128L6.96735 16.5468C6.64684 16.739 6.26438 16.7907 5.90629 16.6902C5.5482 16.5897 5.24464 16.3455 5.06415 16.0128C4.67911 15.3184 4.90563 14.4358 5.57407 14.0258L6.09082 13.7148C5.77329 12.6049 5.77329 11.4247 6.09082 10.3148L5.57407 10.0038C4.90333 9.59369 4.67651 8.70808 5.06415 8.01281C5.24498 7.68014 5.54885 7.43621 5.90715 7.3361C6.26546 7.236 6.64797 7.28816 6.96832 7.48081L7.5231 7.81481C8.28484 7.01545 9.24936 6.4505 10.3077 6.18381V5.46781Z" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                        </span>
-                        <span>Personalización</span>
+            </details>
+            <details class="sidebar-block">
+                <summary>
+                    <span class="sidebar-main-left">
+                        <span class="sidebar-main-icon" style="--icon-src: url('/icon/reporte.svg');" aria-hidden="true"></span>
+                        <span class="sidebar-main-label">Reportes</span>
                     </span>
-                    <span id="personalizar-toggle">+</span>
-                </button>
-                <div class="accordion-content" id="personalizar-submenu">
-                    <a href="/personalizar-pantalla" class="submenu" data-menu-name="Personalizar pantalla" data-route="/personalizar-pantalla" data-floating-screen="personalization">Personalizar pantalla</a>
-                    <a href="/roles-permisos" class="submenu" data-menu-name="Roles del sistema" data-route="/roles-permisos" data-floating-screen="personalization">Roles del sistema</a>
-                    <a href="/membresia" class="submenu" data-menu-name="Membresía" data-route="/membresia">Membresía</a>
+                    <span class="sidebar-main-caret">▾</span>
+                </summary>
+                <div class="sidebar-submenu">
+                    <a href="https://cajapolotitlan.circulocooperativo.com/reportes">Resumen</a>
+                    <a href="https://cajapolotitlan.circulocooperativo.com/reportes/documentos">Documentos</a>
                 </div>
-            </div>
-            {% endif %}
+            </details>
+            <details class="sidebar-block">
+                <summary>
+                    <span class="sidebar-main-left">
+                        <span class="sidebar-main-icon" style="--icon-src: url('/icon/empresa.svg');" aria-hidden="true"></span>
+                        <span class="sidebar-main-label">Empresa</span>
+                    </span>
+                    <span class="sidebar-main-caret">▾</span>
+                </summary>
+                <div class="sidebar-submenu">
+                    <a href="/identidad-institucional#">Identidad institucional</a>
+                    <a href="/plantillas">Plantillas</a>
+                    <a href="/plantillas/constructor">Constructor de formularios</a>
+                </div>
+            </details>
+            <details class="sidebar-block">
+                <summary>
+                    <span class="sidebar-main-left">
+                        <span class="sidebar-main-icon" style="--icon-src: url('/icon/settings.svg');" aria-hidden="true"></span>
+                        <span class="sidebar-main-label">Ajustes</span>
+                    </span>
+                    <span class="sidebar-main-caret">▾</span>
+                </summary>
+                <div class="sidebar-submenu">
+                    <a href="/personalizar">Colores</a>
+                    <a href="/roles-permisos">Roles</a>
+                    <a href="/membresia">Membresía</a>
+                </div>
+            </details>
         </nav>
         <div class="sidebar-notifications-panel" id="sidebar-notifications-panel" aria-hidden="true">
             <div class="sidebar-notifications-header">
@@ -2227,10 +2645,14 @@
     <div class="navbar">
         <div class="navbar-inner">
             <div class="navbar-left">
-                <button class="navbar-hamburger" aria-label="Mostrar u ocultar menú">&#9776;</button>
+                <button class="navbar-hamburger is-open" aria-label="Mostrar u ocultar menú" aria-expanded="true" aria-controls="sidebar">
+                    <span class="bar"></span>
+                    <span class="bar"></span>
+                    <span class="bar"></span>
+                </button>
                 <div class="navbar-title">
-                    <span class="navbar-menu-name">Sistema</span>
-                    <a class="navbar-route" href="/inicio">/ inicio</a>
+                    <span class="navbar-menu-name">{{ page_title or title or "Inicio" }}</span>
+                    <a class="navbar-route" href="{{ request.url.path | default('/inicio') }}">{{ request.url.path | default('/inicio') }}</a>
                 </div>
             </div>
             <div class="navbar-user-menu">
@@ -2239,7 +2661,12 @@
                     <span class="navbar-notifications-badge" id="navbar-notifications-badge">0</span>
                 </button>
                 <button class="navbar-avatar" id="navbar-avatar-btn" aria-label="Menú de usuario" aria-expanded="false">
-                    <img id="navbar-avatar-img" src="/templates/icon/usuarios.svg" alt="Avatar" data-default="/templates/icon/usuarios.svg">
+                    <img
+                        id="navbar-avatar-img"
+                        src="/templates/icon/usuario.png"
+                        data-default="/templates/icon/usuario.png"
+                        alt="Usuario"
+                    />
                 </button>
                 <div class="user-dropdown" id="user-dropdown">
                     <a href="/logout" id="logout-link">Cerrar sesión</a>
@@ -2249,18 +2676,14 @@
     </div>
     <main class="main-content">
         <div class="content-shell">
-        {% if show_page_header | default(true) and (page_title or title or page_description or subtitle or view_buttons_html) %}
+        {% if show_page_header | default(true) %}
         <section class="page-header">
             <div class="page-header-text">
                 {% if subtitle %}
                 <span class="page-header-subtitle">{{ subtitle }}</span>
                 {% endif %}
-                {% if page_title or title %}
-                <h1>{{ page_title or title }}</h1>
-                {% endif %}
-                {% if page_description %}
-                <p class="page-header-description">{{ page_description }}</p>
-                {% endif %}
+                <h1 style="color: var(--titulo-color, var(--sidebar-bottom, #0f172a));">{{ page_title or title }}</h1>
+                <p class="page-header-description" style="color: var(--descripcion-color, #475569);">{{ page_description or description }}</p>
             </div>
             {% if view_buttons_html %}
             <div class="view-buttons">
@@ -2269,83 +2692,29 @@
             {% endif %}
         </section>
         {% endif %}
-        {{ content|safe }}
+        <section class="content-section">
+            {% if section_label or section_title %}
+            <header class="content-section-head">
+                {% if section_label %}<p class="content-section-kicker">{{ section_label }}</p>{% endif %}
+                {% if section_title %}<h2 class="content-section-title" style="color: var(--titulo-seccion-color, var(--sidebar-bottom, #0f172a));">{{ section_title }}</h2>{% endif %}
+            </header>
+            {% endif %}
+            <div class="content-section-body" style="color: var(--texto-color, var(--navbar-text, #1f172a));">
+                {{ content|safe }}
+            </div>
+        </section>
         </div>
     </main>
-        <div class="floating-actions-wrapper{% if hide_floating_actions %} floating-placeholder{% endif %}"
+        {% if not hide_floating_actions and floating_actions_html %}
+        <div class="floating-actions-wrapper"
              aria-label="Acciones rápidas de pantalla"
              data-default-screen="{{ floating_actions_screen | default('personalization') }}">
             <aside class="floating-actions">
-            {% set DEFAULT_FLOATING_ACTIONS %}
-            <div class="floating-actions-group" data-floating-screen="personalization">
-                <button class="action-button" type="button" id="action-save-personal" aria-label="Guardar">
-                    <img src="/templates/icon/guardar.svg" alt="Guardar">
-                    <span class="action-label">Guardar</span>
-                </button>
-                <button class="action-button" type="button" id="action-reset-personal" aria-label="Restablecer">
-                    <img src="/templates/icon/restablecer.svg" alt="Restablecer">
-                    <span class="action-label">Restablecer</span>
-                </button>
-            </div>
-            <div class="floating-actions-group{% if (floating_actions_screen | default('personalization')) == 'usuarios' %} active{% endif %}" data-floating-screen="usuarios"{% if (floating_actions_screen | default('personalization')) == 'usuarios' %} style="display:flex"{% endif %}>
-                <button class="action-button" type="button" id="action-create-user" aria-label="Crear usuario">
-                    <img src="/templates/icon/nuevo.svg" alt="Crear usuario">
-                    <span class="action-label">Crear Usuario</span>
-                </button>
-                <button class="action-button" type="button" id="action-edit" aria-label="Editar">
-                    <img src="/templates/icon/editar.svg" alt="Editar">
-                    <span class="action-label">Editar</span>
-                </button>
-                <button class="action-button" type="button" id="action-save-usuario" aria-label="Guardar">
-                    <img src="/templates/icon/guardar.svg" alt="Guardar">
-                    <span class="action-label">Guardar</span>
-                </button>
-                <button class="action-button" type="button" id="action-delete" aria-label="Eliminar">
-                    <img src="/templates/icon/eliminar.svg" alt="Eliminar">
-                    <span class="action-label">Eliminar</span>
-                </button>
-            </div>
-            <div class="floating-actions-group{% if (floating_actions_screen | default('personalization')) == 'areas' %} active{% endif %}" data-floating-screen="areas"{% if (floating_actions_screen | default('personalization')) == 'areas' %} style="display:flex"{% endif %}>
-                <button class="action-button" type="button" id="action-new-areas" aria-label="Nuevo">
-                    <img src="/templates/icon/nuevo.svg" alt="Nuevo">
-                    <span class="action-label">Nuevo</span>
-                </button>
-                <button class="action-button" type="button" id="action-edit-areas" aria-label="Editar">
-                    <img src="/templates/icon/editar.svg" alt="Editar">
-                    <span class="action-label">Editar</span>
-                </button>
-                <button class="action-button" type="button" id="action-save-areas" aria-label="Guardar">
-                    <img src="/templates/icon/guardar.svg" alt="Guardar">
-                    <span class="action-label">Guardar</span>
-                </button>
-                <button class="action-button" type="button" id="action-delete-areas" aria-label="Eliminar">
-                    <img src="/templates/icon/eliminar.svg" alt="Eliminar">
-                    <span class="action-label">Eliminar</span>
-                </button>
-            </div>
-            <div class="floating-actions-group{% if (floating_actions_screen | default('personalization')) == 'plantillas' %} active{% endif %}" data-floating-screen="plantillas"{% if (floating_actions_screen | default('personalization')) == 'plantillas' %} style="display:flex"{% endif %}>
-                <button class="action-button" type="button" id="action-new-template" aria-label="Nuevo">
-                    <img src="/templates/icon/nuevo.svg" alt="Nuevo">
-                    <span class="action-label">Nuevo</span>
-                </button>
-                <button class="action-button" type="button" id="action-edit-template" aria-label="Editar">
-                    <img src="/templates/icon/editar.svg" alt="Editar">
-                    <span class="action-label">Editar</span>
-                </button>
-                <button class="action-button" type="button" id="action-save-template" aria-label="Guardar">
-                    <img src="/templates/icon/guardar.svg" alt="Guardar">
-                    <span class="action-label">Guardar</span>
-                </button>
-                <button class="action-button" type="button" id="action-delete-template" aria-label="Eliminar">
-                    <img src="/templates/icon/eliminar.svg" alt="Eliminar">
-                    <span class="action-label">Eliminar</span>
-                </button>
-            </div>
-            {% endset %}
-            {{ (floating_actions_html if floating_actions_html else DEFAULT_FLOATING_ACTIONS) | safe }}
-        </aside>
-        <button class="floating-toggle" type="button" id="floating-toggle" aria-label="Ocultar barra flotante">−</button>
-    </div>
+                {{ floating_actions_html | safe }}
+            </aside>
+            <button class="floating-toggle" type="button" id="floating-toggle" aria-label="Ocultar barra flotante">−</button>
+        </div>
+        {% endif %}
     <script>
         document.addEventListener('DOMContentLoaded', async function() {
             const hamburger = document.querySelector('.navbar-hamburger');
@@ -2372,6 +2741,9 @@
             const inicioSubmenu = document.getElementById('inicio-submenu');
             const submenuLinks = document.querySelectorAll('.submenu[data-menu-name]');
             const menuLinks = document.querySelectorAll('nav > a[data-menu-name]');
+            const sidebarBlocks = document.querySelectorAll('.sidebar-block');
+            const sidebarSummaryItems = document.querySelectorAll('.sidebar-block > summary');
+            const sidebarSubmenuLinks = document.querySelectorAll('.sidebar-submenu a');
             const navbarMenuName = document.querySelector('.navbar-menu-name');
             const navbarRoute = document.querySelector('.navbar-route');
             const floatingActions = document.querySelector('.floating-actions');
@@ -2405,9 +2777,81 @@
             const actionExportReportes = document.getElementById('action-export-reportes');
             const actionExportPdf = document.getElementById('action-export-pdf');
             const actionExportExcel = document.getElementById('action-export-excel');
+            const personalizarEditBtn = document.getElementById('personalizar-edit-btn');
+            const personalizarSaveBtn = document.getElementById('personalizar-save-btn');
+            const personalizarResetBtn = document.getElementById('personalizar-reset-btn');
             const navbarAvatarBtn = document.getElementById('navbar-avatar-btn');
+            const navbarAvatarImgEl = document.getElementById('navbar-avatar-img');
             const userDropdown = document.getElementById('user-dropdown');
             const logoutLink = document.getElementById('logout-link');
+            const sidebarUserImg = document.getElementById('sidebar-user-img');
+            const COMPANY_LOGO_CACHE_KEY = 'sipet_logo_empresa_url';
+            const USER_LOGO_CACHE_KEY = 'sipet_logo_usuario_url';
+            try {
+                if (sidebarUserImg instanceof HTMLImageElement) {
+                    const cachedLogo = String(window.localStorage.getItem(COMPANY_LOGO_CACHE_KEY) || '').trim();
+                    if (cachedLogo) {
+                        sidebarUserImg.src = cachedLogo;
+                    }
+                }
+                if (navbarAvatarImgEl instanceof HTMLImageElement) {
+                    const cachedUserLogo = String(window.localStorage.getItem(USER_LOGO_CACHE_KEY) || '').trim();
+                    if (cachedUserLogo) {
+                        navbarAvatarImgEl.src = cachedUserLogo;
+                    }
+                }
+            } catch (e) {
+                // Ignorar acceso a localStorage cuando no esté disponible.
+            }
+            const syncSidebarCompanyLogo = async () => {
+                if (!(sidebarUserImg instanceof HTMLImageElement) && !(navbarAvatarImgEl instanceof HTMLImageElement)) return;
+                try {
+                    const res = await fetch('/personalizar/estado', { headers: { Accept: 'application/json' } });
+                    if (!res.ok) return;
+                    const json = await res.json();
+                    const logoUrl = String(json?.assets?.logo_empresa?.url || '').trim();
+                    if (logoUrl) {
+                        sidebarUserImg.src = logoUrl;
+                        try {
+                            window.localStorage.setItem(COMPANY_LOGO_CACHE_KEY, logoUrl);
+                        } catch (e) {
+                            // Ignorar acceso a localStorage cuando no esté disponible.
+                        }
+                    } else if (sidebarUserImg.dataset.default) {
+                        sidebarUserImg.src = sidebarUserImg.dataset.default;
+                        try {
+                            window.localStorage.removeItem(COMPANY_LOGO_CACHE_KEY);
+                        } catch (e) {
+                            // Ignorar acceso a localStorage cuando no esté disponible.
+                        }
+                    }
+                    const userLogoUrl = String(json?.assets?.logo_usuario?.url || '').trim();
+                    if (navbarAvatarImgEl instanceof HTMLImageElement) {
+                        if (userLogoUrl) {
+                            navbarAvatarImgEl.src = userLogoUrl;
+                            try {
+                                window.localStorage.setItem(USER_LOGO_CACHE_KEY, userLogoUrl);
+                            } catch (e) {
+                                // Ignorar acceso a localStorage cuando no esté disponible.
+                            }
+                        } else if (navbarAvatarImgEl.dataset.default) {
+                            navbarAvatarImgEl.src = navbarAvatarImgEl.dataset.default;
+                            try {
+                                window.localStorage.removeItem(USER_LOGO_CACHE_KEY);
+                            } catch (e) {
+                                // Ignorar acceso a localStorage cuando no esté disponible.
+                            }
+                        }
+                    }
+                } catch (e) {
+                    if (sidebarUserImg.dataset.default) {
+                        sidebarUserImg.src = sidebarUserImg.dataset.default;
+                    }
+                    if (navbarAvatarImgEl instanceof HTMLImageElement && navbarAvatarImgEl.dataset.default) {
+                        navbarAvatarImgEl.src = navbarAvatarImgEl.dataset.default;
+                    }
+                }
+            };
             const sidebarNotificationsTrigger = document.getElementById('sidebar-notifications-trigger');
             const sidebarNotificationsBadge = document.getElementById('sidebar-notifications-badge');
             const navbarNotificationsTrigger = document.getElementById('navbar-notifications-trigger');
@@ -2423,8 +2867,11 @@
             const viewPills = document.querySelectorAll('.view-buttons .view-pill[data-view]');
             const convertFloatingIconsToMasks = () => {
                 document.querySelectorAll('.floating-actions .action-button img[src$=".svg"]').forEach((img) => {
-                    const src = img.getAttribute('src');
-                    if (!src || img.dataset.maskApplied === '1') return;
+                    const rawSrc = img.getAttribute('src');
+                    if (!rawSrc || img.dataset.maskApplied === '1') return;
+                    const src = rawSrc
+                        .replace('/modulos/templates/icon/', '/templates/icon/')
+                        .replace('fastapi_modulo/modulos/templates/icon/', '/templates/icon/');
                     const iconMask = document.createElement('span');
                     iconMask.className = 'action-icon-mask';
                     iconMask.setAttribute('aria-hidden', 'true');
@@ -2434,7 +2881,35 @@
                 });
             };
             convertFloatingIconsToMasks();
+            const shouldSkipThemedButton = (button) => (
+                button.matches(
+                    '.navbar-hamburger, .navbar-avatar, .navbar-notifications-btn, .accordion-header, .sidebar-section-toggle, .floating-toggle, .sipet-section-tab, .Pestana, [data-param-tab], [data-cg-tab], .cg-view-toggle, .view-pill, [data-view], .ar-chip, [data-relacion-help], .fp-row, .fp-btn, .fp-icon, [data-scn], .pe-axis__btn, .pe-btn, .table-delete-btn, .delete-activo-fijo-row'
+                ) ||
+                !!button.closest('.fp-shell, .pe-page, .ar-shell, #usuario-view, #area-view, #sucursales-view, .kpi-page, .axm-shell, #plantillas-page')
+            );
+            const applyButtonThemeClass = () => {
+                document.querySelectorAll('button').forEach((button) => {
+                    const forceTheme = button.getAttribute('data-force-button-theme') === '1';
+                    if (forceTheme) {
+                        button.classList.add('boton-personalizado');
+                        return;
+                    }
+                    if (shouldSkipThemedButton(button)) {
+                        button.classList.remove('boton-personalizado');
+                        return;
+                    }
+                    button.classList.add('boton-personalizado');
+                });
+            };
+            applyButtonThemeClass();
+            if (document.body) {
+                const themedButtonObserver = new MutationObserver(() => {
+                    applyButtonThemeClass();
+                });
+                themedButtonObserver.observe(document.body, { childList: true, subtree: true });
+            }
             const currentUserRole = {{ request.state.user_role | default('usuario') | tojson }};
+            const currentSessionUser = {{ request.state.user_name | default('') | tojson }};
             const currentTenantId = {{ request.state.tenant_id | default('default') | tojson }};
             const activateViewButton = (view) => {
                 if (!viewPills.length || !view) return;
@@ -2467,40 +2942,76 @@
             };
             refreshUsuarioFloating();
 
-            const collapsedWidth = '0px';
+            const collapsedWidth = '72px';
             const expandedWidth = '220px';
             let isSidebarOpen = true;
 
-            const formatRouteLabel = (route) => {
-                if (!route) return '';
-                return route.replace(/^\//, '/ ').replace(/-/g, ' ');
+            const slugify = (value) => {
+                return (value || '')
+                    .toLowerCase()
+                    .normalize('NFD')
+                    .replace(/[\u0300-\u036f]/g, '')
+                    .replace(/[^a-z0-9]+/g, '-')
+                    .replace(/^-+|-+$/g, '');
+            };
+
+            const formatRouteLabel = (mainLabel, subLabel = '') => {
+                if (!mainLabel) return '';
+                return subLabel ? `${mainLabel}/${subLabel}` : mainLabel;
             };
 
             const setMenuInfo = (source) => {
                 if (!source) return;
-                const name = source.dataset.menuName || source.textContent.trim();
-                const route = source.dataset.route || '';
-                navbarMenuName.textContent = name;
-                navbarRoute.textContent = formatRouteLabel(route);
-                navbarRoute.href = route || source.getAttribute('href') || '#';
+                const fromSubmenu = source.matches && source.matches('.sidebar-submenu a');
+                const fromSummary = source.matches && source.matches('.sidebar-block > summary');
+
+                let mainLabel = source.dataset.menuName || source.textContent.trim();
+                let subLabel = '';
+
+                if (fromSubmenu) {
+                    const parentSummary = source.closest('.sidebar-block')?.querySelector('.sidebar-main-label');
+                    mainLabel = (parentSummary?.textContent || '').trim() || mainLabel;
+                    subLabel = (source.dataset.submenuName || source.textContent || '').trim();
+                } else if (fromSummary) {
+                    const label = source.querySelector('.sidebar-main-label');
+                    mainLabel = (label?.textContent || '').trim() || mainLabel;
+                }
+
+                const fallbackRoute = fromSubmenu
+                    ? `/${slugify(mainLabel)}/${slugify(subLabel)}`
+                    : `/${slugify(mainLabel)}`;
+                const explicitHref = source.getAttribute('href');
+                const routeHref = explicitHref && explicitHref !== '#'
+                    ? explicitHref
+                    : (source.dataset.route || fallbackRoute);
+
+                navbarMenuName.textContent = mainLabel || 'Inicio';
+                navbarRoute.textContent = formatRouteLabel(mainLabel || 'Inicio', subLabel);
+                navbarRoute.href = routeHref || '/';
             };
 
             const updateRouteVisibility = () => {
                 if (!navbarRoute) return;
-                if (!isSidebarOpen) {
-                    navbarRoute.style.display = 'inline-flex';
-                    navbarRoute.setAttribute('aria-hidden', 'false');
-                } else {
-                    navbarRoute.style.display = 'none';
-                    navbarRoute.setAttribute('aria-hidden', 'true');
-                }
+                navbarRoute.style.display = 'inline-flex';
+                navbarRoute.setAttribute('aria-hidden', 'false');
             };
 
             const setSidebarState = (open) => {
                 const width = open ? expandedWidth : collapsedWidth;
-                sidebarElem.style.width = width;
+                sidebarElem.classList.toggle('is-collapsed', !open);
                 navbar.style.marginLeft = width;
                 mainContent.style.marginLeft = width;
+                mainContent.style.width = open ? `calc(100vw - ${expandedWidth})` : `calc(100vw - ${collapsedWidth})`;
+                if (!open) {
+                    sidebarBlocks.forEach((item) => {
+                        item.removeAttribute('open');
+                        item.classList.remove('is-flyout-open');
+                    });
+                }
+                if (hamburger) {
+                    hamburger.classList.toggle('is-open', open);
+                    hamburger.setAttribute('aria-expanded', open ? 'true' : 'false');
+                }
                 isSidebarOpen = open;
                 updateRouteVisibility();
             };
@@ -2510,6 +3021,58 @@
             if (hamburger) {
                 hamburger.addEventListener('click', toggleSidebar);
             }
+
+            sidebarSummaryItems.forEach((summary) => {
+                summary.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    const block = summary.closest('.sidebar-block');
+                    if (!block) return;
+                    if (!isSidebarOpen) {
+                        const shouldOpenFlyout = !block.classList.contains('is-flyout-open');
+                        sidebarBlocks.forEach((item) => {
+                            item.classList.remove('is-flyout-open');
+                            item.removeAttribute('open');
+                        });
+                        if (shouldOpenFlyout) {
+                            block.classList.add('is-flyout-open');
+                        }
+                        setMenuInfo(summary);
+                        return;
+                    }
+                    const shouldOpen = !block.hasAttribute('open');
+                    sidebarBlocks.forEach((item) => {
+                        if (item !== block) {
+                            item.removeAttribute('open');
+                            item.classList.remove('is-flyout-open');
+                        }
+                    });
+                    if (shouldOpen) {
+                        block.setAttribute('open', '');
+                    } else {
+                        block.removeAttribute('open');
+                    }
+                    setMenuInfo(summary);
+                });
+            });
+            sidebarSubmenuLinks.forEach((link) => {
+                link.addEventListener('click', () => {
+                    setMenuInfo(link);
+                    if (!isSidebarOpen) {
+                        sidebarBlocks.forEach((item) => {
+                            item.removeAttribute('open');
+                            item.classList.remove('is-flyout-open');
+                        });
+                    }
+                });
+            });
+            document.addEventListener('click', (event) => {
+                if (isSidebarOpen) return;
+                if (sidebarElem && sidebarElem.contains(event.target)) return;
+                sidebarBlocks.forEach((item) => {
+                    item.removeAttribute('open');
+                    item.classList.remove('is-flyout-open');
+                });
+            });
 
             if (personalizarBtn && personalizarSubmenu && personalizarToggle) {
                 personalizarBtn.addEventListener('click', function(event) {
@@ -2643,7 +3206,14 @@
 
             // Eliminado: los links ahora navegan normalmente
 
-            if (menuLinks.length) {
+            const activeSidebarLink = Array.from(sidebarSubmenuLinks).find(link => link.getAttribute('href') === window.location.pathname);
+            if (activeSidebarLink) {
+                const block = activeSidebarLink.closest('.sidebar-block');
+                if (block) block.open = true;
+                setMenuInfo(activeSidebarLink);
+            } else if (sidebarSummaryItems.length) {
+                setMenuInfo(sidebarSummaryItems[0]);
+            } else if (menuLinks.length) {
                 setMenuInfo(menuLinks[0]);
             }
             setSidebarState(true);
@@ -2825,14 +3395,26 @@
                 }
             };
             let guardarColores = () => {};
+            let guardarAssets = () => Promise.resolve();
+            let restablecerAssets = () => Promise.resolve();
             let restablecerColores = () => {};
             if (personalizationPanel) {
                 const colorInputs = [
                     'navbar-bg','navbar-text','sidebar-top','sidebar-bottom','sidebar-text',
                     'field-color',
+                    'button-bg','button-text',
                     'sidebar-icon','sidebar-hover'
                 ];
                 const colorDefaults = {};
+                const assetsForm = document.getElementById('personalizar-assets-form');
+                const assetConfig = {
+                    favicon: { filenameId: 'asset-filename-favicon', linkId: 'asset-link-favicon', thumbId: 'asset-thumb-favicon' },
+                    logo_empresa: { filenameId: 'asset-filename-logo-empresa', linkId: 'asset-link-logo-empresa', thumbId: 'asset-thumb-logo-empresa' },
+                    logo_usuario: { filenameId: 'asset-filename-logo-usuario', linkId: 'asset-link-logo-usuario', thumbId: 'asset-thumb-logo-usuario' },
+                    svg_fondo: { filenameId: 'asset-filename-svg-fondo', linkId: 'asset-link-svg-fondo', thumbId: 'asset-thumb-svg-fondo' },
+                    svg_defecto: { filenameId: 'asset-filename-svg-defecto', linkId: 'asset-link-svg-defecto', thumbId: 'asset-thumb-svg-defecto' }
+                };
+                const defaultAssetThumb = '/templates/icon/placeholder.svg';
                 const updatePreview = (id, value) => {
                     const preview = document.getElementById(id + '-preview');
                     if (preview) preview.style.background = value;
@@ -2860,6 +3442,8 @@
                     const sidebarBottom = document.getElementById('sidebar-bottom');
                     const sidebarText = document.getElementById('sidebar-text');
                     const fieldColor = document.getElementById('field-color');
+                    const buttonBg = document.getElementById('button-bg');
+                    const buttonText = document.getElementById('button-text');
                     const sidebarIcon = document.getElementById('sidebar-icon');
                     const sidebarHover = document.getElementById('sidebar-hover');
                     if (navbarBg && navbar) {
@@ -2893,15 +3477,22 @@
                         });
                     }
                     if (sidebarHover) {
-                        document.querySelectorAll('.sidebar nav a:hover').forEach(link => {
-                            link.style.background = sidebarHover.value;
-                        });
+                        document.documentElement.style.setProperty('--sidebar-hover', sidebarHover.value);
                     }
                     if (fieldColor) {
                         document.documentElement.style.setProperty('--field-color', fieldColor.value);
                     }
-                    const bottomColor = (sidebarBottom && sidebarBottom.value) || '#0f172a';
-                    const textColor = (sidebarText && sidebarText.value) || '#ffffff';
+                    if (buttonBg) {
+                        document.documentElement.style.setProperty('--button-bg', buttonBg.value);
+                    }
+                    if (buttonText) {
+                        document.documentElement.style.setProperty('--button-text', buttonText.value);
+                    }
+                    const rootStyles = getComputedStyle(document.documentElement);
+                    const rootBottomColor = (rootStyles.getPropertyValue('--sidebar-bottom') || '').trim();
+                    const rootTextColor = (rootStyles.getPropertyValue('--sidebar-text') || '').trim();
+                    const bottomColor = (sidebarBottom && sidebarBottom.value) || rootBottomColor || '#0f172a';
+                    const textColor = (sidebarText && sidebarText.value) || rootTextColor || '#ffffff';
                     document.documentElement.style.setProperty('--page-title-color', bottomColor);
                     document.documentElement.style.setProperty('--view-pill-border', bottomColor);
                     document.documentElement.style.setProperty('--view-pill-bg', textColor);
@@ -2960,15 +3551,162 @@
                         // Ignorar errores de carga
                     }
                 }
+                const applyAssetState = (assets = {}) => {
+                    Object.entries(assetConfig).forEach(([field, refs]) => {
+                        const filenameEl = document.getElementById(refs.filenameId);
+                        const linkEl = document.getElementById(refs.linkId);
+                        const thumbEl = document.getElementById(refs.thumbId);
+                        const info = assets[field] || {};
+                        const filename = String(info.filename || '').trim();
+                        const url = String(info.url || '').trim();
+                        if (filenameEl) {
+                            filenameEl.textContent = filename || 'Sin archivo';
+                        }
+                        if (linkEl) {
+                            if (url) {
+                                linkEl.href = url;
+                                linkEl.hidden = false;
+                            } else {
+                                linkEl.hidden = true;
+                                linkEl.removeAttribute('href');
+                            }
+                        }
+                        if (thumbEl instanceof HTMLImageElement) {
+                            thumbEl.src = url || defaultAssetThumb;
+                        }
+                    });
+                    const sidebarLogoEl = document.getElementById('sidebar-user-img');
+                    if (sidebarLogoEl instanceof HTMLImageElement) {
+                        const logoEmpresa = assets.logo_empresa || {};
+                        const logoUrl = String(logoEmpresa.url || '').trim();
+                        if (logoUrl) {
+                            sidebarLogoEl.src = logoUrl;
+                            try {
+                                window.localStorage.setItem(COMPANY_LOGO_CACHE_KEY, logoUrl);
+                            } catch (e) {
+                                // Ignorar acceso a localStorage cuando no esté disponible.
+                            }
+                        } else if (sidebarLogoEl.dataset.default) {
+                            sidebarLogoEl.src = sidebarLogoEl.dataset.default;
+                            try {
+                                window.localStorage.removeItem(COMPANY_LOGO_CACHE_KEY);
+                            } catch (e) {
+                                // Ignorar acceso a localStorage cuando no esté disponible.
+                            }
+                        }
+                    }
+                };
+                const cargarEstadoAssets = async () => {
+                    if (!assetsForm) return;
+                    try {
+                        const res = await fetch('/personalizar/estado', { headers: { Accept: 'application/json' } });
+                        if (!res.ok) return;
+                        const json = await res.json();
+                        if (json && json.ok) {
+                            applyAssetState(json.assets || {});
+                        }
+                    } catch (e) {
+                        // Ignorar errores de carga
+                    }
+                };
                 await cargarColoresGuardados();
                 applyColors();
+                await cargarEstadoAssets();
+                if (assetsForm) {
+                    const resetRemoveFlags = () => {
+                        assetsForm.querySelectorAll('input[type="hidden"][name^="remove_"]').forEach((flag) => {
+                            flag.value = '0';
+                        });
+                    };
+                    const hasAssetChanges = () => {
+                        const hasRemoved = Array.from(
+                            assetsForm.querySelectorAll('input[type="hidden"][name^="remove_"]')
+                        ).some((flag) => String(flag.value || '0').trim() === '1');
+                        const hasFiles = Array.from(
+                            assetsForm.querySelectorAll('input[type="file"]')
+                        ).some((input) => input.files && input.files.length > 0);
+                        return hasRemoved || hasFiles;
+                    };
+                    const clearFileInputs = () => {
+                        assetsForm.querySelectorAll('input[type="file"]').forEach((input) => {
+                            input.value = '';
+                        });
+                    };
+                    const editButtons = assetsForm.querySelectorAll('.asset-edit-btn[data-target-input][data-target-remove]');
+                    const deleteButtons = assetsForm.querySelectorAll('.asset-delete-btn[data-target-remove][data-asset]');
+                    editButtons.forEach((btn) => {
+                        btn.addEventListener('click', (event) => {
+                            event.preventDefault();
+                            const inputId = btn.getAttribute('data-target-input');
+                            const removeId = btn.getAttribute('data-target-remove');
+                            const input = inputId ? document.getElementById(inputId) : null;
+                            const removeFlag = removeId ? document.getElementById(removeId) : null;
+                            if (removeFlag) removeFlag.value = '0';
+                            if (input) input.click();
+                        });
+                    });
+                    deleteButtons.forEach((btn) => {
+                        btn.addEventListener('click', async (event) => {
+                            event.preventDefault();
+                            const assetName = btn.getAttribute('data-asset') || 'archivo';
+                            const removeId = btn.getAttribute('data-target-remove');
+                            const removeFlag = removeId ? document.getElementById(removeId) : null;
+                            if (!removeFlag) return;
+                            const ok = window.confirm(`¿Eliminar ${assetName.replace('_', ' ')}?`);
+                            if (!ok) return;
+                            removeFlag.value = '1';
+                            await guardarAssets();
+                        });
+                    });
+                    assetsForm.querySelectorAll('input[type="file"]').forEach((input) => {
+                        input.addEventListener('change', async () => {
+                            if (!input.files || !input.files.length) return;
+                            const removeId = input.getAttribute('data-target-remove');
+                            const removeFlag = removeId ? document.getElementById(removeId) : null;
+                            if (removeFlag) removeFlag.value = '0';
+                            await guardarAssets();
+                        });
+                    });
+                    guardarAssets = async function() {
+                        if (!hasAssetChanges()) return;
+                        const data = new FormData(assetsForm);
+                        try {
+                            const res = await fetch('/personalizar/guardar', { method: 'POST', body: data });
+                            const json = await res.json();
+                            if (!res.ok || !json?.ok) {
+                                throw new Error(json?.error || 'No se pudieron guardar las imagenes');
+                            }
+                            applyAssetState(json.assets || {});
+                            resetRemoveFlags();
+                            clearFileInputs();
+                            showMessage('Imagenes actualizadas correctamente.', 'success');
+                        } catch (error) {
+                            showMessage(error.message || 'Error al guardar imagenes.', 'error');
+                        }
+                    };
+                    restablecerAssets = async function() {
+                        try {
+                            const res = await fetch('/personalizar/restablecer-assets', { method: 'POST' });
+                            const json = await res.json();
+                            if (!res.ok || !json?.ok) {
+                                throw new Error(json?.error || 'No se pudieron restablecer las imagenes');
+                            }
+                            applyAssetState(json.assets || {});
+                            resetRemoveFlags();
+                            clearFileInputs();
+                            showMessage('Imagenes restablecidas.', 'success');
+                        } catch (error) {
+                            showMessage(error.message || 'Error al restablecer imagenes.', 'error');
+                        }
+                    };
+                }
                 guardarColores = function() {
                     const data = {};
                     colorInputs.forEach(function(id) {
                         const input = document.getElementById(id);
                         if (input) data[id] = input.value;
                     });
-                    fetch('/guardar-colores', {
+                    return fetch('/guardar-colores', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'
@@ -3029,14 +3767,16 @@
             const areaView = document.getElementById('area-view');
             const areaTabs = document.querySelectorAll('.area-tab');
             const usuarioData = [];
-            let areasData = [
+            const defaultAreasData = [
                 { name: 'Dirección General', parent: 'N/A', manager: 'Adriana Chávez Galeana', code: 'DIR-001', color: '#0f172a', status: 'Estratégico' },
                 { name: 'Operaciones', parent: 'Dirección General', manager: 'Pablo Rojas', code: 'OPE-010', color: '#1d4ed8', status: 'Activo' },
                 { name: 'Planeación', parent: 'Dirección General', manager: 'Lucía Ortega Moreno', code: 'PLA-020', color: '#0ea5e9', status: 'Activo' },
                 { name: 'Servicios', parent: 'Operaciones', manager: 'María Delgado', code: 'SER-030', color: '#16a34a', status: 'En revisión' }
             ];
+            let areasData = defaultAreasData.map((row) => ({ ...row }));
             const defaultKanbanImage = '/templates/icon/usuario.png';
             let usuariosImagenStore = [];
+            let createAreaMode = false;
             const normalizeImagePath = (value) => {
                 const raw = String(value || '').trim();
                 if (!raw) return '';
@@ -3083,6 +3823,63 @@
                     }
                 });
             };
+            const normalizeAreaStatus = (value) => {
+                const raw = String(value || '').trim();
+                if (raw === 'Estratégico' || raw === 'En revisión' || raw === 'Activo') return raw;
+                return 'Activo';
+            };
+            const normalizeAreaColor = (value) => {
+                const raw = String(value || '').trim();
+                return /^#[0-9a-fA-F]{6}$/.test(raw) ? raw : '#1d4ed8';
+            };
+            const normalizeAreaRow = (row, fallbackIndex = 0) => {
+                const data = row && typeof row === 'object' ? row : {};
+                const code = String(data.code || data.codigo || '').trim() || `DEP-${String(fallbackIndex + 1).padStart(3, '0')}`;
+                return {
+                    name: String(data.name || data.nombre || '').trim(),
+                    parent: String(data.parent || data.padre || 'N/A').trim() || 'N/A',
+                    manager: String(data.manager || data.responsable || '').trim(),
+                    code,
+                    color: normalizeAreaColor(data.color),
+                    status: normalizeAreaStatus(data.status || data.estado),
+                };
+            };
+            const replaceAreasData = (rows = []) => {
+                const clean = (Array.isArray(rows) ? rows : [])
+                    .map((row, index) => normalizeAreaRow(row, index))
+                    .filter((row) => row.name && row.code);
+                areasData = clean.length ? clean : defaultAreasData.map((row) => ({ ...row }));
+            };
+            const loadAreasData = async () => {
+                try {
+                    const res = await fetch('/api/inicio/departamentos');
+                    const json = await res.json().catch(() => ({}));
+                    if (!res.ok || json?.success === false) throw new Error('No se pudieron cargar departamentos');
+                    const payload = Array.isArray(json?.data) ? json.data : [];
+                    if (payload.length) {
+                        replaceAreasData(payload);
+                        return true;
+                    }
+                    return false;
+                } catch (_error) {
+                    return false;
+                }
+            };
+            const persistAreasData = async () => {
+                try {
+                    const res = await fetch('/api/inicio/departamentos', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ data: areasData }),
+                    });
+                    const json = await res.json().catch(() => ({}));
+                    if (!res.ok || json?.success === false) throw new Error('No se pudieron guardar departamentos');
+                    replaceAreasData(json?.data || []);
+                    return true;
+                } catch (_error) {
+                    return false;
+                }
+            };
             const hydrateAreasFromUsuarios = (usuarios = []) => {
                 if (!Array.isArray(usuarios) || !usuarios.length) return;
                 const grouped = new Map();
@@ -3124,9 +3921,25 @@
                     usuariosImagenStore = data;
                     enrichUsuarioImages(usuariosImagenStore);
                     hydrateAreasFromUsuarios(usuariosImagenStore);
+                    syncCurrentUserShellAvatar(usuariosImagenStore);
                 } catch (error) {
                     // Si falla, mantener fallback local/default.
                 }
+            };
+            const syncCurrentUserShellAvatar = (usuarios = []) => {
+                const sessionValue = String(currentSessionUser || '').trim().toLowerCase();
+                if (!sessionValue) return;
+                const match = (Array.isArray(usuarios) ? usuarios : []).find((u) => {
+                    const usuario = String(u?.usuario || '').trim().toLowerCase();
+                    const correo = String(u?.correo || '').trim().toLowerCase();
+                    const nombre = String(u?.nombre || '').trim().toLowerCase();
+                    return sessionValue === usuario || sessionValue === correo || sessionValue === nombre;
+                });
+                const imageValue = match?.imagen || match?.foto || match?.image || match?.avatar || '';
+                if (!String(imageValue || '').trim()) return;
+                const imageUrl = normalizeImagePath(imageValue);
+                const navbarAvatarImgEl = document.getElementById('navbar-avatar-img');
+                if (navbarAvatarImgEl) navbarAvatarImgEl.src = imageUrl;
             };
             const getManagerImage = (managerName) => {
                 const manager = usuarioData.find((user) => user.name === managerName);
@@ -3193,6 +4006,18 @@
                 const areaNamesDisponibles = getAreaNamesDisponibles();
                 const options = ['N/A', ...areaNamesDisponibles];
                 return options.map((name) => `<option value="${name}" ${name === selected ? 'selected' : ''}>${name}</option>`).join('');
+            };
+            const getResponsableOptions = (selected = '') => {
+                const responsables = [...new Set(usuarioData.map((u) => String(u?.name || '').trim()).filter(Boolean))]
+                    .sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+                const selectedValue = String(selected || '').trim();
+                const dynamicOptions = responsables.map((name) => (
+                    `<option value="${escapeHtmlAttr(name)}" ${name === selectedValue ? 'selected' : ''}>${escapeHtmlAttr(name)}</option>`
+                )).join('');
+                const selectedFallback = selectedValue && !responsables.includes(selectedValue)
+                    ? `<option value="${escapeHtmlAttr(selectedValue)}" selected>${escapeHtmlAttr(selectedValue)}</option>`
+                    : '';
+                return `<option value="">Selecciona responsable</option>${selectedFallback}${dynamicOptions}`;
             };
             const openUsuarioInForm = (userName) => {
                 const normalized = String(userName || '').trim();
@@ -3328,17 +4153,30 @@
                                             <input type="text" placeholder="+52 55 0000 0000">
                                         </div>
                                     </div>
-                                    <div class="ar-row ar-row--2">
-                                        <div class="ar-field">
+                                    <div class="ar-row ar-row--2 ar-row--image-preview">
+                                        <div class="ar-field ar-field--image-input">
                                             <label>Imagen</label>
                                             <input type="text" id="usuario-imagen" placeholder="URL o nombre de archivo de imagen" value="${selectedImageValue}">
+                                            <input type="file" id="usuario-image-file" accept="image/*" style="display:none">
                                         </div>
-                                        <div class="ar-field">
+                                        <div class="ar-field ar-field--image-preview">
                                             <label>Vista previa</label>
-                                            <div class="ar-avatar" aria-hidden="true">
-                                                <img src="${selectedImage}" alt="Vista previa de imagen de usuario" class="ar-user-photo">
+                                            <div class="ar-avatar ar-avatar--preview-large ar-avatar--editable" aria-hidden="true">
+                                                <img src="${selectedImage}" alt="Vista previa de imagen de usuario" class="ar-user-photo" id="usuario-image-preview">
+                                                <div class="ar-avatar-tools">
+                                                    <button type="button" class="ar-avatar-tool" id="usuario-image-edit" title="Editar imagen" aria-label="Editar imagen">
+                                                        <img src="/templates/icon/editar.svg" alt="Editar">
+                                                    </button>
+                                                    <button type="button" class="ar-avatar-tool ar-avatar-tool--danger" id="usuario-image-delete" title="Eliminar imagen" aria-label="Eliminar imagen">
+                                                        <img src="/templates/icon/eliminar.svg" alt="Eliminar">
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
+                                    </div>
+                                    <div class="ar-actions">
+                                        <button type="button" class="ar-btn ar-btn--soft" id="usuario-form-edit-btn" data-force-button-theme="1">Editar</button>
+                                        <button type="button" class="ar-btn ar-btn--primary2" id="usuario-form-save-btn" data-force-button-theme="1">Guardar</button>
                                     </div>
                                 </form>
                             </section>
@@ -3410,6 +4248,61 @@
                     refreshJefes(departamentoSelect.value);
                 }
                 const rolInput = usuarioView.querySelector('#usuario-rol');
+                const imagenInput = usuarioView.querySelector('#usuario-imagen');
+                const imageFileInput = usuarioView.querySelector('#usuario-image-file');
+                const imagePreview = usuarioView.querySelector('#usuario-image-preview');
+                const imageEditBtn = usuarioView.querySelector('#usuario-image-edit');
+                const imageDeleteBtn = usuarioView.querySelector('#usuario-image-delete');
+                const usuarioFormEditBtn = usuarioView.querySelector('#usuario-form-edit-btn');
+                const usuarioFormSaveBtn = usuarioView.querySelector('#usuario-form-save-btn');
+                const syncImagePreview = () => {
+                    if (!imagePreview) return;
+                    const raw = (imagenInput?.value || '').trim();
+                    imagePreview.src = raw ? normalizeImagePath(raw) : defaultKanbanImage;
+                };
+                if (imagenInput) {
+                    imagenInput.addEventListener('input', syncImagePreview);
+                    imagenInput.addEventListener('change', syncImagePreview);
+                }
+                imageEditBtn && imageEditBtn.addEventListener('click', () => {
+                    if (imageFileInput) {
+                        imageFileInput.click();
+                        return;
+                    }
+                    if (!imagenInput) return;
+                    imagenInput.focus();
+                    imagenInput.select();
+                    showMessage('Edita el campo Imagen y guarda para aplicar.', 'success');
+                });
+                imageDeleteBtn && imageDeleteBtn.addEventListener('click', () => {
+                    if (!imagenInput) return;
+                    imagenInput.value = '';
+                    syncImagePreview();
+                    showMessage('Imagen eliminada del formulario. Guarda para aplicar.', 'success');
+                });
+                imageFileInput && imageFileInput.addEventListener('change', async () => {
+                    const file = imageFileInput.files && imageFileInput.files[0];
+                    if (!file || !imagenInput) return;
+                    try {
+                        const fd = new FormData();
+                        fd.append('archivo', file);
+                        const res = await fetch('/api/usuarios/upload-imagen', {
+                            method: 'POST',
+                            body: fd,
+                        });
+                        const json = await res.json().catch(() => ({}));
+                        if (!res.ok || !json?.success) {
+                            throw new Error(json?.error || 'No se pudo subir la imagen');
+                        }
+                        imagenInput.value = String(json?.data?.filename || '').trim();
+                        syncImagePreview();
+                        showMessage('Imagen cargada. Guarda para aplicar.', 'success');
+                    } catch (err) {
+                        showMessage(err?.message || 'Error al subir imagen.', 'error');
+                    } finally {
+                        imageFileInput.value = '';
+                    }
+                });
                 if (rolInput) {
                     const normalizedRole = String(selectedRole || '').trim().toLowerCase();
                     const roleOption = Array.from(rolInput.options).find((opt) => String(opt.value || '').trim().toLowerCase() === normalizedRole);
@@ -3508,6 +4401,17 @@
                         showMessage(err?.message || (isEditing ? 'Error al actualizar usuario.' : 'Error al registrar usuario.'), 'error');
                     }
                 };
+                usuarioFormEditBtn && usuarioFormEditBtn.addEventListener('click', () => {
+                    createUsuarioMode = false;
+                    showMessage('Modo edición activado.', 'success');
+                });
+                usuarioFormSaveBtn && usuarioFormSaveBtn.addEventListener('click', () => {
+                    if (typeof submitUsuarioFromPanel === 'function') {
+                        submitUsuarioFromPanel();
+                        return;
+                    }
+                    showMessage('No se pudo ejecutar el guardado del formulario.', 'error');
+                });
             }
             function renderUsuarioList(role = 'Todos') {
                 const filtered = role === 'Todos' ? usuarioData : usuarioData.filter(u => roleMatches(u.role, role));
@@ -3541,7 +4445,7 @@
                                     </div>
                                 </div>
                             </header>
-                            <div class="ar-user-list view-list-excel-list">
+                            <div class="ar-user-list view-list-excel-list usuarios-list-right-photo">
                                 ${filtered.length ? filtered.map(user => `
                                     <button type="button" class="ar-user-item usuario-selectable" data-usuario-name="${escapeHtmlAttr(user.name)}">
                                         <div class="ar-user-item__main">
@@ -3666,29 +4570,29 @@
                             </header>
                             <div class="ar-org">
                                 <div class="ar-org__level">
-                                    <article class="ar-node usuario-selectable" data-usuario-name="${escapeHtmlAttr(lider?.name || '')}" style="--accent:#0f3d2e">
+                                    <article class="ar-node ar-node--persona usuario-selectable" data-usuario-name="${escapeHtmlAttr(lider?.name || '')}" style="--accent:#0f3d2e">
                                         <div class="ar-node__badge">Nivel 1</div>
                                         <div class="ar-node__logo"><img src="${getPersonImage(lider)}" alt="Foto de ${escapeHtmlAttr(lider?.name || 'Direccion General')}" class="ar-user-photo"></div>
-                                        <div class="ar-node__title">Direccion General</div>
-                                        <div class="ar-node__sub">${escapeHtmlAttr(lider?.name || 'Sin asignar')}</div>
+                                        <div class="ar-node__title">${escapeHtmlAttr(lider?.name || 'Sin asignar')}</div>
+                                        <div class="ar-node__sub">Direccion General</div>
                                         <div class="ar-node__code">${escapeHtmlAttr(lider?.role || 'N/A')}</div>
                                     </article>
                                 </div>
                                 <div class="ar-org__pipe" aria-hidden="true"></div>
                                 <div class="ar-org__level ar-org__level--children">
                                     ${mandos.map(user => `
-                                        <article class="ar-node usuario-selectable" data-usuario-name="${escapeHtmlAttr(user.name)}" style="--accent:#1f6f52">
+                                        <article class="ar-node ar-node--persona usuario-selectable" data-usuario-name="${escapeHtmlAttr(user.name)}" style="--accent:#1f6f52">
                                             <div class="ar-node__badge">Nivel 2</div>
                                             <div class="ar-node__logo"><img src="${getPersonImage(user)}" alt="Foto de ${escapeHtmlAttr(user.name)}" class="ar-user-photo"></div>
-                                            <div class="ar-node__title">${escapeHtmlAttr(user.department)}</div>
-                                            <div class="ar-node__sub">${escapeHtmlAttr(user.name)}</div>
+                                            <div class="ar-node__title">${escapeHtmlAttr(user.name)}</div>
+                                            <div class="ar-node__sub">${escapeHtmlAttr(user.department)}</div>
                                             <div class="ar-node__code">${escapeHtmlAttr(user.role)}</div>
                                         </article>
                                     `).join('')}
                                 </div>
                                 <div class="ar-org__level ar-org__level--children">
                                     ${equipoBase.map(user => `
-                                        <article class="ar-node usuario-selectable" data-usuario-name="${escapeHtmlAttr(user.name)}" style="--accent:#2563eb">
+                                        <article class="ar-node ar-node--persona usuario-selectable" data-usuario-name="${escapeHtmlAttr(user.name)}" style="--accent:#2563eb">
                                             <div class="ar-node__badge">Base</div>
                                             <div class="ar-node__logo"><img src="${getPersonImage(user)}" alt="Foto de ${escapeHtmlAttr(user.name)}" class="ar-user-photo"></div>
                                             <div class="ar-node__title">${escapeHtmlAttr(user.name)}</div>
@@ -3708,10 +4612,14 @@
                 const areaCount = areasData.length;
                 const parentCount = new Set(areasData.map(area => area.parent).filter(parent => parent && parent !== 'N/A')).size;
                 const strategicCount = areasData.filter(area => area.status === 'Estratégico').length;
-                const selectedArea = areasData.find((area) => String(area.code || '').trim() === String(selectedAreaCode || '').trim())
-                    || areasData.find(area => area.status === 'Activo')
-                    || areasData[0]
-                    || {};
+                const selectedArea = createAreaMode
+                    ? {}
+                    : (
+                        areasData.find((area) => String(area.code || '').trim() === String(selectedAreaCode || '').trim())
+                        || areasData.find(area => area.status === 'Activo')
+                        || areasData[0]
+                        || {}
+                    );
                 const selectedNameRaw = selectedArea.name || '';
                 const selectedParentRaw = selectedArea.parent || 'N/A';
                 const selectedManagerRaw = selectedArea.manager || '';
@@ -3722,7 +4630,7 @@
                 const selectedCode = escapeHtmlAttr(selectedCodeRaw);
                 const selectedColor = String(selectedArea.color || '#0f3d2e');
                 const selectedStatus = escapeHtmlAttr(selectedArea.status || 'Activo');
-                const relation = selectedStatus === 'Estratégico' ? 'Línea' : (selectedStatus === 'En revisión' ? 'Funcional' : 'Línea');
+                const relation = selectedStatus === 'En revisión' ? 'Funcional' : 'Línea';
                 const safeRelation = escapeHtmlAttr(relation);
                 const hexLabel = /^#[0-9a-fA-F]{6}$/.test(selectedColor) ? selectedColor.toUpperCase() : '#0F3D2E';
                 areaView.innerHTML = `
@@ -3735,7 +4643,7 @@
                                         <p>Completa la información base y define su relación organizacional.</p>
                                     </div>
                                     <div class="ar-card__tools">
-                                        <span class="ar-pill ar-pill--soft">Registro activo</span>
+                                        <span class="ar-pill ar-pill--soft">${createAreaMode ? 'Nuevo registro' : 'Registro activo'}</span>
                                         <span class="ar-pill">${areaCount} áreas</span>
                                     </div>
                                 </header>
@@ -3743,7 +4651,7 @@
                                     <div class="ar-row ar-row--3">
                                         <div class="ar-field">
                                             <label>Nombre</label>
-                                            <input type="text" placeholder="Nombre del área" value="${selectedName}">
+                                            <input id="area-name-input" type="text" placeholder="Nombre del área" value="${selectedName}">
                                         </div>
                                         <div class="ar-field">
                                             <label>Departamento padre</label>
@@ -3753,7 +4661,9 @@
                                         </div>
                                         <div class="ar-field">
                                             <label>Responsable</label>
-                                            <input type="text" placeholder="Nombre del responsable" value="${selectedManager}">
+                                            <select id="area-manager-select">
+                                                ${getResponsableOptions(selectedManagerRaw)}
+                                            </select>
                                         </div>
                                     </div>
                                     <div class="ar-row ar-row--3">
@@ -3772,13 +4682,13 @@
                                         </div>
                                         <div class="ar-field">
                                             <label>Código</label>
-                                            <input type="text" placeholder="Ej: OPE-010" value="${selectedCode}">
+                                            <input id="area-code-input" type="text" placeholder="Ej: OPE-010" value="${selectedCode}">
                                             <div class="ar-help">Recomendado: prefijo + consecutivo (ej. OPE-010).</div>
                                         </div>
                                         <div class="ar-field">
                                             <label>Color</label>
                                             <div class="ar-color">
-                                                <input type="color" value="${selectedColor}">
+                                                <input id="area-color-input" type="color" value="${selectedColor}">
                                                 <span class="ar-color__swatch" style="--c:${selectedColor}"></span>
                                                 <span class="ar-color__txt">${hexLabel}</span>
                                             </div>
@@ -3796,8 +4706,9 @@
                                         </div>
                                     </div>
                                     <div class="ar-actions">
-                                        <button type="button" class="ar-btn ar-btn--soft">Cancelar</button>
-                                        <button type="button" class="ar-btn ar-btn--primary2">Guardar</button>
+                                        <button type="button" id="area-form-new-btn" class="ar-btn ar-btn--soft" data-force-button-theme="1">Nuevo</button>
+                                        <button type="button" id="area-form-cancel-btn" class="ar-btn ar-btn--soft" data-force-button-theme="1">Cancelar</button>
+                                        <button type="button" id="area-form-save-btn" class="ar-btn ar-btn--primary2" data-force-button-theme="1">Guardar</button>
                                     </div>
                                 </form>
                             </section>
@@ -3852,6 +4763,57 @@
                         if (text) alert(text);
                     });
                 });
+                const nameInput = areaView.querySelector('#area-name-input');
+                const parentSelect = areaView.querySelector('#area-parent-select');
+                const managerInput = areaView.querySelector('#area-manager-select');
+                const relationSelect = areaView.querySelector('#area-relacion-select');
+                const codeInput = areaView.querySelector('#area-code-input');
+                const colorInput = areaView.querySelector('#area-color-input');
+                const saveBtn = areaView.querySelector('#area-form-save-btn');
+                const cancelBtn = areaView.querySelector('#area-form-cancel-btn');
+                const newBtn = areaView.querySelector('#area-form-new-btn');
+                newBtn && newBtn.addEventListener('click', () => {
+                    createAreaMode = true;
+                    selectedAreaCode = null;
+                    renderAreaForm();
+                    const input = areaView.querySelector('#area-name-input');
+                    input && input.focus();
+                });
+                cancelBtn && cancelBtn.addEventListener('click', () => {
+                    createAreaMode = false;
+                    setAreaView('list');
+                });
+                saveBtn && saveBtn.addEventListener('click', async () => {
+                    const name = String(nameInput?.value || '').trim();
+                    const parent = String(parentSelect?.value || 'N/A').trim() || 'N/A';
+                    const manager = String(managerInput?.value || '').trim();
+                    const code = String(codeInput?.value || '').trim();
+                    const color = normalizeAreaColor(colorInput?.value || '#1d4ed8');
+                    const relationValue = String(relationSelect?.value || 'Línea').trim();
+                    const status = relationValue === 'Funcional'
+                        ? 'En revisión'
+                        : (createAreaMode ? 'Activo' : normalizeAreaStatus(selectedArea.status || 'Activo'));
+                    if (!name || !code) {
+                        showMessage('Nombre y código son obligatorios.', 'error');
+                        return;
+                    }
+                    const existingIndex = areasData.findIndex((area) => String(area.code || '').trim() === code);
+                    const payload = { name, parent, manager, code, color, status };
+                    if (existingIndex >= 0) {
+                        areasData[existingIndex] = payload;
+                    } else {
+                        areasData.push(payload);
+                    }
+                    const saved = await persistAreasData();
+                    if (!saved) {
+                        showMessage('No se pudo guardar departamentos en BD.', 'error');
+                        return;
+                    }
+                    createAreaMode = false;
+                    selectedAreaCode = code;
+                    showMessage('Departamento guardado en BD.', 'success');
+                    setAreaView('form');
+                });
             }
             function renderAreaList() {
                 if (!areaView) return;
@@ -3901,6 +4863,7 @@
                 `;
                 areaView.querySelectorAll('[data-area-code]').forEach((item) => {
                     item.addEventListener('click', () => {
+                        createAreaMode = false;
                         selectedAreaCode = (item.getAttribute('data-area-code') || '').trim();
                         setAreaView('form');
                     });
@@ -4118,6 +5081,7 @@
                     setMenuInfo(areaMenuLink);
                 }
                 await loadUsuariosImagenes();
+                await loadAreasData();
                 setAreaView('form');
             }
             const plantillasPage = document.getElementById('plantillas-page');
@@ -4647,13 +5611,42 @@
             actionSavePersonal && actionSavePersonal.addEventListener('click', (event) => {
                 if (activeFloatingScreen !== 'personalization') return;
                 event.preventDefault();
+                if (identityForm) {
+                    if (typeof identityForm.requestSubmit === 'function') {
+                        identityForm.requestSubmit();
+                    } else {
+                        identityForm.submit();
+                    }
+                    return;
+                }
                 guardarColores();
+                guardarAssets();
             });
             actionResetPersonal && actionResetPersonal.addEventListener('click', (event) => {
                 if (activeFloatingScreen !== 'personalization') return;
                 event.preventDefault();
                 restablecerColores();
+                restablecerAssets();
                 showMessage('Colores restablecidos en personalización.', 'success');
+            });
+            personalizarEditBtn && personalizarEditBtn.addEventListener('click', (event) => {
+                event.preventDefault();
+                const firstColorInput = document.querySelector('.personalization-panel input[type="color"]');
+                if (firstColorInput instanceof HTMLElement) {
+                    firstColorInput.focus();
+                }
+                showMessage('Modo edición activo en personalización.', 'success');
+            });
+            personalizarSaveBtn && personalizarSaveBtn.addEventListener('click', (event) => {
+                event.preventDefault();
+                guardarColores();
+                guardarAssets();
+            });
+            personalizarResetBtn && personalizarResetBtn.addEventListener('click', (event) => {
+                event.preventDefault();
+                restablecerColores();
+                restablecerAssets();
+                guardarColores();
             });
             actionSaveUsuario && actionSaveUsuario.addEventListener('click', (event) => {
                 if (activeFloatingScreen !== 'usuarios') return;
@@ -4676,19 +5669,27 @@
             actionNewAreas && actionNewAreas.addEventListener('click', (event) => {
                 if (activeFloatingScreen !== 'areas') return;
                 event.preventDefault();
+                createAreaMode = true;
+                selectedAreaCode = null;
                 setAreaView('form');
                 showMessage('Nueva área lista para captura.', 'success');
             });
             actionEditAreas && actionEditAreas.addEventListener('click', (event) => {
                 if (activeFloatingScreen !== 'areas') return;
                 event.preventDefault();
+                createAreaMode = false;
                 setAreaView('form');
                 showMessage('Modo edición de áreas activado.', 'success');
             });
             actionSaveAreas && actionSaveAreas.addEventListener('click', (event) => {
                 if (activeFloatingScreen !== 'areas') return;
                 event.preventDefault();
-                showMessage('Cambios en áreas guardados.', 'success');
+                const saveBtn = areaView ? areaView.querySelector('#area-form-save-btn') : null;
+                if (!(saveBtn instanceof HTMLElement)) {
+                    showMessage('Abre la vista formulario para guardar departamentos.', 'error');
+                    return;
+                }
+                saveBtn.click();
             });
             actionDeleteAreas && actionDeleteAreas.addEventListener('click', (event) => {
                 if (activeFloatingScreen !== 'areas') return;
@@ -5142,7 +6143,6 @@
                 renderPercepcion();
             }
             const navbarAvatarImg = document.getElementById('navbar-avatar-img');
-            const sidebarUserImg = document.getElementById('sidebar-user-img');
             const applyFallback = (img) => {
                 if (!img) return;
                 const fallback = img.dataset.default;
@@ -5153,6 +6153,8 @@
             };
             applyFallback(navbarAvatarImg);
             applyFallback(sidebarUserImg);
+            syncSidebarCompanyLogo();
+            loadUsuariosImagenes();
             syncNavbarNotificationIconColor(
                 (navbar ? getComputedStyle(navbar).color : '')
                 || getComputedStyle(document.documentElement).getPropertyValue('--navbar-text')

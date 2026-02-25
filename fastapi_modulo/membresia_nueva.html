@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="content-section">
+    <div class="content-section-head">
+        <h2>Nueva Membresía</h2>
+    </div>
+    <form method="post" action="/membresia/nueva">
+        <div class="color-group">
+            <label for="nombre">Nombre</label>
+            <input type="text" id="nombre" name="nombre" required class="input input-bordered w-full mb-2">
+
+            <label for="tipo">Tipo</label>
+            <input type="text" id="tipo" name="tipo" required class="input input-bordered w-full mb-2">
+
+            <label for="caracteristicas">Características</label>
+            <textarea id="caracteristicas" name="caracteristicas" class="input input-bordered w-full mb-2"></textarea>
+
+            <label for="descripcion">Descripción</label>
+            <textarea id="descripcion" name="descripcion" class="input input-bordered w-full mb-2"></textarea>
+        </div>
+        <div class="color-actions mt-4">
+            <button type="submit" class="color-btn color-btn--primary">Guardar</button>
+            <a href="/membresia" class="color-btn color-btn--ghost">Cancelar</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="content-section">
+    <div class="content-section-head">
+        <h2>Membresías</h2>
+        <a href="/membresia/nueva" class="color-btn color-btn--primary">Agregar Membresía</a>
+    </div>
+    <table class="table-auto w-full mt-4">
+        <thead>
+            <tr>
+                <th>Nombre</th>
+                <th>Tipo</th>
+                <th>Características</th>
+                <th>Descripción</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for membresia in membresias %}
+            <tr>
+                <td>{{ membresia.nombre }}</td>
+                <td>{{ membresia.tipo }}</td>
+                <td>{{ membresia.caracteristicas }}</td>
+                <td>{{ membresia.descripcion }}</td>
+                <td>
+                    <a href="/membresia/{{ membresia.id }}/editar" class="color-btn color-btn--ghost">Editar</a>
+                    <a href="/membresia/{{ membresia.id }}/eliminar" class="color-btn color-btn--ghost">Eliminar</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

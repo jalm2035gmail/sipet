@@ -1,33 +1,13 @@
-INFO:     Started server process [84241]
+INFO:     Started server process [42030]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
-INFO:     127.0.0.1:58534 - "GET /proyectando/datos-preliminares HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58535 - "GET /imagenes/icon.png?v=1770659882 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58534 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58545 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58546 - "GET /proyectando/datos-preliminares HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58546 - "GET /icon/datos_generales.svg HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:58547 - "GET /icon/macroeconomia.svg HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:58548 - "GET /icon/activo_fijo.svg HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:58550 - "GET /icon/gastos.svg HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:58551 - "GET /icon/sucursales.svg HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:58549 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58546 - "GET /icon/informacion_financiera.svg HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:58572 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58618 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58636 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58679 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58713 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58716 - "GET /web/descripcion HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58717 - "GET /web/funcionalidades HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58717 - "GET /sipet-funcionalidades.css HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58717 - "POST /api/public/track-visit HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58717 - "GET /api/public/landing-metrics?page=funcionalidades HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58718 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58740 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58753 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58812 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58823 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58854 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58856 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58329 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58329 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58766 - "GET /proyectando/descargar-plantilla-presupuesto HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59039 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59039 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59762 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59762 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60270 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60270 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK

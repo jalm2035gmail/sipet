@@ -27,7 +27,7 @@ class NotificationService:
         message: str,
         resource_type: str | None = None,
         resource_id: int | None = None,
-        metadata: dict | None = None,
+        extra_data: dict | None = None,
         notification_type: NotificationType = NotificationType.SYSTEM,
     ) -> Notification:
         notification = Notification(
@@ -36,7 +36,7 @@ class NotificationService:
             message=message,
             resource_type=resource_type,
             resource_id=resource_id,
-            metadata=metadata,
+            extra_data=extra_data,
             notification_type=notification_type,
         )
         db.add(notification)
@@ -67,7 +67,7 @@ class NotificationService:
                 message=message,
                 resource_type="strategic_plan",
                 resource_id=plan.id,
-                metadata={
+                extra_data={
                     "new_status": new_status,
                     "department_id": plan.department_id,
                 },

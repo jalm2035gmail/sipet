@@ -1,0 +1,15 @@
+{
+  "scripts": {
+    "build:css": "tailwindcss -c tailwind.config.js -i ./static/src/input.css -o ./static/dist/output.css --minify",
+    "watch:css": "tailwindcss -c tailwind.config.js -i ./static/src/input.css -o ./static/dist/output.css --watch"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.2.1",
+    "autoprefixer": "^10.4.24",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^4.2.1"
+  },
+  "dependencies": {
+    "daisyui": "^5.5.19"
+  }
+}

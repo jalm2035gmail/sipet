@@ -22,7 +22,7 @@ class Notification(BaseModel):
     message = Column(Text, nullable=False)
     resource_type = Column(String(100), nullable=True)
     resource_id = Column(Integer, nullable=True)
-    metadata = Column(JSON, nullable=True)
+    extra_data = Column(JSON, nullable=True)
     is_read = Column(Boolean, default=False, nullable=False)
     read_at = Column(DateTime(timezone=True), nullable=True)
 
@@ -41,7 +41,7 @@ class Notification(BaseModel):
             "message": self.message,
             "resource_type": self.resource_type,
             "resource_id": self.resource_id,
-            "metadata": self.metadata,
+            "extra_data": self.extra_data,
             "is_read": self.is_read,
             "created_at": self.created_at,
             "read_at": self.read_at,

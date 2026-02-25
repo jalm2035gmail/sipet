@@ -1,0 +1,40 @@
+<section class="roles-panel" aria-labelledby="roles-title">
+  <header>
+    <h2 id="roles-title">Gestión de roles</h2>
+    <p>Aquí se mostrarán y gestionarán los roles de usuario.</p>
+  </header>
+
+  <form method="post" action="/roles/create">
+    <input type="text" name="nombre" placeholder="Nombre del rol" required>
+    <input type="text" name="descripcion" placeholder="Descripción del rol">
+    <button type="submit">Crear rol</button>
+  </form>
+
+  <table class="roles-table">
+    <thead>
+      <tr>
+        <th>Nombre</th>
+        <th>Descripción</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for nombre, descripcion in roles %}
+      <tr>
+        <td>{{ nombre }}</td>
+        <td>{{ descripcion }}</td>
+        <td>
+          <form method="post" action="/roles/edit/{{ loop.index }}" class="roles-inline-form">
+            <input type="text" name="nombre" value="{{ nombre }}" required>
+            <input type="text" name="descripcion" value="{{ descripcion }}">
+            <button type="submit">Editar</button>
+          </form>
+          <form method="post" action="/roles/delete/{{ loop.index }}" class="roles-inline-form">
+            <button type="submit" onclick="return confirm('¿Eliminar este rol?')">Eliminar</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>

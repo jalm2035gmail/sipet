@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block title %}Test SIPET{% endblock %}
+
+{% block content %}
+<h1 class="text-3xl font-bold text-primary">¡FastAPI + Tailwind + DaisyUI funcionando!</h1>
+
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-8">
+    <div class="card bg-base-100 shadow-xl">
+        <div class="card-body">
+            <h2 class="card-title">Tarjeta 1</h2>
+            <p>Si ves este estilo, DaisyUI está funcionando</p>
+            <div class="card-actions justify-end">
+                <button class="btn btn-primary">Botón</button>
+            </div>
+        </div>
+    </div>
+    <!-- Puedes agregar más tarjetas aquí -->
+</div>
+{% endblock %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test SIPET</title>
+    <!-- Importante: la ruta debe coincidir con app.mount -->
+    <link rel="stylesheet" href="/static/dist/output.css">
+</head>
+<body>
+    <div class="navbar bg-base-100 shadow-lg">
+        <div class="flex-1">
+            <a class="btn btn-ghost text-xl">SIPET</a>
+        </div>
+    </div>
+    
+    <div class="container mx-auto p-4">
+        <h1 class="text-3xl font-bold text-primary">¡FastAPI + Tailwind + DaisyUI funcionando!</h1>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-8">
+            <div class="card bg-base-100 shadow-xl">
+                <div class="card-body">
+                    <h2 class="card-title">Tarjeta 1</h2>
+                    <p>Si ves este estilo, DaisyUI está funcionando</p>
+                    <div class="card-actions justify-end">
+                        <button class="btn btn-primary">Botón</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card bg-base-100 shadow-xl">
+                <div class="card-body">
+                    <h2 class="card-title">Tarjeta 2</h2>
+                    <p>Tailwind procesó todas las clases correctamente</p>
+                    <div class="card-actions justify-end">
+                        <button class="btn btn-secondary">Botón</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card bg-base-100 shadow-xl">
+                <div class="card-body">
+                    <h2 class="card-title">Tarjeta 3</h2>
+                    <p>Todo listo para construir tu app</p>
+                    <div class="card-actions justify-end">
+                        <button class="btn btn-accent">Botón</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Ejemplo de alerta con DaisyUI -->
+        <div class="alert alert-success mt-8">
+            <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>¡Configuración exitosa! Tu entorno FastAPI + Tailwind + DaisyUI está listo.</span>
+        </div>
+    </div>
+</body>
+</html>

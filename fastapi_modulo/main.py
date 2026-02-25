@@ -1,41 +1,47 @@
-
-import json
-import base64
-import hashlib
-import hmac
-import smtplib
-import csv
-import sqlite3
-from io import BytesIO, StringIO
-from datetime import date, datetime, timedelta
-from html import escape
 import os
 import re
+import json
+import base64
+import sqlite3
 import secrets
+import hashlib
+import hmac
 import time
+from datetime import datetime, date as Date, timedelta
+from urllib.parse import urlparse
+from typing import Any, Dict, List, Optional
+from pydantic import BaseModel, Field, ConfigDict
+from fastapi import Request, UploadFile, HTTPException
+from fastapi import File
+from fastapi import FastAPI
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
+from sqlalchemy import create_engine, Column, Integer, String, Boolean, DateTime, Date, ForeignKey, Text, JSON, UniqueConstraint, func
+from sqlalchemy.orm import sessionmaker, declarative_base, relationship
+from cryptography.fernet import Fernet, InvalidToken
+from textwrap import dedent
+from html import escape
+from fastapi_modulo.db import SessionLocal, Base, engine
+from fastapi_modulo.personalizacion import personalizacion_router
+from fastapi_modulo.membresia import membresia_router
+from fastapi_modulo.modulos.presupuesto.presupuesto import router as presupuesto_router
+from fastapi_modulo.modulos.personalizacion.roles import (
+    DEFAULT_SYSTEM_ROLES,
+    ROLE_ALIASES,
+    router as roles_router,
+)
+from fastapi import FastAPI, Request, UploadFile, HTTPException, Response, Form, Body
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.templating import Jinja2Templates
+from fastapi.staticfiles import StaticFiles
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from fastapi import Depends
+from typing import Any, Dict, List, Optional, Set
+from datetime import datetime, date
 import struct
 import ipaddress
-from textwrap import dedent
-from email.message import EmailMessage
-from urllib.parse import quote, urlparse
-from cryptography.fernet import Fernet, InvalidToken
-from cryptography.exceptions import InvalidSignature
-from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.primitives.asymmetric import ec, padding, rsa
-
-from typing import Any, Dict, List, Optional, Set
-from fastapi import FastAPI, Request, Body, HTTPException, UploadFile, File, Form, Depends
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 import httpx
-from openpyxl import Workbook
-from pydantic import BaseModel, ConfigDict, Field, ValidationError, create_model
-from reportlab.lib.pagesizes import letter
-from reportlab.pdfgen import canvas
-from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
-from starlette.exceptions import HTTPException as StarletteHTTPException
-from sqlalchemy import create_engine, Column, String, Integer, JSON, ForeignKey, Boolean, Date, DateTime, UniqueConstraint, func
-from sqlalchemy.orm import declarative_base, sessionmaker, relationship
+templates = Jinja2Templates(directory="fastapi_modulo")
 
 HIDDEN_SYSTEM_USERS = {"0konomiyaki"}
 APP_ENV_DEFAULT = (os.environ.get("APP_ENV") or os.environ.get("ENVIRONMENT") or "development").strip().lower()
@@ -243,25 +249,6 @@ _LOGIN_ATTEMPTS: Dict[str, List[float]] = {}
 IDENTITY_UPLOAD_MAX_BYTES = int((os.environ.get("IDENTITY_UPLOAD_MAX_BYTES") or str(5 * 1024 * 1024)).strip() or str(5 * 1024 * 1024))
 TOTP_PERIOD_SECONDS = int((os.environ.get("TOTP_PERIOD_SECONDS") or "30").strip() or "30")
 TOTP_ALLOWED_DRIFT_STEPS = int((os.environ.get("TOTP_ALLOWED_DRIFT_STEPS") or "1").strip() or "1")
-
-
-ROLE_ALIASES = {
-    "super_admin": "superadministrador",
-    "superadministrador": "superadministrador",
-    "admin": "administrador",
-    "administrador": "administrador",
-    "autoridad": "autoridades",
-    "autoridades": "autoridades",
-    "authority": "autoridades",
-    "authorities": "autoridades",
-    "strategic_manager": "departamento",
-    "department_manager": "departamento",
-    "departamento": "departamento",
-    "team_leader": "usuario",
-    "collaborator": "usuario",
-    "viewer": "usuario",
-    "usuario": "usuario",
-}
 
 
 def normalize_role_name(role_name: Optional[str]) -> str:
@@ -924,6 +911,51 @@ def build_view_buttons_html(view_buttons: Optional[List[Dict]]) -> str:
     return "".join(pieces)
 
 
+def _render_backend_base(
+    request: Request,
+    title: str,
+    subtitle: Optional[str] = None,
+    description: Optional[str] = None,
+    content: str = "",
+    view_buttons: Optional[List[Dict]] = None,
+    view_buttons_html: str = "",
+    hide_floating_actions: bool = True,
+    show_page_header: bool = True,
+    page_title: Optional[str] = None,
+    page_description: Optional[str] = None,
+    section_title: Optional[str] = None,
+    section_label: Optional[str] = None,
+    floating_buttons: Optional[List[Dict]] = None,
+    floating_actions_html: str = "",
+    floating_actions_screen: str = "personalization",
+) -> HTMLResponse:
+    rendered_view_buttons = view_buttons_html or build_view_buttons_html(view_buttons)
+    can_manage_personalization = is_superadmin(request)
+    login_identity = _get_login_identity_context()
+    resolved_title = (page_title or title or "Sin titulo").strip()
+    resolved_description = (page_description or description or subtitle or "Descripcion pendiente").strip()
+    context = {
+        "request": request,
+        "title": title,
+        "subtitle": subtitle,
+        "page_title": resolved_title,
+        "page_description": resolved_description,
+        "section_title": (section_title or "Contenido").strip(),
+        "section_label": (section_label or "Seccion").strip(),
+        "content": content,
+        "view_buttons_html": rendered_view_buttons,
+        "floating_buttons": floating_buttons,
+        "floating_actions_html": floating_actions_html,
+        "floating_actions_screen": floating_actions_screen,
+        "hide_floating_actions": hide_floating_actions,
+        "show_page_header": show_page_header,
+        "colores": get_colores_context(),
+        "can_manage_personalization": can_manage_personalization,
+        "app_favicon_url": login_identity.get("login_favicon_url"),
+    }
+    return templates.TemplateResponse("base.html", context)
+
+
 def backend_screen(
     request: Request,
     title: str,
@@ -937,31 +969,30 @@ def backend_screen(
     show_page_header: bool = True,
     page_title: Optional[str] = None,
     page_description: Optional[str] = None,
+    section_title: Optional[str] = None,
+    section_label: Optional[str] = None,
 ):
     """
     Helper para renderizar una pantalla backend con panel flotante y botones de vistas.
     - view_buttons: lista de dicts {label, view?, url, icon}
     - floating_buttons: lista de dicts {label, onclick}
     """
-    rendered_view_buttons = view_buttons_html or build_view_buttons_html(view_buttons)
-    can_manage_personalization = is_superadmin(request)
-    login_identity = _get_login_identity_context()
-    context = {
-        "request": request,
-        "title": title,
-        "subtitle": subtitle,
-        "page_title": page_title or title,
-        "page_description": page_description or description,
-        "content": content,
-        "view_buttons_html": rendered_view_buttons,
-        "floating_buttons": floating_buttons,
-        "hide_floating_actions": hide_floating_actions,
-        "show_page_header": show_page_header,
-        "colores": get_colores_context(),
-        "can_manage_personalization": can_manage_personalization,
-        "app_favicon_url": login_identity.get("login_favicon_url"),
-    }
-    return templates.TemplateResponse("base.html", context)
+    return _render_backend_base(
+        request=request,
+        title=title,
+        subtitle=subtitle,
+        description=description,
+        content=content,
+        view_buttons=view_buttons,
+        view_buttons_html=view_buttons_html,
+        hide_floating_actions=hide_floating_actions,
+        show_page_header=show_page_header,
+        page_title=page_title,
+        page_description=page_description,
+        section_title=section_title,
+        section_label=section_label,
+        floating_buttons=floating_buttons,
+    )
 
 # Configuración de BD por entorno (Railway/Local)
 def _resolve_database_url() -> str:
@@ -1290,19 +1321,14 @@ class PublicQuizSubmission(Base):
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
 
 
-DEFAULT_SYSTEM_ROLES = [
-    ("superadministrador", "Acceso total a todo el módulo"),
-    ("administrador", "Acceso a todo menos a Personalización"),
-    ("autoridades", "Acceso al tablero de control"),
-    ("departamento", "Acceso a su departamento"),
-    ("usuario", "Acceso solo a sus datos"),
-]
 DEFAULT_SUPERADMIN_USERNAME_B64 = "T2tvbm9taXlha2k="  # Okonomiyaki
 DEFAULT_SUPERADMIN_PASSWORD_B64 = "WFgsJCwyNixzaXBldCwyNiwkLFhY"  # XX,$,26,sipet,26,$,XX
 DEFAULT_SUPERADMIN_EMAIL_B64 = "YWxvcGV6QGF2YW5jb29wLm9yZw=="  # alopez@avancoop.org
+DEFAULT_RAILWAY_DEMO_EMAIL = "demo@railway.local"
 
 
 def ensure_default_roles() -> None:
+    Rol.__table__.create(bind=engine, checkfirst=True)
     db = SessionLocal()
     try:
         for role_name, role_description in DEFAULT_SYSTEM_ROLES:
@@ -1383,6 +1409,85 @@ def ensure_system_superadmin_user() -> None:
                 contrasena=_hash_password_pbkdf2(password),
                 rol_id=superadmin_role.id,
                 role="superadministrador",
+                is_active=True,
+            )
+        )
+        db.commit()
+    finally:
+        db.close()
+
+
+def _is_railway_runtime() -> bool:
+    return any(
+        (os.environ.get(name) or "").strip()
+        for name in (
+            "RAILWAY_ENVIRONMENT",
+            "RAILWAY_PROJECT_ID",
+            "RAILWAY_SERVICE_ID",
+            "RAILWAY_SERVICE_NAME",
+            "RAILWAY_STATIC_URL",
+        )
+    )
+
+
+def ensure_railway_demo_admin_user() -> None:
+    if not _is_railway_runtime():
+        return
+
+    username = "demo"
+    password = "demodemo"
+    email = (os.environ.get("RAILWAY_DEMO_EMAIL") or DEFAULT_RAILWAY_DEMO_EMAIL).strip().lower()
+    if not email:
+        email = DEFAULT_RAILWAY_DEMO_EMAIL
+
+    db = SessionLocal()
+    try:
+        admin_role = db.query(Rol).filter(func.lower(Rol.nombre) == "administrador").first()
+        if not admin_role:
+            return
+
+        username_hash = _sensitive_lookup_hash(username)
+        email_hash = _sensitive_lookup_hash(email)
+        existing = (
+            db.query(Usuario)
+            .filter((Usuario.usuario_hash == username_hash) | (Usuario.correo_hash == email_hash))
+            .first()
+        )
+        if not existing:
+            existing = (
+                db.query(Usuario)
+                .filter(
+                    (func.lower(Usuario.usuario) == username.lower())
+                    | (func.lower(Usuario.correo) == email.lower())
+                )
+                .first()
+            )
+
+        password_hash = _hash_password_pbkdf2(password)
+        if existing:
+            existing.nombre = existing.nombre or "Usuario Demo"
+            existing.usuario = _encrypt_sensitive(username)
+            existing.correo = _encrypt_sensitive(email)
+            existing.usuario_hash = username_hash
+            existing.correo_hash = email_hash
+            existing.contrasena = password_hash
+            existing.rol_id = admin_role.id
+            existing.role = "administrador"
+            existing.is_active = True
+            db.add(existing)
+            db.commit()
+            return
+
+        db.add(
+            Usuario(
+                nombre="Usuario Demo",
+                usuario=_encrypt_sensitive(username),
+                usuario_hash=username_hash,
+                correo=_encrypt_sensitive(email),
+                correo_hash=email_hash,
+                contrasena=password_hash,
+                rol_id=admin_role.id,
+                role="administrador",
                 is_active=True,
             )
         )
@@ -1805,6 +1910,7 @@ ensure_passkey_user_schema()
 ensure_strategic_axes_schema()
 protect_sensitive_user_fields()
 ensure_system_superadmin_user()
+ensure_railway_demo_admin_user()
 ensure_default_strategic_axes_data()
 
 app = FastAPI(
@@ -1813,9 +1919,17 @@ app = FastAPI(
     redoc_url="/redoc" if ENABLE_API_DOCS else None,
     openapi_url="/openapi.json" if ENABLE_API_DOCS else None,
 )
+# Montar archivos estáticos
+app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="fastapi_modulo/templates")
 app.state.templates = templates
 app.mount("/templates", StaticFiles(directory="fastapi_modulo/templates"), name="templates")
+app.mount("/icon", StaticFiles(directory="fastapi_modulo/templates/icon"), name="icon")
+
+app.include_router(personalizacion_router)
+app.include_router(membresia_router)
+app.include_router(roles_router)
+app.include_router(presupuesto_router, prefix="/proyectando")
 
 @app.get("/health")
 def healthcheck():
@@ -3946,27 +4060,26 @@ def render_backend_page(
     floating_actions_html: str = "",
     floating_actions_screen: str = "personalization",
     show_page_header: bool = True,
+    section_title: Optional[str] = None,
+    section_label: Optional[str] = None,
 ) -> HTMLResponse:
-    rendered_view_buttons = view_buttons_html or build_view_buttons_html(view_buttons)
-    can_manage_personalization = is_superadmin(request)
-    login_identity = _get_login_identity_context()
-    context = {
-        "request": request,
-        "title": title,
-        "content": content,
-        "subtitle": subtitle,
-        "page_title": title,
-        "page_description": description,
-        "hide_floating_actions": hide_floating_actions,
-        "floating_actions_html": floating_actions_html,
-        "floating_actions_screen": floating_actions_screen,
-        "view_buttons_html": rendered_view_buttons,
-        "show_page_header": show_page_header,
-        "can_manage_personalization": can_manage_personalization,
-        "app_favicon_url": login_identity.get("login_favicon_url"),
-    }
-    context.update({"colores": get_colores_context()})
-    return templates.TemplateResponse("base.html", context)
+    return _render_backend_base(
+        request=request,
+        title=title,
+        subtitle=subtitle,
+        description=description,
+        content=content,
+        view_buttons=view_buttons,
+        view_buttons_html=view_buttons_html,
+        hide_floating_actions=hide_floating_actions,
+        show_page_header=show_page_header,
+        page_title=title,
+        page_description=description,
+        section_title=section_title,
+        section_label=section_label,
+        floating_actions_html=floating_actions_html,
+        floating_actions_screen=floating_actions_screen,
+    )
 
 
 
@@ -4002,67 +4115,6 @@ def avan(request: Request, edit: Optional[bool] = False):
 
 
 
-PERSONALIZACION_HTML = dedent("""
-    <section class="personalization-panel" aria-labelledby="personalizacion-title">
-        <div>
-            <h2 id="personalizacion-title">Personalizar pantalla</h2>
-            <p>Define los colores principales que se aplicarán en todo el sitio para mantener la identidad institucional.</p>
-        </div>
-        <div class="color-group">
-            <h3>Navbar</h3>
-            <div class="color-grid">
-                <article class="color-option">
-                    <label for="navbar-bg">Fondo</label>
-                    <input type="color" id="navbar-bg" name="navbar-bg" value="#ffffff">
-                    <div class="color-preview" id="navbar-bg-preview" style="background:#ffffff;"></div>
-                </article>
-                <article class="color-option">
-                    <label for="navbar-text">Texto</label>
-                    <input type="color" id="navbar-text" name="navbar-text" value="#0f172a">
-                    <div class="color-preview" id="navbar-text-preview" style="background:#0f172a;"></div>
-                </article>
-            </div>
-        </div>
-        <div class="color-group">
-            <h3>Sidebar</h3>
-            <div class="color-grid">
-                <article class="color-option">
-                    <label for="sidebar-top">Color superior</label>
-                    <input type="color" id="sidebar-top" name="sidebar-top" value="#1f2a3d">
-                    <div class="color-preview" id="sidebar-top-preview" style="background:#1f2a3d;"></div>
-                </article>
-                <article class="color-option">
-                    <label for="sidebar-bottom">Color inferior</label>
-                    <input type="color" id="sidebar-bottom" name="sidebar-bottom" value="#0f172a">
-                    <div class="color-preview" id="sidebar-bottom-preview" style="background:#0f172a;"></div>
-                </article>
-                <article class="color-option">
-                    <label for="sidebar-text">Texto</label>
-                    <input type="color" id="sidebar-text" name="sidebar-text" value="#ffffff">
-                    <div class="color-preview" id="sidebar-text-preview" style="background:#ffffff;"></div>
-                </article>
-                <article class="color-option">
-                    <label for="sidebar-icon">Iconos</label>
-                    <input type="color" id="sidebar-icon" name="sidebar-icon" value="#f5f7fb">
-                    <div class="color-preview" id="sidebar-icon-preview" style="background:#f5f7fb;"></div>
-                </article>
-                <article class="color-option">
-                    <label for="sidebar-hover">Hover</label>
-                    <input type="color" id="sidebar-hover" name="sidebar-hover" value="#2a3a52">
-                    <div class="color-preview" id="sidebar-hover-preview" style="background:#2a3a52;"></div>
-                </article>
-                <article class="color-option">
-                    <label for="field-color">Color del campo</label>
-                    <input type="color" id="field-color" name="field-color" value="#e7d7da">
-                    <div class="color-preview" id="field-color-preview" style="background:#e7d7da;"></div>
-                </article>
-            </div>
-        </div>
-        <div class="color-field-note">
-            <p><strong>Clase disponible:</strong> usa <code>campo-personalizado</code> para aplicar el color de campo configurado por el usuario.</p>
-        </div>
-    </section>
-""")
 
 FODA_HTML = dedent("""
     <section class="foda-page pe-foda" id="foda-builder">
@@ -5099,8 +5151,6 @@ PLAN_ESTRATEGICO_HTML = dedent("""
 INICIO_BSC_HTML = dedent("""
     <section class="poa-dashboard">
         <style>
-            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-
             :root{
               --bg: #f6f8fc;
               --surface: rgba(255,255,255,.86);
@@ -8237,32 +8287,16 @@ DOCUMENTOS_HTML = dedent("""
 """)
 
 
-def render_personalizacion_page(request: Request) -> HTMLResponse:
+
+
+@app.get("/backend", response_class=HTMLResponse)
+def backend(request: Request):
     return render_backend_page(
         request,
-        title="Personalizar",
-        description="Agrega tu imagen corporativa",
-        content=PERSONALIZACION_HTML,
-        hide_floating_actions=False,
-        floating_actions_screen="personalization",
-    )
-
-
-@app.get("/personalizar-pantalla", response_class=HTMLResponse)
-def personalizar_pantalla(request: Request):
-    require_superadmin(request)
-    return backend_screen(
-        request,
-        title="Personalizar",
-        subtitle="Colores institucionales",
-        description="Agrega tu imagen corporativa",
-        content=PERSONALIZACION_HTML,
-        view_buttons=[
-            {"label": "Formulario", "view": "form", "icon": "/templates/icon/formulario.svg"},
-            {"label": "Lista", "view": "list", "icon": "/templates/icon/list.svg"},
-            {"label": "Colores", "view": "colores", "icon": "/templates/icon/personalizacion.svg", "active": True},
-        ],
-        hide_floating_actions=False,
+        title="Panel Backend",
+        description="Gestión avanzada del sistema",
+        content="<p>Bienvenido al backend premium.</p>",
+        hide_floating_actions=True,
     )
 
 
@@ -14176,98 +14210,6 @@ def diagnostico_percepcion_cliente_page(request: Request):
         hide_floating_actions=True,
         show_page_header=True,
     )
-
-
-BACKEND_ROLES_PERMISSIONS_URL = os.environ.get(
-    "BACKEND_ROLES_PERMISSIONS_URL",
-    "http://localhost:8000/api/v1/personalizacion/roles-permisos"
-)
-
-
-async def _fetch_roles_permissions_view() -> str:
-    async with httpx.AsyncClient() as client:
-        try:
-            resp = await client.get(BACKEND_ROLES_PERMISSIONS_URL, timeout=10.0)
-            resp.raise_for_status()
-        except httpx.HTTPError as exc:
-            raise HTTPException(status_code=502, detail=f"Error al cargar el módulo de roles: {exc}") from exc
-    return resp.text.replace("http://localhost:8000", "http://localhost:8005")
-
-
-def _render_local_roles_permissions_page(
-    request: Request,
-    error_detail: Optional[str] = None,
-) -> HTMLResponse:
-    db = SessionLocal()
-    try:
-        roles = db.query(Rol).order_by(Rol.id.asc()).all()
-    finally:
-        db.close()
-    error_html = (
-        f"<p style='margin:0 0 12px;color:#991b1b;font-weight:600;'>"
-        f"Servicio externo no disponible. Se muestra vista local. Detalle: {escape(error_detail or '')}"
-        f"</p>"
-        if error_detail
-        else ""
-    )
-    rows_html = "".join(
-        [
-            (
-                "<tr>"
-                f"<td>{role.id}</td>"
-                f"<td>{escape(role.nombre or '')}</td>"
-                f"<td>{escape(role.descripcion or '')}</td>"
-                "</tr>"
-            )
-            for role in roles
-        ]
-    )
-    content = f"""
-        <section class="form-section">
-            {error_html}
-            <div class="section-title">
-                <h2>Roles y permisos (vista local)</h2>
-            </div>
-            <p class="plantillas-hint">El módulo remoto no respondió, por lo que se cargó una vista local de contingencia.</p>
-            <div style="overflow:auto;">
-                <table style="width:100%; border-collapse:collapse; background:#fff;">
-                    <thead>
-                        <tr>
-                            <th style="border:1px solid #cbd5e1; text-align:left; padding:10px;">ID</th>
-                            <th style="border:1px solid #cbd5e1; text-align:left; padding:10px;">Rol</th>
-                            <th style="border:1px solid #cbd5e1; text-align:left; padding:10px;">Descripción</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {rows_html}
-                    </tbody>
-                </table>
-            </div>
-        </section>
-    """
-    return render_backend_page(
-        request,
-        title="Roles y permisos",
-        description="Gestión de roles y permisos",
-        content=content,
-        hide_floating_actions=True,
-        show_page_header=True,
-    )
-
-
-@app.get("/roles-sistema", response_class=HTMLResponse)
-@app.get("/roles-permisos", response_class=HTMLResponse)
-@app.get("/api/v1/personalizacion/roles-permisos", response_class=HTMLResponse)
-@app.get("/personalizacion/roles-permisos", response_class=HTMLResponse)
-async def personalizacion_roles_permisos(request: Request):
-    require_superadmin(request)
-    try:
-        content = await _fetch_roles_permissions_view()
-        return HTMLResponse(content=content)
-    except HTTPException as exc:
-        if exc.status_code == 502:
-            return _render_local_roles_permissions_page(request, exc.detail)
-        raise
 
 
 @app.get("/", response_class=HTMLResponse)
