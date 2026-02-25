@@ -1,63 +1,327 @@
-<section id="empleados-module" style="display:grid; gap:14px;">
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Colaboradores</title>
     <style>
-        .emp-card { background:#fff; border:1px solid #dbe3ef; border-radius:14px; padding:14px; }
-        .emp-head { margin:0 0 10px; font-size:1.02rem; color:#0f172a; }
-        .emp-table { width:100%; border-collapse:collapse; border:1px solid rgba(15,23,42,.16); border-radius:12px; overflow:hidden; background:#fff; }
-        .emp-table th { text-align:left; font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:rgba(15,23,42,.82); background:linear-gradient(180deg, rgba(239,246,255,.96), rgba(219,234,254,.90)); border:1px solid rgba(15,23,42,.14); padding:10px 12px; white-space:nowrap; }
-        .emp-table td { border:1px solid rgba(15,23,42,.10); padding:10px 12px; color:#0f172a; background:#fff; }
-        .emp-table tbody tr:nth-child(even) td { background:#f3f4f6; }
-        .emp-empty { color:#64748b; }
+        #empleados-module {
+            display: grid;
+            gap: 14px;
+        }
+        .emp-card { 
+            background: #fff; 
+            border: 1px solid #dbe3ef; 
+            border-radius: 14px; 
+            padding: 14px; 
+        }
+        .emp-head { 
+            margin: 0 0 10px; 
+            font-size: 1.02rem; 
+            color: #0f172a; 
+        }
+        .emp-table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            border: 1px solid rgba(15,23,42,.16); 
+            border-radius: 12px; 
+            overflow: hidden; 
+            background: #fff; 
+        }
+        .emp-table th { 
+            text-align: left; 
+            font-size: 12px; 
+            letter-spacing: .06em; 
+            text-transform: uppercase; 
+            color: rgba(15,23,42,.82); 
+            background: linear-gradient(180deg, rgba(239,246,255,.96), rgba(219,234,254,.90)); 
+            border: 1px solid rgba(15,23,42,.14); 
+            padding: 10px 12px; 
+            white-space: nowrap; 
+        }
+        .emp-table td { 
+            border: 1px solid rgba(15,23,42,.10); 
+            padding: 10px 12px; 
+            color: #0f172a; 
+            background: #fff; 
+        }
+        .emp-table tbody tr:nth-child(even) td { 
+            background: #f3f4f6; 
+        }
+        .emp-empty { 
+            color: #64748b; 
+        }
+        .view-buttons {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        .view-pill {
+            padding: 6px 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 20px;
+            background: #fff;
+            cursor: pointer;
+        }
+        .view-pill.active {
+            background: #0f172a;
+            color: #fff;
+            border-color: #0f172a;
+        }
+        .field {
+            display: grid;
+            gap: 4px;
+            margin-bottom: 10px;
+        }
+        .field input, .field select {
+            padding: 8px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+        }
+        .actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        .btn {
+            padding: 8px 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            background: #fff;
+            cursor: pointer;
+        }
+        .btn.primary {
+            background: #0f172a;
+            color: #fff;
+            border-color: #0f172a;
+        }
     </style>
-    <article class="emp-card">
-        <h3 class="emp-head">Colaboradores</h3>
-        <table class="emp-table">
-            <thead>
-                <tr>
-                    <th>Nombre</th>
-                    <th>Usuario</th>
-                    <th>Correo</th>
-                    <th>Rol</th>
-                    <th>Departamento</th>
-                    <th>Estado</th>
-                </tr>
-            </thead>
-            <tbody id="empleados-tbody">
-                <tr><td colspan="6" class="emp-empty">Cargando...</td></tr>
-            </tbody>
-        </table>
-    </article>
-</section>
-<script>
-(() => {
-    const tbody = document.getElementById('empleados-tbody');
-    if (!tbody) return;
-    const esc = (v) => String(v || '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] || c));
-    const render = (rows) => {
-        if (!Array.isArray(rows) || !rows.length) {
-            tbody.innerHTML = '<tr><td colspan="6" class="emp-empty">Sin registros.</td></tr>';
-            return;
+</head>
+<body>
+    <section id="empleados-module">
+        <!-- Botones de vista eliminados para evitar duplicación -->
+        
+        <article class="emp-card">
+            <h3 class="emp-head">Colaboradores</h3>
+            <table class="emp-table">
+                <thead>
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Usuario</th>
+                        <th>Correo</th>
+                        <th>Rol</th>
+                        <th>Departamento</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+                <tbody id="empleados-tbody">
+                    <tr><td colspan="6" class="emp-empty">Cargando...</td></tr>
+                </tbody>
+            </table>
+        </article>
+    </section>
+
+    <script>
+    (function() {
+        // Obtener elementos
+        var tbody = document.getElementById('empleados-tbody');
+        var viewButtons = document.querySelectorAll('.view-pill[data-view]');
+        var empCard = document.querySelector('.emp-card');
+        
+        if (!tbody || !viewButtons.length || !empCard) return;
+        
+        var empleadosData = [];
+        
+        // Función para escapar caracteres HTML
+        function esc(v) {
+            if (v === null || v === undefined) return '';
+            return String(v)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
         }
-        tbody.innerHTML = rows.map((u) => `
-            <tr>
-                <td>${esc(u.nombre)}</td>
-                <td>${esc(u.usuario)}</td>
-                <td>${esc(u.correo)}</td>
-                <td>${esc(u.rol)}</td>
-                <td>${esc(u.departamento)}</td>
-                <td>${esc(u.estado)}</td>
-            </tr>
-        `).join('');
-    };
-    const load = async () => {
-        try {
-            const res = await fetch('/api/usuarios');
-            const json = await res.json().catch(() => ({}));
-            if (!res.ok || json?.success === false) throw new Error();
-            render(Array.isArray(json?.data) ? json.data : []);
-        } catch (_e) {
-            tbody.innerHTML = '<tr><td colspan="6" class="emp-empty">No se pudo cargar colaboradores.</td></tr>';
+        
+        // Renderizar vista de lista
+        function renderList(rows) {
+            if (!rows || !rows.length) {
+                tbody.innerHTML = '<tr><td colspan="6" class="emp-empty">Sin registros.</td></tr>';
+                return;
+            }
+            
+            var html = '';
+            for (var i = 0; i < rows.length; i++) {
+                var u = rows[i];
+                html += '<tr>' +
+                    '<td>' + esc(u.nombre) + '</td>' +
+                    '<td>' + esc(u.usuario) + '</td>' +
+                    '<td>' + esc(u.correo) + '</td>' +
+                    '<td>' + esc(u.rol) + '</td>' +
+                    '<td>' + esc(u.departamento) + '</td>' +
+                    '<td>' + esc(u.estado) + '</td>' +
+                '</tr>';
+            }
+            tbody.innerHTML = html;
         }
-    };
-    load();
-})();
-</script>
+        
+        // Renderizar vista de formulario
+        function renderForm() {
+            empCard.innerHTML = 
+                '<h3 class="emp-head">Agregar colaborador</h3>' +
+                '<form id="colaborador-form" style="display:grid;gap:14px;max-width:420px;">' +
+                    '<div class="field"><label>Nombre</label><input type="text" name="nombre" required></div>' +
+                    '<div class="field"><label>Usuario</label><input type="text" name="usuario" required></div>' +
+                    '<div class="field"><label>Correo</label><input type="text" name="correo" required></div>' +
+                    '<div class="field"><label>Rol</label><input type="text" name="rol"></div>' +
+                    '<div class="field"><label>Departamento</label><select name="departamento" id="departamento-select"></select></div>' +
+                    '<div class="field"><label>Estado</label>' +
+                        '<select name="estado">' +
+                            '<option value="Activo">Activo</option>' +
+                            '<option value="Inactivo">Inactivo</option>' +
+                        '</select>' +
+                    '</div>' +
+                    '<div class="actions">' +
+                        '<button type="button" class="btn" onclick="window.nuevoColaborador()">Nuevo</button>' +
+                        '<button type="button" class="btn" onclick="window.editarColaborador()">Editar</button>' +
+                        '<button type="submit" class="btn primary">Guardar</button>' +
+                    '</div>' +
+                '</form>';
+            
+            var form = document.getElementById('colaborador-form');
+            var deptSelect = document.getElementById('departamento-select');
+            // Cargar departamentos y llenar el select
+            if (deptSelect) {
+                fetch('/api/inicio/departamentos').then(r => r.json()).then(json => {
+                    if (json && Array.isArray(json.data)) {
+                        deptSelect.innerHTML = '<option value="">Seleccione</option>' +
+                            json.data.map(function(dep) {
+                                return '<option value="' + (dep.name || dep.code || '') + '">' + (dep.name || dep.code || '') + '</option>';
+                            }).join('');
+                    } else {
+                        deptSelect.innerHTML = '<option value="">Sin departamentos</option>';
+                    }
+                }).catch(() => {
+                    deptSelect.innerHTML = '<option value="">Error al cargar</option>';
+                });
+            }
+            if (form) {
+                form.onsubmit = function(e) {
+                    e.preventDefault();
+                    alert('Funcionalidad de guardado no implementada.');
+                };
+            }
+        }
+        
+        // Renderizar vista kanban
+        function renderKanban() {
+            var byEstado = {};
+            for (var i = 0; i < empleadosData.length; i++) {
+                var u = empleadosData[i];
+                var estado = u.estado || 'Sin estado';
+                if (!byEstado[estado]) byEstado[estado] = [];
+                byEstado[estado].push(u);
+            }
+            
+            var kanbanHtml = '<h3 class="emp-head">Kanban de colaboradores</h3>' +
+                '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">';
+            
+            for (var estado in byEstado) {
+                var rows = byEstado[estado];
+                kanbanHtml += 
+                    '<div style="border:1px dashed #cbd5e1;border-radius:12px;padding:10px;background:#fff;">' +
+                        '<h4 style="margin:0 0 10px;">' + esc(estado) + ' (' + rows.length + ')</h4>';
+                
+                if (rows.length) {
+                    for (var j = 0; j < rows.length; j++) {
+                        var u = rows[j];
+                        kanbanHtml += 
+                            '<div style="margin-bottom:6px;">' +
+                                '<strong>' + esc(u.nombre) + '</strong><br>' +
+                                '<small>' + esc(u.usuario) + '</small>' +
+                            '</div>';
+                    }
+                } else {
+                    kanbanHtml += '<p>Sin colaboradores.</p>';
+                }
+                
+                kanbanHtml += '</div>';
+            }
+            
+            kanbanHtml += '</div>';
+            empCard.innerHTML = kanbanHtml;
+        }
+        
+        // Cambiar vista
+        function setView(view) {
+            for (var i = 0; i < viewButtons.length; i++) {
+                var btn = viewButtons[i];
+                if (btn.getAttribute('data-view') === view) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            }
+            
+            if (view === 'list') {
+                empCard.innerHTML = 
+                    '<h3 class="emp-head">Colaboradores</h3>' +
+                    '<table class="emp-table">' +
+                        '<thead>' +
+                            '<tr>' +
+                                '<th>Nombre</th>' +
+                                '<th>Usuario</th>' +
+                                '<th>Correo</th>' +
+                                '<th>Rol</th>' +
+                                '<th>Departamento</th>' +
+                                '<th>Estado</th>' +
+                            '</tr>' +
+                        '</thead>' +
+                        '<tbody id="empleados-tbody"></tbody>' +
+                    '</table>';
+                renderList(empleadosData);
+            } else if (view === 'form') {
+                renderForm();
+            } else if (view === 'kanban') {
+                renderKanban();
+            }
+        }
+        
+        // Agregar event listeners a los botones de vista
+        for (var i = 0; i < viewButtons.length; i++) {
+            var btn = viewButtons[i];
+            btn.onclick = (function(v) {
+                return function() {
+                    setView(v);
+                };
+            })(btn.getAttribute('data-view'));
+        }
+        
+        // Funciones globales para los botones del formulario
+        window.nuevoColaborador = function() {
+            var form = document.getElementById('colaborador-form');
+            if (form) form.reset();
+            alert('Funcionalidad de nuevo colaborador no implementada.');
+        };
+        
+        window.editarColaborador = function() {
+            alert('Funcionalidad de edición no implementada.');
+        };
+        
+        // Cargar datos
+        async function load() {
+            try {
+                var res = await fetch('/api/usuarios');
+                var json = await res.json();
+                if (!res.ok || json?.success === false) throw new Error();
+                empleadosData = Array.isArray(json?.data) ? json.data : [];
+                setView('list');
+            } catch (e) {
+                empCard.innerHTML = '<p class="emp-empty">No se pudo cargar colaboradores.</p>';
+            }
+        }
+        
+        load();
+    })();
+    </script>
+</body>
+</html>

@@ -38,18 +38,18 @@ from fastapi_modulo.modulos.proyectando.tablero import router as proyectando_tab
 from fastapi_modulo.modulos.proyectando.datos_preliminares import router as proyectando_datos_preliminares_router
 from fastapi_modulo.modulos.proyectando.crecimiento_general import router as proyectando_crecimiento_general_router
 from fastapi_modulo.modulos.proyectando.sucursales import router as proyectando_sucursales_router
+from fastapi_modulo.modulos.proyectando.no_acceso import router as proyectando_no_acceso_router
 from fastapi_modulo.modulos.planificacion.ejes_poa import router as ejes_poa_router
 from fastapi_modulo.modulos.plantillas.plantillas_forms import router as plantillas_forms_router
 from fastapi_modulo.modulos.diagnostico.diagnostico import router as diagnostico_router
 from fastapi_modulo.modulos.kpis.kpis import router as kpis_router
-from fastapi import FastAPI, Request, UploadFile, HTTPException, Response, Form, Body
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates
+from fastapi import Response, Form, Body
+from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi import Depends
-from typing import Any, Dict, List, Optional, Set
-from datetime import datetime, date
+from typing import Set
+
 import struct
 import ipaddress
 import httpx
@@ -59,6 +59,7 @@ from reportes.reportes import (
     router as reportes_router,
 )
 templates = Jinja2Templates(directory="fastapi_modulo")
+date = Date
 
 HIDDEN_SYSTEM_USERS = {"0konomiyaki"}
 APP_ENV_DEFAULT = (os.environ.get("APP_ENV") or os.environ.get("ENVIRONMENT") or "development").strip().lower()
@@ -779,6 +780,7 @@ ENABLE_API_DOCS = (os.environ.get("ENABLE_API_DOCS") or "").strip().lower() in {
     "prod",
 }
 HEALTH_INCLUDE_DETAILS = (os.environ.get("HEALTH_INCLUDE_DETAILS") or "").strip().lower() in {"1", "true", "yes", "on"}
+DEMO_ADMIN_SEED_ENABLED = (os.environ.get("DEMO_ADMIN_SEED_ENABLED") or "true").strip().lower() in {"1", "true", "yes", "on"}
 CSRF_PROTECTION_ENABLED = (os.environ.get("CSRF_PROTECTION_ENABLED") or "true").strip().lower() in {
     "1",
     "true",
@@ -1162,9 +1164,14 @@ def ensure_system_superadmin_user() -> None:
 
 
 def ensure_demo_admin_user_seed() -> None:
-    username = "demo"
-    password = "demodemo"
+    if not DEMO_ADMIN_SEED_ENABLED:
+        return
+
+    username = (os.environ.get("DEMO_ADMIN_USERNAME") or "demo").strip()
+    password = os.environ.get("DEMO_ADMIN_PASSWORD") or "demodemo"
     email = (os.environ.get("DEMO_ADMIN_EMAIL") or DEFAULT_DEMO_EMAIL).strip().lower()
+    if not username or not password:
+        return
     if not email:
         email = DEFAULT_DEMO_EMAIL
 
@@ -1665,6 +1672,7 @@ app.include_router(proyectando_tablero_router)
 app.include_router(proyectando_datos_preliminares_router)
 app.include_router(proyectando_crecimiento_general_router)
 app.include_router(proyectando_sucursales_router)
+app.include_router(proyectando_no_acceso_router)
 app.include_router(ejes_poa_router)
 app.include_router(plantillas_forms_router)
 app.include_router(diagnostico_router)
@@ -1673,6 +1681,17 @@ app.include_router(reportes_router)
 from fastapi_modulo.modulos.notificaciones.notificaciones import router as notificaciones_router
 app.include_router(kpis_router)
 app.include_router(notificaciones_router)
+
+
+@app.on_event("startup")
+async def seed_default_users_on_startup():
+    try:
+        ensure_default_roles()
+        ensure_system_superadmin_user()
+        ensure_demo_admin_user_seed()
+    except Exception as exc:
+        print(f"[seed-startup] Error al sembrar usuarios por defecto: {exc}")
+
 
 @app.get("/health")
 def healthcheck():
@@ -2097,13 +2116,13 @@ def _user_aliases(user: Optional[Usuario], session_username: str) -> Set[str]:
     return aliases
 
 
-def _date_to_iso(value: Optional[date]) -> str:
+def _date_to_iso(value: Optional[Date]) -> str:
     if not value:
         return ""
     return value.isoformat()
 
 
-def _parse_date_field(value: Any, field_name: str, required: bool = True) -> tuple[Optional[date], Optional[str]]:
+def _parse_date_field(value: Any, field_name: str, required: bool = True) -> tuple[Optional[Date], Optional[str]]:
     raw = str(value or "").strip()
     if not raw:
         if required:

@@ -72,6 +72,15 @@
       color: #fff;
       border-color: #0f172a;
     }
+    .departamentos-page .save-status {
+      min-height: 20px;
+      font-size: .9rem;
+      font-weight: 600;
+      align-self: center;
+    }
+    .departamentos-page .save-status.is-pending { color: #334155; }
+    .departamentos-page .save-status.is-ok { color: #166534; }
+    .departamentos-page .save-status.is-error { color: #b91c1c; }
     .departamentos-page .list {
       display: grid;
       gap: 10px;
@@ -137,6 +146,7 @@
       let areasData = defaultAreasData.map((row) => ({ ...row }));
       let createAreaMode = false;
       let selectedAreaCode = null;
+      let lastSaveFeedback = { message: '', tone: '' };
 
       const escapeHtml = (value) => String(value || '')
         .replace(/&/g, '&amp;')
@@ -209,6 +219,7 @@
       };
 
       const renderAreaForm = () => {
+
         const selectedArea = createAreaMode
           ? {}
           : (
@@ -241,7 +252,7 @@
                 </div>
                 <div class="field">
                   <label>Responsable</label>
-                  <input id="area-manager-input" type="text" value="${selectedManager}" placeholder="Nombre del responsable">
+                  <select id="area-manager-select"><option value="">Cargando...</option></select>
                 </div>
                 <div class="field">
                   <label>Relación organizacional</label>
@@ -274,14 +285,46 @@
                 <button type="button" id="area-form-new-btn" class="btn">Nuevo</button>
                 <button type="button" id="area-form-cancel-btn" class="btn">Cancelar</button>
                 <button type="submit" id="area-form-save-btn" class="btn primary">Guardar</button>
+                <span id="area-form-save-status" class="save-status" role="status" aria-live="polite"></span>
               </div>
             </form>
           </section>
         `;
 
+        // Poblar select de responsables (colaboradores)
+        const managerSelect = areaView.querySelector('#area-manager-select');
+        if (managerSelect) {
+          fetch('/api/colaboradores').then(r => r.json()).then(json => {
+            if (json && Array.isArray(json.data)) {
+              managerSelect.innerHTML = '<option value="">Seleccione responsable</option>' +
+                json.data.map(function(col) {
+                  const label = (col.nombre ? col.nombre : col.usuario) + (col.departamento ? ' (' + col.departamento + ')' : '');
+                  return '<option value="' + (col.nombre || col.usuario || '') + '"' + (selectedManager === (col.nombre || col.usuario) ? ' selected' : '') + '>' + label + '</option>';
+                }).join('');
+            } else {
+              managerSelect.innerHTML = '<option value="">Sin colaboradores</option>';
+            }
+          }).catch(() => {
+            managerSelect.innerHTML = '<option value="">Error al cargar</option>';
+          });
+        }
+
         const form = areaView.querySelector('#area-form');
         const newBtn = areaView.querySelector('#area-form-new-btn');
         const cancelBtn = areaView.querySelector('#area-form-cancel-btn');
+        const saveBtn = areaView.querySelector('#area-form-save-btn');
+        const saveStatus = areaView.querySelector('#area-form-save-status');
+
+        const setSaveStatus = (message, tone = '') => {
+          lastSaveFeedback = { message: message || '', tone: tone || '' };
+          if (!saveStatus) return;
+          saveStatus.textContent = message || '';
+          saveStatus.classList.remove('is-pending', 'is-ok', 'is-error');
+          if (tone) saveStatus.classList.add(`is-${tone}`);
+        };
+        if (lastSaveFeedback.message) {
+          setSaveStatus(lastSaveFeedback.message, lastSaveFeedback.tone);
+        }
 
         newBtn && newBtn.addEventListener('click', () => {
           createAreaMode = true;
@@ -315,12 +358,17 @@
             areasData.push(payload);
           }
           try {
+            saveBtn && (saveBtn.disabled = true);
+            setSaveStatus('Guardando...', 'pending');
             await persistAreasData();
             createAreaMode = false;
             selectedAreaCode = code;
+            setSaveStatus('Guardado correctamente.', 'ok');
             setAreaView('form');
           } catch (error) {
-            alert(error?.message || 'Error al guardar.');
+            setSaveStatus(error?.message || 'Error al guardar.', 'error');
+          } finally {
+            saveBtn && (saveBtn.disabled = false);
           }
         });
       };
@@ -332,22 +380,43 @@
             <p>Consulta áreas por código, responsable y estado.</p>
             <div class="list">
               ${areasData.length ? areasData.map((area) => `
-                <button class="list-item" type="button" data-area-code="${escapeHtml(area.code)}">
+                <div class="list-item" data-area-code="${escapeHtml(area.code)}">
                   <span><strong>${escapeHtml(area.name)}</strong><br><small>${escapeHtml(area.manager || 'Sin responsable')}</small></span>
                   <span>
                     <span class="badge">${escapeHtml(area.code || 'N/A')}</span>
                     <span class="badge">${escapeHtml(area.status || 'N/A')}</span>
+                    <button class="btn btn-delete" data-delete-code="${escapeHtml(area.code)}" title="Eliminar" style="margin-left:8px;background:#dc2626;color:#fff;border-color:#dc2626;">Eliminar</button>
                   </span>
-                </button>
+                </div>
               `).join('') : '<p>Sin áreas registradas.</p>'}
             </div>
           </section>
         `;
         areaView.querySelectorAll('[data-area-code]').forEach((item) => {
-          item.addEventListener('click', () => {
+          item.addEventListener('click', (ev) => {
+            // Evitar que el click en el botón Eliminar abra el formulario
+            if (ev.target && ev.target.matches('.btn-delete')) return;
             createAreaMode = false;
             selectedAreaCode = String(item.getAttribute('data-area-code') || '').trim();
             setAreaView('form');
+          });
+        });
+        areaView.querySelectorAll('.btn-delete').forEach((btn) => {
+          btn.addEventListener('click', async (ev) => {
+            ev.stopPropagation();
+            const code = btn.getAttribute('data-delete-code');
+            if (!code) return;
+            if (!confirm('¿Seguro que deseas eliminar este departamento?')) return;
+            const idx = areasData.findIndex((a) => String(a.code) === String(code));
+            if (idx >= 0) {
+              areasData.splice(idx, 1);
+              try {
+                await persistAreasData();
+                setAreaView('list');
+              } catch (error) {
+                alert(error?.message || 'Error al eliminar.');
+              }
+            }
           });
         });
       };

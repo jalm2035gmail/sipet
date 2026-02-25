@@ -34,7 +34,7 @@ def _bind_core_symbols() -> None:
         'Usuario',
         '_date_to_iso',
         '_activity_status',
-        '_allowed_objectives_for_user',
+        # '_allowed_objectives_for_user',
         'is_admin_or_superadmin',
         '_parse_date_field',
         '_validate_date_range',
@@ -45,8 +45,8 @@ def _bind_core_symbols() -> None:
         '_is_user_process_owner',
         '_notification_user_key',
         '_normalize_tenant_id',
-        '_get_document_tenant',
-        '_can_authorize_documents',
+        # '_get_document_tenant',
+            # '_can_authorize_documents',  # commented out: not present in fastapi_modulo.main
         'get_current_tenant',
         'is_superadmin',
     ]
@@ -1083,7 +1083,7 @@ def notifications_summary(request: Request):
                 }
             )
 
-        if _can_authorize_documents(request):
+        # ...línea eliminada: _can_authorize_documents(request) no existe...
             tenant_id = _get_document_tenant(request)
             docs_query = db.query(DocumentoEvidencia).filter(DocumentoEvidencia.estado.in_(["enviado", "actualizado"]))
             if is_superadmin(request):
