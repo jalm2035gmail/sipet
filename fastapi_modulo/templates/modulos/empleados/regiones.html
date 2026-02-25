@@ -1,0 +1,324 @@
+        <section id="regiones-module" style="display:grid; gap:14px;">
+            <style>
+                .reg-card {
+                    background:#ffffff;
+                    border:1px solid #dbe3ef;
+                    border-radius:14px;
+                    padding:14px;
+                }
+                .reg-title {
+                    margin:0 0 10px;
+                    font-size:1.02rem;
+                    color:#0f172a;
+                }
+                .reg-grid {
+                    display:grid;
+                    grid-template-columns:repeat(3, minmax(0, 1fr));
+                    gap:12px;
+                }
+                .reg-field {
+                    display:flex;
+                    flex-direction:column;
+                    gap:6px;
+                }
+                .reg-field label {
+                    font-size:0.85rem;
+                    font-weight:700;
+                    color:#334155;
+                }
+                .reg-field input,
+                .reg-field textarea {
+                    width:100%;
+                    border:1px solid #cbd5e1;
+                    border-radius:10px;
+                    padding:10px;
+                    color:#0f172a;
+                    background:#ffffff;
+                    font-size:0.95rem;
+                }
+                .reg-field textarea {
+                    min-height:82px;
+                    resize:vertical;
+                }
+                .reg-actions {
+                    margin-top:12px;
+                    display:flex;
+                    gap:10px;
+                    align-items:center;
+                }
+                .reg-actions button {
+                    height:36px;
+                    padding:0 14px;
+                    border:1px solid #0f172a;
+                    background:#0f172a;
+                    color:#ffffff;
+                    border-radius:10px;
+                    font-weight:600;
+                    cursor:pointer;
+                }
+                .reg-msg {
+                    font-size:0.88rem;
+                    color:#334155;
+                }
+                .reg-table {
+                    width:100%;
+                    border-collapse:collapse;
+                }
+                .reg-table th,
+                .reg-table td {
+                    border-bottom:1px solid #e2e8f0;
+                    padding:10px;
+                    text-align:left;
+                    vertical-align:top;
+                }
+                .reg-table th {
+                    color:#334155;
+                    font-size:0.85rem;
+                    text-transform:uppercase;
+                    letter-spacing:.04em;
+                }
+                .view-list-excel {
+                    width:100%;
+                    border-collapse:collapse;
+                    border:1px solid rgba(15,23,42,.16);
+                    border-radius:12px;
+                    overflow:hidden;
+                    background:#ffffff;
+                }
+                .view-list-excel thead th {
+                    text-align:left;
+                    font-size:12px;
+                    letter-spacing:.06em;
+                    text-transform:uppercase;
+                    color:rgba(15,23,42,.82);
+                    background:linear-gradient(180deg, rgba(239,246,255,.96), rgba(219,234,254,.90));
+                    border:1px solid rgba(15,23,42,.14);
+                    padding:10px 12px;
+                    white-space:nowrap;
+                }
+                .view-list-excel tbody td {
+                    border:1px solid rgba(15,23,42,.10);
+                    padding:10px 12px;
+                    color:#0f172a;
+                    background:#ffffff;
+                }
+                .view-list-excel tbody tr:nth-child(even) td {
+                    background:#f3f4f6;
+                }
+                .view-list-excel tbody tr:hover td {
+                    background:#e5e7eb;
+                }
+                .reg-kanban {
+                    display:grid;
+                    grid-template-columns:repeat(3, minmax(0, 1fr));
+                    gap:12px;
+                }
+                .reg-col {
+                    border:1px solid #dbe3ef;
+                    border-radius:12px;
+                    background:#f8fafc;
+                    padding:10px;
+                }
+                .reg-col h4 {
+                    margin:0 0 10px;
+                    font-size:0.9rem;
+                    color:#0f172a;
+                }
+                .reg-item {
+                    border:1px solid #dbe3ef;
+                    border-radius:10px;
+                    background:#ffffff;
+                    padding:10px;
+                    margin-bottom:8px;
+                }
+                .reg-item strong {
+                    color:#0f172a;
+                    display:block;
+                    margin-bottom:4px;
+                }
+                .reg-item p {
+                    margin:0;
+                    color:#475569;
+                    font-size:0.9rem;
+                }
+                @media (max-width: 980px) {
+                    .reg-grid { grid-template-columns:1fr; }
+                    .reg-kanban { grid-template-columns:1fr; }
+                }
+            </style>
+            <div id="regiones-view"></div>
+        </section>
+        <script>
+            (() => {
+                const mount = document.getElementById('regiones-view');
+                if (!mount) return;
+                const data = [];
+                let currentView = 'form';
+                let editingIndex = -1;
+
+                const escapeHtml = (value) => String(value || '').replace(/[&<>"']/g, (char) => (
+                    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char] || char
+                ));
+                const normalizeRegion = (row) => {
+                    const item = row && typeof row === 'object' ? row : {};
+                    return {
+                        nombre: String(item.nombre || '').trim(),
+                        codigo: String(item.codigo || '').trim(),
+                        descripcion: String(item.descripcion || '').trim(),
+                    };
+                };
+                const replaceData = (rows) => {
+                    const normalized = Array.isArray(rows) ? rows.map(normalizeRegion) : [];
+                    data.splice(0, data.length, ...normalized);
+                };
+                const loadRegiones = async () => {
+                    try {
+                        const res = await fetch('/api/inicio/regiones');
+                        const json = await res.json().catch(() => ({}));
+                        if (!res.ok || json?.success === false) throw new Error('No se pudieron cargar regiones');
+                        replaceData(json?.data || []);
+                    } catch (_error) {
+                        replaceData([]);
+                    }
+                };
+                const persistRegiones = async () => {
+                    try {
+                        const res = await fetch('/api/inicio/regiones', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ data }),
+                        });
+                        const json = await res.json().catch(() => ({}));
+                        if (!res.ok || json?.success === false) throw new Error('No se pudieron guardar regiones');
+                        replaceData(json?.data || []);
+                        return true;
+                    } catch (_error) {
+                        return false;
+                    }
+                };
+
+                const renderForm = () => {
+                    const current = editingIndex >= 0 ? data[editingIndex] : { nombre: '', codigo: '', descripcion: '' };
+                    mount.innerHTML = `
+                        <article class="reg-card">
+                            <h3 class="reg-title">Formulario de regiones</h3>
+                            <form id="regiones-form">
+                                <div class="reg-grid">
+                                    <div class="reg-field">
+                                        <label for="region-nombre">Nombre</label>
+                                        <input id="region-nombre" type="text" value="${escapeHtml(current.nombre)}" required>
+                                    </div>
+                                    <div class="reg-field">
+                                        <label for="region-codigo">Código</label>
+                                        <input id="region-codigo" type="text" value="${escapeHtml(current.codigo)}" required>
+                                    </div>
+                                    <div class="reg-field">
+                                        <label for="region-descripcion">Descripción</label>
+                                        <textarea id="region-descripcion">${escapeHtml(current.descripcion)}</textarea>
+                                    </div>
+                                </div>
+                                <div class="reg-actions">
+                                    <button type="submit">${editingIndex >= 0 ? 'Actualizar' : 'Guardar'} región</button>
+                                    <span class="reg-msg">${data.length} registro(s)</span>
+                                </div>
+                            </form>
+                        </article>
+                    `;
+                    const form = document.getElementById('regiones-form');
+                    form && form.addEventListener('submit', async (event) => {
+                        event.preventDefault();
+                        const nombre = (document.getElementById('region-nombre')?.value || '').trim();
+                        const codigo = (document.getElementById('region-codigo')?.value || '').trim();
+                        const descripcion = (document.getElementById('region-descripcion')?.value || '').trim();
+                        if (!nombre || !codigo) return;
+                        const payload = { nombre, codigo, descripcion };
+                        if (editingIndex >= 0) {
+                            data[editingIndex] = payload;
+                        } else {
+                            data.push(payload);
+                        }
+                        editingIndex = -1;
+                        await persistRegiones();
+                        renderForm();
+                    });
+                };
+
+                const renderList = () => {
+                    mount.innerHTML = `
+                        <article class="reg-card">
+                            <h3 class="reg-title">Lista de regiones</h3>
+                            <table class="reg-table view-list-excel">
+                                <thead>
+                                    <tr>
+                                        <th>Nombre</th>
+                                        <th>Código</th>
+                                        <th>Descripción</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${data.length ? data.map((row) => `
+                                        <tr>
+                                            <td>${escapeHtml(row.nombre)}</td>
+                                            <td>${escapeHtml(row.codigo)}</td>
+                                            <td>${escapeHtml(row.descripcion)}</td>
+                                        </tr>
+                                    `).join('') : `
+                                        <tr><td colspan="3" style="color:#64748b;">Sin registros.</td></tr>
+                                    `}
+                                </tbody>
+                            </table>
+                        </article>
+                    `;
+                };
+
+                const laneName = (nombre) => {
+                    const first = (nombre || '').trim().charAt(0).toUpperCase();
+                    if (!first) return 'Sin clasificar';
+                    if (first <= 'H') return 'A - H';
+                    if (first <= 'P') return 'I - P';
+                    return 'Q - Z';
+                };
+
+                const renderKanban = () => {
+                    const lanes = { 'A - H': [], 'I - P': [], 'Q - Z': [], 'Sin clasificar': [] };
+                    data.forEach((row, index) => { lanes[laneName(row.nombre)].push({ ...row, index }); });
+                    mount.innerHTML = `
+                        <article class="reg-card">
+                            <h3 class="reg-title">Kanban de regiones</h3>
+                            <div class="reg-kanban">
+                                ${Object.keys(lanes).map((key) => `
+                                    <div class="reg-col">
+                                        <h4>${key}</h4>
+                                        ${lanes[key].length ? lanes[key].map((row) => `
+                                            <article class="reg-item">
+                                                <strong>${escapeHtml(row.nombre)}</strong>
+                                                <p>${escapeHtml(row.codigo)}</p>
+                                                <p>${escapeHtml(row.descripcion)}</p>
+                                            </article>
+                                        `).join('') : '<p class="reg-msg">Sin registros.</p>'}
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </article>
+                    `;
+                };
+
+                const render = (view) => {
+                    currentView = ['form', 'list', 'kanban'].includes(view) ? view : 'form';
+                    if (currentView === 'list') return renderList();
+                    if (currentView === 'kanban') return renderKanban();
+                    return renderForm();
+                };
+
+                document.addEventListener('backend-view-change', (event) => {
+                    const view = event.detail?.view;
+                    if (!view) return;
+                    render(view);
+                });
+
+                (async () => {
+                    await loadRegiones();
+                    render('form');
+                })();
+            })();
+        </script>

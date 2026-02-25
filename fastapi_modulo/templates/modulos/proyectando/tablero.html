@@ -1,0 +1,318 @@
+<section class="pc-dashboard">
+  <style>
+    .pc-dashboard {
+      --pc-bg: #e9edf8;
+      --pc-card: #f8faff;
+      --pc-border: #d6dceb;
+      --pc-text: #0f1833;
+      --pc-muted: #607089;
+      --pc-blue: #2f5ed7;
+      --pc-pill: #dbe6fb;
+      --pc-green-bg: #ddf4e6;
+      --pc-green-text: #1c6b40;
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 24px;
+      border: 1px solid #cfe6de;
+      border-radius: 20px;
+      background: radial-gradient(circle at 0% 0%, #e3f0ec 0%, transparent 40%), var(--pc-bg);
+    }
+    .pc-topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .pc-title {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+    }
+    .pc-play {
+      width: 66px;
+      height: 66px;
+      border-radius: 20px;
+      border: 2px solid #b9cbf4;
+      background: #d2def8;
+      color: var(--pc-blue);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 30px;
+      line-height: 1;
+      font-weight: 800;
+    }
+    .pc-title h2 {
+      margin: 0;
+      font-size: clamp(1.8rem, 2vw, 2.9rem);
+      line-height: 1.15;
+      color: var(--pc-text);
+    }
+    .pc-title h2 span {
+      color: #657792;
+      font-weight: 700;
+      font-size: 0.8em;
+    }
+    .pc-title p {
+      margin: 8px 0 0;
+      color: var(--pc-muted);
+      font-size: clamp(1rem, 1.1vw, 1.15rem);
+    }
+    .pc-actions {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .pc-btn {
+      border: 1px solid #c6cfde;
+      border-radius: 22px;
+      background: #ffffff;
+      color: var(--pc-text);
+      font-weight: 700;
+      font-size: 1rem;
+      padding: 16px 28px;
+      cursor: pointer;
+    }
+    .pc-btn--primary {
+      border-color: #a9bdf1;
+      background: var(--pc-pill);
+      color: var(--pc-blue);
+    }
+    .pc-circle {
+      width: 66px;
+      height: 66px;
+      border-radius: 50%;
+      border: 1px solid #c6cfde;
+      background: #ffffff;
+      color: var(--pc-text);
+      font-size: 2rem;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .pc-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 20px;
+    }
+    .pc-card {
+      border: 1px solid var(--pc-border);
+      border-radius: 26px;
+      background: var(--pc-card);
+      padding: 28px 26px;
+      box-shadow: 0 14px 34px rgba(27, 43, 77, 0.05);
+    }
+    .pc-card-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+    .pc-card-title {
+      color: var(--pc-muted);
+      font-size: clamp(1rem, 1.2vw, 1.08rem);
+      font-weight: 600;
+    }
+    .pc-tag {
+      border-radius: 999px;
+      padding: 10px 18px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      border: 1px solid #c2ccdd;
+      color: #566177;
+      background: #eef2fa;
+      white-space: nowrap;
+    }
+    .pc-tag.is-positive {
+      border-color: #b7dfca;
+      color: var(--pc-green-text);
+      background: var(--pc-green-bg);
+    }
+    .pc-metric {
+      margin: 20px 0 10px;
+      color: var(--pc-text);
+      font-size: clamp(2.3rem, 3.4vw, 4.1rem);
+      line-height: 1.05;
+      font-weight: 900;
+      letter-spacing: -0.03em;
+    }
+    .pc-sub {
+      margin: 0;
+      color: #5f7088;
+      font-size: clamp(1rem, 1.1vw, 1.15rem);
+    }
+    .pc-params {
+      margin-top: 20px;
+      border: 1px solid var(--pc-border);
+      border-radius: 28px;
+      background: #fbfdff;
+      padding: 26px;
+    }
+    .pc-params-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      align-items: flex-start;
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+    }
+    .pc-params h3 {
+      margin: 0;
+      color: var(--pc-text);
+      font-size: clamp(1.4rem, 1.8vw, 2rem);
+    }
+    .pc-params p {
+      margin: 10px 0 0;
+      color: var(--pc-muted);
+      font-size: clamp(1rem, 1.1vw, 1.15rem);
+    }
+    .pc-chip {
+      border: 2px solid #b8d6ee;
+      color: #226aa0;
+      background: #e6f3fb;
+      border-radius: 999px;
+      padding: 12px 22px;
+      font-size: 1.05rem;
+      font-weight: 700;
+    }
+    .pc-form {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 20px 22px;
+    }
+    .pc-field label {
+      display: block;
+      margin-bottom: 10px;
+      color: #3d475a;
+      font-size: 1.04rem;
+      font-weight: 700;
+    }
+    .pc-select, .pc-value {
+      width: 100%;
+      border: 2px solid #d4dbe8;
+      border-radius: 20px;
+      background: #fff;
+      padding: 14px 18px;
+      font-size: 1.06rem;
+      color: var(--pc-text);
+      min-height: 58px;
+    }
+    .pc-slider-wrap {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 170px;
+      gap: 16px;
+      align-items: center;
+    }
+    .pc-range {
+      width: 100%;
+      accent-color: #1d72e7;
+    }
+    @media (max-width: 980px) {
+      .pc-grid,
+      .pc-form {
+        grid-template-columns: 1fr;
+      }
+      .pc-slider-wrap {
+        grid-template-columns: 1fr;
+      }
+      .pc-circle {
+        width: 56px;
+        height: 56px;
+        font-size: 1.45rem;
+      }
+    }
+  </style>
+
+  <header class="pc-topbar">
+    <div class="pc-title">
+      <div class="pc-play">▶</div>
+      <div>
+        <h2>Proyección Financiera <span>(12 meses)</span></h2>
+        <p>Ajusta parámetros y observa el recalculo en tiempo real.</p>
+      </div>
+    </div>
+    <div class="pc-actions">
+      <button type="button" class="pc-btn">Guardar</button>
+      <button type="button" class="pc-btn pc-btn--primary">Exportar</button>
+      <span class="pc-circle">3</span>
+      <span class="pc-circle">🎚</span>
+    </div>
+  </header>
+
+  <div class="pc-grid">
+    <article class="pc-card">
+      <div class="pc-card-head">
+        <span class="pc-card-title">Ingresos proyectados</span>
+        <span class="pc-tag is-positive">↑ 2.5% / mes</span>
+      </div>
+      <div class="pc-metric">USD 1,172,622</div>
+      <p class="pc-sub">Total acumulado en 12 meses</p>
+    </article>
+
+    <article class="pc-card">
+      <div class="pc-card-head">
+        <span class="pc-card-title">Costos proyectados</span>
+        <span class="pc-tag">Inflación +4.0%</span>
+      </div>
+      <div class="pc-metric">USD 757,543</div>
+      <p class="pc-sub">Total acumulado en 12 meses</p>
+    </article>
+
+    <article class="pc-card">
+      <div class="pc-card-head">
+        <span class="pc-card-title">Flujo neto estimado</span>
+        <span class="pc-tag" style="color:#2f5ed7;border-color:#b7caf7;background:#dfebff;">Base</span>
+      </div>
+      <div class="pc-metric">USD 415,079</div>
+      <p class="pc-sub">Ingresos - costos (12m)</p>
+    </article>
+
+    <article class="pc-card">
+      <div class="pc-card-head">
+        <span class="pc-card-title">Margen estimado</span>
+        <span class="pc-tag is-positive">En meta</span>
+      </div>
+      <div class="pc-metric">35.4%</div>
+      <p class="pc-sub">Flujo / ingresos</p>
+    </article>
+  </div>
+
+  <section class="pc-params">
+    <div class="pc-params-head">
+      <div>
+        <h3>Parámetros de proyección</h3>
+        <p>Modifica supuestos y recalcula automáticamente.</p>
+      </div>
+      <span class="pc-chip">Horizonte 12m</span>
+    </div>
+    <div class="pc-form">
+      <div class="pc-field">
+        <label for="pc-horizonte">Horizonte</label>
+        <select id="pc-horizonte" class="pc-select">
+          <option>12 meses</option>
+          <option>24 meses</option>
+          <option>36 meses</option>
+        </select>
+      </div>
+      <div class="pc-field">
+        <label for="pc-crecimiento">Crecimiento mensual</label>
+        <div class="pc-slider-wrap">
+          <input id="pc-crecimiento" class="pc-range" type="range" min="0" max="10" step="0.1" value="2.5">
+          <div class="pc-value">2.5%</div>
+        </div>
+      </div>
+      <div class="pc-field">
+        <label for="pc-inflacion">Inflación anual</label>
+        <input id="pc-inflacion" class="pc-select" type="text" value="4.0%">
+      </div>
+      <div class="pc-field">
+        <label for="pc-tasa">Tasa de descuento anual</label>
+        <input id="pc-tasa" class="pc-select" type="text" value="12.5%">
+      </div>
+    </div>
+  </section>
+</section>

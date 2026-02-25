@@ -1,0 +1,59 @@
+<section class="notificaciones-page">
+  <article class="content-section">
+    <header class="content-section-head">
+      <h2 class="content-section-title">Notificaciones</h2>
+    </header>
+    <div class="content-section-body">
+      <div class="tabla-oficial-wrap">
+        <table class="tabla-oficial" id="notificaciones-table">
+          <thead>
+            <tr>
+              <th>Tipo</th>
+              <th>Título</th>
+              <th>Mensaje</th>
+              <th>Fecha</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td colspan="5">Cargando notificaciones...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </article>
+
+  <script>
+    (async () => {
+      const tbody = document.querySelector('#notificaciones-table tbody');
+      if (!tbody) return;
+      try {
+        const res = await fetch('/api/notificaciones/resumen', { headers: { 'Accept': 'application/json' } });
+        const payload = await res.json();
+        const items = Array.isArray(payload?.data?.items) ? payload.data.items : [];
+        if (!items.length) {
+          tbody.innerHTML = '<tr><td colspan="5">Sin notificaciones pendientes.</td></tr>';
+          return;
+        }
+        tbody.innerHTML = items.map((item) => {
+          const title = item?.titulo || item?.type || 'Notificación';
+          const msg = item?.mensaje || item?.description || '';
+          const date = item?.created_at || item?.fecha || '';
+          const state = item?.status || (item?.is_read ? 'leída' : 'pendiente');
+          const type = item?.type || 'sistema';
+          return `
+            <tr>
+              <td>${type}</td>
+              <td>${title}</td>
+              <td>${msg}</td>
+              <td>${date}</td>
+              <td>${state}</td>
+            </tr>
+          `;
+        }).join('');
+      } catch (error) {
+        tbody.innerHTML = '<tr><td colspan="5">No se pudieron cargar las notificaciones.</td></tr>';
+      }
+    })();
+  </script>
+</section>

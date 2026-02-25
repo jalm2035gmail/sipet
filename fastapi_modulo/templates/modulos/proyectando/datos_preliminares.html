@@ -1,0 +1,96 @@
+<section class="notebook-section proyectando-scope">
+  <div class="notebook-tabs" role="tablist" aria-label="Datos preliminares">
+    <button type="button" class="tab active" data-tab="datos-generales">Datos generales</button>
+    <button type="button" class="tab" data-tab="macroeconomia">Macroeconomia</button>
+    <button type="button" class="tab" data-tab="sucursales">Sucursales</button>
+    <button type="button" class="tab" data-tab="informacion-financiera">Información financiera</button>
+    <button type="button" class="tab" data-tab="activo-fijo">Activo fijo</button>
+    <button type="button" class="tab" data-tab="gastos">Gastos</button>
+  </div>
+
+  <div class="notebook-content">
+    <section class="tab-panel" data-panel="datos-generales">
+      <form class="proyectando-form" autocomplete="off">
+        <div class="proyectando-form-row">
+          <div class="form-field">
+            <label for="dp-primer-anio">Primer año de proyección</label>
+            <input id="dp-primer-anio" type="number" min="2000" step="1" placeholder="2026">
+          </div>
+          <div class="form-field">
+            <label for="dp-anios">Años de proyección</label>
+            <input id="dp-anios" type="number" min="1" max="10" step="1" placeholder="3">
+          </div>
+          <div class="form-field">
+            <label for="dp-moneda">Moneda</label>
+            <select id="dp-moneda">
+              <option value="HNL">HNL</option>
+              <option value="USD">USD</option>
+            </select>
+          </div>
+        </div>
+        <div class="proyectando-form-row">
+          <div class="form-field">
+            <label for="dp-inflacion">Inflación estimada (%)</label>
+            <input id="dp-inflacion" type="number" step="0.01" min="0" placeholder="0.00">
+          </div>
+          <div class="form-field">
+            <label for="dp-tasa">Tasa de crecimiento (%)</label>
+            <input id="dp-tasa" type="number" step="0.01" placeholder="0.00">
+          </div>
+          <div class="form-field">
+            <label for="dp-observaciones">Observaciones</label>
+            <input id="dp-observaciones" type="text" placeholder="Notas del escenario">
+          </div>
+        </div>
+        <div class="proyectando-actions">
+          <button type="button" class="proyectando-btn">Guardar</button>
+          <button type="button" class="proyectando-btn alt">Limpiar</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="tab-panel" data-panel="mercado" hidden>
+      <div class="proyectando-card">
+        <h3 class="proyectando-title">Supuestos de mercado</h3>
+        <p class="proyectando-muted">Define variables macro y comportamiento esperado de demanda.</p>
+      </div>
+    </section>
+
+    <section class="tab-panel" data-panel="operativo" hidden>
+          <section class="tab-panel" data-panel="macroeconomia" hidden>
+            <div class="proyectando-card">
+              <h3 class="proyectando-title">Macroeconomía</h3>
+              <p class="proyectando-muted">Variables macroeconómicas relevantes para la proyección.</p>
+            </div>
+          </section>
+          <section class="tab-panel" data-panel="sucursales" hidden>
+            <div class="proyectando-card">
+              <h3 class="proyectando-title">Sucursales</h3>
+              <p class="proyectando-muted">Gestión y proyección de sucursales.</p>
+            </div>
+          </section>
+          <section class="tab-panel" data-panel="informacion-financiera" hidden>
+            <div class="proyectando-card">
+              <h3 class="proyectando-title">Información financiera</h3>
+              <p class="proyectando-muted">Datos y supuestos financieros clave.</p>
+            </div>
+          </section>
+          <section class="tab-panel" data-panel="activo-fijo" hidden>
+            <div class="proyectando-card">
+              <h3 class="proyectando-title">Activo fijo</h3>
+              <p class="proyectando-muted">Detalle y proyección de activos fijos.</p>
+            </div>
+          </section>
+          <section class="tab-panel" data-panel="gastos" hidden>
+            <div class="proyectando-card">
+              <h3 class="proyectando-title">Gastos</h3>
+              <p class="proyectando-muted">Proyección y desglose de gastos.</p>
+            </div>
+          </section>
+      <div class="proyectando-card">
+        <h3 class="proyectando-title">Supuestos operativos</h3>
+        <p class="proyectando-muted">Registra capacidad instalada, costos base y metas de eficiencia.</p>
+      </div>
+    </section>
+  </div>
+</section>

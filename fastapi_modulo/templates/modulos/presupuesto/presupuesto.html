@@ -501,6 +501,10 @@
     background: var(--page-bg, #f4f6fb);
     overflow: auto;
   }
+  .tab-panel[data-panel="reportes"] {
+    overflow: auto;
+    max-height: 75vh;
+  }
   .tab-panel[data-panel="reportes"]:fullscreen .reportes-fullscreen-hint {
     display: inline-flex;
     align-items: center;
@@ -522,6 +526,7 @@
     border-radius: 14px;
     background: #f2f5fb;
     overflow: hidden;
+    min-width: 1400px;
   }
   .cp-head {
     background: #1f4a88;

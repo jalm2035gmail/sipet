@@ -1,68 +1,6 @@
-## Fases de migración para el módulo Personalización
-
-1. **Planeación y documentación** ✅
-	- Identificar funciones, endpoints, rutas y archivos relacionados con la pantalla de personalización en main.py/base.html. ✅
-	- Registrar dependencias y confirmar la estructura destino: modulos/personalizacion/personalizar.html, personalizar.py, personalizar.css. ✅
-	- Documentar el flujo actual y puntos de integración. ✅
-
-**Dependencias y estructura destino:**
-- Archivos fuente identificados:
-	- fastapi_modulo/main.py: funciones `render_personalizacion_page`, endpoint `/personalizar-pantalla`, variable `PERSONALIZACION_HTML` (pendiente localizar definición).
-	- fastapi_modulo/templates/base.html: estilos `.personalization-panel`, `.campo-personalizado`, lógica JS para panel y floating actions.
-- Estructura destino confirmada:
-	- modulos/personalizacion/personalizar.html
-	- modulos/personalizacion/personalizar.py
-	- modulos/personalizacion/personalizar.css
-- Problemas encontrados:
-	- Falta localizar definición de `PERSONALIZACION_HTML` (¿está en main.py o en otro archivo?).
-	- Los estilos y lógica JS están mezclados en base.html, requieren extracción y modularización.
-	- El endpoint `/personalizar-pantalla` depende de permisos (require_superadmin), revisar si debe mantenerse igual.
-	- Confirmar si hay dependencias adicionales en backend_screen/render_backend_page.
-
-**Siguiente paso:**
-- Extraer views/styles y backend lógica de personalización para migrar a los archivos destino.
-
-2. **Extracción de vistas y estilos** ✅
-	- Mover el HTML relevante a personalizar.html. ✅
-	- Crear y mover CSS específico a personalizar.css. ✅
-	- Adaptar clases y estilos para evitar conflictos con el CSS global. ✅
-
-3. **Modularización de lógica backend** ✅
-	- Mover funciones y endpoints de personalización a personalizar.py. ✅
-	- Adaptar imports y dependencias, asegurando modularidad. ✅
-
-4. **Refactorización de JS** ✅
-	- Mover JS específico a la plantilla o a un archivo personalizar.js. ✅
-	- Asegurar funcionamiento de eventos y lógica. ✅
-
-**Notas de refactorización:**
-- El JS específico para mostrar/ocultar el panel de personalización fue migrado a modulos/personalizacion/personalizar.js.
-- Se recomienda agregar lógica adicional para guardar colores y eventos según necesidades del módulo.
-
-5. **Integración y pruebas** ✅
-	- Registrar el router de personalización en main.py. ✅
-	- Probar toda la funcionalidad migrada en la nueva estructura. ✅
-
-**Notas de integración:**
-- El router de personalización fue importado y registrado en main.py:
-	`from fastapi_modulo.modulos.personalizacion.personalizar import router as personalizacion_router`
-	`app.include_router(personalizacion_router)`
-- La ruta migrada `/personalizar-pantalla` ya sirve el HTML desde personalizar.html.
-- Se recomienda probar la pantalla y validar el funcionamiento en la nueva estructura.
-
-6. **Limpieza y documentación** ✅
-	- Eliminar código duplicado o migrado de main.py/base.html. ✅
-	- Documentar la nueva arquitectura y dependencias. ✅
-
-**Notas de limpieza:**
-- El código antiguo de personalización fue migrado y puede eliminarse de main.py/base.html.
-- La arquitectura modular está documentada en este archivo.
-- Se recomienda revisar dependencias cruzadas antes de eliminar código antiguo.
 
 
 
-Este archivo servirá como plantilla para migraciones de otros módulos en el futuro
-# Protocolo de Migración de Módulos (Ejemplo: Presupuesto)
 
 ## Objetivo
 Documentar el proceso y las mejores prácticas para migrar módulos grandes desde main.py/base.html a una estructura modular y desacoplada, reutilizable para otros módulos.
@@ -129,5 +67,37 @@ Probar la funcionalidad migrada.
 Limpieza y documentación:
 Eliminar archivos vacíos o migrados (departamentos_list.html, departamentos_kanban.html, departamentos_organigrama.html).
 Documentar la nueva arquitectura y dependencias.
+---
 
+# Migración y desarrollo del módulo Reportes
 
+## Planeación y análisis
+- Se identificó la necesidad de un módulo independiente para reportes.
+- Se decidió crear los archivos `reportes.py` (lógica backend) y `reportes.html` (plantilla frontend) en la carpeta `/reportes`.
+- Se analizaron funciones existentes en `fastapi_modulo/main.py` relacionadas con generación de reportes, encabezados y exportaciones (por ejemplo: `_build_report_export_html_document`, helpers de plantillas y contexto).
+- No existen endpoints dedicados a reportes, pero sí lógica reutilizable para exportación y visualización.
+- Próximo paso: migrar esta lógica a `reportes.py` y dejar solo los imports en `main.py`.
+
+## Estructura creada
+- `/reportes/reportes.py`: Archivo principal para la lógica de generación de reportes.
+- `/reportes/reportes.html`: Plantilla HTML para la visualización de reportes.
+
+## Desarrollo
+- Se creó `reportes.py` como punto de entrada para futuras funciones de generación y exportación de reportes.
+- Se creó `reportes.html` como plantilla base para mostrar los reportes generados.
+- Ambas estructuras están listas para ser integradas con FastAPI y Jinja2.
+
+## Integración con FastAPI
+- Se importó la función `_build_report_export_html_document` desde `reportes.py` en `main.py`.
+- Se creó un endpoint `/reportes/exportar-html` que devuelve el HTML del reporte consolidado.
+- El router de reportes se registró en la app principal.
+
+## Buenas prácticas aplicadas
+- Separación clara entre lógica backend y presentación frontend.
+- Uso de nombres descriptivos y consistentes.
+- Documentación de cada paso en este archivo.
+
+## Próximos pasos
+- Implementar endpoints en `reportes.py` para generar y servir reportes.
+- Integrar la plantilla `reportes.html` con el backend.
+- Añadir pruebas y documentación adicional según se avance en el desarrollo.

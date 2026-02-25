@@ -1,0 +1,63 @@
+<section id="empleados-module" style="display:grid; gap:14px;">
+    <style>
+        .emp-card { background:#fff; border:1px solid #dbe3ef; border-radius:14px; padding:14px; }
+        .emp-head { margin:0 0 10px; font-size:1.02rem; color:#0f172a; }
+        .emp-table { width:100%; border-collapse:collapse; border:1px solid rgba(15,23,42,.16); border-radius:12px; overflow:hidden; background:#fff; }
+        .emp-table th { text-align:left; font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:rgba(15,23,42,.82); background:linear-gradient(180deg, rgba(239,246,255,.96), rgba(219,234,254,.90)); border:1px solid rgba(15,23,42,.14); padding:10px 12px; white-space:nowrap; }
+        .emp-table td { border:1px solid rgba(15,23,42,.10); padding:10px 12px; color:#0f172a; background:#fff; }
+        .emp-table tbody tr:nth-child(even) td { background:#f3f4f6; }
+        .emp-empty { color:#64748b; }
+    </style>
+    <article class="emp-card">
+        <h3 class="emp-head">Colaboradores</h3>
+        <table class="emp-table">
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Usuario</th>
+                    <th>Correo</th>
+                    <th>Rol</th>
+                    <th>Departamento</th>
+                    <th>Estado</th>
+                </tr>
+            </thead>
+            <tbody id="empleados-tbody">
+                <tr><td colspan="6" class="emp-empty">Cargando...</td></tr>
+            </tbody>
+        </table>
+    </article>
+</section>
+<script>
+(() => {
+    const tbody = document.getElementById('empleados-tbody');
+    if (!tbody) return;
+    const esc = (v) => String(v || '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] || c));
+    const render = (rows) => {
+        if (!Array.isArray(rows) || !rows.length) {
+            tbody.innerHTML = '<tr><td colspan="6" class="emp-empty">Sin registros.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = rows.map((u) => `
+            <tr>
+                <td>${esc(u.nombre)}</td>
+                <td>${esc(u.usuario)}</td>
+                <td>${esc(u.correo)}</td>
+                <td>${esc(u.rol)}</td>
+                <td>${esc(u.departamento)}</td>
+                <td>${esc(u.estado)}</td>
+            </tr>
+        `).join('');
+    };
+    const load = async () => {
+        try {
+            const res = await fetch('/api/usuarios');
+            const json = await res.json().catch(() => ({}));
+            if (!res.ok || json?.success === false) throw new Error();
+            render(Array.isArray(json?.data) ? json.data : []);
+        } catch (_e) {
+            tbody.innerHTML = '<tr><td colspan="6" class="emp-empty">No se pudo cargar colaboradores.</td></tr>';
+        }
+    };
+    load();
+})();
+</script>

@@ -1,18 +1,48 @@
+import os
+
 # Módulo inicial para endpoints y lógica de departamentos
 from fastapi import APIRouter, Request, Body, HTTPException
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from typing import List, Dict, Set
 from fastapi_modulo.db import SessionLocal, DepartamentoOrganizacional
 
 router = APIRouter()
+DEPARTAMENTOS_TEMPLATE_PATH = os.path.join("fastapi_modulo", "modulos", "empleados", "departamentos.html")
+
+
+def _render_departamentos_page(request: Request) -> HTMLResponse:
+    from fastapi_modulo.main import render_backend_page
+
+    try:
+        with open(DEPARTAMENTOS_TEMPLATE_PATH, "r", encoding="utf-8") as fh:
+            areas_content = fh.read()
+    except OSError:
+        areas_content = ""
+    return render_backend_page(
+        request,
+        title="Departamentos",
+        description="Administra la estructura de departamentos de la organización",
+        content=areas_content,
+        hide_floating_actions=True,
+        show_page_header=False,
+    )
+
 
 @router.get("/departamentos", response_class=HTMLResponse)
 def departamentos_page(request: Request):
-    # Renderizar la plantilla departamentos.html
-    return request.app.state.templates.TemplateResponse(
-        "modulos/empleados/departamentos.html",
-        {"request": request}
-    )
+    # Redirige a la vista backend oficial con estilos y layout unificados.
+    return RedirectResponse(url="/inicio/departamentos", status_code=307)
+
+
+@router.get("/inicio/departamentos", response_class=HTMLResponse)
+def inicio_departamentos_page(request: Request):
+    return _render_departamentos_page(request)
+
+
+@router.get("/areas-organizacionales", response_class=HTMLResponse)
+def areas_organizacionales_page(request: Request):
+    return RedirectResponse(url="/inicio/departamentos", status_code=307)
+
 
 def _serialize_departamentos(rows: List[DepartamentoOrganizacional]) -> List[Dict[str, str]]:
     data: List[Dict[str, str]] = []
