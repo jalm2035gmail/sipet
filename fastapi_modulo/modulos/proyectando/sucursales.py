@@ -178,17 +178,17 @@ def _render_sucursales_page(request: Request) -> HTMLResponse:
                 .suc-field label {{
                     font-size:0.85rem;
                     font-weight:700;
-                    color:#334155;
+                    color:var(--sidebar-bottom, #0f172a);
                 }}
                 .suc-field input,
                 .suc-field select,
                 .suc-field textarea {{
                     width:100%;
-                    border:1px solid #cbd5e1;
+                    border:1px solid color-mix(in srgb, var(--button-bg, #0f172a) 20%, #ffffff 80%);
                     border-radius:10px;
                     padding:10px;
-                    color:#0f172a;
-                    background:#ffffff;
+                    color:var(--navbar-text, #1f172a);
+                    background:var(--field-color, #ffffff);
                     font-size:0.95rem;
                 }}
                 .suc-field textarea {{

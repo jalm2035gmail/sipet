@@ -1,6 +1,6 @@
 <section class="departamentos-page">
-  <h1 class="page-title">Departamentos</h1>
-  <p class="page-description">Administra la estructura de departamentos de la organización</p>
+  <h1 class="page-title">Áreas Organizacionales</h1>
+  <p class="page-description">Administra la estructura organizacional de la organización</p>
 
   <div class="view-buttons">
     <button type="button" class="view-pill active" data-view="form">
@@ -39,17 +39,35 @@
       flex-direction: column;
       gap: 6px;
     }
+    .departamentos-page .field.field-full {
+      grid-column: 1 / -1;
+    }
     .departamentos-page .field input,
     .departamentos-page .field select,
     .departamentos-page .field textarea {
-      border: 1px solid #cbd5e1;
+      border: 1px solid color-mix(in srgb, var(--button-bg, #0f172a) 20%, #ffffff 80%);
       border-radius: 10px;
       padding: 10px 12px;
       font: inherit;
+      color: var(--navbar-text, #1f172a);
+      background: var(--field-color, #ffffff);
     }
     .departamentos-page .field textarea {
       min-height: 92px;
       resize: vertical;
+    }
+    .departamentos-page .color-field-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .departamentos-page .color-swatch {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      border: 1px solid color-mix(in srgb, var(--button-bg, #0f172a) 22%, #ffffff 78%);
+      background: #1d4ed8;
+      flex: 0 0 40px;
     }
     .departamentos-page .actions {
       display: flex;
@@ -147,6 +165,9 @@
       let createAreaMode = false;
       let selectedAreaCode = null;
       let lastSaveFeedback = { message: '', tone: '' };
+      let orgLibPromise = null;
+      let orgChartInstance = null;
+      let orgAvatarUrl = '/templates/icon/organigrama.svg';
 
       const escapeHtml = (value) => String(value || '')
         .replace(/&/g, '&amp;')
@@ -250,7 +271,7 @@
                   <label>Departamento padre</label>
                   <select id="area-parent-select">${getAreaParentOptions(selectedParentRaw)}</select>
                 </div>
-                <div class="field">
+                <div class="field field-full">
                   <label>Responsable</label>
                   <select id="area-manager-select"><option value="">Cargando...</option></select>
                 </div>
@@ -268,7 +289,10 @@
                 </div>
                 <div class="field">
                   <label>Color</label>
-                  <input id="area-color-input" type="color" value="${selectedColor}">
+                  <div class="color-field-row">
+                    <input id="area-color-input" type="color" value="${selectedColor}">
+                    <span id="area-color-swatch" class="color-swatch" style="background:${selectedColor};"></span>
+                  </div>
                 </div>
               </div>
               <div class="area-grid" style="margin-top:10px;">
@@ -314,6 +338,8 @@
         const cancelBtn = areaView.querySelector('#area-form-cancel-btn');
         const saveBtn = areaView.querySelector('#area-form-save-btn');
         const saveStatus = areaView.querySelector('#area-form-save-status');
+        const colorInput = areaView.querySelector('#area-color-input');
+        const colorSwatch = areaView.querySelector('#area-color-swatch');
 
         const setSaveStatus = (message, tone = '') => {
           lastSaveFeedback = { message: message || '', tone: tone || '' };
@@ -324,6 +350,13 @@
         };
         if (lastSaveFeedback.message) {
           setSaveStatus(lastSaveFeedback.message, lastSaveFeedback.tone);
+        }
+        if (colorInput && colorSwatch) {
+          const syncColorSwatch = () => {
+            colorSwatch.style.background = normalizeAreaColor(colorInput.value);
+          };
+          colorInput.addEventListener('input', syncColorSwatch);
+          syncColorSwatch();
         }
 
         newBtn && newBtn.addEventListener('click', () => {
@@ -341,7 +374,7 @@
           event.preventDefault();
           const name = String(areaView.querySelector('#area-name-input')?.value || '').trim();
           const parent = String(areaView.querySelector('#area-parent-select')?.value || 'N/A').trim() || 'N/A';
-          const manager = String(areaView.querySelector('#area-manager-input')?.value || '').trim();
+          const manager = String(areaView.querySelector('#area-manager-select')?.value || '').trim();
           const code = String(areaView.querySelector('#area-code-input')?.value || '').trim();
           const color = normalizeAreaColor(areaView.querySelector('#area-color-input')?.value || '#1d4ed8');
           const relationValue = String(areaView.querySelector('#area-relacion-select')?.value || 'Línea').trim();
@@ -448,22 +481,216 @@
       };
 
       const renderAreaOrganigrama = () => {
-        const root = areasData.find((area) => area.parent === 'N/A') || areasData[0];
-        if (!root) {
-          areaView.innerHTML = '<section class="area-card"><h2>Organigrama</h2><p>Sin áreas disponibles.</p></section>';
-          return;
-        }
-        const firstLevel = areasData.filter((area) => area.parent === root.name);
-        const secondLevel = areasData.filter((area) => firstLevel.some((parent) => parent.name === area.parent));
         areaView.innerHTML = `
           <section class="area-card">
             <h2>Organigrama de áreas</h2>
-            <p>Vista jerárquica con líneas y niveles.</p>
-            <div class="org-root org-level">Nivel 1: ${escapeHtml(root.name)} (${escapeHtml(root.code)})</div>
-            <div><strong>Nivel 2</strong>: ${firstLevel.map((a) => escapeHtml(a.name)).join(', ') || 'Sin áreas'}</div>
-            <div style="margin-top:6px;"><strong>Nivel 3</strong>: ${secondLevel.map((a) => escapeHtml(a.name)).join(', ') || 'Sin áreas'}</div>
+            <p>Vista jerárquica interactiva.</p>
+            <div class="org-toolbar">
+              <button type="button" id="area-org-fullscreen-btn" class="btn">Ver en pantalla completa</button>
+              <span id="area-org-fullscreen-hint" class="org-fullscreen-hint">Esc para salir de pantalla completa</span>
+            </div>
+            <div id="area-org-chart" class="org-chart-wrap"></div>
           </section>
         `;
+        const chartEl = areaView.querySelector('#area-org-chart');
+        const fullscreenBtn = areaView.querySelector('#area-org-fullscreen-btn');
+        const fullscreenHint = areaView.querySelector('#area-org-fullscreen-hint');
+        if (!chartEl) return;
+        setupOrgFullscreen(chartEl, fullscreenBtn, fullscreenHint);
+        renderOrgChartWithLibrary(chartEl);
+      };
+
+      const getFullscreenElement = () => document.fullscreenElement || document.webkitFullscreenElement || null;
+
+      const requestElementFullscreen = async (element) => {
+        if (!element) return;
+        if (element.requestFullscreen) {
+          await element.requestFullscreen();
+          return;
+        }
+        if (element.webkitRequestFullscreen) {
+          element.webkitRequestFullscreen();
+        }
+      };
+
+      const exitAnyFullscreen = async () => {
+        if (document.exitFullscreen) {
+          await document.exitFullscreen();
+          return;
+        }
+        if (document.webkitExitFullscreen) {
+          document.webkitExitFullscreen();
+        }
+      };
+
+      const setupOrgFullscreen = (chartEl, btnEl, hintEl) => {
+        if (!chartEl || !btnEl) return;
+        const target = chartEl;
+        const updateFullscreenUi = () => {
+          const isActive = getFullscreenElement() === target;
+          btnEl.textContent = isActive ? 'Salir de pantalla completa' : 'Ver en pantalla completa';
+          if (hintEl) hintEl.classList.toggle('visible', isActive);
+        };
+        btnEl.addEventListener('click', async () => {
+          const isActive = getFullscreenElement() === target;
+          try {
+            if (isActive) {
+              await exitAnyFullscreen();
+            } else {
+              await requestElementFullscreen(target);
+            }
+          } catch (_error) {
+            // Ignorar fallo silencioso del navegador en fullscreen sin gesto permitido.
+          } finally {
+            updateFullscreenUi();
+          }
+        });
+        document.addEventListener('fullscreenchange', updateFullscreenUi);
+        document.addEventListener('webkitfullscreenchange', updateFullscreenUi);
+        updateFullscreenUi();
+      };
+
+      const loadScript = (src) => new Promise((resolve, reject) => {
+        if (document.querySelector(`script[src="${src}"]`)) {
+          resolve();
+          return;
+        }
+        const script = document.createElement('script');
+        script.src = src;
+        script.async = true;
+        script.onload = () => resolve();
+        script.onerror = () => reject(new Error(`No se pudo cargar ${src}`));
+        document.head.appendChild(script);
+      });
+
+      const ensureOrgChartLibrary = async () => {
+        if (window.d3 && window.d3.OrgChart) return true;
+        if (!orgLibPromise) {
+          orgLibPromise = (async () => {
+            try {
+              await loadScript('/static/vendor/d3.min.js');
+              await loadScript('/static/vendor/d3-flextree.min.js');
+              await loadScript('/static/vendor/d3-org-chart.min.js');
+            } catch (_localError) {
+              await loadScript('https://cdn.jsdelivr.net/npm/d3@7');
+              await loadScript('https://cdn.jsdelivr.net/npm/d3-flextree@2.1.2/build/d3-flextree.js');
+              await loadScript('https://cdn.jsdelivr.net/npm/d3-org-chart@3');
+            }
+          })().catch(() => false);
+        }
+        const result = await orgLibPromise;
+        return result !== false && !!(window.d3 && window.d3.OrgChart);
+      };
+
+      const buildOrgNodes = () => {
+        const nameToCode = new Map();
+        areasData.forEach((area) => {
+          const name = String(area.name || '').trim();
+          const code = String(area.code || '').trim();
+          if (name && code && !nameToCode.has(name)) nameToCode.set(name, code);
+        });
+        const nodes = areasData.map((area) => {
+          const parentName = String(area.parent || '').trim();
+          const parentCode = parentName && parentName !== 'N/A' ? (nameToCode.get(parentName) || '') : '';
+          return {
+            id: String(area.code || '').trim(),
+            parentId: parentCode || null,
+            name: String(area.name || '').trim(),
+            code: String(area.code || '').trim(),
+            manager: String(area.manager || '').trim(),
+            status: String(area.status || '').trim() || 'Activo',
+            color: normalizeAreaColor(area.color),
+          };
+        }).filter((node) => node.id && node.name);
+        const rootNodes = nodes.filter((node) => !node.parentId);
+        if (rootNodes.length > 1) {
+          const virtualRootId = '__root__areas__';
+          rootNodes.forEach((node) => { node.parentId = virtualRootId; });
+          nodes.unshift({
+            id: virtualRootId,
+            parentId: null,
+            name: 'Áreas organizacionales',
+            code: 'ROOT',
+            manager: '',
+            status: 'Activo',
+            color: '#0f172a',
+          });
+        }
+        return nodes;
+      };
+
+      const renderOrgChartWithLibrary = async (container) => {
+        const available = await ensureOrgChartLibrary();
+        if (!available) {
+          container.innerHTML = '<p>No se pudo cargar la librería de organigrama.</p>';
+          return;
+        }
+        const nodes = buildOrgNodes();
+        if (!nodes.length) {
+          container.innerHTML = '<p>Sin áreas disponibles.</p>';
+          return;
+        }
+        container.innerHTML = '';
+        orgChartInstance = new window.d3.OrgChart()
+          .container(container)
+          .data(nodes)
+          .nodeWidth(() => 260)
+          .nodeHeight(() => 120)
+          .childrenMargin(() => 48)
+          .linkYOffset(20)
+          .setActiveNodeCentered(false)
+          .onNodeClick(() => {})
+          .linkUpdate(function (d) {
+            window.d3.select(this)
+              .attr('stroke-width', 1.1)
+              .attr('stroke', 'rgba(15, 23, 42, 0.38)');
+          })
+          .initialExpandLevel(99)
+          .compact(false)
+          .nodeContent((d) => {
+            const data = d?.data || {};
+            const manager = escapeHtml(data.manager || 'Sin responsable');
+            const code = escapeHtml(data.code || '');
+            const name = escapeHtml(data.name || '');
+            const border = escapeHtml(data.color || '#1d4ed8');
+            const initials = escapeHtml((name || 'A').split(/\s+/).filter(Boolean).slice(0, 2).map(part => part.charAt(0).toUpperCase()).join(''));
+            return `
+              <div style="
+                width:100%;
+                height:100%;
+                border:2px solid ${border};
+                border-radius:12px;
+                background:#ffffff;
+                box-shadow:0 8px 20px rgba(15,23,42,.12);
+                padding:10px 12px;
+                color:#0f172a;
+                display:flex;
+                flex-direction:column;
+                justify-content:center;
+                gap:6px;
+                box-sizing:border-box;
+                overflow:hidden;
+              ">
+                <div class="org-node-layout">
+                  <div class="org-node-avatar">
+                    ${orgAvatarUrl
+                      ? `<img src="${escapeHtml(orgAvatarUrl)}" alt="Área">`
+                      : `<span class="org-node-avatar-fallback">${initials}</span>`
+                    }
+                  </div>
+                  <div class="org-node-data">
+                    <strong style="font-size:15px; line-height:1.2; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${name}</strong>
+                    <div style="font-size:12px; opacity:.85; line-height:1.2; margin-top:2px;">${code}</div>
+                    <div style="font-size:12px; opacity:.9; line-height:1.2; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${manager}</div>
+                  </div>
+                </div>
+              </div>
+            `;
+          })
+          .render();
+        if (orgChartInstance && typeof orgChartInstance.fit === 'function') {
+          orgChartInstance.fit();
+        }
       };
 
       const setAreaView = (view) => {

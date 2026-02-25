@@ -77,6 +77,100 @@
             border: 1px solid #cbd5e1;
             border-radius: 6px;
         }
+        .emp-form-shell {
+            display: grid;
+            gap: 14px;
+            max-width: 980px;
+        }
+        .emp-form-header {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 180px;
+            gap: 16px;
+            align-items: start;
+        }
+        .emp-form-header-left {
+            display: grid;
+            gap: 10px;
+        }
+        .emp-photo-box {
+            border: 1px solid color-mix(in srgb, var(--button-bg, #0f172a) 16%, #ffffff 84%);
+            border-radius: 14px;
+            background: var(--field-color, #ffffff);
+            min-height: 170px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--sidebar-bottom, #0f172a);
+            font-weight: 700;
+            font-size: 2rem;
+            overflow: hidden;
+            position: relative;
+        }
+        .emp-photo-box img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+        .emp-photo-action {
+            position: absolute;
+            bottom: 8px;
+            width: 30px;
+            height: 30px;
+            border-radius: 8px;
+            border: 1px solid color-mix(in srgb, var(--button-bg, #0f172a) 24%, #ffffff 76%);
+            background: #ffffff;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            padding: 0;
+        }
+        .emp-photo-action img {
+            width: 16px;
+            height: 16px;
+            object-fit: contain;
+        }
+        .emp-photo-action.edit {
+            left: 8px;
+        }
+        .emp-photo-action.delete {
+            right: 8px;
+        }
+        .emp-form-grid {
+            display: grid;
+            gap: 10px;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        .emp-field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .emp-field label {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--sidebar-bottom, #0f172a);
+        }
+        .emp-field input,
+        .emp-field select,
+        .emp-field textarea {
+            width: 100%;
+            border: 1px solid color-mix(in srgb, var(--button-bg, #0f172a) 20%, #ffffff 80%);
+            border-radius: 10px;
+            padding: 10px;
+            color: var(--navbar-text, #1f172a);
+            background: var(--field-color, #ffffff);
+            font-size: 0.95rem;
+        }
+        @media (max-width: 900px) {
+            .emp-form-header {
+                grid-template-columns: 1fr;
+            }
+            .emp-form-grid {
+                grid-template-columns: 1fr;
+            }
+        }
         .actions {
             display: flex;
             gap: 8px;
@@ -93,6 +187,41 @@
             background: #0f172a;
             color: #fff;
             border-color: #0f172a;
+        }
+        .emp-notebook {
+            margin-top: 8px;
+            border: 1px solid #dbe3ef;
+            border-radius: 12px;
+            background: #ffffff;
+            overflow: hidden;
+        }
+        .emp-notebook-tabs {
+            display: flex;
+            gap: 0;
+            border-bottom: 1px solid #e2e8f0;
+            background: #f8fafc;
+        }
+        .emp-notebook-tab {
+            border: 0;
+            border-right: 1px solid #e2e8f0;
+            background: transparent;
+            color: #334155;
+            font-weight: 700;
+            padding: 10px 14px;
+            cursor: pointer;
+        }
+        .emp-notebook-tab.active {
+            background: #ffffff;
+            color: #0f172a;
+        }
+        .emp-notebook-panel {
+            min-height: 180px;
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #64748b;
+            text-align: center;
         }
     </style>
 </head>
@@ -130,6 +259,7 @@
         if (!tbody || !viewButtons.length || !empCard) return;
         
         var empleadosData = [];
+        var viewerCanViewAll = false;
         
         // Función para escapar caracteres HTML
         function esc(v) {
@@ -166,29 +296,106 @@
         
         // Renderizar vista de formulario
         function renderForm() {
-            empCard.innerHTML = 
-                '<h3 class="emp-head">Agregar colaborador</h3>' +
-                '<form id="colaborador-form" style="display:grid;gap:14px;max-width:420px;">' +
-                    '<div class="field"><label>Nombre</label><input type="text" name="nombre" required></div>' +
-                    '<div class="field"><label>Usuario</label><input type="text" name="usuario" required></div>' +
-                    '<div class="field"><label>Correo</label><input type="text" name="correo" required></div>' +
-                    '<div class="field"><label>Rol</label><input type="text" name="rol"></div>' +
-                    '<div class="field"><label>Departamento</label><select name="departamento" id="departamento-select"></select></div>' +
-                    '<div class="field"><label>Estado</label>' +
-                        '<select name="estado">' +
-                            '<option value="Activo">Activo</option>' +
-                            '<option value="Inactivo">Inactivo</option>' +
-                        '</select>' +
-                    '</div>' +
-                    '<div class="actions">' +
-                        '<button type="button" class="btn" onclick="window.nuevoColaborador()">Nuevo</button>' +
-                        '<button type="button" class="btn" onclick="window.editarColaborador()">Editar</button>' +
-                        '<button type="submit" class="btn primary">Guardar</button>' +
-                    '</div>' +
-                '</form>';
+            empCard.innerHTML = `
+                <h3 class="emp-head">Agregar colaborador</h3>
+                <form id="colaborador-form" class="emp-form-shell">
+                    <section class="emp-form-header">
+                        <div class="emp-form-header-left">
+                            <div class="emp-field">
+                                <label for="colab-nombre">Nombre</label>
+                                <input id="colab-nombre" type="text" name="nombre" required>
+                            </div>
+                            <div class="emp-field">
+                                <label for="colab-puesto">Puesto</label>
+                                <input id="colab-puesto" type="text" name="puesto">
+                            </div>
+                            <div class="emp-field">
+                                <label for="colab-celular">Celular</label>
+                                <input id="colab-celular" type="text" name="celular">
+                            </div>
+                        </div>
+                        <div class="emp-photo-box" aria-label="Foto del colaborador">
+                            <img id="colab-photo-preview" src="/icon/usuario.png" alt="Foto colaborador">
+                            <button type="button" class="emp-photo-action edit" id="colab-photo-edit-btn" title="Editar foto">
+                                <img src="/icon/editar.svg" alt="Editar">
+                            </button>
+                            <button type="button" class="emp-photo-action delete" id="colab-photo-delete-btn" title="Eliminar foto">
+                                <img src="/icon/eliminar.svg" alt="Eliminar">
+                            </button>
+                            <input type="file" id="colab-photo-input" accept="image/*" style="display:none;">
+                            <input type="hidden" id="colab-imagen-url" name="imagen" value="">
+                        </div>
+                    </section>
+                    <section class="emp-form-grid">
+                        <div class="emp-field">
+                            <label for="colab-usuario">Usuario</label>
+                            <input id="colab-usuario" type="text" name="usuario" required>
+                        </div>
+                        <div class="emp-field">
+                            <label for="colab-correo">Correo electrónico</label>
+                            <input id="colab-correo" type="text" name="correo" required>
+                        </div>
+                        <div class="emp-field">
+                            <label for="departamento-select">Área organizacional</label>
+                            <select name="departamento" id="departamento-select"></select>
+                        </div>
+                        <div class="emp-field">
+                            <label for="colab-nivel">Nivel organizacional</label>
+                            <select id="colab-nivel" name="nivel_organizacional">
+                                <option value="">Seleccione nivel</option>
+                                <option value="Direccion">Dirección</option>
+                                <option value="Gerencia">Gerencia</option>
+                                <option value="Jefatura">Jefatura</option>
+                                <option value="Coordinacion">Coordinación</option>
+                                <option value="Staff">Staff</option>
+                            </select>
+                        </div>
+                        <div class="emp-field">
+                            <label for="colab-colaborador-check">Colaborador</label>
+                            <label style="display:inline-flex;align-items:center;gap:8px;font-weight:600;">
+                                <input id="colab-colaborador-check" type="checkbox" name="colaborador" style="width:auto;">
+                                Mostrar en organigrama
+                            </label>
+                        </div>
+                    </section>
+                    <div class="emp-notebook" id="colaborador-notebook">
+                        <div class="emp-notebook-tabs">
+                            <button type="button" class="emp-notebook-tab active" data-tab="cv">CV</button>
+                            <button type="button" class="emp-notebook-tab" data-tab="habilidades">Habilidades</button>
+                            <button type="button" class="emp-notebook-tab" data-tab="acceso">Acceso</button>
+                        </div>
+                        <div class="emp-notebook-panel" id="colaborador-notebook-panel">Sin acceso</div>
+                    </div>
+                    <div class="actions">
+                        <button type="button" class="btn" onclick="window.nuevoColaborador()">Nuevo</button>
+                        <button type="button" class="btn" onclick="window.editarColaborador()">Editar</button>
+                        <button type="submit" class="btn primary">Guardar</button>
+                        <span id="colaborador-form-msg" class="emp-empty"></span>
+                    </div>
+                </form>
+            `;
             
             var form = document.getElementById('colaborador-form');
             var deptSelect = document.getElementById('departamento-select');
+            var formMsg = document.getElementById('colaborador-form-msg');
+            var photoPreview = document.getElementById('colab-photo-preview');
+            var photoEditBtn = document.getElementById('colab-photo-edit-btn');
+            var photoDeleteBtn = document.getElementById('colab-photo-delete-btn');
+            var photoInput = document.getElementById('colab-photo-input');
+            var imagenInput = document.getElementById('colab-imagen-url');
+            var notebookTabs = empCard.querySelectorAll('.emp-notebook-tab');
+            var notebookPanel = document.getElementById('colaborador-notebook-panel');
+            if (notebookTabs.length && notebookPanel) {
+                for (var t = 0; t < notebookTabs.length; t++) {
+                    notebookTabs[t].addEventListener('click', function() {
+                        for (var j = 0; j < notebookTabs.length; j++) {
+                            notebookTabs[j].classList.remove('active');
+                        }
+                        this.classList.add('active');
+                        notebookPanel.textContent = 'Sin acceso';
+                    });
+                }
+            }
             // Cargar departamentos y llenar el select
             if (deptSelect) {
                 fetch('/api/inicio/departamentos').then(r => r.json()).then(json => {
@@ -204,10 +411,92 @@
                     deptSelect.innerHTML = '<option value="">Error al cargar</option>';
                 });
             }
+            if (photoEditBtn && photoInput) {
+                photoEditBtn.addEventListener('click', function() {
+                    photoInput.click();
+                });
+            }
+            if (photoDeleteBtn && photoPreview && imagenInput) {
+                photoDeleteBtn.addEventListener('click', function() {
+                    photoPreview.src = '/icon/usuario.png';
+                    imagenInput.value = '';
+                    if (formMsg) formMsg.textContent = 'Foto eliminada.';
+                });
+            }
+            if (photoInput && photoPreview && imagenInput) {
+                photoInput.addEventListener('change', async function() {
+                    if (!photoInput.files || !photoInput.files.length) return;
+                    var file = photoInput.files[0];
+                    var fd = new FormData();
+                    fd.append('file', file);
+                    if (formMsg) formMsg.textContent = 'Subiendo foto...';
+                    try {
+                        var res = await fetch('/api/colaboradores/foto', { method: 'POST', body: fd });
+                        var json = await res.json().catch(function() { return {}; });
+                        if (!res.ok || json?.success === false || !json?.url) {
+                            throw new Error((json && (json.error || json.detail)) || 'No se pudo subir la foto');
+                        }
+                        photoPreview.src = json.url;
+                        imagenInput.value = json.url;
+                        if (formMsg) formMsg.textContent = 'Foto cargada.';
+                    } catch (err) {
+                        if (formMsg) formMsg.textContent = (err && err.message) ? err.message : 'Error al subir foto.';
+                    }
+                });
+            }
             if (form) {
-                form.onsubmit = function(e) {
+                form.onsubmit = async function(e) {
                     e.preventDefault();
-                    alert('Funcionalidad de guardado no implementada.');
+                    var payload = {
+                        nombre: (document.getElementById('colab-nombre')?.value || '').trim(),
+                        puesto: (document.getElementById('colab-puesto')?.value || '').trim(),
+                        celular: (document.getElementById('colab-celular')?.value || '').trim(),
+                        usuario: (document.getElementById('colab-usuario')?.value || '').trim(),
+                        correo: (document.getElementById('colab-correo')?.value || '').trim(),
+                        departamento: (document.getElementById('departamento-select')?.value || '').trim(),
+                        nivel_organizacional: (document.getElementById('colab-nivel')?.value || '').trim(),
+                        imagen: (document.getElementById('colab-imagen-url')?.value || '').trim(),
+                        colaborador: !!document.getElementById('colab-colaborador-check')?.checked
+                    };
+                    if (!payload.nombre || !payload.usuario || !payload.correo) {
+                        if (formMsg) formMsg.textContent = 'Nombre, usuario y correo son obligatorios.';
+                        return;
+                    }
+                    if (formMsg) formMsg.textContent = 'Guardando...';
+                    try {
+                        var res = await fetch('/api/colaboradores', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+                        var json = await res.json().catch(function() { return {}; });
+
+                        if ((res.status === 404 || res.status === 405)) {
+                            // Fallback para entornos con endpoint legacy de usuarios.
+                            res = await fetch('/api/usuarios/registro-seguro', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    nombre: payload.nombre,
+                                    usuario: payload.usuario,
+                                    correo: payload.correo,
+                                    imagen: payload.imagen,
+                                    rol: 'usuario',
+                                    contrasena: 'Temp1234!'
+                                })
+                            });
+                            json = await res.json().catch(function() { return {}; });
+                        }
+
+                        if (!res.ok || json?.success === false) {
+                            throw new Error((json && (json.error || json.detail)) || 'No se pudo guardar');
+                        }
+                        if (formMsg) formMsg.textContent = 'Guardado correctamente.';
+                        await load();
+                        setView('form');
+                    } catch (err) {
+                        if (formMsg) formMsg.textContent = (err && err.message) ? err.message : 'Error al guardar.';
+                    }
                 };
             }
         }
@@ -250,6 +539,56 @@
             kanbanHtml += '</div>';
             empCard.innerHTML = kanbanHtml;
         }
+
+        function renderOrganigrama() {
+            empCard.innerHTML = '<h3 class="emp-head">Organigrama de colaboradores</h3><p class="emp-empty">Cargando...</p>';
+            fetch('/api/colaboradores/organigrama')
+                .then(function(r) { return r.json().then(function(j){ return { ok: r.ok, j: j }; }); })
+                .then(function(res) {
+                    if (!res.ok || !res.j || res.j.success === false) throw new Error();
+                    var rows = Array.isArray(res.j.data) ? res.j.data : [];
+                    if (!rows.length) {
+                        empCard.innerHTML = '<h3 class="emp-head">Organigrama de colaboradores</h3><p class="emp-empty">Sin colaboradores visibles.</p>';
+                        return;
+                    }
+                    var byBoss = {};
+                    var idByKey = {};
+                    rows.forEach(function(row) {
+                        var keyName = (row.nombre || '').trim().toLowerCase();
+                        var keyUser = (row.usuario || '').trim().toLowerCase();
+                        if (keyName) idByKey[keyName] = row.id;
+                        if (keyUser) idByKey[keyUser] = row.id;
+                    });
+                    rows.forEach(function(row) {
+                        var boss = (row.jefe || '').trim().toLowerCase();
+                        var bossId = idByKey[boss] || null;
+                        var groupKey = bossId ? String(bossId) : 'root';
+                        if (!byBoss[groupKey]) byBoss[groupKey] = [];
+                        byBoss[groupKey].push(row);
+                    });
+                    var roots = byBoss.root || rows.filter(function(row) {
+                        var boss = (row.jefe || '').trim().toLowerCase();
+                        return !boss || !idByKey[boss];
+                    });
+                    var renderLevel = function(nodes, depth) {
+                        if (!nodes || !nodes.length) return '';
+                        return '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:' + (depth ? '10px' : '0') + ';">' +
+                            nodes.map(function(n) {
+                                var children = byBoss[String(n.id)] || [];
+                                return '<div style="border:1px solid #dbe3ef;border-radius:12px;background:#fff;padding:10px;min-width:220px;">' +
+                                    '<strong style="display:block;">' + esc(n.nombre) + '</strong>' +
+                                    '<small style="display:block;color:#475569;">' + esc(n.puesto || n.usuario) + '</small>' +
+                                    (children.length ? renderLevel(children, depth + 1) : '') +
+                                '</div>';
+                            }).join('') +
+                        '</div>';
+                    };
+                    empCard.innerHTML = '<h3 class="emp-head">Organigrama de colaboradores</h3>' + renderLevel(roots, 0);
+                })
+                .catch(function() {
+                    empCard.innerHTML = '<h3 class="emp-head">Organigrama de colaboradores</h3><p class="emp-empty">No se pudo cargar organigrama.</p>';
+                });
+        }
         
         // Cambiar vista
         function setView(view) {
@@ -283,6 +622,8 @@
                 renderForm();
             } else if (view === 'kanban') {
                 renderKanban();
+            } else if (view === 'organigrama') {
+                renderOrganigrama();
             }
         }
         
@@ -310,10 +651,11 @@
         // Cargar datos
         async function load() {
             try {
-                var res = await fetch('/api/usuarios');
+                var res = await fetch('/api/colaboradores');
                 var json = await res.json();
                 if (!res.ok || json?.success === false) throw new Error();
                 empleadosData = Array.isArray(json?.data) ? json.data : [];
+                viewerCanViewAll = !!json?.can_view_all;
                 setView('list');
             } catch (e) {
                 empCard.innerHTML = '<p class="emp-empty">No se pudo cargar colaboradores.</p>';
