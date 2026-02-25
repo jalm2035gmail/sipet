@@ -9,6 +9,9 @@
   }
   .presupuesto-notebook .notebook-tabs .tab {
     position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
     border: 0;
     background: transparent;
     color: #1f2937;
@@ -35,6 +38,12 @@
   .presupuesto-notebook .notebook-tabs .tab.active::after {
     background: var(--sidebar-bottom, #0f172a);
   }
+  .presupuesto-notebook .notebook-tabs .tab .tab-icon {
+    width: 18px;
+    height: 18px;
+    display: inline-block;
+    flex: 0 0 auto;
+  }
   .presupuesto-notebook .notebook-content {
     border: 0;
     padding: 14px 0 0;
@@ -58,10 +67,10 @@
     line-height: 1;
     cursor: pointer;
   }
-  #presupuesto-table th:nth-child(3),
   #presupuesto-table th:nth-child(4),
-  #presupuesto-table td:nth-child(3),
-  #presupuesto-table td:nth-child(4) {
+  #presupuesto-table th:nth-child(5),
+  #presupuesto-table td:nth-child(4),
+  #presupuesto-table td:nth-child(5) {
     width: 100px;
     min-width: 100px;
     max-width: 100px;
@@ -88,6 +97,12 @@
   .month-group-head.is-collapsed {
     opacity: 0.85;
   }
+  #control-mensual-table .month-percent-col,
+  #control-mensual-table .cm-percent-input {
+    text-align: center !important;
+    font-style: italic;
+    font-size: 0.8em;
+  }
   .tabla-oficial-wrap {
     overflow: auto;
     max-height: 65vh;
@@ -102,6 +117,560 @@
   }
   .tabla-oficial-wrap::-webkit-scrollbar-track {
     background: rgba(15, 23, 42, 0.08);
+  }
+  .reportes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .reporte-card {
+    border: 1px solid rgba(15, 23, 42, 0.14);
+    border-radius: 12px;
+    padding: 10px 12px;
+    background: #ffffff;
+    color: #0f172a;
+    text-align: left;
+    min-height: 66px;
+    cursor: pointer;
+  }
+  .reporte-card.is-muted {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+  .reporte-card-title {
+    margin: 0;
+    font-size: 0.94rem;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+  .reporte-card-subtitle {
+    margin: 4px 0 0;
+    font-size: 0.78rem;
+    opacity: 0.85;
+  }
+  .reporte-detalle {
+    border: 1px solid rgba(15, 23, 42, 0.12);
+    border-radius: 12px;
+    background: #ffffff;
+    padding: 12px;
+  }
+  .reporte-detalle h3 {
+    margin: 0 0 10px;
+  }
+  .reporte-kpis {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 8px;
+    margin: 10px 0 14px;
+  }
+  .reporte-kpi {
+    border: 1px solid rgba(15, 23, 42, 0.12);
+    border-radius: 10px;
+    padding: 8px 10px;
+    background: #f8fafc;
+  }
+  .reporte-kpi-label {
+    font-size: 0.8rem;
+    opacity: 0.8;
+  }
+  .reporte-kpi-value {
+    font-size: 1.02rem;
+    font-weight: 700;
+  }
+  .reporte-bar-chart {
+    border: 1px solid rgba(15, 23, 42, 0.12);
+    border-radius: 10px;
+    padding: 10px;
+    background: #ffffff;
+  }
+  .reporte-bar-chart-head {
+    display: grid;
+    grid-template-columns: repeat(3, auto);
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 8px;
+    font-size: 0.8rem;
+  }
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    display: inline-block;
+    margin-right: 4px;
+  }
+  .legend-dot-proy {
+    background: var(--sidebar-bottom, #0f172a);
+  }
+  .legend-dot-real {
+    background: color-mix(in srgb, var(--sidebar-bottom, #0f172a) 55%, #ffffff 45%);
+  }
+  .reporte-bars {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(34px, 1fr));
+    gap: 8px;
+    align-items: end;
+    min-height: 170px;
+  }
+  .reporte-month {
+    display: grid;
+    grid-template-rows: 1fr auto;
+    gap: 6px;
+    align-items: end;
+  }
+  .reporte-month-bars {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3px;
+    align-items: end;
+    height: 140px;
+  }
+  .reporte-bar {
+    border-radius: 8px 8px 0 0;
+    min-height: 3px;
+  }
+  .reporte-bar.proy {
+    background: var(--sidebar-bottom, #0f172a);
+  }
+  .reporte-bar.real {
+    background: color-mix(in srgb, var(--sidebar-bottom, #0f172a) 55%, #ffffff 45%);
+  }
+  .reporte-month-label {
+    font-size: 0.72rem;
+    text-align: center;
+    opacity: 0.8;
+  }
+  .semaforo-badge {
+    display: inline-block;
+    border-radius: 999px;
+    padding: 2px 8px;
+    font-size: 0.74rem;
+    font-weight: 700;
+    border: 1px solid transparent;
+  }
+  .semaforo-normal {
+    background: #dcfce7;
+    color: #166534;
+    border-color: #86efac;
+  }
+  .semaforo-atencion {
+    background: #fef9c3;
+    color: #854d0e;
+    border-color: #fde047;
+  }
+  .semaforo-riesgo {
+    background: #fee2e2;
+    color: #991b1b;
+    border-color: #fca5a5;
+  }
+  .reporte-variacion-bars {
+    display: grid;
+    gap: 6px;
+    margin-top: 10px;
+  }
+  .reporte-variacion-row {
+    display: grid;
+    grid-template-columns: minmax(160px, 280px) 1fr auto;
+    gap: 8px;
+    align-items: center;
+  }
+  .reporte-variacion-label {
+    font-size: 0.78rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .reporte-variacion-track {
+    height: 10px;
+    border-radius: 999px;
+    background: #e2e8f0;
+    position: relative;
+  }
+  .reporte-variacion-bar {
+    height: 100%;
+    border-radius: 999px;
+    background: var(--sidebar-bottom, #0f172a);
+  }
+  .reporte-variacion-value {
+    font-size: 0.75rem;
+    min-width: 52px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  .line-chart-wrap {
+    border: 1px solid rgba(15, 23, 42, 0.12);
+    border-radius: 10px;
+    background: #ffffff;
+    padding: 10px;
+  }
+  #reporte-tendencia-svg {
+    width: 100%;
+    height: 260px;
+    display: block;
+  }
+  .line-axis {
+    stroke: rgba(15, 23, 42, 0.28);
+    stroke-width: 1;
+  }
+  .line-proy {
+    fill: none;
+    stroke: var(--sidebar-bottom, #0f172a);
+    stroke-width: 2.5;
+  }
+  .line-real {
+    fill: none;
+    stroke: color-mix(in srgb, var(--sidebar-bottom, #0f172a) 55%, #ffffff 45%);
+    stroke-width: 2.5;
+  }
+  .line-point-proy {
+    fill: var(--sidebar-bottom, #0f172a);
+  }
+  .line-point-real {
+    fill: color-mix(in srgb, var(--sidebar-bottom, #0f172a) 55%, #ffffff 45%);
+  }
+  .area-bars {
+    display: grid;
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .area-bar-row {
+    display: grid;
+    grid-template-columns: minmax(180px, 260px) 1fr auto;
+    gap: 8px;
+    align-items: center;
+  }
+  .area-bar-label {
+    font-size: 0.8rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .area-bar-track {
+    height: 12px;
+    border-radius: 999px;
+    background: #e2e8f0;
+    overflow: hidden;
+  }
+  .area-bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: var(--sidebar-bottom, #0f172a);
+  }
+  .area-bar-fill.over {
+    background: #dc2626;
+  }
+  .area-bar-value {
+    font-size: 0.76rem;
+    min-width: 66px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  .gasto-composicion {
+    display: grid;
+    grid-template-columns: minmax(260px, 320px) 1fr;
+    gap: 14px;
+    align-items: center;
+  }
+  .gasto-donut-wrap {
+    display: grid;
+    place-items: center;
+    min-height: 230px;
+  }
+  .gasto-donut {
+    width: 210px;
+    height: 210px;
+    border-radius: 50%;
+    position: relative;
+    background: #e2e8f0;
+  }
+  .gasto-donut::after {
+    content: "";
+    position: absolute;
+    inset: 34px;
+    border-radius: 50%;
+    background: #ffffff;
+    box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.08);
+  }
+  .gasto-legend {
+    display: grid;
+    gap: 6px;
+  }
+  .gasto-legend-item {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 8px;
+    align-items: center;
+    font-size: 0.82rem;
+  }
+  .gasto-legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    display: inline-block;
+  }
+  .gasto-legend-value {
+    font-variant-numeric: tabular-nums;
+  }
+  .kpi-sipet-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 10px;
+  }
+  .kpi-sipet-card {
+    border: 1px solid rgba(15, 23, 42, 0.12);
+    border-radius: 12px;
+    background: #ffffff;
+    padding: 10px 12px;
+  }
+  .kpi-sipet-title {
+    font-size: 0.8rem;
+    opacity: 0.86;
+    margin: 0 0 4px;
+  }
+  .kpi-sipet-value {
+    margin: 0;
+    font-size: 1.08rem;
+    font-weight: 750;
+    font-variant-numeric: tabular-nums;
+  }
+  .heat-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 42px;
+    height: 24px;
+    border-radius: 999px;
+    font-size: 0.9rem;
+    border: 1px solid transparent;
+    background: #f1f5f9;
+  }
+  .alertas-box {
+    border: 1px solid rgba(15, 23, 42, 0.14);
+    border-radius: 12px;
+    background: #ffffff;
+    padding: 10px 12px;
+    margin-bottom: 12px;
+  }
+  .alertas-title {
+    margin: 0 0 8px;
+    font-size: 0.95rem;
+    font-weight: 800;
+  }
+  .alertas-list {
+    display: grid;
+    gap: 6px;
+  }
+  .alerta-item {
+    border-radius: 10px;
+    padding: 7px 10px;
+    font-size: 0.84rem;
+    border: 1px solid transparent;
+  }
+  .alerta-item.warn {
+    background: #fff7ed;
+    border-color: #fdba74;
+    color: #9a3412;
+  }
+  .alerta-item.danger {
+    background: #fef2f2;
+    border-color: #fca5a5;
+    color: #991b1b;
+  }
+  .alerta-item.ok {
+    background: #f0fdf4;
+    border-color: #86efac;
+    color: #166534;
+  }
+  .reportes-fullscreen-hint {
+    display: none;
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    width: fit-content;
+    margin: 0 0 10px auto;
+    border: 1px solid rgba(15, 23, 42, 0.2);
+    border-radius: 999px;
+    background: #ffffff;
+    color: #0f172a;
+    padding: 6px 12px;
+    font-size: 0.8rem;
+    font-weight: 700;
+  }
+  .tab-panel[data-panel="reportes"]:fullscreen {
+    padding: 14px;
+    background: var(--page-bg, #f4f6fb);
+    overflow: auto;
+  }
+  .tab-panel[data-panel="reportes"]:fullscreen .reportes-fullscreen-hint {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .tab-panel[data-panel="reportes"] > .alertas-box,
+  .tab-panel[data-panel="reportes"] > .reportes-grid,
+  .tab-panel[data-panel="reportes"] > #reporte-ejecucion,
+  .tab-panel[data-panel="reportes"] > #reporte-desviaciones,
+  .tab-panel[data-panel="reportes"] > #reporte-tendencia,
+  .tab-panel[data-panel="reportes"] > #reporte-ejecucion-area,
+  .tab-panel[data-panel="reportes"] > #reporte-composicion-gasto,
+  .tab-panel[data-panel="reportes"] > #reporte-kpis-sipet,
+  .tab-panel[data-panel="reportes"] > #reporte-mapa-calor {
+    display: none !important;
+  }
+  .cp-dashboard {
+    border: 1px solid rgba(15, 23, 42, 0.12);
+    border-radius: 14px;
+    background: #f2f5fb;
+    overflow: hidden;
+  }
+  .cp-head {
+    background: #1f4a88;
+    color: #ffffff;
+    text-align: center;
+    font-size: 2rem;
+    font-weight: 800;
+    padding: 10px 16px;
+  }
+  .cp-grid {
+    padding: 12px;
+    display: grid;
+    gap: 12px;
+  }
+  .cp-cards {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(170px, 1fr));
+    gap: 10px;
+  }
+  .cp-card {
+    background: #ffffff;
+    border: 1px solid rgba(15, 23, 42, 0.12);
+    border-radius: 10px;
+    padding: 10px 12px;
+  }
+  .cp-card-title {
+    margin: 0;
+    color: #1d3d70;
+    font-weight: 750;
+    font-size: 1rem;
+  }
+  .cp-card-value {
+    margin: 6px 0 4px;
+    color: #1d3d70;
+    font-size: 2rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+  }
+  .cp-card-sub {
+    margin: 0;
+    border-radius: 6px;
+    padding: 4px 8px;
+    color: #ffffff;
+    font-size: 1.8rem;
+    font-weight: 800;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
+  .cp-sub-blue { background: #4f95c9; }
+  .cp-sub-orange { background: #f97316; }
+  .cp-sub-green { background: #15803d; }
+  .cp-sub-red { background: #dc2626; }
+  .cp-gauge {
+    margin-top: 8px;
+    width: 100%;
+    height: 14px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #16a34a 0%, #84cc16 25%, #f59e0b 50%, #f97316 75%, #dc2626 100%);
+    position: relative;
+  }
+  .cp-gauge-pointer {
+    position: absolute;
+    top: -4px;
+    width: 2px;
+    height: 22px;
+    background: #0f172a;
+  }
+  .cp-row-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .cp-panel {
+    background: #ffffff;
+    border: 1px solid rgba(15, 23, 42, 0.12);
+    border-radius: 10px;
+    padding: 10px;
+  }
+  .cp-panel-title {
+    margin: 0 0 8px;
+    color: #1d3d70;
+    font-size: 1.1rem;
+    font-weight: 800;
+  }
+  .cp-bars {
+    height: 220px;
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 6px;
+    align-items: end;
+  }
+  .cp-bars-m {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2px;
+    align-items: end;
+    height: 190px;
+  }
+  .cp-bar-proy { background: #3b82f6; border-radius: 6px 6px 0 0; min-height: 3px; }
+  .cp-bar-real { background: #f97316; border-radius: 6px 6px 0 0; min-height: 3px; }
+  .cp-bars-lbl { text-align: center; font-size: 0.72rem; color: #334155; }
+  .cp-row-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .cp-desv-wrap { max-height: 260px; overflow: auto; }
+  .cp-desv-table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+  .cp-desv-table th, .cp-desv-table td { border: 1px solid #d7dde8; padding: 6px 8px; }
+  .cp-desv-table th { background: #1f4a88; color: #fff; }
+  .cp-dot { display: inline-block; width: 12px; height: 12px; border-radius: 999px; }
+  .cp-dist {
+    display: grid;
+    grid-template-columns: 1fr 220px;
+    gap: 12px;
+    align-items: center;
+  }
+  .cp-dist-list { display: grid; gap: 6px; }
+  .cp-dist-item { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: center; }
+  .cp-donut {
+    width: 210px;
+    height: 210px;
+    border-radius: 50%;
+    position: relative;
+    margin: 0 auto;
+    background: #e2e8f0;
+  }
+  .cp-donut.use-css-donut::after {
+    content: "";
+    position: absolute;
+    inset: 38px;
+    border-radius: 50%;
+    background: #ffffff;
+  }
+  .cp-plot {
+    width: 100%;
+    min-height: 220px;
+  }
+  .cp-heat { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+  .cp-heat th, .cp-heat td { border: 1px solid #d7dde8; padding: 6px; text-align: center; }
+  .cp-heat th { background: #1f4a88; color: #fff; }
+  .cp-heat-lbl { text-align: left !important; font-weight: 700; color: #1e3a8a; }
+  .cp-h-green { background: #d9f99d; }
+  .cp-h-yellow { background: #fde68a; }
+  .cp-h-red { background: #fca5a5; }
+  @media (max-width: 1200px) {
+    .cp-cards { grid-template-columns: repeat(2, minmax(170px, 1fr)); }
+    .cp-row-2, .cp-row-3 { grid-template-columns: 1fr; }
+    .cp-dist { grid-template-columns: 1fr; }
   }
 </style>
 
@@ -120,9 +689,9 @@
     </div>
     <section class="notebook-section presupuesto-notebook">
       <div class="notebook-tabs">
-        <button type="button" class="tab active" data-tab="presupuesto-anual">Presupuesto anual</button>
-        <button type="button" class="tab" data-tab="control-mensual">Control mensual</button>
-        <button type="button" class="tab" data-tab="reportes">Reportes</button>
+        <button type="button" class="tab active" data-tab="presupuesto-anual"><img src="/templates/icon/financiamiento.svg" alt="" class="tab-icon">Presupuesto anual</button>
+        <button type="button" class="tab" data-tab="control-mensual"><img src="/templates/icon/calendario.svg" alt="" class="tab-icon">Control mensual</button>
+        <button type="button" class="tab" data-tab="reportes"><img src="/templates/icon/crecimiento.svg" alt="" class="tab-icon">Reportes</button>
       </div>
       <div class="notebook-content">
         <div class="tab-panel" data-panel="presupuesto-anual">
@@ -132,6 +701,7 @@
               <thead>
                 <tr>
                   <th class="cod-col" style="display:none;">Cod</th>
+                  <th class="tipo-col" style="display:none;">Tipo</th>
                   <th>Rubro</th>
                   <th class="tabla-oficial-num">Monto</th>
                   <th class="tabla-oficial-num">Mensual</th>
@@ -162,6 +732,277 @@
           </div>
         </div>
         <div class="tab-panel" data-panel="reportes" hidden>
+          <div class="reportes-fullscreen-hint">Esc para volver</div>
+          <section class="cp-dashboard">
+            <header class="cp-head">Dashboard de Control Presupuestal</header>
+            <div class="cp-grid">
+              <section class="cp-cards">
+                <article class="cp-card">
+                  <p class="cp-card-title">Ingresos Ejecutados</p>
+                  <p class="cp-card-value" id="cp-kpi-ingresos">$0</p>
+                  <p class="cp-card-sub cp-sub-blue" id="cp-kpi-ingresos-pct">0.0%</p>
+                </article>
+                <article class="cp-card">
+                  <p class="cp-card-title">Egresos Ejecutados</p>
+                  <p class="cp-card-value" id="cp-kpi-egresos">$0</p>
+                  <p class="cp-card-sub cp-sub-orange" id="cp-kpi-egresos-pct">0.0%</p>
+                </article>
+                <article class="cp-card">
+                  <p class="cp-card-title">Resultado Neto</p>
+                  <p class="cp-card-value" id="cp-kpi-resultado">$0</p>
+                  <p class="cp-card-sub cp-sub-green" id="cp-kpi-resultado-delta">$0</p>
+                </article>
+                <article class="cp-card">
+                  <p class="cp-card-title">Desviación Promedio</p>
+                  <p class="cp-card-value" id="cp-kpi-desv-prom">0.0%</p>
+                </article>
+                <article class="cp-card">
+                  <p class="cp-card-title">Riesgo Global</p>
+                  <p class="cp-card-value" id="cp-kpi-riesgo">0.0%</p>
+                  <div class="cp-gauge"><span class="cp-gauge-pointer" id="cp-gauge-pointer" style="left:0%;"></span></div>
+                </article>
+              </section>
+
+              <section class="cp-row-2">
+                <article class="cp-panel">
+                  <h3 class="cp-panel-title">Ejecución Presupuestal Mensual</h3>
+                  <div id="cp-monthly-bars" class="cp-plot"></div>
+                </article>
+                <article class="cp-panel">
+                  <h3 class="cp-panel-title">Tendencia Acumulada Anual</h3>
+                  <div id="cp-tendencia-chart" class="cp-plot"></div>
+                </article>
+              </section>
+
+              <section class="cp-row-3">
+                <article class="cp-panel">
+                  <h3 class="cp-panel-title">Desviaciones Presupuestales</h3>
+                  <div class="cp-desv-wrap">
+                    <table class="cp-desv-table">
+                      <thead>
+                        <tr>
+                          <th>Rubro</th>
+                          <th>Presupuesto</th>
+                          <th>Real</th>
+                          <th>Diferencia</th>
+                          <th>% Desv</th>
+                          <th>Semáforo</th>
+                        </tr>
+                      </thead>
+                      <tbody id="cp-desv-body"></tbody>
+                    </table>
+                  </div>
+                </article>
+                <article class="cp-panel">
+                  <h3 class="cp-panel-title">Distribución de Egresos</h3>
+                  <div class="cp-dist">
+                    <div class="cp-dist-list" id="cp-dist-list"></div>
+                    <div id="cp-donut-chart" class="cp-donut"></div>
+                  </div>
+                </article>
+              </section>
+
+              <article class="cp-panel">
+                <h3 class="cp-panel-title">Mapa de Calor Presupuestal</h3>
+                <div id="cp-heatmap-chart" class="cp-plot"></div>
+              </article>
+            </div>
+          </section>
+          <section class="alertas-box">
+            <h3 class="alertas-title">Alertas inteligentes</h3>
+            <div id="alertas-inteligentes-list" class="alertas-list"></div>
+          </section>
+          <div class="reportes-grid">
+            <button type="button" class="reporte-card" data-report-target="reporte-ejecucion">
+              <p class="reporte-card-title">1. Reporte Ejecutivo de Ejecución Presupuestal</p>
+              <p class="reporte-card-subtitle">Principal para Dirección y CNBV</p>
+            </button>
+            <button type="button" class="reporte-card" data-report-target="reporte-desviaciones">
+              <p class="reporte-card-title">2. Reporte de Desviaciones Presupuestales</p>
+              <p class="reporte-card-subtitle">Crítico para CNBV</p>
+            </button>
+            <button type="button" class="reporte-card" data-report-target="reporte-tendencia">
+              <p class="reporte-card-title">3. Tendencia Presupuestal</p>
+              <p class="reporte-card-subtitle">Análisis preventivo</p>
+            </button>
+            <button type="button" class="reporte-card" data-report-target="reporte-ejecucion-area">
+              <p class="reporte-card-title">4. Reporte de Ejecución por Área / Sucursal</p>
+              <p class="reporte-card-subtitle">Gobernanza</p>
+            </button>
+            <button type="button" class="reporte-card" data-report-target="reporte-composicion-gasto">
+              <p class="reporte-card-title">5. Reporte de Composición del Gasto</p>
+              <p class="reporte-card-subtitle">Estructura financiera</p>
+            </button>
+            <button type="button" class="reporte-card" data-report-target="reporte-kpis-sipet">
+              <p class="reporte-card-title">6. Indicadores Presupuestales Clave</p>
+              <p class="reporte-card-subtitle">KPIs SIPET</p>
+            </button>
+            <button type="button" class="reporte-card" data-report-target="reporte-mapa-calor">
+              <p class="reporte-card-title">7. Mapa de Calor Presupuestal</p>
+              <p class="reporte-card-subtitle">Meses críticos</p>
+            </button>
+          </div>
+          <section id="reporte-ejecucion" class="reporte-detalle">
+            <h3>Reporte Ejecutivo de Ejecución Presupuestal</h3>
+            <div class="tabla-oficial-wrap">
+              <table class="tabla-oficial" id="reporte-ejecucion-table">
+                <thead>
+                  <tr>
+                    <th>Concepto</th>
+                    <th class="tabla-oficial-num">Presupuestado</th>
+                    <th class="tabla-oficial-num">Real</th>
+                    <th class="tabla-oficial-num">Variación</th>
+                    <th class="tabla-oficial-num">% Cumplimiento</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr data-concept="ingresos">
+                    <td>Ingresos</td>
+                    <td class="tabla-oficial-num" data-field="presupuestado">0</td>
+                    <td class="tabla-oficial-num" data-field="real">0</td>
+                    <td class="tabla-oficial-num" data-field="variacion">0</td>
+                    <td class="tabla-oficial-num month-percent-col" data-field="cumplimiento">0.0%</td>
+                  </tr>
+                  <tr data-concept="egresos">
+                    <td>Egresos</td>
+                    <td class="tabla-oficial-num" data-field="presupuestado">0</td>
+                    <td class="tabla-oficial-num" data-field="real">0</td>
+                    <td class="tabla-oficial-num" data-field="variacion">0</td>
+                    <td class="tabla-oficial-num month-percent-col" data-field="cumplimiento">0.0%</td>
+                  </tr>
+                  <tr data-concept="resultado">
+                    <td>Resultado</td>
+                    <td class="tabla-oficial-num" data-field="presupuestado">0</td>
+                    <td class="tabla-oficial-num" data-field="real">0</td>
+                    <td class="tabla-oficial-num" data-field="variacion">0</td>
+                    <td class="tabla-oficial-num month-percent-col" data-field="cumplimiento">0.0%</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="reporte-kpis">
+              <div class="reporte-kpi">
+                <div class="reporte-kpi-label">% ejecución ingresos</div>
+                <div class="reporte-kpi-value" id="kpi-ejecucion-ingresos">0.0%</div>
+              </div>
+              <div class="reporte-kpi">
+                <div class="reporte-kpi-label">% ejecución egresos</div>
+                <div class="reporte-kpi-value" id="kpi-ejecucion-egresos">0.0%</div>
+              </div>
+              <div class="reporte-kpi">
+                <div class="reporte-kpi-label">Resultado operativo vs esperado</div>
+                <div class="reporte-kpi-value" id="kpi-resultado-vs">0.0%</div>
+              </div>
+            </div>
+            <div class="reporte-bar-chart">
+              <div class="reporte-bar-chart-head">
+                <span><i class="legend-dot legend-dot-proy"></i>Presupuesto</span>
+                <span><i class="legend-dot legend-dot-real"></i>Real</span>
+                <span>Comparativo mensual</span>
+              </div>
+              <div id="reporte-ejecucion-bars" class="reporte-bars"></div>
+            </div>
+          </section>
+          <section id="reporte-desviaciones" class="reporte-detalle" style="margin-top:12px;">
+            <h3>Reporte de Desviaciones Presupuestales</h3>
+            <div class="tabla-oficial-wrap">
+              <table class="tabla-oficial" id="reporte-desviaciones-table">
+                <thead>
+                  <tr>
+                    <th>Rubro</th>
+                    <th class="tabla-oficial-num">Presupuesto</th>
+                    <th class="tabla-oficial-num">Real</th>
+                    <th class="tabla-oficial-num">Diferencia</th>
+                    <th class="tabla-oficial-num">% Desviación</th>
+                    <th>Semáforo</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+            <div class="reporte-bar-chart">
+              <div class="reporte-bar-chart-head">
+                <span>Barras de variación por rubro</span>
+              </div>
+              <div id="reporte-desviaciones-bars" class="reporte-variacion-bars"></div>
+            </div>
+          </section>
+          <section id="reporte-tendencia" class="reporte-detalle" style="margin-top:12px;">
+            <h3>Tendencia Presupuestal</h3>
+            <div class="tabla-oficial-wrap">
+              <table class="tabla-oficial" id="reporte-tendencia-table">
+                <thead>
+                  <tr>
+                    <th>Mes</th>
+                    <th class="tabla-oficial-num">Presupuesto acumulado</th>
+                    <th class="tabla-oficial-num">Real acumulado</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+            <div class="line-chart-wrap">
+              <svg id="reporte-tendencia-svg" viewBox="0 0 1000 260" preserveAspectRatio="none"></svg>
+            </div>
+          </section>
+          <section id="reporte-ejecucion-area" class="reporte-detalle" style="margin-top:12px;">
+            <h3>Reporte de Ejecución por Área / Sucursal</h3>
+            <div class="tabla-oficial-wrap">
+              <table class="tabla-oficial" id="reporte-area-table">
+                <thead>
+                  <tr>
+                    <th>Área/Sucursal</th>
+                    <th class="tabla-oficial-num">Presupuesto</th>
+                    <th class="tabla-oficial-num">Ejercido</th>
+                    <th class="tabla-oficial-num">% Ejecución</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+            <div class="reporte-bar-chart">
+              <div class="reporte-bar-chart-head">
+                <span>Barras horizontales comparativas</span>
+              </div>
+              <div id="reporte-area-bars" class="area-bars"></div>
+            </div>
+          </section>
+          <section id="reporte-composicion-gasto" class="reporte-detalle" style="margin-top:12px;">
+            <h3>Reporte de Composición del Gasto</h3>
+            <div class="gasto-composicion">
+              <div class="gasto-donut-wrap">
+                <div id="reporte-gasto-donut" class="gasto-donut" aria-label="Composición de egresos"></div>
+              </div>
+              <div id="reporte-gasto-legend" class="gasto-legend"></div>
+            </div>
+          </section>
+          <section id="reporte-kpis-sipet" class="reporte-detalle" style="margin-top:12px;">
+            <h3>Indicadores Presupuestales Clave (KPIs SIPET)</h3>
+            <div class="kpi-sipet-grid">
+              <article class="kpi-sipet-card"><p class="kpi-sipet-title">Índice de ejecución presupuestal</p><p class="kpi-sipet-value" id="kpi-sipet-ejecucion">0.0%</p></article>
+              <article class="kpi-sipet-card"><p class="kpi-sipet-title">Variación presupuestal promedio</p><p class="kpi-sipet-value" id="kpi-sipet-variacion-prom">0.0%</p></article>
+              <article class="kpi-sipet-card"><p class="kpi-sipet-title">Ratio gasto operativo / ingreso</p><p class="kpi-sipet-value" id="kpi-sipet-ratio-gasto-ingreso">0.0%</p></article>
+              <article class="kpi-sipet-card"><p class="kpi-sipet-title">Cumplimiento mensual promedio</p><p class="kpi-sipet-value" id="kpi-sipet-cumplimiento-prom">0.0%</p></article>
+              <article class="kpi-sipet-card"><p class="kpi-sipet-title">Desviación acumulada anual</p><p class="kpi-sipet-value" id="kpi-sipet-desviacion-anual">0</p></article>
+              <article class="kpi-sipet-card"><p class="kpi-sipet-title">Índice de disciplina presupuestal</p><p class="kpi-sipet-value" id="kpi-sipet-disciplina">0.0%</p></article>
+            </div>
+          </section>
+          <section id="reporte-mapa-calor" class="reporte-detalle" style="margin-top:12px;">
+            <h3>Mapa de Calor Presupuestal</h3>
+            <div class="tabla-oficial-wrap">
+              <table class="tabla-oficial" id="reporte-mapa-calor-table">
+                <thead>
+                  <tr>
+                    <th>Mes</th>
+                    <th style="text-align:center;">Ingresos</th>
+                    <th style="text-align:center;">Egresos</th>
+                    <th style="text-align:center;">Resultado</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </section>
         </div>
       </div>
     </section>
@@ -172,6 +1013,7 @@
   </section>
 </section>
 
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
 <script>
   document.addEventListener("DOMContentLoaded", function() {
     const btn = document.getElementById("toggle-cod-col-btn");
@@ -221,6 +1063,12 @@
       const numeric = Number(value || 0);
       return Number.isFinite(numeric) ? numeric.toLocaleString("en-US", { maximumFractionDigits: 0 }) : "0";
     };
+    const formatPercentOneDecimal = (value) => {
+      const numeric = Number(value || 0);
+      if (!Number.isFinite(numeric)) return "0.0%";
+      return `${numeric.toFixed(1)}%`;
+    };
+    const formatCurrency = (value) => `$${formatIntegerValue(value)}`;
     const buildControlMonthlyCells = (rowIndex, mensualBase) => {
       const cells = [];
       const base = parseIntegerValue(mensualBase);
@@ -230,7 +1078,16 @@
         const projectedValue = formatIntegerValue(saldo);
         cells.push(`<td class="tabla-oficial-num month-col month-${month}" data-month-col="${month}"><input class="tabla-oficial-input num" type="text" name="cm_${rowIndex}_${month}_proyectado" value="${projectedValue}" inputmode="numeric"></td>`);
         cells.push(`<td class="tabla-oficial-num month-col month-${month}" data-month-col="${month}"><input class="tabla-oficial-input num" type="text" name="cm_${rowIndex}_${month}_realizado" value="0" inputmode="numeric"></td>`);
-        cells.push(`<td class="tabla-oficial-num month-col month-${month}" data-month-col="${month}"><input class="tabla-oficial-input num cm-percent-input" type="text" name="cm_${rowIndex}_${month}_percent" value="0%" inputmode="numeric" readonly></td>`);
+        cells.push(`<td class="tabla-oficial-num month-col month-${month} month-percent-col" data-month-col="${month}"><input class="tabla-oficial-input num cm-percent-input" type="text" name="cm_${rowIndex}_${month}_percent" value="0%" inputmode="numeric" readonly></td>`);
+      });
+      return cells.join("");
+    };
+    const buildControlSummaryCells = () => {
+      const cells = [];
+      months.forEach((month) => {
+        cells.push(`<td class="tabla-oficial-num month-col month-${month}" data-month-col="${month}"><input class="tabla-oficial-input num" type="text" data-summary-month="${month}" data-summary-kind="proyectado" value="0" readonly></td>`);
+        cells.push(`<td class="tabla-oficial-num month-col month-${month}" data-month-col="${month}"><input class="tabla-oficial-input num" type="text" data-summary-month="${month}" data-summary-kind="realizado" value="0" readonly></td>`);
+        cells.push(`<td class="tabla-oficial-num month-col month-${month} month-percent-col" data-month-col="${month}"><input class="tabla-oficial-input num cm-percent-input" type="text" data-summary-month="${month}" data-summary-kind="percent" value="0%" readonly></td>`);
       });
       return cells.join("");
     };
@@ -239,7 +1096,7 @@
       const realized = parseIntegerValue(realizedRaw);
       if (projected <= 0) return "0%";
       const pct = (realized / projected) * 100;
-      return `${pct.toFixed(2)}%`;
+      return `${pct.toFixed(1)}%`;
     };
     const recalcControlMensualRow = (row) => {
       if (!row) return;
@@ -255,12 +1112,692 @@
       if (!controlMensualTable) return;
       const rows = Array.from(controlMensualTable.querySelectorAll("tbody tr"));
       rows.forEach((row) => {
+        if (!row.classList.contains("control-mensual-detail-row")) return;
         const projectedAndRealInputs = row.querySelectorAll('input[name*="_proyectado"], input[name*="_realizado"]');
         projectedAndRealInputs.forEach((input) => {
-          input.addEventListener("input", () => recalcControlMensualRow(row));
+          input.addEventListener("input", () => {
+            recalcControlMensualRow(row);
+            recalcControlMensualTotals();
+          });
         });
         recalcControlMensualRow(row);
       });
+    };
+    const recalcControlMensualTotals = () => {
+      if (!controlMensualTable) return;
+      const detailRows = Array.from(controlMensualTable.querySelectorAll("tbody tr.control-mensual-detail-row"));
+      const totalIngresosRow = controlMensualTable.querySelector("tbody tr.control-mensual-total-ingresos");
+      const totalEgresosRow = controlMensualTable.querySelector("tbody tr.control-mensual-total-egresos");
+      const resultadoRow = controlMensualTable.querySelector("tbody tr.control-mensual-resultado");
+      if (!totalIngresosRow || !totalEgresosRow || !resultadoRow) return;
+
+      months.forEach((month) => {
+        let ingresosProjected = 0;
+        let ingresosRealized = 0;
+        let egresosProjected = 0;
+        let egresosRealized = 0;
+
+        detailRows.forEach((row) => {
+          const tipo = (row.getAttribute("data-tipo") || "").toLowerCase();
+          const projectedInput = row.querySelector(`input[name*="_${month}_proyectado"]`);
+          const realizedInput = row.querySelector(`input[name*="_${month}_realizado"]`);
+          const projected = parseIntegerValue(projectedInput?.value || "0");
+          const realized = parseIntegerValue(realizedInput?.value || "0");
+          if (tipo === "ingreso") {
+            ingresosProjected += projected;
+            ingresosRealized += realized;
+          } else if (tipo === "egreso") {
+            egresosProjected += projected;
+            egresosRealized += realized;
+          }
+        });
+
+        const resultadoProjected = ingresosProjected - egresosProjected;
+        const resultadoRealized = ingresosRealized - egresosRealized;
+
+        const setSummary = (row, kind, value) => {
+          const input = row.querySelector(`input[data-summary-month="${month}"][data-summary-kind="${kind}"]`);
+          if (input) input.value = value;
+        };
+
+        setSummary(totalIngresosRow, "proyectado", formatIntegerValue(ingresosProjected));
+        setSummary(totalIngresosRow, "realizado", formatIntegerValue(ingresosRealized));
+        setSummary(totalIngresosRow, "percent", computePercentValue(ingresosProjected, ingresosRealized));
+
+        setSummary(totalEgresosRow, "proyectado", formatIntegerValue(egresosProjected));
+        setSummary(totalEgresosRow, "realizado", formatIntegerValue(egresosRealized));
+        setSummary(totalEgresosRow, "percent", computePercentValue(egresosProjected, egresosRealized));
+
+        setSummary(resultadoRow, "proyectado", formatIntegerValue(resultadoProjected));
+        setSummary(resultadoRow, "realizado", formatIntegerValue(resultadoRealized));
+        setSummary(resultadoRow, "percent", computePercentValue(resultadoProjected, resultadoRealized));
+      });
+      updateReporteEjecutivo();
+      updateReporteDesviaciones();
+      updateReporteTendencia();
+      updateReporteEjecucionArea();
+      updateReporteComposicionGasto();
+      updateReporteKpisSipet();
+      updateReporteMapaCalor();
+      updateAlertasInteligentes();
+      updateControlDashboard();
+    };
+    const updateControlDashboard = () => {
+      if (!controlMensualTable) return;
+      const monthNames = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+      const getSummaryValue = (rowClass, month, kind) => {
+        const row = controlMensualTable.querySelector(`tbody tr.${rowClass}`);
+        if (!row) return 0;
+        const input = row.querySelector(`input[data-summary-month="${month}"][data-summary-kind="${kind}"]`);
+        return parseIntegerValue(input?.value || "0");
+      };
+      const ingP = getSummaryValue("control-mensual-total-ingresos", "12", "proyectado");
+      const ingR = getSummaryValue("control-mensual-total-ingresos", "12", "realizado");
+      const egrP = getSummaryValue("control-mensual-total-egresos", "12", "proyectado");
+      const egrR = getSummaryValue("control-mensual-total-egresos", "12", "realizado");
+      const resP = getSummaryValue("control-mensual-resultado", "12", "proyectado");
+      const resR = getSummaryValue("control-mensual-resultado", "12", "realizado");
+      const setText = (id, value) => { const el = document.getElementById(id); if (el) el.textContent = value; };
+      setText("cp-kpi-ingresos", formatCurrency(ingR));
+      setText("cp-kpi-ingresos-pct", formatPercentOneDecimal(ingP > 0 ? (ingR / ingP) * 100 : 0));
+      setText("cp-kpi-egresos", formatCurrency(egrR));
+      setText("cp-kpi-egresos-pct", formatPercentOneDecimal(egrP > 0 ? (egrR / egrP) * 100 : 0));
+      setText("cp-kpi-resultado", formatCurrency(resR));
+      setText("cp-kpi-resultado-delta", `${resR - resP >= 0 ? "+" : ""}${formatCurrency(resR - resP)}`);
+      const detailRows = Array.from(controlMensualTable.querySelectorAll("tbody tr.control-mensual-detail-row"));
+      const avgDesv = detailRows.length ? detailRows.reduce((acc, row) => {
+        const p = parseIntegerValue(row.querySelector('input[name*="_12_proyectado"]')?.value || "0");
+        const r = parseIntegerValue(row.querySelector('input[name*="_12_realizado"]')?.value || "0");
+        return acc + (p !== 0 ? Math.abs(((r - p) / p) * 100) : 0);
+      }, 0) / detailRows.length : 0;
+      setText("cp-kpi-desv-prom", formatPercentOneDecimal(avgDesv));
+      setText("cp-kpi-riesgo", `${avgDesv >= 0 ? "-" : ""}${formatPercentOneDecimal(avgDesv)}`);
+      const pointer = document.getElementById("cp-gauge-pointer");
+      if (pointer) pointer.style.left = `${Math.max(0, Math.min(100, avgDesv))}%`;
+
+      const monthly = months.map((m, i) => ({
+        label: monthNames[i],
+        proy: getSummaryValue("control-mensual-total-ingresos", m, "proyectado"),
+        real: getSummaryValue("control-mensual-total-ingresos", m, "realizado"),
+      }));
+      const barsRoot = document.getElementById("cp-monthly-bars");
+      if (barsRoot && window.Plotly) {
+        Plotly.react(
+          barsRoot,
+          [
+            { type: "bar", name: "Presupuesto", x: monthly.map((x) => x.label), y: monthly.map((x) => x.proy), marker: { color: "#3b82f6" } },
+            { type: "bar", name: "Real", x: monthly.map((x) => x.label), y: monthly.map((x) => x.real), marker: { color: "#f97316" } },
+          ],
+          {
+            margin: { l: 44, r: 12, t: 8, b: 30 },
+            barmode: "group",
+            paper_bgcolor: "rgba(0,0,0,0)",
+            plot_bgcolor: "rgba(0,0,0,0)",
+            legend: { orientation: "h", y: 1.12 },
+            yaxis: { tickformat: ",", gridcolor: "rgba(148,163,184,.35)" },
+            xaxis: { tickfont: { size: 11 } },
+          },
+          { displayModeBar: false, responsive: true }
+        );
+      }
+
+      const trend = [];
+      let proyAccum = 0;
+      let realAccum = 0;
+      months.forEach((m, i) => {
+        proyAccum += getSummaryValue("control-mensual-total-ingresos", m, "proyectado");
+        realAccum += getSummaryValue("control-mensual-total-ingresos", m, "realizado");
+        trend.push({ label: monthNames[i], p: proyAccum, r: realAccum });
+      });
+      const trendRoot = document.getElementById("cp-tendencia-chart");
+      if (trendRoot && window.Plotly) {
+        Plotly.react(
+          trendRoot,
+          [
+            { type: "scatter", mode: "lines+markers", name: "Presupuesto Acumulado", x: trend.map((x) => x.label), y: trend.map((x) => x.p), line: { color: "#2563eb", width: 3 } },
+            { type: "scatter", mode: "lines+markers", name: "Real Acumulado", x: trend.map((x) => x.label), y: trend.map((x) => x.r), line: { color: "#f97316", width: 3 } },
+          ],
+          {
+            margin: { l: 46, r: 12, t: 8, b: 30 },
+            paper_bgcolor: "rgba(0,0,0,0)",
+            plot_bgcolor: "rgba(0,0,0,0)",
+            legend: { orientation: "h", y: 1.12 },
+            yaxis: { tickformat: ",", gridcolor: "rgba(148,163,184,.35)" },
+            xaxis: { tickfont: { size: 11 } },
+          },
+          { displayModeBar: false, responsive: true }
+        );
+      }
+
+      const semaforo = (p, v) => {
+        if (!p) return { cls: "semaforo-normal", dot: "#22c55e", pct: 0 };
+        const pct = ((v - p) / p) * 100;
+        const abs = Math.abs(pct);
+        if (abs <= 5) return { cls: "semaforo-normal", dot: "#22c55e", pct };
+        if (abs <= 10) return { cls: "semaforo-atencion", dot: "#f59e0b", pct };
+        return { cls: "semaforo-riesgo", dot: "#ef4444", pct };
+      };
+      const desvBody = document.getElementById("cp-desv-body");
+      if (desvBody) {
+        const rows = detailRows.map((row) => {
+          const rubro = (row.querySelector("td:first-child")?.textContent || "").trim();
+          const p = parseIntegerValue(row.querySelector('input[name*="_12_proyectado"]')?.value || "0");
+          const v = parseIntegerValue(row.querySelector('input[name*="_12_realizado"]')?.value || "0");
+          const d = v - p;
+          const s = semaforo(p, v);
+          return { rubro, p, v, d, s };
+        }).sort((a, b) => Math.abs(b.s.pct) - Math.abs(a.s.pct)).slice(0, 6);
+        desvBody.innerHTML = rows.map((x) => `<tr>
+          <td>${x.rubro}</td><td>${formatCurrency(x.p)}</td><td>${formatCurrency(x.v)}</td>
+          <td>${x.d >= 0 ? "+" : ""}${formatCurrency(x.d)}</td>
+          <td>${formatPercentOneDecimal(x.s.pct)}</td><td><span class="cp-dot" style="background:${x.s.dot};"></span></td>
+        </tr>`).join("");
+      }
+
+      const catName = (rubro) => {
+        const text = String(rubro || "").toLowerCase();
+        if (text.includes("salarios") || text.includes("aguinaldo") || text.includes("prestaciones") || text.includes("honorarios") || text.includes("gratificaciones")) return "Personal";
+        if (text.includes("tecnologia")) return "Tecnología";
+        if (text.includes("promocion") || text.includes("publicidad")) return "Marketing";
+        if (text.includes("administracion")) return "Administración";
+        if (text.includes("intereses") || text.includes("impuestos") || text.includes("derechos") || text.includes("depreciaciones") || text.includes("amortizaciones")) return "Operación";
+        return "Otros";
+      };
+      const palette = {"Personal":"#2563eb","Administración":"#38a169","Operación":"#f97316","Tecnología":"#f59e0b","Marketing":"#a855f7","Otros":"#ef4444"};
+      const cats = new Map([["Personal",0],["Administración",0],["Operación",0],["Tecnología",0],["Marketing",0],["Otros",0]]);
+      detailRows.forEach((row) => {
+        const tipo = (row.getAttribute("data-tipo") || "").toLowerCase();
+        if (tipo !== "egreso") return;
+        const rubro = (row.querySelector("td:first-child")?.textContent || "").trim();
+        const amount = parseIntegerValue(row.querySelector('input[name*="_12_realizado"]')?.value || "0");
+        const c = catName(rubro);
+        cats.set(c, (cats.get(c) || 0) + amount);
+      });
+      const items = Array.from(cats.entries()).map(([name, value]) => ({ name, value, color: palette[name] || "#64748b" }));
+      const total = items.reduce((acc, it) => acc + it.value, 0);
+      let start = 0;
+      const gradient = items.map((it) => {
+        const pct = total ? (it.value / total) * 100 : 0;
+        const end = start + pct;
+        const seg = `${it.color} ${start.toFixed(2)}% ${end.toFixed(2)}%`;
+        start = end;
+        return seg;
+      }).join(", ");
+      const donut = document.getElementById("cp-donut-chart");
+      if (donut && window.Plotly) {
+        Plotly.react(
+          donut,
+          [
+            {
+              type: "pie",
+              labels: items.map((x) => x.name),
+              values: items.map((x) => x.value),
+              hole: 0.55,
+              textinfo: "percent",
+              marker: { colors: items.map((x) => x.color), line: { color: "#ffffff", width: 2 } },
+            },
+          ],
+          {
+            margin: { l: 4, r: 4, t: 4, b: 4 },
+            paper_bgcolor: "rgba(0,0,0,0)",
+            plot_bgcolor: "rgba(0,0,0,0)",
+            showlegend: false,
+          },
+          { displayModeBar: false, responsive: true }
+        );
+      } else if (donut) {
+        donut.classList.add("use-css-donut");
+        donut.style.background = total ? `conic-gradient(${gradient})` : "#e2e8f0";
+      }
+      const dist = document.getElementById("cp-dist-list");
+      if (dist) {
+        dist.innerHTML = items.map((it) => `<div class="cp-dist-item"><span class="cp-dot" style="background:${it.color}"></span><span>${it.name}</span><strong>${total ? formatPercentOneDecimal((it.value/total)*100) : "0.0%"}</strong></div>`).join("");
+      }
+
+      const heatRoot = document.getElementById("cp-heatmap-chart");
+      if (heatRoot && window.Plotly) {
+        const rows = [
+          { label: "Ingresos", cls: "control-mensual-total-ingresos" },
+          { label: "Egresos", cls: "control-mensual-total-egresos" },
+          { label: "Resultado", cls: "control-mensual-resultado" },
+        ];
+        const z = rows.map((row) => months.map((m) => {
+          const p = getSummaryValue(row.cls, m, "proyectado");
+          const v = getSummaryValue(row.cls, m, "realizado");
+          return p ? Math.abs(((v - p) / p) * 100) : 0;
+        }));
+        const text = rows.map((row) => months.map((m) => formatCurrency(getSummaryValue(row.cls, m, "realizado"))));
+        Plotly.react(
+          heatRoot,
+          [
+            {
+              type: "heatmap",
+              x: monthNames,
+              y: rows.map((r) => r.label),
+              z,
+              text,
+              hovertemplate: "%{y} %{x}<br>Real: %{text}<br>Desv: %{z:.1f}%<extra></extra>",
+              colorscale: [
+                [0, "#86efac"],
+                [0.25, "#d9f99d"],
+                [0.5, "#fde68a"],
+                [0.75, "#fdba74"],
+                [1, "#fca5a5"],
+              ],
+              zmin: 0,
+              zmax: Math.max(15, ...z.flat()),
+            },
+          ],
+          {
+            margin: { l: 86, r: 12, t: 8, b: 34 },
+            paper_bgcolor: "rgba(0,0,0,0)",
+            plot_bgcolor: "rgba(0,0,0,0)",
+            xaxis: { tickfont: { size: 11 } },
+            yaxis: { tickfont: { size: 12 } },
+          },
+          { displayModeBar: false, responsive: true }
+        );
+      }
+    };
+    const updateReporteEjecutivo = () => {
+      const getSummaryValue = (rowClass, month, kind) => {
+        const row = controlMensualTable?.querySelector(`tbody tr.${rowClass}`);
+        if (!row) return 0;
+        const input = row.querySelector(`input[data-summary-month="${month}"][data-summary-kind="${kind}"]`);
+        return parseIntegerValue(input?.value || "0");
+      };
+      const updateConceptRow = (concept, projected, realized) => {
+        const row = document.querySelector(`#reporte-ejecucion-table tr[data-concept="${concept}"]`);
+        if (!row) return;
+        const variacion = realized - projected;
+        const cumplimiento = projected > 0 ? (realized / projected) * 100 : 0;
+        const cell = (field) => row.querySelector(`[data-field="${field}"]`);
+        if (cell("presupuestado")) cell("presupuestado").textContent = formatIntegerValue(projected);
+        if (cell("real")) cell("real").textContent = formatIntegerValue(realized);
+        if (cell("variacion")) cell("variacion").textContent = formatIntegerValue(variacion);
+        if (cell("cumplimiento")) cell("cumplimiento").textContent = formatPercentOneDecimal(cumplimiento);
+      };
+
+      const ingresoProjected = getSummaryValue("control-mensual-total-ingresos", "12", "proyectado");
+      const ingresoRealized = getSummaryValue("control-mensual-total-ingresos", "12", "realizado");
+      const egresoProjected = getSummaryValue("control-mensual-total-egresos", "12", "proyectado");
+      const egresoRealized = getSummaryValue("control-mensual-total-egresos", "12", "realizado");
+      const resultadoProjected = getSummaryValue("control-mensual-resultado", "12", "proyectado");
+      const resultadoRealized = getSummaryValue("control-mensual-resultado", "12", "realizado");
+
+      updateConceptRow("ingresos", ingresoProjected, ingresoRealized);
+      updateConceptRow("egresos", egresoProjected, egresoRealized);
+      updateConceptRow("resultado", resultadoProjected, resultadoRealized);
+
+      const kpiIngresos = ingresoProjected > 0 ? (ingresoRealized / ingresoProjected) * 100 : 0;
+      const kpiEgresos = egresoProjected > 0 ? (egresoRealized / egresoProjected) * 100 : 0;
+      const kpiResultadoVs = resultadoProjected !== 0 ? (resultadoRealized / resultadoProjected) * 100 : 0;
+      const k1 = document.getElementById("kpi-ejecucion-ingresos");
+      const k2 = document.getElementById("kpi-ejecucion-egresos");
+      const k3 = document.getElementById("kpi-resultado-vs");
+      if (k1) k1.textContent = formatPercentOneDecimal(kpiIngresos);
+      if (k2) k2.textContent = formatPercentOneDecimal(kpiEgresos);
+      if (k3) k3.textContent = formatPercentOneDecimal(kpiResultadoVs);
+
+      const barsRoot = document.getElementById("reporte-ejecucion-bars");
+      if (!barsRoot) return;
+      const monthNames = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+      const monthly = months.map((m, index) => ({
+        label: monthNames[index],
+        proy: getSummaryValue("control-mensual-resultado", m, "proyectado"),
+        real: getSummaryValue("control-mensual-resultado", m, "realizado"),
+      }));
+      const maxVal = Math.max(1, ...monthly.flatMap((x) => [Math.abs(x.proy), Math.abs(x.real)]));
+      barsRoot.innerHTML = monthly.map((item) => {
+        const hProy = Math.max(3, Math.round((Math.abs(item.proy) / maxVal) * 140));
+        const hReal = Math.max(3, Math.round((Math.abs(item.real) / maxVal) * 140));
+        return `<div class="reporte-month">
+          <div class="reporte-month-bars">
+            <div class="reporte-bar proy" style="height:${hProy}px" title="${item.label} Presupuesto: ${formatIntegerValue(item.proy)}"></div>
+            <div class="reporte-bar real" style="height:${hReal}px" title="${item.label} Real: ${formatIntegerValue(item.real)}"></div>
+          </div>
+          <div class="reporte-month-label">${item.label}</div>
+        </div>`;
+      }).join("");
+    };
+    const getSemaforo = (pctAbs) => {
+      if (pctAbs <= 5) return { label: "Normal", cls: "semaforo-normal" };
+      if (pctAbs <= 10) return { label: "Atención", cls: "semaforo-atencion" };
+      return { label: "Riesgo", cls: "semaforo-riesgo" };
+    };
+    const updateReporteDesviaciones = () => {
+      if (!controlMensualTable) return;
+      const detailRows = Array.from(controlMensualTable.querySelectorAll("tbody tr.control-mensual-detail-row"));
+      const tableBody = document.querySelector("#reporte-desviaciones-table tbody");
+      const barsRoot = document.getElementById("reporte-desviaciones-bars");
+      if (!tableBody || !barsRoot) return;
+
+      const rubros = detailRows.map((row) => {
+        const rubro = (row.querySelector("td:first-child")?.textContent || "").trim();
+        const projected = parseIntegerValue(row.querySelector('input[name*="_12_proyectado"]')?.value || "0");
+        const realized = parseIntegerValue(row.querySelector('input[name*="_12_realizado"]')?.value || "0");
+        const diff = realized - projected;
+        const pct = projected !== 0 ? (diff / projected) * 100 : 0;
+        return { rubro, projected, realized, diff, pct, absPct: Math.abs(pct) };
+      }).filter((item) => item.rubro);
+
+      tableBody.innerHTML = rubros.map((item) => {
+        const semaforo = getSemaforo(item.absPct);
+        return `<tr>
+          <td>${item.rubro}</td>
+          <td class="tabla-oficial-num">${formatIntegerValue(item.projected)}</td>
+          <td class="tabla-oficial-num">${formatIntegerValue(item.realized)}</td>
+          <td class="tabla-oficial-num">${formatIntegerValue(item.diff)}</td>
+          <td class="tabla-oficial-num month-percent-col">${formatPercentOneDecimal(item.pct)}</td>
+          <td><span class="semaforo-badge ${semaforo.cls}">${semaforo.label}</span></td>
+        </tr>`;
+      }).join("");
+
+      const ranked = [...rubros].sort((a, b) => b.absPct - a.absPct).slice(0, 12);
+      const maxAbs = Math.max(1, ...ranked.map((x) => x.absPct));
+      barsRoot.innerHTML = ranked.map((item) => {
+        const width = Math.max(4, Math.round((item.absPct / maxAbs) * 100));
+        return `<div class="reporte-variacion-row">
+          <div class="reporte-variacion-label" title="${item.rubro}">${item.rubro}</div>
+          <div class="reporte-variacion-track"><div class="reporte-variacion-bar" style="width:${width}%;"></div></div>
+          <div class="reporte-variacion-value">${formatPercentOneDecimal(item.pct)}</div>
+        </div>`;
+      }).join("");
+    };
+    const updateReporteTendencia = () => {
+      if (!controlMensualTable) return;
+      const getSummaryValue = (rowClass, month, kind) => {
+        const row = controlMensualTable.querySelector(`tbody tr.${rowClass}`);
+        if (!row) return 0;
+        const input = row.querySelector(`input[data-summary-month="${month}"][data-summary-kind="${kind}"]`);
+        return parseIntegerValue(input?.value || "0");
+      };
+      const monthNames = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+      const trend = [];
+      let realAccum = 0;
+      months.forEach((month, idx) => {
+        const proyAccum = getSummaryValue("control-mensual-resultado", month, "proyectado");
+        const realMonth = getSummaryValue("control-mensual-resultado", month, "realizado");
+        realAccum += realMonth;
+        trend.push({ label: monthNames[idx], proy: proyAccum, real: realAccum });
+      });
+
+      const tbody = document.querySelector("#reporte-tendencia-table tbody");
+      if (tbody) {
+        tbody.innerHTML = trend.map((item) => (
+          `<tr>
+            <td>${item.label}</td>
+            <td class="tabla-oficial-num">${formatIntegerValue(item.proy)}</td>
+            <td class="tabla-oficial-num">${formatIntegerValue(item.real)}</td>
+          </tr>`
+        )).join("");
+      }
+
+      const svg = document.getElementById("reporte-tendencia-svg");
+      if (!svg) return;
+      const w = 1000;
+      const h = 260;
+      const padL = 44;
+      const padR = 18;
+      const padT = 12;
+      const padB = 30;
+      const chartW = w - padL - padR;
+      const chartH = h - padT - padB;
+      const maxVal = Math.max(1, ...trend.map((x) => Math.max(Math.abs(x.proy), Math.abs(x.real))));
+      const xFor = (i) => padL + ((chartW / 11) * i);
+      const yFor = (v) => padT + (chartH - (Math.abs(v) / maxVal) * chartH);
+      const pathFor = (key) => trend.map((item, i) => `${i === 0 ? "M" : "L"} ${xFor(i)} ${yFor(item[key])}`).join(" ");
+      const points = trend.map((item, i) => ({ x: xFor(i), yp: yFor(item.proy), yr: yFor(item.real), label: item.label }));
+
+      svg.innerHTML = `
+        <line x1="${padL}" y1="${h - padB}" x2="${w - padR}" y2="${h - padB}" class="line-axis"></line>
+        <line x1="${padL}" y1="${padT}" x2="${padL}" y2="${h - padB}" class="line-axis"></line>
+        <path d="${pathFor("proy")}" class="line-proy"></path>
+        <path d="${pathFor("real")}" class="line-real"></path>
+        ${points.map((p) => `<circle cx="${p.x}" cy="${p.yp}" r="3" class="line-point-proy"></circle>`).join("")}
+        ${points.map((p) => `<circle cx="${p.x}" cy="${p.yr}" r="3" class="line-point-real"></circle>`).join("")}
+        ${points.map((p) => `<text x="${p.x}" y="${h - 10}" text-anchor="middle" font-size="11" fill="rgba(15,23,42,.8)">${p.label}</text>`).join("")}
+      `;
+    };
+    const resolveAreaSucursal = (rubro) => {
+      const text = String(rubro || "").toLowerCase();
+      if (text.includes("interes") || text.includes("moratorio") || text.includes("normal")) return "Crédito";
+      if (text.includes("comisiones") || text.includes("productos")) return "Comercial";
+      if (text.includes("salarios") || text.includes("aguinaldo") || text.includes("prestaciones") || text.includes("honorarios")) return "Administración";
+      if (text.includes("tecnologia")) return "Tecnología";
+      if (text.includes("impuestos") || text.includes("derechos")) return "Cumplimiento";
+      if (text.includes("promocion") || text.includes("publicidad")) return "Marketing";
+      if (text.includes("depreciaciones") || text.includes("amortizaciones") || text.includes("costo neto")) return "Finanzas";
+      return "Sucursal Centro";
+    };
+    const updateReporteEjecucionArea = () => {
+      if (!controlMensualTable) return;
+      const detailRows = Array.from(controlMensualTable.querySelectorAll("tbody tr.control-mensual-detail-row"));
+      const grouped = new Map();
+      detailRows.forEach((row) => {
+        const rubro = (row.querySelector("td:first-child")?.textContent || "").trim();
+        const area = resolveAreaSucursal(rubro);
+        const projected = parseIntegerValue(row.querySelector('input[name*="_12_proyectado"]')?.value || "0");
+        const realized = parseIntegerValue(row.querySelector('input[name*="_12_realizado"]')?.value || "0");
+        const current = grouped.get(area) || { area, projected: 0, realized: 0 };
+        current.projected += projected;
+        current.realized += realized;
+        grouped.set(area, current);
+      });
+      const rows = Array.from(grouped.values()).sort((a, b) => a.area.localeCompare(b.area, "es"));
+      const tbody = document.querySelector("#reporte-area-table tbody");
+      if (tbody) {
+        tbody.innerHTML = rows.map((item) => {
+          const ejec = item.projected > 0 ? (item.realized / item.projected) * 100 : 0;
+          return `<tr>
+            <td>${item.area}</td>
+            <td class="tabla-oficial-num">${formatIntegerValue(item.projected)}</td>
+            <td class="tabla-oficial-num">${formatIntegerValue(item.realized)}</td>
+            <td class="tabla-oficial-num month-percent-col">${formatPercentOneDecimal(ejec)}</td>
+          </tr>`;
+        }).join("");
+      }
+      const barsRoot = document.getElementById("reporte-area-bars");
+      if (!barsRoot) return;
+      const maxPct = Math.max(100, ...rows.map((x) => (x.projected > 0 ? (x.realized / x.projected) * 100 : 0)));
+      barsRoot.innerHTML = rows.map((item) => {
+        const pct = item.projected > 0 ? (item.realized / item.projected) * 100 : 0;
+        const width = Math.max(3, Math.min(100, (pct / maxPct) * 100));
+        const overCls = pct > 100 ? " over" : "";
+        return `<div class="area-bar-row">
+          <div class="area-bar-label">${item.area}</div>
+          <div class="area-bar-track"><div class="area-bar-fill${overCls}" style="width:${width}%;"></div></div>
+          <div class="area-bar-value">${formatPercentOneDecimal(pct)}</div>
+        </div>`;
+      }).join("");
+    };
+    const resolveGastoCategoria = (rubro) => {
+      const text = String(rubro || "").toLowerCase();
+      if (text.includes("salarios") || text.includes("aguinaldo") || text.includes("prestaciones") || text.includes("honorarios") || text.includes("gratificaciones")) return "Personal";
+      if (text.includes("tecnologia")) return "Tecnología";
+      if (text.includes("promocion") || text.includes("publicidad")) return "Marketing";
+      if (text.includes("administracion")) return "Administración";
+      if (text.includes("intereses") || text.includes("impuestos") || text.includes("derechos") || text.includes("depreciaciones") || text.includes("amortizaciones") || text.includes("fondo de proteccion")) return "Operación";
+      return "Otros";
+    };
+    const updateReporteComposicionGasto = () => {
+      if (!controlMensualTable) return;
+      const detailRows = Array.from(controlMensualTable.querySelectorAll("tbody tr.control-mensual-detail-row"));
+      const categories = new Map([
+        ["Personal", 0],
+        ["Operación", 0],
+        ["Tecnología", 0],
+        ["Marketing", 0],
+        ["Administración", 0],
+        ["Otros", 0],
+      ]);
+      detailRows.forEach((row) => {
+        const tipo = (row.getAttribute("data-tipo") || "").toLowerCase();
+        if (tipo !== "egreso") return;
+        const rubro = (row.querySelector("td:first-child")?.textContent || "").trim();
+        const amount = parseIntegerValue(row.querySelector('input[name*="_12_realizado"]')?.value || "0");
+        const cat = resolveGastoCategoria(rubro);
+        categories.set(cat, (categories.get(cat) || 0) + amount);
+      });
+      const palette = {
+        "Personal": "#0f766e",
+        "Operación": "#0369a1",
+        "Tecnología": "#7c3aed",
+        "Marketing": "#ea580c",
+        "Administración": "#0f172a",
+        "Otros": "#64748b",
+      };
+      const items = Array.from(categories.entries()).map(([name, value]) => ({ name, value, color: palette[name] || "#64748b" }));
+      const total = items.reduce((acc, item) => acc + item.value, 0);
+      let start = 0;
+      const slices = items.map((item) => {
+        const pct = total > 0 ? (item.value / total) * 100 : 0;
+        const end = start + pct;
+        const slice = `${item.color} ${start.toFixed(2)}% ${end.toFixed(2)}%`;
+        start = end;
+        return slice;
+      }).join(", ");
+      const donut = document.getElementById("reporte-gasto-donut");
+      if (donut) donut.style.background = total > 0 ? `conic-gradient(${slices})` : "#e2e8f0";
+      const legend = document.getElementById("reporte-gasto-legend");
+      if (!legend) return;
+      legend.innerHTML = items.map((item) => {
+        const pct = total > 0 ? (item.value / total) * 100 : 0;
+        return `<div class="gasto-legend-item">
+          <span class="gasto-legend-dot" style="background:${item.color};"></span>
+          <span>${item.name}</span>
+          <span class="gasto-legend-value">${formatIntegerValue(item.value)} (${formatPercentOneDecimal(pct)})</span>
+        </div>`;
+      }).join("");
+    };
+    const updateReporteKpisSipet = () => {
+      if (!controlMensualTable) return;
+      const getSummaryValue = (rowClass, month, kind) => {
+        const row = controlMensualTable.querySelector(`tbody tr.${rowClass}`);
+        if (!row) return 0;
+        const input = row.querySelector(`input[data-summary-month="${month}"][data-summary-kind="${kind}"]`);
+        return parseIntegerValue(input?.value || "0");
+      };
+      const setKpi = (id, value) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = value;
+      };
+      const ingresosP = getSummaryValue("control-mensual-total-ingresos", "12", "proyectado");
+      const ingresosR = getSummaryValue("control-mensual-total-ingresos", "12", "realizado");
+      const egresosP = getSummaryValue("control-mensual-total-egresos", "12", "proyectado");
+      const egresosR = getSummaryValue("control-mensual-total-egresos", "12", "realizado");
+      const resultadoP = getSummaryValue("control-mensual-resultado", "12", "proyectado");
+      const resultadoR = getSummaryValue("control-mensual-resultado", "12", "realizado");
+
+      const ejecBaseP = ingresosP + egresosP;
+      const ejecBaseR = ingresosR + egresosR;
+      const indiceEjec = ejecBaseP > 0 ? (ejecBaseR / ejecBaseP) * 100 : 0;
+
+      const detailRows = Array.from(controlMensualTable.querySelectorAll("tbody tr.control-mensual-detail-row"));
+      const desviaciones = detailRows.map((row) => {
+        const p = parseIntegerValue(row.querySelector('input[name*="_12_proyectado"]')?.value || "0");
+        const r = parseIntegerValue(row.querySelector('input[name*="_12_realizado"]')?.value || "0");
+        return p !== 0 ? Math.abs(((r - p) / p) * 100) : 0;
+      });
+      const variacionProm = desviaciones.length ? (desviaciones.reduce((a, b) => a + b, 0) / desviaciones.length) : 0;
+
+      const ratioGastoIngreso = ingresosR > 0 ? (egresosR / ingresosR) * 100 : 0;
+
+      const cumplimientosMensuales = months.map((m) => {
+        const p = getSummaryValue("control-mensual-resultado", m, "proyectado");
+        const r = getSummaryValue("control-mensual-resultado", m, "realizado");
+        return p !== 0 ? (r / p) * 100 : 0;
+      });
+      const cumplimientoProm = cumplimientosMensuales.length ? (cumplimientosMensuales.reduce((a, b) => a + b, 0) / cumplimientosMensuales.length) : 0;
+
+      const desviacionAnual = resultadoR - resultadoP;
+      const disciplina = Math.max(0, 100 - variacionProm);
+
+      setKpi("kpi-sipet-ejecucion", formatPercentOneDecimal(indiceEjec));
+      setKpi("kpi-sipet-variacion-prom", formatPercentOneDecimal(variacionProm));
+      setKpi("kpi-sipet-ratio-gasto-ingreso", formatPercentOneDecimal(ratioGastoIngreso));
+      setKpi("kpi-sipet-cumplimiento-prom", formatPercentOneDecimal(cumplimientoProm));
+      setKpi("kpi-sipet-desviacion-anual", formatIntegerValue(desviacionAnual));
+      setKpi("kpi-sipet-disciplina", formatPercentOneDecimal(disciplina));
+    };
+    const heatSemaforo = (projected, realized) => {
+      if (projected === 0) return { emoji: "🟢", cls: "semaforo-normal" };
+      const pctAbs = Math.abs(((realized - projected) / projected) * 100);
+      if (pctAbs <= 5) return { emoji: "🟢", cls: "semaforo-normal" };
+      if (pctAbs <= 10) return { emoji: "🟡", cls: "semaforo-atencion" };
+      return { emoji: "🔴", cls: "semaforo-riesgo" };
+    };
+    const updateReporteMapaCalor = () => {
+      if (!controlMensualTable) return;
+      const monthNames = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+      const getSummaryValue = (rowClass, month, kind) => {
+        const row = controlMensualTable.querySelector(`tbody tr.${rowClass}`);
+        if (!row) return 0;
+        const input = row.querySelector(`input[data-summary-month="${month}"][data-summary-kind="${kind}"]`);
+        return parseIntegerValue(input?.value || "0");
+      };
+      const tbody = document.querySelector("#reporte-mapa-calor-table tbody");
+      if (!tbody) return;
+      tbody.innerHTML = months.map((m, idx) => {
+        const ingP = getSummaryValue("control-mensual-total-ingresos", m, "proyectado");
+        const ingR = getSummaryValue("control-mensual-total-ingresos", m, "realizado");
+        const egrP = getSummaryValue("control-mensual-total-egresos", m, "proyectado");
+        const egrR = getSummaryValue("control-mensual-total-egresos", m, "realizado");
+        const resP = getSummaryValue("control-mensual-resultado", m, "proyectado");
+        const resR = getSummaryValue("control-mensual-resultado", m, "realizado");
+        const sIng = heatSemaforo(ingP, ingR);
+        const sEgr = heatSemaforo(egrP, egrR);
+        const sRes = heatSemaforo(resP, resR);
+        return `<tr>
+          <td>${monthNames[idx]}</td>
+          <td style="text-align:center;"><span class="heat-chip ${sIng.cls}" title="Ingresos">${sIng.emoji}</span></td>
+          <td style="text-align:center;"><span class="heat-chip ${sEgr.cls}" title="Egresos">${sEgr.emoji}</span></td>
+          <td style="text-align:center;"><span class="heat-chip ${sRes.cls}" title="Resultado">${sRes.emoji}</span></td>
+        </tr>`;
+      }).join("");
+    };
+    const updateAlertasInteligentes = () => {
+      if (!controlMensualTable) return;
+      const getSummaryValue = (rowClass, month, kind) => {
+        const row = controlMensualTable.querySelector(`tbody tr.${rowClass}`);
+        if (!row) return 0;
+        const input = row.querySelector(`input[data-summary-month="${month}"][data-summary-kind="${kind}"]`);
+        return parseIntegerValue(input?.value || "0");
+      };
+      const monthNames = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+      const alerts = [];
+
+      months.forEach((m, idx) => {
+        const egP = getSummaryValue("control-mensual-total-egresos", m, "proyectado");
+        const egR = getSummaryValue("control-mensual-total-egresos", m, "realizado");
+        if (egP > 0 && egR > egP * 1.1) {
+          alerts.push({ level: "danger", text: `Riesgo ${monthNames[idx]}: gasto en ${formatPercentOneDecimal((egR / egP) * 100)} del presupuesto (>110%).` });
+        }
+      });
+
+      months.forEach((m, idx) => {
+        const inP = getSummaryValue("control-mensual-total-ingresos", m, "proyectado");
+        const inR = getSummaryValue("control-mensual-total-ingresos", m, "realizado");
+        if (inP > 0 && inR < inP * 0.9) {
+          alerts.push({ level: "warn", text: `Atención ${monthNames[idx]}: ingreso en ${formatPercentOneDecimal((inR / inP) * 100)} del esperado (<90%).` });
+        }
+      });
+
+      const resultadoSerie = months.map((m) => getSummaryValue("control-mensual-resultado", m, "realizado"));
+      for (let i = 2; i < resultadoSerie.length; i += 1) {
+        if (resultadoSerie[i] < resultadoSerie[i - 1] && resultadoSerie[i - 1] < resultadoSerie[i - 2]) {
+          alerts.push({ level: "danger", text: `Tendencia negativa detectada: 3 meses consecutivos a la baja hasta ${monthNames[i]}.` });
+          break;
+        }
+      }
+
+      const container = document.getElementById("alertas-inteligentes-list");
+      if (!container) return;
+      if (!alerts.length) {
+        container.innerHTML = `<div class="alerta-item ok">Sin alertas críticas. Ejecución dentro de parámetros.</div>`;
+        return;
+      }
+      container.innerHTML = alerts.map((a) => `<div class="alerta-item ${a.level}">${a.text}</div>`).join("");
     };
     const syncControlMensualRubrosFromAnual = () => {
       if (!controlMensualTable || !presupuestoTable) return;
@@ -268,19 +1805,44 @@
       const controlBody = controlMensualTable.querySelector("tbody");
       if (!controlBody) return;
       const rubros = anualRows.map((row) => {
-        const rubroCell = row.querySelector("td:nth-child(2)");
+        const tipoCell = row.querySelector("td.tipo-col");
+        const rubroCell = row.querySelector("td.rubro-col");
         const mensualCell = row.querySelector(".presupuesto-mensual");
         return {
+          tipo: (tipoCell?.textContent || "").trim(),
           rubro: (rubroCell?.textContent || "").trim(),
           mensualBase: normalizeInteger((mensualCell?.textContent || "").trim()) || "0",
         };
       }).filter((item) => item.rubro);
-      controlBody.innerHTML = rubros.map((item, index) => (
-        `<tr><td>${item.rubro}</td>${buildControlMonthlyCells(index + 1, item.mensualBase)}</tr>`
+      const detailRowsHtml = rubros.map((item, index) => (
+        `<tr class="control-mensual-detail-row" data-tipo="${item.tipo}"><td>${item.rubro}</td>${buildControlMonthlyCells(index + 1, item.mensualBase)}</tr>`
       )).join("");
+      const summaryRowsHtml = [
+        `<tr class="control-mensual-total-ingresos"><td><strong>Total de ingresos</strong></td>${buildControlSummaryCells()}</tr>`,
+        `<tr class="control-mensual-total-egresos"><td><strong>Total de egresos</strong></td>${buildControlSummaryCells()}</tr>`,
+        `<tr class="control-mensual-resultado"><td><strong>Resultado</strong></td>${buildControlSummaryCells()}</tr>`,
+      ].join("");
+      controlBody.innerHTML = `${detailRowsHtml}${summaryRowsHtml}`;
       bindControlMensualFormula();
+      recalcControlMensualTotals();
+      updateReporteDesviaciones();
+      updateReporteTendencia();
+      updateReporteEjecucionArea();
+      updateReporteComposicionGasto();
+      updateReporteKpisSipet();
+      updateReporteMapaCalor();
+      updateAlertasInteligentes();
+      updateControlDashboard();
     };
     syncControlMensualRubrosFromAnual();
+
+    document.querySelectorAll("[data-report-target]").forEach((card) => {
+      card.addEventListener("click", () => {
+        const id = card.getAttribute("data-report-target");
+        if (!id) return;
+        document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    });
 
     const monthToggleButtons = Array.from(document.querySelectorAll("[data-month-toggle]"));
     const setMonthVisibility = (month, visible) => {
@@ -301,5 +1863,17 @@
         setMonthVisibility(month, isVisible);
       });
     });
+
+    const reportesTab = document.querySelector('.notebook-tabs .tab[data-tab="reportes"]');
+    const reportesPanel = document.querySelector('.tab-panel[data-panel="reportes"]');
+    if (reportesTab && reportesPanel && typeof reportesPanel.requestFullscreen === "function") {
+      reportesTab.addEventListener("click", () => {
+        setTimeout(() => {
+          if (!document.fullscreenElement) {
+            reportesPanel.requestFullscreen().catch(() => {});
+          }
+        }, 0);
+      });
+    }
   });
 </script>

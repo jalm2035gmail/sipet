@@ -1,6 +1,7 @@
 from html import escape
 from io import StringIO
 from pathlib import Path
+import unicodedata
 
 import pandas as pd
 from fastapi import APIRouter, Request
@@ -13,6 +14,50 @@ PROJECT_ROOT = Path(__file__).resolve().parents[3]
 PRESUPUESTO_TXT_PATH = PROJECT_ROOT / "presupuesto.txt"
 
 
+def _normalize_rubro_key(value: str) -> str:
+    text = unicodedata.normalize("NFKD", str(value or ""))
+    text = "".join(ch for ch in text if not unicodedata.combining(ch))
+    text = text.upper()
+    text = " ".join(text.replace(".", " ").replace(",", " ").split())
+    return text
+
+
+RUBRO_TIPO_MAP = {
+    _normalize_rubro_key("INT NORMAL VIGENTE"): "Ingreso",
+    _normalize_rubro_key("INT NORMAL VENCIDO"): "Ingreso",
+    _normalize_rubro_key("GASTOS POR INTERESES"): "Egreso",
+    _normalize_rubro_key("ESTIMACION PREV. P."): "Egreso",
+    _normalize_rubro_key("OTROS INGRESOS"): "Ingreso",
+    _normalize_rubro_key("INT MORATORIO VIGENTE"): "Ingreso",
+    _normalize_rubro_key("INT MORATORIO VENCIDO"): "Ingreso",
+    _normalize_rubro_key("INTERESES DE DISPONIBILIDADES"): "Ingreso",
+    _normalize_rubro_key("INTERESES DE INVERSIONES"): "Ingreso",
+    _normalize_rubro_key("OTROS PRODUCTOS"): "Ingreso",
+    _normalize_rubro_key("COMISIONES Y TARIFAS COBRADAS"): "Ingreso",
+    _normalize_rubro_key("COMISIONES Y TARIFAS PAGADAS"): "Egreso",
+    _normalize_rubro_key("SALARIOS"): "Egreso",
+    _normalize_rubro_key("AGUINALDO"): "Egreso",
+    _normalize_rubro_key("GRATIFICACIONES"): "Egreso",
+    _normalize_rubro_key("PRESTACIONES"): "Egreso",
+    _normalize_rubro_key("HONORARIOS"): "Egreso",
+    _normalize_rubro_key("GASTOS DE PROMOCION Y PUBLICIDAD"): "Egreso",
+    _normalize_rubro_key("APORTACIONES AL FONDO DE PROTECCION"): "Egreso",
+    _normalize_rubro_key("IMPUESTOS Y DERECHOS DIVERSOS"): "Egreso",
+    _normalize_rubro_key("GASTOS NO DEDUCIBLES"): "Egreso",
+    _normalize_rubro_key("GASTOS EN TECNOLOGIA"): "Egreso",
+    _normalize_rubro_key("DEPRECIACIONES"): "Egreso",
+    _normalize_rubro_key("AMORTIZACIONES"): "Egreso",
+    _normalize_rubro_key("COSTO NETO DEL PERIODO"): "Egreso",
+    _normalize_rubro_key("OTROS GASTOS DE ADMINISTRACION Y PROMOCION"): "Egreso",
+    _normalize_rubro_key("OPERACIONES DISCONTINUAS"): "Egreso",
+    _normalize_rubro_key("UTILIDAD O PERDIDA"): "",
+}
+
+
+def _resolve_tipo(rubro: str) -> str:
+    return RUBRO_TIPO_MAP.get(_normalize_rubro_key(rubro), "")
+
+
 def _get_colores_context() -> dict:
     from fastapi_modulo.main import get_colores_context
     return get_colores_context()
@@ -20,7 +65,7 @@ def _get_colores_context() -> dict:
 
 def _load_presupuesto_dataframe() -> pd.DataFrame:
     if not PRESUPUESTO_TXT_PATH.exists():
-        return pd.DataFrame(columns=["cod", "rubro", "monto", "mensual"])
+        return pd.DataFrame(columns=["cod", "tipo", "rubro", "monto", "mensual"])
     df = pd.read_csv(
         PRESUPUESTO_TXT_PATH,
         sep="\t",
@@ -34,13 +79,14 @@ def _load_presupuesto_dataframe() -> pd.DataFrame:
     for col in ["cod", "rubro", "monto"]:
         df[col] = df[col].fillna("").astype(str).str.strip()
     df = df[(df["cod"] != "") | (df["rubro"] != "") | (df["monto"] != "")].copy()
+    df["tipo"] = df["rubro"].map(_resolve_tipo)
     df["rubro"] = df["rubro"].str.capitalize()
     monto_num = pd.to_numeric(df["monto"].str.replace(",", "", regex=False), errors="coerce")
     df["monto"] = monto_num.map(lambda val: f"{int(round(val)):,}" if pd.notna(val) else "").where(
         monto_num.notna(), df["monto"]
     )
     df["mensual"] = monto_num.div(12).map(lambda val: f"{int(round(val)):,}" if pd.notna(val) else "")
-    return df[["cod", "rubro", "monto", "mensual"]]
+    return df[["cod", "tipo", "rubro", "monto", "mensual"]]
 
 
 def _control_mensual_header_html() -> str:
@@ -70,7 +116,7 @@ def _control_mensual_header_html() -> str:
         (
             f'<th class="tabla-oficial-num month-col month-{numero}" data-month-col="{numero}">Proyectado</th>'
             f'<th class="tabla-oficial-num month-col month-{numero}" data-month-col="{numero}">Realizado</th>'
-            f'<th class="tabla-oficial-num month-col month-{numero}" data-month-col="{numero}">%</th>'
+            f'<th class="tabla-oficial-num month-col month-{numero} month-percent-col" data-month-col="{numero}">%</th>'
         )
         for numero, _ in meses
     )
@@ -91,7 +137,7 @@ def _control_mensual_rows_html(df: pd.DataFrame) -> str:
                 f'<td class="tabla-oficial-num month-col month-{mes}" data-month-col="{mes}"><input class="tabla-oficial-input num" type="text" name="cm_{idx}_{mes}_realizado" value="0" inputmode="numeric"></td>'
             )
             celdas.append(
-                f'<td class="tabla-oficial-num month-col month-{mes}" data-month-col="{mes}"><input class="tabla-oficial-input num cm-percent-input" type="text" name="cm_{idx}_{mes}_percent" value="0%" inputmode="numeric" readonly></td>'
+                f'<td class="tabla-oficial-num month-col month-{mes} month-percent-col" data-month-col="{mes}"><input class="tabla-oficial-input num cm-percent-input" type="text" name="cm_{idx}_{mes}_percent" value="0%" inputmode="numeric" readonly></td>'
             )
         rows.append(f"<tr><td>{rubro}</td>{''.join(celdas)}</tr>")
     return "".join(rows)
@@ -139,7 +185,8 @@ def proyectando_presupuesto_page(request: Request):
         ('<tr class="presupuesto-zebra">' if i % 2 == 1 else "<tr>")
         + (
             f'<td class="cod-col" style="display:none;">{escape(row.cod)}</td>'
-            f"<td>{escape(row.rubro)}</td>"
+            f'<td class="tipo-col" style="display:none;">{escape(row.tipo)}</td>'
+            f'<td class="rubro-col">{escape(row.rubro)}</td>'
             f'<td class="tabla-oficial-num"><input class="tabla-oficial-input num presupuesto-num-input" type="text" value="{escape(row.monto)}" inputmode="numeric" placeholder="0"></td>'
             f'<td class="tabla-oficial-num presupuesto-mensual">{escape(row.mensual)}</td></tr>'
         )
