@@ -38,8 +38,8 @@
             <div class="sidebar-user">
                 <img
                     id="sidebar-user-img"
-                    src="{{ login_logo_url | default('/templates/icon/icon.png', true) }}"
-                    data-default="{{ login_logo_url | default('/templates/icon/icon.png', true) }}"
+                    src="{{ sidebar_logo_url | default('/templates/icon/icon.png', true) }}"
+                    data-default="{{ sidebar_logo_url | default('/templates/icon/icon.png', true) }}"
                     alt="Logo empresa"
                 />
             </div>
@@ -122,8 +122,6 @@
                         <summary>Presupuesto</summary>
                         <div class="sidebar-submenu-level3">
                             <a href="/proyectando/presupuesto">Vista general</a>
-                            <a href="/proyectando/presupuesto#presupuesto-anual">Presupuesto anual</a>
-                            <a href="/proyectando/presupuesto#control-mensual">Control mensual</a>
                         </div>
                     </details>
                 </div>
@@ -187,6 +185,7 @@
                 </summary>
                 <div class="sidebar-submenu">
                     <a href="/identidad-institucional">Identidad institucional</a>
+                    <a href="/empresa/base-datos">Base de datos</a>
                     <a href="/plantillas">Plantillas</a>
                     <a href="/plantillas/constructor">Constructor de formularios</a>
                 </div>
@@ -355,14 +354,12 @@
             const userDropdown = document.getElementById('user-dropdown');
             const logoutLink = document.getElementById('logout-link');
             const sidebarUserImg = document.getElementById('sidebar-user-img');
-            const COMPANY_LOGO_CACHE_KEY = 'sipet_logo_empresa_url';
             const USER_LOGO_CACHE_KEY = 'sipet_logo_usuario_url';
             try {
                 if (sidebarUserImg instanceof HTMLImageElement) {
-                    const cachedLogo = String(window.localStorage.getItem(COMPANY_LOGO_CACHE_KEY) || '').trim();
-                    if (cachedLogo) {
-                        sidebarUserImg.src = cachedLogo;
-                    }
+                    // El logo del sidebar siempre proviene de Identidad institucional (valor por defecto del template).
+                    sidebarUserImg.src = sidebarUserImg.dataset.default || sidebarUserImg.src;
+                    window.localStorage.removeItem('sipet_logo_empresa_url');
                 }
                 if (navbarAvatarImgEl instanceof HTMLImageElement) {
                     const cachedUserLogo = String(window.localStorage.getItem(USER_LOGO_CACHE_KEY) || '').trim();
@@ -379,35 +376,12 @@
                     const res = await fetch('/personalizar/estado', { headers: { Accept: 'application/json' } });
                     if (!res.ok) return;
                     const json = await res.json();
-                    const logoUrl = String(json?.assets?.logo_empresa?.url || '').trim();
-                    if (logoUrl) {
-                        sidebarUserImg.src = logoUrl;
-                        try {
-                            window.localStorage.setItem(COMPANY_LOGO_CACHE_KEY, logoUrl);
-                        } catch (e) {
-                            // Ignorar acceso a localStorage cuando no esté disponible.
-                        }
-                    } else if (sidebarUserImg.dataset.default) {
-                        sidebarUserImg.src = sidebarUserImg.dataset.default;
-                        try {
-                            window.localStorage.removeItem(COMPANY_LOGO_CACHE_KEY);
-                        } catch (e) {
-                            // Ignorar acceso a localStorage cuando no esté disponible.
-                        }
-                    }
                     const userLogoUrl = String(json?.assets?.logo_usuario?.url || '').trim();
                     if (navbarAvatarImgEl instanceof HTMLImageElement) {
                         if (userLogoUrl) {
                             navbarAvatarImgEl.src = userLogoUrl;
                             try {
                                 window.localStorage.setItem(USER_LOGO_CACHE_KEY, userLogoUrl);
-                            } catch (e) {
-                                // Ignorar acceso a localStorage cuando no esté disponible.
-                            }
-                        } else if (logoUrl) {
-                            navbarAvatarImgEl.src = logoUrl;
-                            try {
-                                window.localStorage.removeItem(USER_LOGO_CACHE_KEY);
                             } catch (e) {
                                 // Ignorar acceso a localStorage cuando no esté disponible.
                             }
@@ -1003,6 +977,30 @@
                     svg_defecto: { filenameId: 'asset-filename-svg-defecto', linkId: 'asset-link-svg-defecto', thumbId: 'asset-thumb-svg-defecto' }
                 };
                 const defaultAssetThumb = '/templates/icon/placeholder.svg';
+                const setLiveFavicon = (url) => {
+                    document.querySelectorAll('link[rel="icon"], link[rel="shortcut icon"]').forEach((linkEl) => {
+                        if (url) {
+                            linkEl.setAttribute('href', url);
+                        }
+                    });
+                };
+                const applyLiveAssetUrl = (field, url) => {
+                    const safeUrl = String(url || '').trim();
+                    if (!safeUrl) return;
+                    if (field === 'logo_empresa' && sidebarUserImg instanceof HTMLImageElement) {
+                        const currentDefault = String(sidebarUserImg.dataset.default || '').trim();
+                        if (currentDefault.includes('/personalizar/uploads/')) {
+                            sidebarUserImg.src = safeUrl;
+                            sidebarUserImg.dataset.default = safeUrl;
+                        }
+                    }
+                    if (field === 'logo_usuario' && navbarAvatarImgEl instanceof HTMLImageElement) {
+                        navbarAvatarImgEl.src = safeUrl;
+                    }
+                    if (field === 'favicon') {
+                        setLiveFavicon(safeUrl);
+                    }
+                };
                 const updatePreview = (id, value) => {
                     const preview = document.getElementById(id + '-preview');
                     if (preview) preview.style.background = value;
@@ -1162,27 +1160,10 @@
                         if (thumbEl instanceof HTMLImageElement) {
                             thumbEl.src = url || defaultAssetThumb;
                         }
-                    });
-                    const sidebarLogoEl = document.getElementById('sidebar-user-img');
-                    if (sidebarLogoEl instanceof HTMLImageElement) {
-                        const logoEmpresa = assets.logo_empresa || {};
-                        const logoUrl = String(logoEmpresa.url || '').trim();
-                        if (logoUrl) {
-                            sidebarLogoEl.src = logoUrl;
-                            try {
-                                window.localStorage.setItem(COMPANY_LOGO_CACHE_KEY, logoUrl);
-                            } catch (e) {
-                                // Ignorar acceso a localStorage cuando no esté disponible.
-                            }
-                        } else if (sidebarLogoEl.dataset.default) {
-                            sidebarLogoEl.src = sidebarLogoEl.dataset.default;
-                            try {
-                                window.localStorage.removeItem(COMPANY_LOGO_CACHE_KEY);
-                            } catch (e) {
-                                // Ignorar acceso a localStorage cuando no esté disponible.
-                            }
+                        if (url) {
+                            applyLiveAssetUrl(field, url);
                         }
-                    }
+                    });
                 };
                 const cargarEstadoAssets = async () => {
                     if (!assetsForm) return;
@@ -1276,13 +1257,15 @@
                                 }
                                 if (thumbEl instanceof HTMLImageElement && file.type && file.type.startsWith('image/')) {
                                     try {
-                                        thumbEl.src = URL.createObjectURL(file);
+                                        const tempUrl = URL.createObjectURL(file);
+                                        thumbEl.src = tempUrl;
+                                        applyLiveAssetUrl(field, tempUrl);
                                     } catch (e) {
                                         // Ignorar errores de vista previa local.
                                     }
                                 }
                             }
-                            showMessage('Archivo listo para guardar.', 'success');
+                            await guardarAssets();
                         });
                     });
                     guardarAssets = async function() {

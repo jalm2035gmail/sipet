@@ -4,10 +4,15 @@ import os
 from fastapi import APIRouter, Request, Body, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
 from typing import List, Dict, Set
-from fastapi_modulo.db import SessionLocal, DepartamentoOrganizacional
+from fastapi_modulo.db import SessionLocal, DepartamentoOrganizacional, Base, engine
 
 router = APIRouter()
 DEPARTAMENTOS_TEMPLATE_PATH = os.path.join("fastapi_modulo", "modulos", "empleados", "departamentos.html")
+
+
+def _ensure_departamentos_schema() -> None:
+    # Crea la tabla si no existe (producción sin migración previa).
+    Base.metadata.create_all(bind=engine, tables=[DepartamentoOrganizacional.__table__], checkfirst=True)
 
 
 def _render_departamentos_page(request: Request) -> HTMLResponse:
@@ -61,6 +66,7 @@ def _serialize_departamentos(rows: List[DepartamentoOrganizacional]) -> List[Dic
 
 @router.get("/api/inicio/departamentos")
 def listar_departamentos():
+    _ensure_departamentos_schema()
     db = SessionLocal()
     try:
         rows = (
@@ -109,6 +115,10 @@ async def guardar_departamentos(request: Request, data: dict = Body(...)):
             }
         )
 
+    if not cleaned_rows:
+        raise HTTPException(status_code=400, detail="No hay departamentos válidos para guardar")
+
+    _ensure_departamentos_schema()
     db = SessionLocal()
     try:
         db.query(DepartamentoOrganizacional).delete()
@@ -131,5 +141,8 @@ async def guardar_departamentos(request: Request, data: dict = Body(...)):
             .all()
         )
         return {"success": True, "data": _serialize_departamentos(rows)}
+    except Exception as exc:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error guardando departamentos: {exc}")
     finally:
         db.close()

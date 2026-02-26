@@ -155,13 +155,7 @@
       const areaTabs = document.querySelectorAll('.view-pill[data-view]');
       if (!areaView || !areaTabs.length) return;
 
-      const defaultAreasData = [
-        { name: 'Dirección General', parent: 'N/A', manager: 'Adriana Chávez Galeana', code: 'DIR-001', color: '#0f172a', status: 'Estratégico' },
-        { name: 'Operaciones', parent: 'Dirección General', manager: 'Pablo Rojas', code: 'OPE-010', color: '#1d4ed8', status: 'Activo' },
-        { name: 'Planeación', parent: 'Dirección General', manager: 'Lucía Ortega Moreno', code: 'PLA-020', color: '#0ea5e9', status: 'Activo' },
-        { name: 'Servicios', parent: 'Operaciones', manager: 'María Delgado', code: 'SER-030', color: '#16a34a', status: 'En revisión' },
-      ];
-      let areasData = defaultAreasData.map((row) => ({ ...row }));
+      let areasData = [];
       let createAreaMode = false;
       let selectedAreaCode = null;
       let lastSaveFeedback = { message: '', tone: '' };
@@ -204,7 +198,7 @@
         const clean = (Array.isArray(rows) ? rows : [])
           .map((row, index) => normalizeAreaRow(row, index))
           .filter((row) => row.name && row.code);
-        areasData = clean.length ? clean : defaultAreasData.map((row) => ({ ...row }));
+        areasData = clean;
       };
 
       const loadAreasData = async () => {
@@ -214,7 +208,7 @@
           if (!res.ok || json?.success === false) throw new Error();
           replaceAreasData(json?.data || []);
         } catch (_error) {
-          replaceAreasData(defaultAreasData);
+          replaceAreasData([]);
         }
       };
 
@@ -642,7 +636,13 @@
           .childrenMargin(() => 48)
           .linkYOffset(20)
           .setActiveNodeCentered(false)
-          .onNodeClick(() => {})
+          .onNodeClick((d) => {
+            const code = String(d?.data?.code || '').trim();
+            if (!code || code === 'ROOT') return;
+            createAreaMode = false;
+            selectedAreaCode = code;
+            setAreaView('form');
+          })
           .linkUpdate(function (d) {
             window.d3.select(this)
               .attr('stroke-width', 1.1)

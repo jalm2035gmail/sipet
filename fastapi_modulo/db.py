@@ -4,12 +4,26 @@ from sqlalchemy import create_engine, Column, String, Integer, DateTime
 from datetime import datetime
 
 def _resolve_database_url() -> str:
-    raw_url = (os.environ.get("DATABASE_URL") or "").strip()
+    raw_url = (
+        os.environ.get("DATABASE_URL")
+        or os.environ.get("POSTGRES_URL")
+        or os.environ.get("POSTGRESQL_URL")
+        or ""
+    ).strip()
     if raw_url:
         if raw_url.startswith("postgres://"):
             return raw_url.replace("postgres://", "postgresql://", 1)
         return raw_url
     app_env = (os.environ.get("APP_ENV") or os.environ.get("ENVIRONMENT") or "development").strip().lower()
+    is_prod_like = app_env in {"production", "prod"} or bool(
+        (os.environ.get("RAILWAY_ENVIRONMENT") or "").strip()
+        or (os.environ.get("RAILWAY_PROJECT_ID") or "").strip()
+    )
+    if is_prod_like:
+        raise RuntimeError(
+            "DATABASE_URL no está configurada en producción/Railway. "
+            "Define DATABASE_URL (PostgreSQL) para evitar fallback a SQLite local."
+        )
     default_sqlite_name = f"strategic_planning_{app_env}.db"
     sqlite_db_path = (os.environ.get("SQLITE_DB_PATH") or default_sqlite_name).strip()
     return f"sqlite:///./{sqlite_db_path}"

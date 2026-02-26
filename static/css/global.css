@@ -44,6 +44,7 @@ body {
 }
 .sidebar {
     width: 220px;
+    font-family: 'Inter';
     background: linear-gradient(
         180deg,
         var(--sidebar-top, #1f2a3d),

@@ -44,6 +44,34 @@
             color: #0f172a; 
             background: #fff; 
         }
+        .emp-list-actions {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .emp-list-btn {
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            background: #ffffff;
+            color: #0f172a;
+            padding: 4px;
+            width: 30px;
+            height: 30px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+        .emp-list-btn img {
+            width: 16px;
+            height: 16px;
+            object-fit: contain;
+            display: block;
+        }
+        .emp-list-btn.delete {
+            border-color: #ef4444;
+            color: #ef4444;
+        }
         .emp-table tbody tr:nth-child(even) td { 
             background: #f3f4f6; 
         }
@@ -424,10 +452,11 @@
                         <th>Rol</th>
                         <th>Departamento</th>
                         <th>Estado</th>
+                        <th>Acciones</th>
                     </tr>
                 </thead>
                 <tbody id="empleados-tbody">
-                    <tr><td colspan="6" class="emp-empty">Cargando...</td></tr>
+                    <tr><td colspan="7" class="emp-empty">Cargando...</td></tr>
                 </tbody>
             </table>
         </article>
@@ -606,7 +635,7 @@
             var listBody = document.getElementById('empleados-tbody') || tbody;
             if (!listBody) return;
             if (!rows || !rows.length) {
-                listBody.innerHTML = '<tr><td colspan="6" class="emp-empty">Sin registros.</td></tr>';
+                listBody.innerHTML = '<tr><td colspan="7" class="emp-empty">Sin registros.</td></tr>';
                 return;
             }
             
@@ -620,9 +649,48 @@
                     '<td>' + esc(u.rol) + '</td>' +
                     '<td>' + esc(u.departamento) + '</td>' +
                     '<td>' + esc(u.estado) + '</td>' +
+                    '<td>' +
+                        '<div class="emp-list-actions">' +
+                            '<button type="button" class="emp-list-btn" data-list-action="edit" data-index="' + i + '" title="Editar">' +
+                                '<img src="/icon/editar.svg" alt="Editar">' +
+                            '</button>' +
+                            (viewerCanViewAll
+                                ? '<button type="button" class="emp-list-btn delete" data-list-action="delete" data-index="' + i + '" title="Eliminar">' +
+                                    '<img src="/icon/eliminar.svg" alt="Eliminar">' +
+                                  '</button>'
+                                : ''
+                            ) +
+                        '</div>' +
+                    '</td>' +
                 '</tr>';
             }
             listBody.innerHTML = html;
+            listBody.querySelectorAll('button[data-list-action="edit"]').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    var idx = Number(btn.getAttribute('data-index'));
+                    if (Number.isNaN(idx) || idx < 0 || idx >= empleadosData.length) return;
+                    setView('form');
+                    setTimeout(function() { fillFormWithColaborador(empleadosData[idx]); }, 80);
+                });
+            });
+            listBody.querySelectorAll('button[data-list-action="delete"]').forEach(function(btn) {
+                btn.addEventListener('click', async function() {
+                    var idx = Number(btn.getAttribute('data-index'));
+                    var user = (!Number.isNaN(idx) && idx >= 0 && idx < empleadosData.length) ? empleadosData[idx] : null;
+                    if (!user || !user.id) return;
+                    if (!confirm('¿Eliminar colaborador "' + (user.nombre || user.usuario || 'seleccionado') + '"?')) return;
+                    try {
+                        var res = await fetch('/api/colaboradores/' + encodeURIComponent(String(user.id)), { method: 'DELETE' });
+                        var json = await res.json().catch(function() { return {}; });
+                        if (!res.ok || json?.success === false) {
+                            throw new Error((json && (json.error || json.detail)) || 'No se pudo eliminar');
+                        }
+                        await load();
+                    } catch (err) {
+                        alert((err && err.message) ? err.message : 'Error al eliminar.');
+                    }
+                });
+            });
         }
         
         // Renderizar vista de formulario
@@ -665,7 +733,7 @@
                         </div>
                         <div class="emp-field">
                             <label for="colab-correo">Correo electrónico</label>
-                            <input id="colab-correo" type="text" name="correo" required>
+                            <input id="colab-correo" type="text" name="correo">
                         </div>
                         <div class="emp-field">
                             <label for="departamento-select">Área organizacional</label>
@@ -796,8 +864,8 @@
                         rol: (currentAccessState.rol || 'usuario'),
                         menu_blocks: Array.isArray(currentAccessState.menu_blocks) ? currentAccessState.menu_blocks : []
                     };
-                    if (!payload.nombre || !payload.usuario || !payload.correo) {
-                        if (formMsg) formMsg.textContent = 'Nombre, usuario y correo son obligatorios.';
+                    if (!payload.nombre || !payload.usuario) {
+                        if (formMsg) formMsg.textContent = 'Nombre y usuario son obligatorios.';
                         return;
                     }
                     if (formMsg) formMsg.textContent = 'Guardando...';
@@ -968,6 +1036,7 @@
                                 '<th>Rol</th>' +
                                 '<th>Departamento</th>' +
                                 '<th>Estado</th>' +
+                                '<th>Acciones</th>' +
                             '</tr>' +
                         '</thead>' +
                         '<tbody id="empleados-tbody"></tbody>' +

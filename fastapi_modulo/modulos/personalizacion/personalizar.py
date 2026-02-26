@@ -142,7 +142,9 @@ def personalizar_upload(filename: str):
 
 
 @router.post("/personalizar/restablecer-assets")
-def restablecer_assets() -> JSONResponse:
+def restablecer_assets(request: Request) -> JSONResponse:
+    from fastapi_modulo.main import require_superadmin
+    require_superadmin(request)
     restored = []
     for field in ASSET_FIELDS:
         if _restore_active_from_default(field):
@@ -178,7 +180,8 @@ async def guardar_personalizacion(
     remove_svg_fondo: str = Form("0"),
     remove_svg_defecto: str = Form("0"),
 ):
-    del request
+    from fastapi_modulo.main import require_superadmin
+    require_superadmin(request)
     del global_bg, section_bg, navbar_bg, navbar_text, sidebar_top, sidebar_bottom
     del sidebar_text, sidebar_icon, sidebar_hover, field_color
     del text_title, text_description, text_section_title, text_body
@@ -223,6 +226,8 @@ async def guardar_personalizacion(
 
 @router.get("/personalizar", response_class=HTMLResponse)
 def personalizar_page(request: Request):
+    from fastapi_modulo.main import require_superadmin
+    require_superadmin(request)
     with open(Path(__file__).resolve().parent / "personalizar.html", encoding="utf-8") as f:
         panel_html = f.read()
     section_label = ""

@@ -6,10 +6,12 @@ from fastapi import APIRouter, Body, HTTPException, Request
 from fastapi.responses import HTMLResponse
 
 router = APIRouter()
+APP_ENV_DEFAULT = (os.environ.get("APP_ENV") or os.environ.get("ENVIRONMENT") or "development").strip().lower()
+RUNTIME_STORE_DIR = (os.environ.get("RUNTIME_STORE_DIR") or f"fastapi_modulo/runtime_store/{APP_ENV_DEFAULT}").strip()
 
 REGIONES_STORE_PATH = (
     os.environ.get("REGIONES_STORE_PATH")
-    or os.path.join("fastapi_modulo/runtime_store/development", "regiones_store.json")
+    or os.path.join(RUNTIME_STORE_DIR, "regiones_store.json")
 )
 REGIONES_TEMPLATE_PATH = os.path.join("fastapi_modulo", "templates", "modulos", "empleados", "regiones.html")
 

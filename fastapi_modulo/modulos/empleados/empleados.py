@@ -6,11 +6,16 @@ from typing import Dict, Any, List
 
 from fastapi import APIRouter, Request, Body, UploadFile, File, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
+from sqlalchemy.exc import IntegrityError
 from fastapi_modulo.db import SessionLocal
 
 router = APIRouter()
 COLAB_UPLOAD_DIR = Path("fastapi_modulo/uploads/colaboradores")
-COLAB_META_PATH = Path("fastapi_modulo/runtime_store/development/colaboradores_meta.json")
+_APP_ENV = (os.environ.get("APP_ENV") or os.environ.get("ENVIRONMENT") or "development").strip().lower()
+_RUNTIME_STORE_DIR = (os.environ.get("RUNTIME_STORE_DIR") or f"fastapi_modulo/runtime_store/{_APP_ENV}").strip()
+COLAB_META_PATH = Path(
+    os.environ.get("COLAB_META_PATH") or os.path.join(_RUNTIME_STORE_DIR, "colaboradores_meta.json")
+)
 
 
 def _load_colab_meta() -> Dict[str, Dict[str, Any]]:
@@ -225,9 +230,9 @@ def api_guardar_colaborador(request: Request, data: dict = Body(...)):
         menu_blocks = [raw_menu_blocks.strip()]
     menu_blocks = sorted(set(menu_blocks))
 
-    if not nombre or not usuario_login or not correo:
+    if not nombre or not usuario_login:
         return JSONResponse(
-            {"success": False, "error": "Nombre, usuario y correo son obligatorios"},
+            {"success": False, "error": "Nombre y usuario son obligatorios"},
             status_code=400,
         )
 
@@ -238,29 +243,31 @@ def api_guardar_colaborador(request: Request, data: dict = Body(...)):
             return JSONResponse({"success": False, "error": "Rol no encontrado"}, status_code=404)
         rol_id = target_role.id
         user_hash = _sensitive_lookup_hash(usuario_login)
-        email_hash = _sensitive_lookup_hash(correo)
+        email_hash = _sensitive_lookup_hash(correo) if correo else None
 
         existing = None
         if incoming_id:
             existing = db.query(Usuario).filter(Usuario.id == incoming_id).first()
         if not existing:
-            existing = (
-                db.query(Usuario)
-                .filter((Usuario.usuario_hash == user_hash) | (Usuario.correo_hash == email_hash))
-                .first()
-            )
+            existing_query = db.query(Usuario).filter(Usuario.usuario_hash == user_hash)
+            if email_hash:
+                existing_query = db.query(Usuario).filter(
+                    (Usuario.usuario_hash == user_hash) | (Usuario.correo_hash == email_hash)
+                )
+            existing = existing_query.first()
         if not existing:
-            existing = (
-                db.query(Usuario)
-                .filter((Usuario.usuario == usuario_login) | (Usuario.correo == correo))
-                .first()
-            )
+            existing_plain_query = db.query(Usuario).filter(Usuario.usuario == usuario_login)
+            if correo:
+                existing_plain_query = db.query(Usuario).filter(
+                    (Usuario.usuario == usuario_login) | (Usuario.correo == correo)
+                )
+            existing = existing_plain_query.first()
 
         if existing:
             existing.nombre = nombre
             existing.usuario = _encrypt_sensitive(usuario_login)
             existing.usuario_hash = user_hash
-            existing.correo = _encrypt_sensitive(correo)
+            existing.correo = _encrypt_sensitive(correo) if correo else None
             existing.correo_hash = email_hash
             existing.departamento = departamento
             existing.puesto = puesto
@@ -281,6 +288,7 @@ def api_guardar_colaborador(request: Request, data: dict = Body(...)):
             _save_colab_meta(meta)
             return {
                 "success": True,
+                "message": "Colaborador actualizado correctamente",
                 "data": {
                     "id": existing.id,
                     "nombre": existing.nombre or "",
@@ -302,7 +310,7 @@ def api_guardar_colaborador(request: Request, data: dict = Body(...)):
             nombre=nombre,
             usuario=_encrypt_sensitive(usuario_login),
             usuario_hash=user_hash,
-            correo=_encrypt_sensitive(correo),
+            correo=_encrypt_sensitive(correo) if correo else None,
             correo_hash=email_hash,
             contrasena=hash_password("Temp1234!"),
             departamento=departamento,
@@ -325,6 +333,7 @@ def api_guardar_colaborador(request: Request, data: dict = Body(...)):
         _save_colab_meta(meta)
         return {
             "success": True,
+            "message": "Colaborador creado correctamente",
             "data": {
                 "id": nuevo.id,
                 "nombre": nuevo.nombre or "",
@@ -341,6 +350,24 @@ def api_guardar_colaborador(request: Request, data: dict = Body(...)):
                 "estado": "Activo",
             },
         }
+    except IntegrityError:
+        db.rollback()
+        return JSONResponse(
+            {
+                "success": False,
+                "error": "No se pudo guardar: el usuario o correo ya existe.",
+            },
+            status_code=409,
+        )
+    except Exception as exc:
+        db.rollback()
+        return JSONResponse(
+            {
+                "success": False,
+                "error": f"No se pudo guardar: {exc}",
+            },
+            status_code=500,
+        )
     finally:
         db.close()
 

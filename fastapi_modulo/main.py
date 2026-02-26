@@ -3,11 +3,13 @@ import re
 import json
 import base64
 import sqlite3
+import glob
 import secrets
 import hashlib
 import hmac
 import time
 import unicodedata
+import shutil
 from datetime import datetime, date as Date, timedelta
 from urllib.parse import urlparse
 from typing import Any, Dict, List, Optional
@@ -44,7 +46,7 @@ from fastapi_modulo.modulos.plantillas.plantillas_forms import router as plantil
 from fastapi_modulo.modulos.diagnostico.diagnostico import router as diagnostico_router
 from fastapi_modulo.modulos.kpis.kpis import router as kpis_router
 from fastapi import Response, Form, Body
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi import Depends
@@ -63,7 +65,11 @@ date = Date
 
 HIDDEN_SYSTEM_USERS = {"0konomiyaki"}
 APP_ENV_DEFAULT = (os.environ.get("APP_ENV") or os.environ.get("ENVIRONMENT") or "development").strip().lower()
-IDENTIDAD_LOGIN_CONFIG_PATH = "fastapi_modulo/identidad_login.json"
+RUNTIME_STORE_DIR = (os.environ.get("RUNTIME_STORE_DIR") or f"fastapi_modulo/runtime_store/{APP_ENV_DEFAULT}").strip()
+IDENTIDAD_LOGIN_CONFIG_PATH = (
+    os.environ.get("IDENTIDAD_LOGIN_CONFIG_PATH")
+    or os.path.join(RUNTIME_STORE_DIR, "identidad_login.json")
+).strip()
 IDENTIDAD_LOGIN_IMAGE_DIR = "fastapi_modulo/templates/imagenes"
 DOCUMENTS_UPLOAD_DIR = "fastapi_modulo/uploads/documentos"
 DEFAULT_LOGIN_IDENTITY = {
@@ -74,7 +80,6 @@ DEFAULT_LOGIN_IDENTITY = {
     "company_short_name": "AVAN",
     "login_message": "Incrementando el nivel de eficiencia",
 }
-RUNTIME_STORE_DIR = (os.environ.get("RUNTIME_STORE_DIR") or f"fastapi_modulo/runtime_store/{APP_ENV_DEFAULT}").strip()
 PLANTILLAS_STORE_PATH = (os.environ.get("PLANTILLAS_STORE_PATH") or os.path.join(RUNTIME_STORE_DIR, "plantillas_store.json")).strip()
 AUTH_COOKIE_NAME = "auth_session"
 SIPET_PREMIUM_UI_TEMPLATE_CSS = dedent("""
@@ -260,7 +265,7 @@ def normalize_role_name(role_name: Optional[str]) -> str:
         return "usuario"
     if normalized in {"superadmin", "super_admin", "super_administrador", "superadministrador"}:
         return "superadministrador"
-    if normalized in {"admin", "administrador"}:
+    if normalized in {"admin", "administrador", "administador", "administrdor", "admnistrador"}:
         return "administrador"
     return ROLE_ALIASES.get(normalized, normalized)
 
@@ -575,6 +580,37 @@ def _build_login_asset_url(filename: Optional[str], default_filename: str) -> st
     return f"/templates/imagenes/{selected}?v={version}"
 
 
+def _resolve_personalizacion_logo_empresa_url() -> str:
+    uploads_dir = os.path.join("fastapi_modulo", "modulos", "personalizacion", "uploads")
+    candidates = sorted(
+        glob.glob(os.path.join(uploads_dir, "logo_empresa.*")),
+        key=lambda p: os.path.getmtime(p) if os.path.exists(p) else 0,
+        reverse=True,
+    )
+    if not candidates:
+        return ""
+    selected_path = candidates[0]
+    filename = os.path.basename(selected_path)
+    version = int(os.path.getmtime(selected_path)) if os.path.exists(selected_path) else 0
+    return f"/personalizar/uploads/{filename}?v={version}"
+
+
+def _resolve_sidebar_logo_url(login_identity: Dict[str, str]) -> str:
+    identity_data = _load_login_identity()
+    identity_logo_filename = str(identity_data.get("logo_filename") or "").strip()
+    identity_logo_url = str(login_identity.get("login_logo_url") or "").strip()
+
+    # Si el administrador configuró un logo en Identidad institucional, tiene prioridad.
+    if identity_logo_filename and identity_logo_filename != DEFAULT_LOGIN_IDENTITY["logo_filename"]:
+        return identity_logo_url or "/templates/icon/icon.png"
+
+    # Si Identidad institucional no está personalizado, usa el logo por defecto de Ajustes/Colores.
+    default_logo_url = _resolve_personalizacion_logo_empresa_url()
+    if default_logo_url:
+        return default_logo_url
+    return identity_logo_url or "/templates/icon/icon.png"
+
+
 def _get_login_identity_context() -> Dict[str, str]:
     data = _load_login_identity()
     return {
@@ -704,6 +740,7 @@ def _render_backend_base(
     rendered_view_buttons = view_buttons_html or build_view_buttons_html(view_buttons)
     can_manage_personalization = is_superadmin(request)
     login_identity = _get_login_identity_context()
+    sidebar_logo_url = _resolve_sidebar_logo_url(login_identity)
     resolved_title = (page_title or title or "Sin titulo").strip()
     resolved_description = (page_description or description or subtitle or "Descripcion pendiente").strip()
     context = {
@@ -724,6 +761,8 @@ def _render_backend_base(
         "colores": get_colores_context(),
         "can_manage_personalization": can_manage_personalization,
         "app_favicon_url": login_identity.get("login_favicon_url"),
+        "login_logo_url": login_identity.get("login_logo_url"),
+        "sidebar_logo_url": sidebar_logo_url,
     }
     return templates.TemplateResponse("base.html", context)
 
@@ -768,11 +807,25 @@ def backend_screen(
 
 # Configuración de BD por entorno (Railway/Local)
 def _resolve_database_url() -> str:
-    raw_url = (os.environ.get("DATABASE_URL") or "").strip()
+    raw_url = (
+        os.environ.get("DATABASE_URL")
+        or os.environ.get("POSTGRES_URL")
+        or os.environ.get("POSTGRESQL_URL")
+        or ""
+    ).strip()
     if raw_url:
         if raw_url.startswith("postgres://"):
             return raw_url.replace("postgres://", "postgresql://", 1)
         return raw_url
+    is_prod_like = APP_ENV_DEFAULT in {"production", "prod"} or bool(
+        (os.environ.get("RAILWAY_ENVIRONMENT") or "").strip()
+        or (os.environ.get("RAILWAY_PROJECT_ID") or "").strip()
+    )
+    if is_prod_like:
+        raise RuntimeError(
+            "DATABASE_URL no está configurada en producción/Railway. "
+            "Define DATABASE_URL (PostgreSQL) para evitar fallback a SQLite local."
+        )
     default_sqlite_name = f"strategic_planning_{APP_ENV_DEFAULT}.db"
     sqlite_db_path = (os.environ.get("SQLITE_DB_PATH") or default_sqlite_name).strip()
     return f"sqlite:///./{sqlite_db_path}"
@@ -5322,6 +5375,125 @@ def configura_imagen():
     return "<h2>Configuración de imagen (template)</h2>"
 
 
+def _render_database_tools_page(request: Request) -> HTMLResponse:
+    from urllib.parse import quote_plus
+
+    msg = (request.query_params.get("msg") or "").strip()
+    status = (request.query_params.get("status") or "").strip().lower()
+    flash_html = ""
+    if msg:
+        tone = "#166534" if status == "ok" else "#b91c1c"
+        flash_html = f"<p style='margin:0 0 12px;color:{tone};font-weight:700'>{escape(msg)}</p>"
+    sqlite_note = ""
+    if not IS_SQLITE_DATABASE:
+        sqlite_note = (
+            "<p style='margin:0 0 12px;color:#92400e;font-weight:600'>"
+            "La exportación/importación por archivo aplica para SQLite."
+            "</p>"
+        )
+
+    content = f"""
+    <section style="background:#fff;border:1px solid #dbe3ef;border-radius:14px;padding:16px;display:grid;gap:12px;max-width:760px;">
+        <h3 style="margin:0;font-size:1.12rem;color:#0f172a;">Respaldo de base de datos</h3>
+        <p style="margin:0;color:#475569;">Exporta e importa un archivo de base de datos para prevenir pérdida de información.</p>
+        {flash_html}
+        {sqlite_note}
+        <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;">
+            <a href="/empresa/base-datos/exportar" style="display:inline-flex;align-items:center;justify-content:center;padding:10px 14px;border-radius:10px;border:1px solid #cbd5e1;background:#fff;color:#0f172a;text-decoration:none;font-weight:700;">
+                Exportar BD
+            </a>
+            <form method="post" action="/empresa/base-datos/importar" enctype="multipart/form-data" style="display:inline-flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                <input type="file" name="db_file" accept=".db,.sqlite,.sqlite3,application/octet-stream" required style="padding:8px;border:1px solid #cbd5e1;border-radius:10px;">
+                <button type="submit" style="padding:10px 14px;border-radius:10px;border:1px solid #0f172a;background:#0f172a;color:#fff;font-weight:700;cursor:pointer;">
+                    Importar BD
+                </button>
+            </form>
+        </div>
+    </section>
+    """
+    return render_backend_page(
+        request,
+        title="Base de datos",
+        description="Exporta e importa respaldos de la base de datos.",
+        content=content,
+        hide_floating_actions=True,
+        show_page_header=True,
+    )
+
+
+@app.get("/empresa/base-datos", response_class=HTMLResponse)
+def empresa_base_datos_page(request: Request):
+    require_admin_or_superadmin(request)
+    return _render_database_tools_page(request)
+
+
+@app.get("/empresa/base-datos/exportar")
+def empresa_base_datos_exportar(request: Request):
+    require_admin_or_superadmin(request)
+    if not IS_SQLITE_DATABASE or not PRIMARY_DB_PATH:
+        raise HTTPException(status_code=400, detail="Exportación por archivo disponible solo en SQLite")
+    db_path = os.path.abspath(PRIMARY_DB_PATH)
+    if not os.path.exists(db_path):
+        raise HTTPException(status_code=404, detail="No se encontró el archivo de base de datos")
+    filename = f"sipet_backup_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.db"
+    return FileResponse(db_path, media_type="application/octet-stream", filename=filename)
+
+
+@app.post("/empresa/base-datos/importar", response_class=HTMLResponse)
+async def empresa_base_datos_importar(request: Request, db_file: UploadFile = File(...)):
+    require_admin_or_superadmin(request)
+    if not IS_SQLITE_DATABASE or not PRIMARY_DB_PATH:
+        return RedirectResponse(
+            url="/empresa/base-datos?status=error&msg=Importación%20por%20archivo%20solo%20disponible%20en%20SQLite",
+            status_code=303,
+        )
+    db_path = os.path.abspath(PRIMARY_DB_PATH)
+    ext = os.path.splitext((db_file.filename or "").lower())[1]
+    if ext not in {".db", ".sqlite", ".sqlite3"}:
+        return RedirectResponse(
+            url="/empresa/base-datos?status=error&msg=Archivo%20inválido.%20Usa%20.db%2C%20.sqlite%20o%20.sqlite3",
+            status_code=303,
+        )
+    raw = await db_file.read()
+    if not raw:
+        return RedirectResponse(
+            url="/empresa/base-datos?status=error&msg=Archivo%20vacío",
+            status_code=303,
+        )
+    tmp_path = f"{db_path}.upload.tmp"
+    backup_path = f"{db_path}.bak"
+    try:
+        with open(tmp_path, "wb") as fh:
+            fh.write(raw)
+        with sqlite3.connect(tmp_path) as conn:
+            conn.execute("PRAGMA schema_version;").fetchone()
+
+        engine.dispose()
+        try:
+            from fastapi_modulo import db as core_db
+            core_db.engine.dispose()
+        except Exception:
+            pass
+
+        if os.path.exists(db_path):
+            shutil.copy2(db_path, backup_path)
+        os.replace(tmp_path, db_path)
+        return RedirectResponse(
+            url="/empresa/base-datos?status=ok&msg=Base%20de%20datos%20importada%20correctamente",
+            status_code=303,
+        )
+    except Exception as exc:
+        if os.path.exists(tmp_path):
+            try:
+                os.remove(tmp_path)
+            except OSError:
+                pass
+        return RedirectResponse(
+            url=f"/empresa/base-datos?status=error&msg={quote_plus(str(exc) or 'Error al importar base de datos')}",
+            status_code=303,
+        )
+
+
 def _render_identidad_institucional_page(request: Request) -> HTMLResponse:
     identity = _load_login_identity()
     favicon_url = _build_login_asset_url(identity.get("favicon_filename"), DEFAULT_LOGIN_IDENTITY["favicon_filename"])
@@ -5732,13 +5904,13 @@ def _render_identidad_institucional_page(request: Request) -> HTMLResponse:
 
 @app.get("/identidad-institucional", response_class=HTMLResponse)
 def identidad_institucional_page(request: Request):
-    require_superadmin(request)
+    require_admin_or_superadmin(request)
     return _render_identidad_institucional_page(request)
 
 
 @app.get("/identidad-institucional/", response_class=HTMLResponse)
 def identidad_institucional_page_slash(request: Request):
-    require_superadmin(request)
+    require_admin_or_superadmin(request)
     return RedirectResponse(url="/identidad-institucional", status_code=307)
 
 
@@ -5756,7 +5928,7 @@ async def identidad_institucional_save(
     remove_desktop: str = Form("0"),
     remove_mobile: str = Form("0"),
 ):
-    require_superadmin(request)
+    require_admin_or_superadmin(request)
     current = _load_login_identity()
     current["company_short_name"] = company_short_name.strip() or DEFAULT_LOGIN_IDENTITY["company_short_name"]
     current["login_message"] = login_message.strip() or DEFAULT_LOGIN_IDENTITY["login_message"]
