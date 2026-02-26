@@ -1,4 +1,6 @@
 from html import escape
+import re
+import unicodedata
 
 from fastapi import APIRouter, Form, HTTPException, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -155,6 +157,15 @@ def roles_page(request: Request):
 
 def _require_superadmin(request: Request) -> None:
     role = str(getattr(request.state, "user_role", "") or "").strip().lower()
+    if not role:
+        role = str(request.cookies.get("user_role") or "").strip().lower()
+    role = unicodedata.normalize("NFKD", role)
+    role = "".join(ch for ch in role if not unicodedata.combining(ch))
+    role = re.sub(r"[^a-z0-9]+", "_", role).strip("_")
+    if role in {"superadmin", "super_admin", "super_administrador", "superadministrador"}:
+        role = "superadministrador"
+    else:
+        role = ROLE_ALIASES.get(role, role)
     if role != "superadministrador":
         raise HTTPException(status_code=403, detail="Acceso solo para superadministrador")
 
@@ -164,7 +175,10 @@ def _require_superadmin(request: Request) -> None:
 @router.get("/api/v1/personalizacion/roles-permisos", response_class=HTMLResponse)
 @router.get("/personalizacion/roles-permisos", response_class=HTMLResponse)
 def roles_permisos_page(request: Request):
-    _require_superadmin(request)
+    try:
+        _require_superadmin(request)
+    except HTTPException:
+        return RedirectResponse(url="/roles", status_code=status.HTTP_303_SEE_OTHER)
     ensure_default_roles()
     db = SessionLocal()
     try:

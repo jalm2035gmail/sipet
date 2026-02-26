@@ -226,7 +226,10 @@
         });
         const json = await res.json().catch(() => ({}));
         if (!res.ok || json?.success === false) {
-          throw new Error('No se pudieron guardar departamentos');
+          const backendMessage = String(
+            json?.error || json?.detail || json?.message || ''
+          ).trim();
+          throw new Error(backendMessage || 'No se pudieron guardar departamentos');
         }
         replaceAreasData(json?.data || []);
       };

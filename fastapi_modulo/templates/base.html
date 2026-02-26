@@ -45,6 +45,18 @@
             </div>
         </div>
         <nav>
+            <details class="sidebar-block">
+                <summary>
+                    <span class="sidebar-main-left">
+                        <span class="sidebar-main-icon" style="--icon-src: url('/icon/inicio.svg');" aria-hidden="true"></span>
+                        <span class="sidebar-main-label">Inicio</span>
+                    </span>
+                    <span class="sidebar-main-caret">▾</span>
+                </summary>
+                <div class="sidebar-submenu">
+                    <a href="/inicio">Inicio</a>
+                </div>
+            </details>
             <details class="sidebar-block" open>
                 <summary>
                     <span class="sidebar-main-left">
@@ -58,6 +70,28 @@
                     <a href="/inicio/regiones">Regiones</a>
                     <a href="/inicio/sucursales">Sucursales</a>
                     <a href="/inicio/colaboradores">Colaboradores</a>
+                </div>
+            </details>
+            <details class="sidebar-block">
+                <summary>
+                    <span class="sidebar-main-left">
+                        <span class="sidebar-main-icon" style="--icon-src: url('/icon/plan.svg');" aria-hidden="true"></span>
+                        <span class="sidebar-main-label">Estrategia y táctica</span>
+                    </span>
+                    <span class="sidebar-main-caret">▾</span>
+                </summary>
+                <div class="sidebar-submenu">
+                    <details class="sidebar-submenu-group">
+                        <summary>Diagnóstico</summary>
+                        <div class="sidebar-submenu-level3">
+                            <a href="/diagnostico/foda">FODA</a>
+                            <a href="/diagnostico/pestel">PESTEL</a>
+                            <a href="/diagnostico/porter">PORTER</a>
+                            <a href="/diagnostico/percepcion-cliente">Percepción del cliente</a>
+                        </div>
+                    </details>
+                    <a href="/planes">Plan estratégico</a>
+                    <a href="/poa">POA</a>
                 </div>
             </details>
             <details class="sidebar-block">
@@ -97,29 +131,13 @@
             <details class="sidebar-block">
                 <summary>
                     <span class="sidebar-main-left">
-                        <span class="sidebar-main-icon" style="--icon-src: url('/icon/plan.svg');" aria-hidden="true"></span>
-                        <span class="sidebar-main-label">Planificación</span>
+                        <span class="sidebar-main-icon" style="--icon-src: url('/icon/inicio.svg');" aria-hidden="true"></span>
+                        <span class="sidebar-main-label">Control y segumiento</span>
                     </span>
                     <span class="sidebar-main-caret">▾</span>
                 </summary>
                 <div class="sidebar-submenu">
-                    <a href="/planes">Plan estratégico</a>
-                    <a href="/poa">POA</a>
-                </div>
-            </details>
-            <details class="sidebar-block">
-                <summary>
-                    <span class="sidebar-main-left">
-                        <span class="sidebar-main-icon" style="--icon-src: url('/icon/diagnostico.svg');" aria-hidden="true"></span>
-                        <span class="sidebar-main-label">Diagnóstico</span>
-                    </span>
-                    <span class="sidebar-main-caret">▾</span>
-                </summary>
-                <div class="sidebar-submenu">
-                    <a href="/diagnostico/foda">FODA</a>
-                    <a href="/diagnostico/pestel">PESTEL</a>
-                    <a href="/diagnostico/porter">PORTER</a>
-                    <a href="/diagnostico/percepcion-cliente">Percepción del cliente</a>
+                    <a href="/control-seguimiento">Control y segumiento</a>
                 </div>
             </details>
             <details class="sidebar-block">
@@ -173,6 +191,7 @@
                     <a href="/plantillas/constructor">Constructor de formularios</a>
                 </div>
             </details>
+            {% if (request.state.user_role | default('')) in ['superadministrador', 'superadmin'] %}
             <details class="sidebar-block">
                 <summary>
                     <span class="sidebar-main-left">
@@ -187,6 +206,7 @@
                     <a href="/membresia">Membresía</a>
                 </div>
             </details>
+            {% endif %}
         </nav>
         <div class="sidebar-notifications-panel" id="sidebar-notifications-panel" aria-hidden="true">
             <div class="sidebar-notifications-header">

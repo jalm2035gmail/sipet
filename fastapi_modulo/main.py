@@ -250,9 +250,18 @@ TOTP_ALLOWED_DRIFT_STEPS = int((os.environ.get("TOTP_ALLOWED_DRIFT_STEPS") or "1
 
 
 def normalize_role_name(role_name: Optional[str]) -> str:
-    normalized = (role_name or "").strip().lower()
+    raw = (role_name or "").strip().lower()
+    if not raw:
+        return "usuario"
+    normalized = unicodedata.normalize("NFKD", raw)
+    normalized = "".join(ch for ch in normalized if not unicodedata.combining(ch))
+    normalized = re.sub(r"[^a-z0-9]+", "_", normalized).strip("_")
     if not normalized:
         return "usuario"
+    if normalized in {"superadmin", "super_admin", "super_administrador", "superadministrador"}:
+        return "superadministrador"
+    if normalized in {"admin", "administrador"}:
+        return "administrador"
     return ROLE_ALIASES.get(normalized, normalized)
 
 
@@ -1792,6 +1801,7 @@ async def enforce_backend_login(request: Request, call_next):
         or path in public_paths
         or path.startswith("/api/public/")
         or path.startswith("/web/passkey/")
+        or path.startswith("/identidad-institucional")
         or path.startswith("/templates/")
         or path.startswith("/docs/")
         or path.startswith("/redoc/")
@@ -5255,19 +5265,49 @@ def listar_usuarios_sanitizados(request: Request):
 
 @app.get("/inicio", response_class=HTMLResponse)
 def inicio_page(request: Request):
+    login_identity = _get_login_identity_context()
+    logo_url = (login_identity.get("login_logo_url") or "/templates/icon/icon.png").strip() or "/templates/icon/icon.png"
+    no_access_content = f"""
+    <section style="width:100%;min-height:70vh;background:#ffffff;border-radius:16px;padding:24px;box-sizing:border-box;">
+        <div style="display:flex;align-items:flex-start;justify-content:flex-start;">
+            <img src="{escape(logo_url)}" alt="Logo empresa" style="max-width:180px;max-height:72px;object-fit:contain;">
+        </div>
+        <div style="min-height:56vh;display:flex;align-items:center;justify-content:center;text-align:center;color:#0f172a;font-size:28px;font-weight:700;padding:16px;">
+            No tiene acceso, comuníquese con el administrador
+        </div>
+    </section>
+    """
     return render_backend_page(
         request,
         title="Inicio",
-        description="Tablero de control estratégico y táctico",
-        content=INICIO_BSC_HTML,
+        description="",
+        content=no_access_content,
         hide_floating_actions=True,
-        show_page_header=True,
-        view_buttons=[
-            {"label": "Formulario", "icon": "/templates/icon/formulario.svg", "view": "form"},
-            {"label": "Lista", "icon": "/templates/icon/list.svg", "view": "list"},
-            {"label": "Kanban", "icon": "/templates/icon/kanban.svg", "view": "kanban"},
-            {"label": "Dashboard", "icon": "/templates/icon/tablero.svg", "view": "dashboard", "active": True},
-        ],
+        show_page_header=False,
+    )
+
+
+@app.get("/control-seguimiento", response_class=HTMLResponse)
+def control_seguimiento_page(request: Request):
+    login_identity = _get_login_identity_context()
+    logo_url = (login_identity.get("login_logo_url") or "/templates/icon/icon.png").strip() or "/templates/icon/icon.png"
+    no_access_content = f"""
+    <section style="width:100%;min-height:70vh;background:#ffffff;border-radius:16px;padding:24px;box-sizing:border-box;">
+        <div style="display:flex;align-items:flex-start;justify-content:flex-start;">
+            <img src="{escape(logo_url)}" alt="Logo empresa" style="max-width:180px;max-height:72px;object-fit:contain;">
+        </div>
+        <div style="min-height:56vh;display:flex;align-items:center;justify-content:center;text-align:center;color:#0f172a;font-size:28px;font-weight:700;padding:16px;">
+            No tiene acceso, comuníquese con el administrador
+        </div>
+    </section>
+    """
+    return render_backend_page(
+        request,
+        title="Control y segumiento",
+        description="",
+        content=no_access_content,
+        hide_floating_actions=True,
+        show_page_header=False,
     )
 
 
