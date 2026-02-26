@@ -4,9 +4,11 @@ from datetime import datetime, timedelta
 from textwrap import dedent
 from typing import Any, Dict, List, Set
 import sqlite3
+import csv
+from io import StringIO
 
-from fastapi import APIRouter, Body, Request, Query
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi import APIRouter, Body, Request, Query, UploadFile, File
+from fastapi.responses import HTMLResponse, JSONResponse, Response
 from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -64,6 +66,7 @@ def _serialize_strategic_objective(obj: StrategicObjectiveConfig) -> Dict[str, A
         "eje_id": obj.eje_id,
         "codigo": obj.codigo or "",
         "nombre": obj.nombre or "",
+        "hito": obj.hito or "",
         "lider": obj.lider or "",
         "fecha_inicial": _date_to_iso(obj.fecha_inicial),
         "fecha_final": _date_to_iso(obj.fecha_final),
@@ -135,6 +138,137 @@ VALID_ACTIVITY_PERIODICITIES = {
     "cada_xx_dias",
 }
 
+STRATEGIC_POA_CSV_HEADERS = [
+    "tipo_registro",
+    "axis_codigo",
+    "axis_nombre",
+    "axis_lider_departamento",
+    "axis_responsabilidad_directa",
+    "axis_descripcion",
+    "axis_orden",
+    "objective_codigo",
+    "objective_nombre",
+    "objective_hito",
+    "objective_lider",
+    "objective_fecha_inicial",
+    "objective_fecha_final",
+    "objective_descripcion",
+    "objective_orden",
+    "activity_codigo",
+    "activity_nombre",
+    "activity_responsable",
+    "activity_entregable",
+    "activity_fecha_inicial",
+    "activity_fecha_final",
+    "activity_descripcion",
+    "activity_recurrente",
+    "activity_periodicidad",
+    "activity_cada_xx_dias",
+    "subactivity_codigo",
+    "subactivity_parent_codigo",
+    "subactivity_nivel",
+    "subactivity_nombre",
+    "subactivity_responsable",
+    "subactivity_entregable",
+    "subactivity_fecha_inicial",
+    "subactivity_fecha_final",
+    "subactivity_descripcion",
+]
+
+
+def _strategic_poa_template_rows() -> List[Dict[str, str]]:
+    return [
+        {
+            "tipo_registro": "eje",
+            "axis_codigo": "m1-01",
+            "axis_nombre": "Gobernanza y cumplimiento",
+            "axis_lider_departamento": "Dirección",
+            "axis_responsabilidad_directa": "Nombre Colaborador",
+            "axis_descripcion": "Eje estratégico institucional",
+            "axis_orden": "1",
+        },
+        {
+            "tipo_registro": "objetivo",
+            "axis_codigo": "m1-01",
+            "objective_codigo": "m1-01-01",
+            "objective_nombre": "Fortalecer controles y gestión de riesgos",
+            "objective_hito": "Modelo de control aprobado",
+            "objective_lider": "Nombre Colaborador",
+            "objective_fecha_inicial": "2026-01-01",
+            "objective_fecha_final": "2026-12-31",
+            "objective_descripcion": "Objetivo estratégico anual",
+            "objective_orden": "1",
+        },
+        {
+            "tipo_registro": "actividad",
+            "objective_codigo": "m1-01-01",
+            "activity_codigo": "m1-01-01-aa-bb-cc-dd-ee",
+            "activity_nombre": "Implementar matriz de riesgos",
+            "activity_responsable": "Nombre Colaborador",
+            "activity_entregable": "Matriz de riesgos validada",
+            "activity_fecha_inicial": "2026-02-01",
+            "activity_fecha_final": "2026-05-30",
+            "activity_descripcion": "Actividad POA",
+            "activity_recurrente": "no",
+            "activity_periodicidad": "",
+            "activity_cada_xx_dias": "",
+        },
+        {
+            "tipo_registro": "subactividad",
+            "activity_codigo": "m1-01-01-aa-bb-cc-dd-ee",
+            "subactivity_codigo": "m1-01-01-aa-bb-cc-dd-ee-01",
+            "subactivity_parent_codigo": "",
+            "subactivity_nivel": "1",
+            "subactivity_nombre": "Levantar riesgos críticos",
+            "subactivity_responsable": "Nombre Colaborador",
+            "subactivity_entregable": "Inventario de riesgos",
+            "subactivity_fecha_inicial": "2026-02-01",
+            "subactivity_fecha_final": "2026-02-28",
+            "subactivity_descripcion": "Subactividad POA",
+        },
+    ]
+
+
+def _csv_value(row: Dict[str, Any], key: str) -> str:
+    return str((row.get(key) or "")).strip()
+
+
+def _normalize_import_kind(value: str) -> str:
+    raw = str(value or "").strip().lower()
+    aliases = {
+        "axis": "eje",
+        "eje": "eje",
+        "objetivo": "objetivo",
+        "objective": "objetivo",
+        "actividad": "actividad",
+        "activity": "actividad",
+        "subactividad": "subactividad",
+        "subactivity": "subactividad",
+    }
+    return aliases.get(raw, raw)
+
+
+def _parse_import_date(value: str) -> Any:
+    raw = str(value or "").strip()
+    if not raw:
+        return None
+    try:
+        return datetime.strptime(raw, "%Y-%m-%d").date()
+    except ValueError:
+        raise ValueError(f"Fecha inválida '{raw}', use formato YYYY-MM-DD")
+
+
+def _parse_import_int(value: str, fallback: int = 0) -> int:
+    raw = str(value or "").strip()
+    if not raw:
+        return fallback
+    return int(raw)
+
+
+def _parse_import_bool(value: str) -> bool:
+    raw = str(value or "").strip().lower()
+    return raw in {"1", "true", "yes", "si", "sí", "on"}
+
 
 def _descendant_subactivity_ids(db, activity_id: int, root_id: int) -> List[int]:
     rows = (
@@ -159,6 +293,8 @@ def _descendant_subactivity_ids(db, activity_id: int, root_id: int) -> List[int]
 
 def _serialize_poa_subactivity(item: POASubactivity) -> Dict[str, Any]:
     _bind_core_symbols()
+    today = datetime.utcnow().date()
+    done = bool(item.fecha_final and today >= item.fecha_final)
     return {
         "id": item.id,
         "activity_id": item.activity_id,
@@ -171,11 +307,18 @@ def _serialize_poa_subactivity(item: POASubactivity) -> Dict[str, Any]:
         "fecha_inicial": _date_to_iso(item.fecha_inicial),
         "fecha_final": _date_to_iso(item.fecha_final),
         "descripcion": item.descripcion or "",
+        "avance": 100 if done else 0,
     }
 
 
 def _serialize_poa_activity(item: POAActivity, subactivities: List[POASubactivity]) -> Dict[str, Any]:
     _bind_core_symbols()
+    today = datetime.utcnow().date()
+    if subactivities:
+        done_subs = sum(1 for sub in subactivities if sub.fecha_final and today >= sub.fecha_final)
+        activity_progress = int(round((done_subs / len(subactivities)) * 100))
+    else:
+        activity_progress = 100 if _activity_status(item) == "Terminada" else 0
     return {
         "id": item.id,
         "objective_id": item.objective_id,
@@ -190,6 +333,7 @@ def _serialize_poa_activity(item: POAActivity, subactivities: List[POASubactivit
         "periodicidad": item.periodicidad or "",
         "cada_xx_dias": item.cada_xx_dias or 0,
         "status": _activity_status(item),
+        "avance": activity_progress,
         "entrega_estado": item.entrega_estado or "ninguna",
         "entrega_solicitada_por": item.entrega_solicitada_por or "",
         "entrega_solicitada_at": item.entrega_solicitada_at.isoformat() if item.entrega_solicitada_at else "",
@@ -427,6 +571,62 @@ EJES_ESTRATEGICOS_HTML = dedent("""
           display: grid;
           gap: 4px;
         }
+        .axm-track{
+          margin-top: 12px;
+          border: 1px solid rgba(148,163,184,.28);
+          border-radius: 14px;
+          background: #fff;
+          padding: 12px;
+        }
+        .axm-track h4{
+          margin: 0;
+          font-size: 15px;
+          color: #0f172a;
+        }
+        .axm-track-grid{
+          margin-top: 8px;
+          display: grid;
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+          gap: 8px;
+        }
+        .axm-track-card{
+          border: 1px solid rgba(148,163,184,.28);
+          border-radius: 10px;
+          background: rgba(248,250,252,.95);
+          padding: 8px 10px;
+        }
+        .axm-track-label{
+          font-size: 11px;
+          color: #64748b;
+          text-transform: uppercase;
+          letter-spacing: .03em;
+        }
+        .axm-track-value{
+          margin-top: 3px;
+          font-size: 18px;
+          font-weight: 800;
+          color: #0f3d2e;
+        }
+        .axm-track-bar{
+          margin-top: 8px;
+          height: 8px;
+          border-radius: 999px;
+          background: rgba(148,163,184,.20);
+          overflow: hidden;
+        }
+        .axm-track-fill{
+          height: 100%;
+          background: linear-gradient(90deg, #0f3d2e 0%, #16a34a 100%);
+          border-radius: inherit;
+        }
+        .axm-track-meta{
+          margin-top: 8px;
+          font-size: 12px;
+          color: #475569;
+          display: flex;
+          gap: 12px;
+          flex-wrap: wrap;
+        }
         .axm-grid{
           display:grid;
           grid-template-columns: 1fr;
@@ -629,6 +829,116 @@ EJES_ESTRATEGICOS_HTML = dedent("""
         .axm-obj-form .axm-textarea{
           min-height: 116px;
         }
+        .axm-axis-tabs{
+          display:flex;
+          gap: 6px;
+          margin-top: 10px;
+          border-bottom: 1px solid rgba(148,163,184,.28);
+          padding-bottom: 0;
+        }
+        .axm-axis-tab{
+          border: 1px solid rgba(148,163,184,.32);
+          border-bottom: 0;
+          border-radius: 10px 10px 0 0;
+          background: #fff;
+          padding: 8px 10px;
+          font-size: 13px;
+          font-weight: 700;
+          color: #334155;
+          cursor: pointer;
+        }
+        .axm-axis-tab.active{
+          background: rgba(15,61,46,.10);
+          border-color: rgba(15,61,46,.34);
+          color: #0f3d2e;
+        }
+        .axm-axis-panel{
+          display:none;
+          border: 1px solid rgba(148,163,184,.28);
+          border-top: 0;
+          border-radius: 0 0 12px 12px;
+          background: #fff;
+          padding: 12px;
+        }
+        .axm-axis-panel.active{ display:block; }
+        .axm-axis-objectives{
+          display:grid;
+          gap: 8px;
+          max-height: 220px;
+          overflow:auto;
+        }
+        .axm-axis-objective{
+          border: 1px solid rgba(148,163,184,.28);
+          border-radius: 10px;
+          padding: 8px 10px;
+          background: rgba(255,255,255,.95);
+        }
+        .axm-axis-objective h5{
+          margin: 0;
+          font-size: 14px;
+          color: #0f172a;
+        }
+        .axm-axis-objective .meta{
+          margin-top: 3px;
+          font-size: 12px;
+          color: #64748b;
+          font-style: italic;
+        }
+        .axm-obj-tabs{
+          display:flex;
+          gap: 6px;
+          margin-top: 10px;
+          border-bottom: 1px solid rgba(148,163,184,.28);
+          padding-bottom: 0;
+        }
+        .axm-obj-tab{
+          border: 1px solid rgba(148,163,184,.32);
+          border-bottom: 0;
+          border-radius: 10px 10px 0 0;
+          background: #fff;
+          padding: 8px 10px;
+          font-size: 13px;
+          font-weight: 700;
+          color: #334155;
+          cursor: pointer;
+        }
+        .axm-obj-tab.active{
+          background: rgba(15,61,46,.10);
+          border-color: rgba(15,61,46,.34);
+          color: #0f3d2e;
+        }
+        .axm-obj-panel{
+          display:none;
+          border: 1px solid rgba(148,163,184,.28);
+          border-top: 0;
+          border-radius: 0 0 12px 12px;
+          background: #fff;
+          padding: 12px;
+        }
+        .axm-obj-panel.active{ display:block; }
+        .axm-obj-acts{
+          display:grid;
+          gap: 8px;
+          max-height: 260px;
+          overflow:auto;
+        }
+        .axm-obj-act{
+          border: 1px solid rgba(148,163,184,.28);
+          border-radius: 10px;
+          padding: 8px 10px;
+          background: rgba(255,255,255,.95);
+        }
+        .axm-obj-act h5{
+          margin: 0;
+          font-size: 14px;
+          color: #0f172a;
+        }
+        .axm-obj-act .meta{
+          margin-top: 3px;
+          font-size: 12px;
+          color: #64748b;
+          font-style: italic;
+        }
         .axm-obj-grid{ display:grid; grid-template-columns: 150px 1fr; gap: 8px; }
         .axm-msg{ margin-top: 10px; font-size: 13px; color:#0f3d2e; min-height: 1.2em; }
         .axm-modal{
@@ -721,6 +1031,16 @@ EJES_ESTRATEGICOS_HTML = dedent("""
           gap: 6px;
           align-items: baseline;
         }
+        .axm-tree-progress{
+          margin-left: auto;
+          font-size: 11px;
+          font-weight: 800;
+          color: #0f3d2e;
+          border: 1px solid rgba(15,61,46,.28);
+          border-radius: 999px;
+          padding: 1px 7px;
+          background: rgba(15,61,46,.08);
+        }
         .axm-tree-code{
           display: inline-flex;
           min-width: 44px;
@@ -740,6 +1060,129 @@ EJES_ESTRATEGICOS_HTML = dedent("""
           height: 24px;
           background: rgba(15,61,46,.35);
           border-radius: 999px;
+          display: none;
+        }
+        .axm-org-roots{
+          display:grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 10px;
+        }
+        .axm-org-root-node{
+          border: 1px solid rgba(15,61,46,.30);
+          border-radius: 12px;
+          background: rgba(15,61,46,.08);
+          padding: 10px;
+        }
+        .axm-org-root-node h4{
+          margin: 0;
+          font-size: 13px;
+          color: #0f3d2e;
+          text-transform: uppercase;
+        }
+        .axm-org-root-node p{
+          margin: 4px 0 0;
+          font-size: 12px;
+          color: #334155;
+        }
+        .axm-org-board{
+          display:grid;
+          gap: 10px;
+        }
+        .axm-org-branch{
+          border: 1px solid rgba(148,163,184,.30);
+          border-radius: 12px;
+          background: #fff;
+          padding: 10px;
+        }
+        .axm-org-line-node{
+          display:flex;
+          align-items:center;
+          gap: 8px;
+          padding-bottom: 8px;
+          border-bottom: 1px dashed rgba(148,163,184,.35);
+        }
+        .axm-org-axes-grid{
+          margin-top: 8px;
+          display:grid;
+          grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+          gap: 8px;
+        }
+        .axm-org-axis-node{
+          border: 1px solid rgba(148,163,184,.28);
+          border-radius: 10px;
+          background: rgba(255,255,255,.95);
+          padding: 8px 10px;
+        }
+        .axm-org-objectives{
+          margin-top: 8px;
+          display: grid;
+          gap: 8px;
+        }
+        .axm-org-objective-node{
+          border: 1px dashed rgba(148,163,184,.40);
+          border-radius: 10px;
+          background: #fff;
+          padding: 8px 10px;
+        }
+        .axm-org-activities{
+          margin-top: 7px;
+          display: grid;
+          gap: 6px;
+        }
+        .axm-org-activity-node{
+          border: 1px solid rgba(148,163,184,.30);
+          border-radius: 10px;
+          background: rgba(248,250,252,.92);
+          padding: 7px 9px;
+        }
+        .axm-org-subactivities{
+          margin-top: 6px;
+          display: grid;
+          gap: 5px;
+        }
+        .axm-org-subactivity-node{
+          border: 1px solid rgba(148,163,184,.24);
+          border-radius: 8px;
+          background: #fff;
+          padding: 6px 8px;
+          font-size: 12px;
+        }
+        .axm-org-click{
+          width: 100%;
+          text-align: left;
+          border: 0;
+          background: transparent;
+          padding: 0;
+          margin: 0;
+          cursor: pointer;
+          color: inherit;
+          font: inherit;
+        }
+        .axm-node-head{
+          display: flex;
+          align-items: center;
+          gap: 7px;
+        }
+        .axm-status-dot{
+          width: 10px;
+          height: 10px;
+          border-radius: 50%;
+          border: 1px solid rgba(15,23,42,.18);
+          display: inline-block;
+        }
+        .axm-node-gray .axm-status-dot{ background:#9ca3af; }
+        .axm-node-yellow .axm-status-dot{ background:#eab308; }
+        .axm-node-orange .axm-status-dot{ background:#f97316; }
+        .axm-node-green .axm-status-dot{ background:#22c55e; }
+        .axm-node-red .axm-status-dot{ background:#ef4444; }
+        .axm-org-axis-node h5{
+          margin: 0;
+          font-size: 14px;
+        }
+        .axm-org-axis-node p{
+          margin: 4px 0 0;
+          font-size: 12px;
+          color:#64748b;
         }
         .axm-tree-axes{
           display: grid;
@@ -772,6 +1215,8 @@ EJES_ESTRATEGICOS_HTML = dedent("""
           .axm-list{ max-height: 36vh; }
           .axm-row{ grid-template-columns: 1fr; }
           .axm-obj-grid{ grid-template-columns: 1fr; }
+          .axm-track-grid{ grid-template-columns: 1fr 1fr; }
+          .axm-org-roots{ grid-template-columns: 1fr; }
           .axm-tree-roots{ grid-template-columns: 1fr; }
           .axm-axis-main-row{ grid-template-columns: 1fr; }
           .axm-axis-main-row .axm-base-grid{ display: grid; grid-template-columns: 1fr; }
@@ -779,14 +1224,15 @@ EJES_ESTRATEGICOS_HTML = dedent("""
       </style>
 
       <article class="axm-intro">
-        <p>Para entender a fondo la planificación estratégica de la organización, hemos dispuesto de manera clara la jerarquía que seguimos. Como podrán ver en el Resumen Gráfico, todo parte de nuestra Misión y Visión (que definen nuestra razón de ser y hacia dónde nos dirigimos). De ahí se despliegan los grandes Ejes Estratégicos, que son nuestros pilares fundamentales.</p>
-        <p>Les invitamos a consultar cada una de las pestañas para explorar el detalle de estos niveles:</p>
-        <ul>
-          <li>Primer pestaña se definen los componentes de la misión y visión.</li>
-          <li>Segunda pestaña, encontrarán los Objetivos Estratégicos, que traducen cada eje en metas concretas.</li>
-          <li>Tercera, están las Líneas de Acción, que describen el camino elegido para alcanzar esos objetivos.</li>
-          <li>Cuarta pestaña, se detallan las lineas de acción, donde veremos los hitos específicos y los recursos necesarios para hacer realidad nuestra visión, esta es la base del POA.</li>
-        </ul>
+        <section class="axm-track" id="axm-track-board">
+          <h4>Tablero de seguimiento</h4>
+          <div class="axm-track-grid">
+            <article class="axm-track-card"><div class="axm-track-label">Avance global</div><div class="axm-track-value">0%</div></article>
+            <article class="axm-track-card"><div class="axm-track-label">Ejes activos</div><div class="axm-track-value">0</div></article>
+            <article class="axm-track-card"><div class="axm-track-label">Objetivos</div><div class="axm-track-value">0</div></article>
+            <article class="axm-track-card"><div class="axm-track-label">Objetivos al 100%</div><div class="axm-track-value">0</div></article>
+          </div>
+        </section>
       </article>
 
       <div class="axm-tabs">
@@ -826,8 +1272,8 @@ EJES_ESTRATEGICOS_HTML = dedent("""
         </details>
       </section>
       <section class="axm-arbol" id="axm-arbol-panel">
-        <h3>Arbol estratégico</h3>
-        <p class="axm-arbol-sub">Base: Misión y Visión. Ramas: ejes estratégicos con su código original.</p>
+        <h3>Organigrama estratégico</h3>
+        <p class="axm-arbol-sub">Vista organigrama: Misión/Visión como base, líneas por código y ejes vinculados.</p>
         <div class="axm-tree-roots" id="axm-tree-roots"></div>
         <div class="axm-tree-divider"></div>
         <div class="axm-tree-axes" id="axm-tree-axes"></div>
@@ -856,6 +1302,9 @@ EJES_ESTRATEGICOS_HTML = dedent("""
           <p class="axm-sub">Selecciona un eje para editarlo o crea uno nuevo.</p>
           <div class="axm-actions">
             <button class="axm-btn primary" id="axm-add-axis" type="button" onclick="(function(){var m=document.getElementById('axm-axis-modal');if(m){m.classList.add('open');m.style.display='flex';document.body.style.overflow='hidden';}})();">Agregar eje</button>
+            <button class="axm-btn" id="axm-download-template" type="button">Descargar plantilla CSV</button>
+            <button class="axm-btn" id="axm-import-csv" type="button">Importar CSV estratégico + POA</button>
+            <input id="axm-import-csv-file" type="file" accept=".csv,text/csv" style="display:none;">
           </div>
           <div class="axm-list" id="axm-axis-list"></div>
         </aside>
@@ -905,9 +1354,22 @@ EJES_ESTRATEGICOS_HTML = dedent("""
             </div>
           </div>
           <div class="axm-field">
-            <label for="axm-axis-desc">Descripción</label>
-            <textarea id="axm-axis-desc" class="axm-textarea" placeholder="Describe el propósito del eje"></textarea>
+            <label for="axm-axis-progress">Avance</label>
+            <input id="axm-axis-progress" class="axm-input" type="text" readonly>
           </div>
+          <div class="axm-axis-tabs">
+            <button type="button" class="axm-axis-tab active" data-axis-tab="desc">Descripción</button>
+            <button type="button" class="axm-axis-tab" data-axis-tab="objs">Objetivos</button>
+          </div>
+          <section class="axm-axis-panel active" data-axis-panel="desc">
+            <div class="axm-field" style="margin-top:0;">
+              <label for="axm-axis-desc">Descripción</label>
+              <textarea id="axm-axis-desc" class="axm-textarea" placeholder="Describe el propósito del eje"></textarea>
+            </div>
+          </section>
+          <section class="axm-axis-panel" data-axis-panel="objs">
+            <div class="axm-axis-objectives" id="axm-axis-objectives-list"></div>
+          </section>
           <div class="axm-actions">
             <button class="axm-btn primary" id="axm-save-axis" type="button">Guardar eje</button>
             <button class="axm-btn warn" id="axm-delete-axis" type="button">Eliminar eje</button>
@@ -931,6 +1393,14 @@ EJES_ESTRATEGICOS_HTML = dedent("""
               <input id="axm-obj-code" class="axm-input" type="text" placeholder="xx-yy-zz" readonly>
             </div>
             <div class="axm-field">
+              <label for="axm-obj-hito">Hito</label>
+              <input id="axm-obj-hito" class="axm-input" type="text" placeholder="Hito estratégico">
+            </div>
+            <div class="axm-field">
+              <label for="axm-obj-progress">Avance</label>
+              <input id="axm-obj-progress" class="axm-input" type="text" readonly>
+            </div>
+            <div class="axm-field">
               <label for="axm-obj-leader">Lider</label>
               <select id="axm-obj-leader" class="axm-input">
                 <option value="">Selecciona colaborador</option>
@@ -946,10 +1416,23 @@ EJES_ESTRATEGICOS_HTML = dedent("""
                 <input id="axm-obj-end" class="axm-input" type="date">
               </div>
             </div>
-            <div class="axm-field">
-              <label for="axm-obj-desc">Descripción</label>
-              <textarea id="axm-obj-desc" class="axm-textarea" placeholder="Descripción del objetivo"></textarea>
+            <div class="axm-obj-tabs">
+              <button type="button" class="axm-obj-tab active" data-obj-tab="desc">Descripción</button>
+              <button type="button" class="axm-obj-tab" data-obj-tab="kpi">Kpis</button>
+              <button type="button" class="axm-obj-tab" data-obj-tab="acts">Actividades</button>
             </div>
+            <section class="axm-obj-panel active" data-obj-panel="desc">
+              <div class="axm-field" style="margin-top:0;">
+                <label for="axm-obj-desc">Descripción</label>
+                <textarea id="axm-obj-desc" class="axm-textarea" placeholder="Descripción del objetivo"></textarea>
+              </div>
+            </section>
+            <section class="axm-obj-panel" data-obj-panel="kpi">
+              <p class="axm-axis-meta" style="margin:0;">Kpis: en construcción.</p>
+            </section>
+            <section class="axm-obj-panel" data-obj-panel="acts">
+              <div class="axm-obj-acts" id="axm-obj-acts-list"></div>
+            </section>
             <div class="axm-actions">
               <button class="axm-btn primary" id="axm-save-obj" type="button">Guardar objetivo</button>
               <button class="axm-btn warn" id="axm-delete-obj" type="button">Eliminar objetivo</button>
@@ -969,6 +1452,7 @@ EJES_ESTRATEGICOS_HTML = dedent("""
           const arbolPanel = document.getElementById("axm-arbol-panel");
           const treeRootsEl = document.getElementById("axm-tree-roots");
           const treeAxesEl = document.getElementById("axm-tree-axes");
+          const trackBoardEl = document.getElementById("axm-track-board");
           const setupIdentityComposer = (prefix, linesId, hiddenId, fullId, addId) => {
             const linesHost = document.getElementById(linesId);
             const hiddenHost = document.getElementById(hiddenId);
@@ -1119,18 +1603,26 @@ EJES_ESTRATEGICOS_HTML = dedent("""
           const axisBaseCodeEl = document.getElementById("axm-axis-base-code");
           const axisBasePreviewEl = document.getElementById("axm-axis-base-preview");
           const axisCodeEl = document.getElementById("axm-axis-code");
+          const axisProgressEl = document.getElementById("axm-axis-progress");
           const axisLeaderEl = document.getElementById("axm-axis-leader");
           const axisOwnerEl = document.getElementById("axm-axis-owner");
           const axisDescEl = document.getElementById("axm-axis-desc");
+          const axisObjectivesListEl = document.getElementById("axm-axis-objectives-list");
           const objNameEl = document.getElementById("axm-obj-name");
           const objCodeEl = document.getElementById("axm-obj-code");
+          const objHitoEl = document.getElementById("axm-obj-hito");
+          const objProgressEl = document.getElementById("axm-obj-progress");
           const objLeaderEl = document.getElementById("axm-obj-leader");
           const objStartEl = document.getElementById("axm-obj-start");
           const objEndEl = document.getElementById("axm-obj-end");
           const objDescEl = document.getElementById("axm-obj-desc");
+          const objActsListEl = document.getElementById("axm-obj-acts-list");
           const msgEl = document.getElementById("axm-msg");
           const axisMsgEl = document.getElementById("axm-axis-msg");
           const addAxisBtn = document.getElementById("axm-add-axis");
+          const downloadTemplateBtn = document.getElementById("axm-download-template");
+          const importCsvBtn = document.getElementById("axm-import-csv");
+          const importCsvFileEl = document.getElementById("axm-import-csv-file");
           const saveAxisBtn = document.getElementById("axm-save-axis");
           const deleteAxisBtn = document.getElementById("axm-delete-axis");
           const addObjBtn = document.getElementById("axm-add-obj");
@@ -1141,6 +1633,7 @@ EJES_ESTRATEGICOS_HTML = dedent("""
           let departments = [];
           let axisDepartmentCollaborators = [];
           let collaborators = [];
+          let poaActivitiesByObjective = {};
           let selectedAxisId = null;
           let selectedObjectiveId = null;
           const toId = (value) => {
@@ -1219,6 +1712,12 @@ EJES_ESTRATEGICOS_HTML = dedent("""
             axisModalEl.style.position = "fixed";
             axisModalEl.style.inset = "0";
             document.body.style.overflow = "hidden";
+            document.querySelectorAll("[data-axis-tab]").forEach((btn) => btn.classList.remove("active"));
+            document.querySelectorAll("[data-axis-panel]").forEach((panelItem) => panelItem.classList.remove("active"));
+            const firstTab = document.querySelector('[data-axis-tab="desc"]');
+            const firstPanel = document.querySelector('[data-axis-panel="desc"]');
+            if (firstTab) firstTab.classList.add("active");
+            if (firstPanel) firstPanel.classList.add("active");
           };
           const closeAxisModal = () => {
             if (!axisModalEl) return;
@@ -1236,6 +1735,12 @@ EJES_ESTRATEGICOS_HTML = dedent("""
             objModalEl.style.position = "fixed";
             objModalEl.style.inset = "0";
             document.body.style.overflow = "hidden";
+            document.querySelectorAll("[data-obj-tab]").forEach((btn) => btn.classList.remove("active"));
+            document.querySelectorAll("[data-obj-panel]").forEach((panelItem) => panelItem.classList.remove("active"));
+            const firstTab = document.querySelector('[data-obj-tab="desc"]');
+            const firstPanel = document.querySelector('[data-obj-panel="desc"]');
+            if (firstTab) firstTab.classList.add("active");
+            if (firstPanel) firstPanel.classList.add("active");
           };
           const closeObjModal = () => {
             if (!objModalEl) return;
@@ -1270,27 +1775,234 @@ EJES_ESTRATEGICOS_HTML = dedent("""
             if (!treeRootsEl || !treeAxesEl) return;
             const missionLines = misionComposer ? misionComposer.getLines() : [];
             const visionLines = visionComposer ? visionComposer.getLines() : [];
-            const rootBlock = (title, items) => {
-              const linesHtml = (items || [])
-                .filter((line) => (line.text || "").trim())
-                .map((line) => `<li class="axm-tree-line"><span class="axm-tree-code">${line.code || "-"}</span><span>${line.text}</span></li>`)
-                .join("");
-              return `
-                <article class="axm-tree-root">
-                  <h4>${title}</h4>
-                  <ul class="axm-tree-lines">${linesHtml || '<li class="axm-tree-line">Sin líneas definidas</li>'}</ul>
-                </article>
-              `;
+            const normalizeCode = (value) => String(value || "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+            const progressByCode = {};
+            const axesByCode = {};
+            const todayIso = (() => {
+              const now = new Date();
+              const y = now.getFullYear();
+              const m = String(now.getMonth() + 1).padStart(2, "0");
+              const d = String(now.getDate()).padStart(2, "0");
+              return `${y}-${m}-${d}`;
+            })();
+            const statusInfo = (statusLabel, progress, endDate) => {
+              const label = String(statusLabel || "").trim().toLowerCase();
+              if (label === "en revisión") return { key: "orange", text: "En revisión" };
+              if (label === "terminada" || Number(progress || 0) >= 100) return { key: "green", text: "Realizado" };
+              if (endDate && todayIso > String(endDate)) return { key: "red", text: "Atrasado" };
+              if (label === "en proceso" || Number(progress || 0) > 0) return { key: "yellow", text: "En proceso" };
+              return { key: "gray", text: "No iniciado" };
             };
-            treeRootsEl.innerHTML = `${rootBlock("Misión", missionLines)}${rootBlock("Visión", visionLines)}`;
+            const aggregateStatus = (nodes) => {
+              const list = Array.isArray(nodes) ? nodes : [];
+              if (!list.length) return { key: "gray", text: "No iniciado" };
+              const has = (key) => list.some((item) => item.key === key);
+              if (has("red")) return { key: "red", text: "Atrasado" };
+              if (has("orange")) return { key: "orange", text: "En revisión" };
+              if (has("yellow")) return { key: "yellow", text: "En proceso" };
+              if (has("green")) return { key: "green", text: "Realizado" };
+              return { key: "gray", text: "No iniciado" };
+            };
+            (axes || []).forEach((axis) => {
+              const code = normalizeCode((axis.codigo || "").split("-", 1)[0] || axis.base_code || "");
+              if (!code) return;
+              if (!progressByCode[code]) progressByCode[code] = [];
+              progressByCode[code].push(Number(axis.avance || 0));
+              if (!axesByCode[code]) axesByCode[code] = [];
+              axesByCode[code].push(axis);
+            });
+            const consolidatedProgress = (lines) => {
+              const values = (lines || [])
+                .filter((line) => (line.text || "").trim())
+                .map((line) => {
+                  const code = normalizeCode(line.code || "");
+                  const list = progressByCode[code] || [];
+                  if (!list.length) return 0;
+                  return Math.round(list.reduce((sum, item) => sum + Number(item || 0), 0) / list.length);
+                });
+              if (!values.length) return 0;
+              return Math.round(values.reduce((sum, item) => sum + Number(item || 0), 0) / values.length);
+            };
+            const totalMission = missionLines.filter((line) => (line.text || "").trim()).length;
+            const totalVision = visionLines.filter((line) => (line.text || "").trim()).length;
+            const missionProgress = consolidatedProgress(missionLines);
+            const visionProgress = consolidatedProgress(visionLines);
+            treeRootsEl.classList.add("axm-org-roots");
+            treeRootsEl.innerHTML = `
+              <article class="axm-org-root-node"><button type="button" class="axm-org-click" data-org-root="mision"><h4>Misión</h4><p>Avance consolidado: ${missionProgress}% · ${totalMission} líneas activas</p></button></article>
+              <article class="axm-org-root-node"><button type="button" class="axm-org-click" data-org-root="vision"><h4>Visión</h4><p>Avance consolidado: ${visionProgress}% · ${totalVision} líneas activas</p></button></article>
+            `;
 
-            treeAxesEl.innerHTML = (axes || []).map((axis) => `
-              <article class="axm-tree-axis">
-                <span class="axm-tree-code">${axis.codigo || "sin-codigo"}</span>
-                <h5>${axis.nombre || "Eje sin nombre"}</h5>
-                <p>Conserva el código original definido para este eje.</p>
-              </article>
-            `).join("") || '<article class="axm-tree-axis"><h5>Sin ejes estratégicos</h5><p>Agrega ejes en la pestaña Ejes estratégicos.</p></article>';
+            const buildBranches = (groupTitle, lines) => {
+              const activeLines = (lines || []).filter((line) => (line.text || "").trim());
+              return activeLines.map((line) => {
+                const code = normalizeCode(line.code || "");
+                const values = progressByCode[code] || [];
+                const progress = values.length ? Math.round(values.reduce((sum, item) => sum + Number(item || 0), 0) / values.length) : 0;
+                const axisNodes = (axesByCode[code] || []).map((axis) => {
+                  const axisObjectives = Array.isArray(axis.objetivos) ? axis.objetivos : [];
+                  const objectiveNodes = axisObjectives.map((objective) => {
+                    const activities = poaActivitiesByObjective[Number(objective.id || 0)] || [];
+                    const activityStates = activities.map((activity) => statusInfo(activity.status, activity.avance, activity.fecha_final));
+                    const objectiveState = aggregateStatus(activityStates);
+                    const activityNodes = activities.map((activity) => {
+                      const actState = statusInfo(activity.status, activity.avance, activity.fecha_final);
+                      const subNodes = (Array.isArray(activity.subactivities) ? activity.subactivities : []).map((sub) => {
+                        const subState = statusInfo("", Number(sub.avance || 0), sub.fecha_final);
+                        return `
+                          <article class="axm-org-subactivity-node axm-node-${subState.key}">
+                            <button type="button" class="axm-org-click" data-org-subactivity-id="${Number(sub.id || 0)}" data-org-objective-id="${Number(objective.id || 0)}" data-org-activity-id="${Number(activity.id || 0)}">
+                              <div class="axm-node-head"><span class="axm-status-dot"></span><strong>${sub.codigo || "SUB"} · ${sub.nombre || "Subactividad"}</strong></div>
+                              <div class="meta">${subState.text} · Avance ${Number(sub.avance || 0)}%</div>
+                            </button>
+                          </article>
+                        `;
+                      }).join("");
+                      return `
+                        <article class="axm-org-activity-node axm-node-${actState.key}">
+                          <button type="button" class="axm-org-click" data-org-activity-id="${Number(activity.id || 0)}" data-org-objective-id="${Number(objective.id || 0)}">
+                            <div class="axm-node-head"><span class="axm-status-dot"></span><strong>${activity.codigo || "ACT"} · ${activity.nombre || "Actividad"}</strong></div>
+                            <p>${actState.text} · Avance ${Number(activity.avance || 0)}%</p>
+                          </button>
+                          <div class="axm-org-subactivities">${subNodes}</div>
+                        </article>
+                      `;
+                    }).join("");
+                    return `
+                      <article class="axm-org-objective-node axm-node-${objectiveState.key}">
+                        <button type="button" class="axm-org-click" data-org-objective-id="${Number(objective.id || 0)}" data-org-axis-id="${Number(axis.id || 0)}">
+                          <div class="axm-node-head"><span class="axm-status-dot"></span><strong>${objective.codigo || "OBJ"} · ${objective.nombre || "Objetivo"}</strong></div>
+                          <p>${objectiveState.text} · Avance ${Number(objective.avance || 0)}%</p>
+                        </button>
+                        <div class="axm-org-activities">${activityNodes || '<article class="axm-org-activity-node axm-node-gray"><div class="meta">Sin actividades POA</div></article>'}</div>
+                      </article>
+                    `;
+                  }).join("");
+                  const axisState = aggregateStatus(axisObjectives.map((obj) => {
+                    const activities = poaActivitiesByObjective[Number(obj.id || 0)] || [];
+                    return aggregateStatus(activities.map((activity) => statusInfo(activity.status, activity.avance, activity.fecha_final)));
+                  }));
+                  return `
+                    <article class="axm-org-axis-node axm-node-${axisState.key}">
+                      <button type="button" class="axm-org-click" data-org-axis-node-id="${Number(axis.id || 0)}">
+                        <div class="axm-node-head"><span class="axm-status-dot"></span><h5>${axis.codigo || "sin-codigo"} · ${axis.nombre || "Eje sin nombre"}</h5></div>
+                        <p>${axisState.text} · Avance: ${Number(axis.avance || 0)}%</p>
+                      </button>
+                      <div class="axm-org-objectives">${objectiveNodes || '<article class="axm-org-objective-node axm-node-gray"><div class="meta">Sin objetivos vinculados</div></article>'}</div>
+                    </article>
+                  `;
+                }).join("") || '<article class="axm-org-axis-node"><h5>Sin ejes vinculados</h5><p>Asigna este código base a un eje.</p></article>';
+                return `
+                  <article class="axm-org-branch">
+                    <div class="axm-org-line-node">
+                      <button type="button" class="axm-org-click" data-org-line-code="${line.code || "-"}">
+                        <span class="axm-tree-code">${line.code || "-"}</span>
+                        <strong>${groupTitle} · ${line.text}</strong>
+                        <span class="axm-tree-progress">${progress}%</span>
+                      </button>
+                    </div>
+                    <div class="axm-org-axes-grid">${axisNodes}</div>
+                  </article>
+                `;
+              }).join("");
+            };
+
+            const missionBranches = buildBranches("Misión", missionLines);
+            const visionBranches = buildBranches("Visión", visionLines);
+            const branchesHtml = `${missionBranches}${visionBranches}`;
+            treeAxesEl.innerHTML = branchesHtml
+              ? `<div class="axm-org-board">${branchesHtml}</div>`
+              : '<article class="axm-tree-axis"><h5>Sin líneas definidas</h5><p>Agrega líneas en Misión/Visión.</p></article>';
+
+            treeRootsEl.querySelectorAll("[data-org-root]").forEach((btn) => {
+              btn.addEventListener("click", () => {
+                applyTabView("identidad");
+                const key = btn.getAttribute("data-org-root");
+                const missionAcc = document.querySelector("#axm-identidad-panel details:nth-of-type(1)");
+                const visionAcc = document.querySelector("#axm-identidad-panel details:nth-of-type(2)");
+                if (key === "mision" && missionAcc) missionAcc.open = true;
+                if (key === "vision" && visionAcc) visionAcc.open = true;
+              });
+            });
+            treeAxesEl.querySelectorAll("[data-org-line-code]").forEach((btn) => {
+              btn.addEventListener("click", () => {
+                applyTabView("identidad");
+                const raw = String(btn.getAttribute("data-org-line-code") || "").toLowerCase();
+                const isMission = raw.startsWith("m");
+                const missionAcc = document.querySelector("#axm-identidad-panel details:nth-of-type(1)");
+                const visionAcc = document.querySelector("#axm-identidad-panel details:nth-of-type(2)");
+                if (missionAcc) missionAcc.open = isMission;
+                if (visionAcc) visionAcc.open = !isMission;
+              });
+            });
+            treeAxesEl.querySelectorAll("[data-org-axis-node-id]").forEach((btn) => {
+              btn.addEventListener("click", () => {
+                selectedAxisId = toId(btn.getAttribute("data-org-axis-node-id"));
+                renderAll();
+                openAxisModal();
+              });
+            });
+            treeAxesEl.querySelectorAll("[data-org-objective-id]").forEach((btn) => {
+              btn.addEventListener("click", async () => {
+                selectedAxisId = toId(btn.getAttribute("data-org-axis-id")) || selectedAxisId;
+                selectedObjectiveId = toId(btn.getAttribute("data-org-objective-id"));
+                renderAll();
+                try { await loadCollaborators(); } catch (_err) {}
+                openObjModal();
+              });
+            });
+            treeAxesEl.querySelectorAll("[data-org-activity-id]:not([data-org-subactivity-id])").forEach((btn) => {
+              btn.addEventListener("click", () => {
+                const objectiveId = Number(btn.getAttribute("data-org-objective-id") || 0);
+                const activityId = Number(btn.getAttribute("data-org-activity-id") || 0);
+                const url = `/poa?objective_id=${objectiveId}&activity_id=${activityId}`;
+                window.location.href = url;
+              });
+            });
+            treeAxesEl.querySelectorAll("[data-org-subactivity-id]").forEach((btn) => {
+              btn.addEventListener("click", () => {
+                const objectiveId = Number(btn.getAttribute("data-org-objective-id") || 0);
+                const activityId = Number(btn.getAttribute("data-org-activity-id") || 0);
+                const subId = Number(btn.getAttribute("data-org-subactivity-id") || 0);
+                const url = `/poa?objective_id=${objectiveId}&activity_id=${activityId}&subactivity_id=${subId}`;
+                window.location.href = url;
+              });
+            });
+          };
+          const renderTrackingBoard = () => {
+            if (!trackBoardEl) return;
+            const axisList = Array.isArray(axes) ? axes : [];
+            const objectives = axisList.flatMap((axis) => Array.isArray(axis.objetivos) ? axis.objetivos : []);
+            const axisCount = axisList.length;
+            const objectiveCount = objectives.length;
+            const globalProgress = axisCount
+              ? Math.round(axisList.reduce((sum, axis) => sum + Number(axis.avance || 0), 0) / axisCount)
+              : 0;
+            const objectiveDone = objectives.filter((obj) => Number(obj.avance || 0) >= 100).length;
+
+            const missionAxes = axisList.filter((axis) => String(axis.base_code || axis.codigo || "").toLowerCase().startsWith("m"));
+            const visionAxes = axisList.filter((axis) => String(axis.base_code || axis.codigo || "").toLowerCase().startsWith("v"));
+            const missionProgress = missionAxes.length
+              ? Math.round(missionAxes.reduce((sum, axis) => sum + Number(axis.avance || 0), 0) / missionAxes.length)
+              : 0;
+            const visionProgress = visionAxes.length
+              ? Math.round(visionAxes.reduce((sum, axis) => sum + Number(axis.avance || 0), 0) / visionAxes.length)
+              : 0;
+
+            trackBoardEl.innerHTML = `
+              <h4>Tablero de seguimiento</h4>
+              <div class="axm-track-grid">
+                <article class="axm-track-card"><div class="axm-track-label">Avance global</div><div class="axm-track-value">${globalProgress}%</div></article>
+                <article class="axm-track-card"><div class="axm-track-label">Ejes activos</div><div class="axm-track-value">${axisCount}</div></article>
+                <article class="axm-track-card"><div class="axm-track-label">Objetivos</div><div class="axm-track-value">${objectiveCount}</div></article>
+                <article class="axm-track-card"><div class="axm-track-label">Objetivos al 100%</div><div class="axm-track-value">${objectiveDone}</div></article>
+              </div>
+              <div class="axm-track-bar"><div class="axm-track-fill" style="width:${globalProgress}%;"></div></div>
+              <div class="axm-track-meta">
+                <span>Misión: ${missionProgress}%</span>
+                <span>Visión: ${visionProgress}%</span>
+              </div>
+            `;
           };
 
           const showMsg = (text, isError = false) => {
@@ -1406,6 +2118,61 @@ EJES_ESTRATEGICOS_HTML = dedent("""
               objLeaderEl.innerHTML = '<option value="">Cargando colaboradores...</option>';
             }
           };
+          const renderAxisObjectivesPanel = () => {
+            if (!axisObjectivesListEl) return;
+            const axis = selectedAxis();
+            if (!axis) {
+              axisObjectivesListEl.innerHTML = '<div class="axm-axis-meta">Selecciona un eje para ver objetivos.</div>';
+              return;
+            }
+            const list = Array.isArray(axis.objetivos) ? axis.objetivos : [];
+            if (!list.length) {
+              axisObjectivesListEl.innerHTML = '<div class="axm-axis-meta">Sin objetivos registrados en este eje.</div>';
+              return;
+            }
+            axisObjectivesListEl.innerHTML = list.map((obj) => `
+              <article class="axm-axis-objective">
+                <h5>${obj.codigo || "OBJ"} · ${obj.nombre || "Objetivo sin nombre"}</h5>
+                <div class="meta">Hito: ${obj.hito || "N/D"} · Líder: ${obj.lider || "N/D"} · Avance: ${Number(obj.avance || 0)}%</div>
+              </article>
+            `).join("");
+          };
+          const renderObjectiveActivitiesPanel = () => {
+            if (!objActsListEl) return;
+            const objective = selectedObjective();
+            if (!objective) {
+              objActsListEl.innerHTML = '<div class="axm-axis-meta">Selecciona un objetivo para ver actividades.</div>';
+              return;
+            }
+            const list = poaActivitiesByObjective[Number(objective.id || 0)] || [];
+            if (!list.length) {
+              objActsListEl.innerHTML = '<div class="axm-axis-meta">Sin actividades POA para este objetivo.</div>';
+              return;
+            }
+            objActsListEl.innerHTML = list.map((item) => `
+              <article class="axm-obj-act">
+                <h5>${item.codigo || "ACT"} · ${item.nombre || "Actividad sin nombre"}</h5>
+                <div class="meta">Responsable: ${item.responsable || "N/D"} · ${item.fecha_inicial || "N/D"} a ${item.fecha_final || "N/D"}</div>
+                <div class="meta">Estatus: ${item.status || "N/D"} · Avance: ${Number(item.avance || 0)}% · Entregable: ${item.entregable || "N/D"}</div>
+              </article>
+            `).join("");
+          };
+          const loadObjectiveActivities = async () => {
+            try {
+              const payload = await requestJson("/api/poa/board-data");
+              const activities = Array.isArray(payload.activities) ? payload.activities : [];
+              poaActivitiesByObjective = {};
+              activities.forEach((item) => {
+                const key = Number(item.objective_id || 0);
+                if (!key) return;
+                if (!poaActivitiesByObjective[key]) poaActivitiesByObjective[key] = [];
+                poaActivitiesByObjective[key].push(item);
+              });
+            } catch (_err) {
+              poaActivitiesByObjective = {};
+            }
+            renderAll();
+          };
 
           const renderAxisList = () => {
             if (!axisListEl) return;
@@ -1413,7 +2180,7 @@ EJES_ESTRATEGICOS_HTML = dedent("""
               <button class="axm-axis-btn ${toId(axis.id) === toId(selectedAxisId) ? "active" : ""}" type="button" data-axis-id="${axis.id}">
                 <span>
                   <strong>${axis.nombre}</strong>
-                  <div class="axm-axis-meta">${axis.codigo || "Sin código"} • ${axis.lider_departamento || "Sin líder"}</div>
+                  <div class="axm-axis-meta">${axis.codigo || "Sin código"} • ${axis.lider_departamento || "Sin líder"} • Avance ${Number(axis.avance || 0)}%</div>
                 </span>
                 <span class="axm-count">${axis.objetivos_count || 0}</span>
               </button>
@@ -1468,11 +2235,13 @@ EJES_ESTRATEGICOS_HTML = dedent("""
               axisNameEl.value = "";
               if (axisBaseCodeEl) axisBaseCodeEl.innerHTML = "";
               if (axisCodeEl) axisCodeEl.value = "";
+              if (axisProgressEl) axisProgressEl.value = "0%";
               if (axisBasePreviewEl) axisBasePreviewEl.textContent = "Selecciona un código para ver su línea asociada.";
               renderDepartmentOptions("");
               axisDepartmentCollaborators = [];
               renderAxisOwnerOptions("");
               axisDescEl.value = "";
+              renderAxisObjectivesPanel();
               return;
             }
             axisNameEl.value = axis.nombre || "";
@@ -1489,10 +2258,12 @@ EJES_ESTRATEGICOS_HTML = dedent("""
               };
             }
             if (axisCodeEl) axisCodeEl.value = buildAxisCode(selectedBase, axisPosition(axis));
+            if (axisProgressEl) axisProgressEl.value = `${Number(axis.avance || 0)}%`;
             updateAxisBasePreview();
             renderDepartmentOptions(axis.lider_departamento || "");
             loadAxisDepartmentCollaborators(axis.lider_departamento || "", axis.responsabilidad_directa || "");
             axisDescEl.value = axis.descripcion || "";
+            renderAxisObjectivesPanel();
           };
 
           const renderObjectives = () => {
@@ -1505,10 +2276,13 @@ EJES_ESTRATEGICOS_HTML = dedent("""
               selectedObjectiveId = null;
               if (objNameEl) objNameEl.value = "";
               if (objCodeEl) objCodeEl.value = "";
+              if (objHitoEl) objHitoEl.value = "";
+              if (objProgressEl) objProgressEl.value = "0%";
               if (objDescEl) objDescEl.value = "";
               if (objStartEl) objStartEl.value = "";
               if (objEndEl) objEndEl.value = "";
               renderCollaboratorOptions("");
+              renderObjectiveActivitiesPanel();
               if (objListEl) objListEl.innerHTML = '<div class="axm-axis-meta">Selecciona un eje en la columna izquierda.</div>';
               return;
             }
@@ -1518,7 +2292,7 @@ EJES_ESTRATEGICOS_HTML = dedent("""
             objListEl.innerHTML = (axis.objetivos || []).map((obj) => `
               <button class="axm-obj-btn ${obj.id === selectedObjectiveId ? "active" : ""}" type="button" data-obj-id="${obj.id}">
                 <strong>${obj.codigo || "OBJ"} - ${obj.nombre || "Sin nombre"}</strong>
-                <div class="axm-obj-sub">Fecha inicial: ${obj.fecha_inicial || "N/D"} · Fecha final: ${obj.fecha_final || "N/D"}</div>
+                <div class="axm-obj-sub">Hito: ${obj.hito || "N/D"} · Avance: ${Number(obj.avance || 0)}% · Fecha inicial: ${obj.fecha_inicial || "N/D"} · Fecha final: ${obj.fecha_final || "N/D"}</div>
               </button>
             `).join("");
 
@@ -1534,10 +2308,13 @@ EJES_ESTRATEGICOS_HTML = dedent("""
             if (!objective) return;
             if (objNameEl) objNameEl.value = objective.nombre || "";
             if (objCodeEl) objCodeEl.value = buildObjectiveCode(axis.codigo || "", objectivePosition(objective));
+            if (objHitoEl) objHitoEl.value = objective.hito || "";
+            if (objProgressEl) objProgressEl.value = `${Number(objective.avance || 0)}%`;
             if (objDescEl) objDescEl.value = objective.descripcion || "";
             if (objStartEl) objStartEl.value = objective.fecha_inicial || "";
             if (objEndEl) objEndEl.value = objective.fecha_final || "";
             renderCollaboratorOptions(objective.lider || "");
+            renderObjectiveActivitiesPanel();
           };
 
           const renderAll = () => {
@@ -1546,6 +2323,7 @@ EJES_ESTRATEGICOS_HTML = dedent("""
             renderAxisEditor();
             renderObjectives();
             renderStrategicTree();
+            renderTrackingBoard();
           };
 
           if (misionComposer) misionComposer.onChange(() => {
@@ -1555,6 +2333,26 @@ EJES_ESTRATEGICOS_HTML = dedent("""
           if (visionComposer) visionComposer.onChange(() => {
             renderStrategicTree();
             renderAxisEditor();
+          });
+          document.querySelectorAll("[data-axis-tab]").forEach((tabBtn) => {
+            tabBtn.addEventListener("click", () => {
+              const tabKey = tabBtn.getAttribute("data-axis-tab");
+              document.querySelectorAll("[data-axis-tab]").forEach((btn) => btn.classList.remove("active"));
+              document.querySelectorAll("[data-axis-panel]").forEach((panelItem) => panelItem.classList.remove("active"));
+              tabBtn.classList.add("active");
+              const panelItem = document.querySelector(`[data-axis-panel="${tabKey}"]`);
+              if (panelItem) panelItem.classList.add("active");
+            });
+          });
+          document.querySelectorAll("[data-obj-tab]").forEach((tabBtn) => {
+            tabBtn.addEventListener("click", () => {
+              const tabKey = tabBtn.getAttribute("data-obj-tab");
+              document.querySelectorAll("[data-obj-tab]").forEach((btn) => btn.classList.remove("active"));
+              document.querySelectorAll("[data-obj-panel]").forEach((panelItem) => panelItem.classList.remove("active"));
+              tabBtn.classList.add("active");
+              const panelItem = document.querySelector(`[data-obj-panel="${tabKey}"]`);
+              if (panelItem) panelItem.classList.add("active");
+            });
           });
 
           const loadAxes = async () => {
@@ -1590,6 +2388,49 @@ EJES_ESTRATEGICOS_HTML = dedent("""
               setCollaboratorLoading(false);
             }
           };
+
+          const importStrategicCsv = async (file) => {
+            if (!file) return;
+            showMsg("Importando plantilla estratégica y POA...");
+            const formData = new FormData();
+            formData.append("file", file);
+            const response = await fetch("/api/planificacion/importar-plan-poa", {
+              method: "POST",
+              credentials: "same-origin",
+              body: formData,
+            });
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok || payload.success === false) {
+              throw new Error(payload.error || "No se pudo importar el archivo.");
+            }
+            await Promise.all([loadDepartments(), loadAxes()]);
+            await loadCollaborators();
+            await loadObjectiveActivities();
+            const summary = payload.summary || {};
+            const created = Number(summary.created || 0);
+            const updated = Number(summary.updated || 0);
+            const skipped = Number(summary.skipped || 0);
+            const errors = Array.isArray(summary.errors) ? summary.errors.length : 0;
+            showMsg(`Importación completada. Creados: ${created}, actualizados: ${updated}, omitidos: ${skipped}, errores: ${errors}.`, errors > 0);
+          };
+
+          downloadTemplateBtn && downloadTemplateBtn.addEventListener("click", () => {
+            window.location.href = "/api/planificacion/plantilla-plan-poa.csv";
+          });
+          importCsvBtn && importCsvBtn.addEventListener("click", () => {
+            if (importCsvFileEl) importCsvFileEl.click();
+          });
+          importCsvFileEl && importCsvFileEl.addEventListener("change", async () => {
+            const file = importCsvFileEl.files && importCsvFileEl.files[0];
+            if (!file) return;
+            try {
+              await importStrategicCsv(file);
+            } catch (err) {
+              showMsg(err.message || "No se pudo importar el archivo CSV.", true);
+            } finally {
+              importCsvFileEl.value = "";
+            }
+          });
 
           addAxisBtn && addAxisBtn.addEventListener("click", async () => {
             showMsg("Creando eje...");
@@ -1678,6 +2519,7 @@ EJES_ESTRATEGICOS_HTML = dedent("""
             const body = {
               codigo: buildObjectiveCode(axis.codigo || "", (axis.objetivos || []).length + 1),
               nombre: "Nuevo objetivo",
+              hito: "",
               lider: "",
               descripcion: "",
               orden: (axis.objetivos || []).length + 1,
@@ -1706,6 +2548,7 @@ EJES_ESTRATEGICOS_HTML = dedent("""
             const body = {
               nombre: objNameEl && objNameEl.value ? objNameEl.value.trim() : "",
               codigo: objCodeEl && objCodeEl.value ? objCodeEl.value.trim() : "",
+              hito: objHitoEl && objHitoEl.value ? objHitoEl.value.trim() : "",
               lider: objLeaderEl && objLeaderEl.value ? objLeaderEl.value.trim() : "",
               fecha_inicial: objStartEl && objStartEl.value ? objStartEl.value : "",
               fecha_final: objEndEl && objEndEl.value ? objEndEl.value : "",
@@ -1753,6 +2596,7 @@ EJES_ESTRATEGICOS_HTML = dedent("""
           Promise.all([loadDepartments(), loadAxes()]).then(loadCollaborators).catch((err) => {
             showMsg(err.message || "No se pudieron cargar los ejes.", true);
           });
+          loadObjectiveActivities();
         })();
       </script>
     </section>
@@ -1772,6 +2616,18 @@ POA_LIMPIO_HTML = dedent("""
           border-radius: 14px;
           padding: 12px 14px;
           margin-bottom: 10px;
+        }
+        .poa-board-head-row{
+          display:flex;
+          align-items:flex-start;
+          justify-content:space-between;
+          gap:10px;
+          flex-wrap:wrap;
+        }
+        .poa-board-head-actions{
+          display:flex;
+          gap:8px;
+          flex-wrap:wrap;
         }
         .poa-board-head h2{
           margin: 0;
@@ -1933,6 +2789,7 @@ POA_LIMPIO_HTML = dedent("""
         .poa-form-grid{
           display: grid;
           gap: 10px;
+          margin-bottom: 12px;
         }
         .poa-row{
           display: grid;
@@ -2143,8 +3000,17 @@ POA_LIMPIO_HTML = dedent("""
       </style>
 
       <div class="poa-board-head">
-        <h2>Tablero POA por eje</h2>
-        <p>Cada columna corresponde a un eje y contiene las tarjetas de sus objetivos.</p>
+        <div class="poa-board-head-row">
+          <div>
+            <h2>Tablero POA por eje</h2>
+            <p>Cada columna corresponde a un eje y contiene las tarjetas de sus objetivos.</p>
+          </div>
+          <div class="poa-board-head-actions">
+            <button type="button" class="poa-btn" id="poa-download-template">Descargar plantilla CSV</button>
+            <button type="button" class="poa-btn" id="poa-import-csv">Importar CSV estratégico + POA</button>
+            <input id="poa-import-csv-file" type="file" accept=".csv,text/csv" style="display:none;">
+          </div>
+        </div>
       </div>
       <div class="poa-board-msg" id="poa-board-msg" aria-live="polite"></div>
       <div class="poa-board-grid" id="poa-board-grid"></div>
@@ -2324,6 +3190,9 @@ POA_LIMPIO_HTML = dedent("""
         (() => {
           const gridEl = document.getElementById("poa-board-grid");
           const msgEl = document.getElementById("poa-board-msg");
+          const downloadTemplateBtn = document.getElementById("poa-download-template");
+          const importCsvBtn = document.getElementById("poa-import-csv");
+          const importCsvFileEl = document.getElementById("poa-import-csv-file");
           const modalEl = document.getElementById("poa-activity-modal");
           const closeBtn = document.getElementById("poa-activity-close");
           const cancelBtn = document.getElementById("poa-act-cancel");
@@ -2601,11 +3470,23 @@ POA_LIMPIO_HTML = dedent("""
             renderStateStrip();
             renderActivityBranch();
           };
-          const openActivityForm = async (objectiveId) => {
+          const activatePoaTab = (tabKey) => {
+            document.querySelectorAll("[data-poa-tab]").forEach((btn) => btn.classList.remove("active"));
+            document.querySelectorAll("[data-poa-panel]").forEach((panel) => panel.classList.remove("active"));
+            const tabBtn = document.querySelector(`[data-poa-tab="${tabKey}"]`);
+            const panel = document.querySelector(`[data-poa-panel="${tabKey}"]`);
+            if (tabBtn) tabBtn.classList.add("active");
+            if (panel) panel.classList.add("active");
+          };
+          const openActivityForm = async (objectiveId, options = {}) => {
             const objective = objectivesById[Number(objectiveId)];
             if (!objective) return;
             currentObjective = objective;
-            const existing = (activitiesByObjective[Number(objective.id || 0)] || [])[0] || null;
+            const targetActivityId = Number(options.activityId || 0);
+            const currentList = activitiesByObjective[Number(objective.id || 0)] || [];
+            const existing = targetActivityId
+              ? (currentList.find((item) => Number(item.id || 0) === targetActivityId) || null)
+              : ((currentList[0]) || null);
             if (titleEl) titleEl.textContent = existing ? "Editar actividad" : "Nueva actividad";
             if (subtitleEl) subtitleEl.textContent = `${objective.codigo || ""} · ${objective.nombre || "Objetivo"}`;
             if (assignedByEl) assignedByEl.textContent = `Asignado por: ${existing?.created_by || objective.lider || "N/D"}`;
@@ -2615,6 +3496,13 @@ POA_LIMPIO_HTML = dedent("""
             await fillCollaborators(objective);
             if (existing) {
               populateActivityForm(existing);
+              if (options.focusSubId) {
+                activatePoaTab("sub");
+                const subId = Number(options.focusSubId || 0);
+                if (subId) {
+                  await openSubtaskForm(subId, 0);
+                }
+              }
             } else {
               renderActivityBranch();
               renderSubtasks();
@@ -3066,11 +3954,7 @@ POA_LIMPIO_HTML = dedent("""
           document.querySelectorAll("[data-poa-tab]").forEach((tabBtn) => {
             tabBtn.addEventListener("click", () => {
               const tabKey = tabBtn.getAttribute("data-poa-tab");
-              document.querySelectorAll("[data-poa-tab]").forEach((btn) => btn.classList.remove("active"));
-              document.querySelectorAll("[data-poa-panel]").forEach((panel) => panel.classList.remove("active"));
-              tabBtn.classList.add("active");
-              const panel = document.querySelector(`[data-poa-panel="${tabKey}"]`);
-              if (panel) panel.classList.add("active");
+              activatePoaTab(tabKey);
             });
           });
 
@@ -3128,6 +4012,7 @@ POA_LIMPIO_HTML = dedent("""
                 return `
                   <article class="poa-obj-card" data-objective-id="${Number(obj.id || 0)}">
                     <h4>${escapeHtml(obj.nombre || "Objetivo sin nombre")}</h4>
+                    <div class="meta">Hito: ${escapeHtml(obj.hito || "N/D")}</div>
                     <div class="meta">Fecha inicial: ${escapeHtml(fmtDate(obj.fecha_inicial))}</div>
                     <div class="meta">Fecha final: ${escapeHtml(fmtDate(obj.fecha_final))}</div>
                     <div class="meta">Actividades: ${countActivities}</div>
@@ -3180,8 +4065,66 @@ POA_LIMPIO_HTML = dedent("""
               showMsg(error.message || "No se pudo cargar la vista POA.", true);
             }
           };
+          const importStrategicCsv = async (file) => {
+            if (!file) return;
+            showMsg("Importando plantilla estratégica y POA...");
+            const formData = new FormData();
+            formData.append("file", file);
+            const response = await fetch("/api/planificacion/importar-plan-poa", {
+              method: "POST",
+              credentials: "same-origin",
+              body: formData,
+            });
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok || payload.success === false) {
+              throw new Error(payload.error || "No se pudo importar el archivo.");
+            }
+            await loadBoard();
+            const summary = payload.summary || {};
+            const created = Number(summary.created || 0);
+            const updated = Number(summary.updated || 0);
+            const skipped = Number(summary.skipped || 0);
+            const errors = Array.isArray(summary.errors) ? summary.errors.length : 0;
+            showMsg(`Importación completada. Creados: ${created}, actualizados: ${updated}, omitidos: ${skipped}, errores: ${errors}.`, errors > 0);
+          };
+          downloadTemplateBtn && downloadTemplateBtn.addEventListener("click", () => {
+            window.location.href = "/api/planificacion/plantilla-plan-poa.csv";
+          });
+          importCsvBtn && importCsvBtn.addEventListener("click", () => {
+            if (importCsvFileEl) importCsvFileEl.click();
+          });
+          importCsvFileEl && importCsvFileEl.addEventListener("change", async () => {
+            const file = importCsvFileEl.files && importCsvFileEl.files[0];
+            if (!file) return;
+            try {
+              await importStrategicCsv(file);
+            } catch (err) {
+              showMsg(err.message || "No se pudo importar el archivo CSV.", true);
+            } finally {
+              importCsvFileEl.value = "";
+            }
+          });
+          const openFromQuery = async () => {
+            const params = new URLSearchParams(window.location.search || "");
+            const objectiveId = Number(params.get("objective_id") || 0);
+            const activityId = Number(params.get("activity_id") || 0);
+            const subactivityId = Number(params.get("subactivity_id") || 0);
+            let targetObjectiveId = objectiveId;
+            if (!targetObjectiveId && activityId) {
+              const matchObj = Object.keys(activitiesByObjective).find((objId) => {
+                const list = activitiesByObjective[Number(objId)] || [];
+                return list.some((item) => Number(item.id || 0) === activityId);
+              });
+              targetObjectiveId = Number(matchObj || 0);
+            }
+            if (!targetObjectiveId) return;
+            await openActivityForm(targetObjectiveId, {
+              activityId: activityId || 0,
+              focusSubId: subactivityId || 0,
+            });
+          };
 
-          loadBoard();
+          loadBoard().then(openFromQuery).catch(() => {});
         })();
       </script>
     </section>
@@ -3223,6 +4166,376 @@ def poa_page(request: Request):
     )
 
 
+@router.get("/estrategia-tactica/tablero-control", response_class=HTMLResponse)
+def estrategia_tactica_tablero_control_page(request: Request):
+    _bind_core_symbols()
+    return render_backend_page(
+        request,
+        title="Tablero de control",
+        description="Acceso restringido.",
+        content=(
+            '<section class="axm-tab-panel" '
+            'style="display:flex;min-height:62vh;">'
+            'No tiene acceso, comuníquese con el administrador'
+            '</section>'
+        ),
+        hide_floating_actions=True,
+        show_page_header=True,
+        view_buttons=[
+            {"label": "Form", "icon": "/templates/icon/formulario.svg", "view": "form", "active": True},
+        ],
+    )
+
+
+@router.get("/api/planificacion/plantilla-plan-poa.csv")
+def download_strategic_poa_template():
+    output = StringIO()
+    writer = csv.DictWriter(output, fieldnames=STRATEGIC_POA_CSV_HEADERS)
+    writer.writeheader()
+    for row in _strategic_poa_template_rows():
+        writer.writerow({key: row.get(key, "") for key in STRATEGIC_POA_CSV_HEADERS})
+    content = output.getvalue()
+    headers = {"Content-Disposition": 'attachment; filename="plantilla_plan_estrategico_poa.csv"'}
+    return Response(content, media_type="text/csv; charset=utf-8", headers=headers)
+
+
+@router.post("/api/planificacion/importar-plan-poa")
+async def import_strategic_poa_csv(file: UploadFile = File(...)):
+    _bind_core_symbols()
+    filename = (file.filename or "").strip().lower()
+    if not filename.endswith(".csv"):
+        return JSONResponse({"success": False, "error": "El archivo debe ser CSV (.csv)."}, status_code=400)
+
+    raw_bytes = await file.read()
+    if not raw_bytes:
+        return JSONResponse({"success": False, "error": "El archivo CSV está vacío."}, status_code=400)
+    try:
+        raw_text = raw_bytes.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        try:
+            raw_text = raw_bytes.decode("latin-1")
+        except UnicodeDecodeError:
+            return JSONResponse(
+                {"success": False, "error": "No se pudo leer el archivo. Usa codificación UTF-8."},
+                status_code=400,
+            )
+
+    reader = csv.DictReader(StringIO(raw_text))
+    if not reader.fieldnames:
+        return JSONResponse({"success": False, "error": "Encabezados CSV no válidos."}, status_code=400)
+    missing_headers = [h for h in ["tipo_registro"] if h not in reader.fieldnames]
+    if missing_headers:
+        return JSONResponse(
+            {"success": False, "error": f"Faltan columnas obligatorias: {', '.join(missing_headers)}"},
+            status_code=400,
+        )
+
+    db = SessionLocal()
+    summary = {"created": 0, "updated": 0, "skipped": 0, "errors": []}
+    try:
+        axes = db.query(StrategicAxisConfig).all()
+        axis_by_code = {str((item.codigo or "")).strip().lower(): item for item in axes if (item.codigo or "").strip()}
+        objectives = db.query(StrategicObjectiveConfig).all()
+        objective_by_code = {str((item.codigo or "")).strip().lower(): item for item in objectives if (item.codigo or "").strip()}
+        activities = db.query(POAActivity).all()
+        activity_by_key: Dict[str, POAActivity] = {}
+        activity_by_code_list: Dict[str, List[POAActivity]] = {}
+        for item in activities:
+            code = str((item.codigo or "")).strip().lower()
+            if not code:
+                continue
+            objective_key = f"{int(item.objective_id)}::{code}"
+            activity_by_key[objective_key] = item
+            activity_by_code_list.setdefault(code, []).append(item)
+        subactivities = db.query(POASubactivity).all()
+        sub_by_activity_code: Dict[str, Dict[str, POASubactivity]] = {}
+        activity_code_by_id = {int(item.id): str((item.codigo or "")).strip().lower() for item in activities}
+        for sub in subactivities:
+            activity_code = activity_code_by_id.get(int(sub.activity_id or 0), "")
+            sub_code = str((sub.codigo or "")).strip().lower()
+            if not activity_code or not sub_code:
+                continue
+            sub_by_activity_code.setdefault(activity_code, {})[sub_code] = sub
+
+        max_axis_order = db.query(func.max(StrategicAxisConfig.orden)).scalar() or 0
+        objective_order_by_axis: Dict[int, int] = {}
+        for item in objectives:
+            axis_id = int(item.eje_id or 0)
+            objective_order_by_axis[axis_id] = max(objective_order_by_axis.get(axis_id, 0), int(item.orden or 0))
+
+        for row_index, row in enumerate(reader, start=2):
+            try:
+                kind = _normalize_import_kind(_csv_value(row, "tipo_registro"))
+                if kind not in {"eje", "objetivo", "actividad", "subactividad"}:
+                    summary["skipped"] += 1
+                    summary["errors"].append(f"Fila {row_index}: tipo_registro no reconocido.")
+                    continue
+
+                if kind == "eje":
+                    axis_code = _csv_value(row, "axis_codigo").lower()
+                    axis_name = _csv_value(row, "axis_nombre")
+                    if not axis_code:
+                        raise ValueError("axis_codigo es obligatorio para tipo_registro=eje.")
+                    if not axis_name and axis_code not in axis_by_code:
+                        raise ValueError("axis_nombre es obligatorio al crear un eje.")
+                    axis_order = _parse_import_int(_csv_value(row, "axis_orden"), 0)
+                    axis = axis_by_code.get(axis_code)
+                    if axis:
+                        if axis_name:
+                            axis.nombre = axis_name
+                        axis.lider_departamento = _csv_value(row, "axis_lider_departamento")
+                        axis.responsabilidad_directa = _csv_value(row, "axis_responsabilidad_directa")
+                        axis.descripcion = _csv_value(row, "axis_descripcion")
+                        if axis_order > 0:
+                            axis.orden = axis_order
+                        db.add(axis)
+                        summary["updated"] += 1
+                    else:
+                        max_axis_order += 1
+                        axis = StrategicAxisConfig(
+                            nombre=axis_name or "Nuevo eje",
+                            codigo=axis_code,
+                            lider_departamento=_csv_value(row, "axis_lider_departamento"),
+                            responsabilidad_directa=_csv_value(row, "axis_responsabilidad_directa"),
+                            descripcion=_csv_value(row, "axis_descripcion"),
+                            orden=axis_order if axis_order > 0 else max_axis_order,
+                            is_active=True,
+                        )
+                        db.add(axis)
+                        db.flush()
+                        axis_by_code[axis_code] = axis
+                        summary["created"] += 1
+                    continue
+
+                if kind == "objetivo":
+                    axis_code = _csv_value(row, "axis_codigo").lower()
+                    axis = axis_by_code.get(axis_code)
+                    if not axis:
+                        raise ValueError("axis_codigo no existe. Carga primero el eje.")
+                    objective_code = _csv_value(row, "objective_codigo").lower()
+                    objective_name = _csv_value(row, "objective_nombre")
+                    if not objective_code:
+                        raise ValueError("objective_codigo es obligatorio para tipo_registro=objetivo.")
+                    objective = objective_by_code.get(objective_code)
+                    start_date = _parse_import_date(_csv_value(row, "objective_fecha_inicial"))
+                    end_date = _parse_import_date(_csv_value(row, "objective_fecha_final"))
+                    if (start_date and not end_date) or (end_date and not start_date):
+                        raise ValueError("objective_fecha_inicial y objective_fecha_final deben definirse juntas.")
+                    if start_date and end_date:
+                        range_error = _validate_date_range(start_date, end_date, "Objetivo")
+                        if range_error:
+                            raise ValueError(range_error)
+                    objective_order = _parse_import_int(_csv_value(row, "objective_orden"), 0)
+                    if objective:
+                        if objective_name:
+                            objective.nombre = objective_name
+                        objective.eje_id = int(axis.id)
+                        objective.hito = _csv_value(row, "objective_hito")
+                        objective.lider = _csv_value(row, "objective_lider")
+                        objective.fecha_inicial = start_date
+                        objective.fecha_final = end_date
+                        objective.descripcion = _csv_value(row, "objective_descripcion")
+                        if objective_order > 0:
+                            objective.orden = objective_order
+                        db.add(objective)
+                        summary["updated"] += 1
+                    else:
+                        if not objective_name:
+                            raise ValueError("objective_nombre es obligatorio al crear un objetivo.")
+                        next_obj_order = objective_order if objective_order > 0 else (objective_order_by_axis.get(int(axis.id), 0) + 1)
+                        objective = StrategicObjectiveConfig(
+                            eje_id=int(axis.id),
+                            codigo=objective_code,
+                            nombre=objective_name,
+                            hito=_csv_value(row, "objective_hito"),
+                            lider=_csv_value(row, "objective_lider"),
+                            fecha_inicial=start_date,
+                            fecha_final=end_date,
+                            descripcion=_csv_value(row, "objective_descripcion"),
+                            orden=next_obj_order,
+                            is_active=True,
+                        )
+                        db.add(objective)
+                        db.flush()
+                        objective_by_code[objective_code] = objective
+                        objective_order_by_axis[int(axis.id)] = max(objective_order_by_axis.get(int(axis.id), 0), int(next_obj_order))
+                        summary["created"] += 1
+                    continue
+
+                if kind == "actividad":
+                    objective_code = _csv_value(row, "objective_codigo").lower()
+                    objective = objective_by_code.get(objective_code)
+                    if not objective:
+                        raise ValueError("objective_codigo no existe. Carga primero el objetivo.")
+                    activity_code = _csv_value(row, "activity_codigo").lower()
+                    activity_name = _csv_value(row, "activity_nombre")
+                    if not activity_code:
+                        raise ValueError("activity_codigo es obligatorio para tipo_registro=actividad.")
+                    activity_key = f"{int(objective.id)}::{activity_code}"
+                    activity = activity_by_key.get(activity_key)
+                    start_date = _parse_import_date(_csv_value(row, "activity_fecha_inicial"))
+                    end_date = _parse_import_date(_csv_value(row, "activity_fecha_final"))
+                    if (start_date and not end_date) or (end_date and not start_date):
+                        raise ValueError("activity_fecha_inicial y activity_fecha_final deben definirse juntas.")
+                    if start_date and end_date:
+                        range_error = _validate_date_range(start_date, end_date, "Actividad")
+                        if range_error:
+                            raise ValueError(range_error)
+                        parent_range_error = _validate_child_date_range(
+                            start_date,
+                            end_date,
+                            objective.fecha_inicial,
+                            objective.fecha_final,
+                            "Actividad",
+                            "Objetivo",
+                        )
+                        if parent_range_error:
+                            raise ValueError(parent_range_error)
+                    recurrente = _parse_import_bool(_csv_value(row, "activity_recurrente"))
+                    periodicidad = _csv_value(row, "activity_periodicidad").lower()
+                    cada_xx_dias = _parse_import_int(_csv_value(row, "activity_cada_xx_dias"), 0)
+                    if recurrente:
+                        if periodicidad not in VALID_ACTIVITY_PERIODICITIES:
+                            raise ValueError("activity_periodicidad no es válida para actividad recurrente.")
+                        if periodicidad == "cada_xx_dias" and cada_xx_dias <= 0:
+                            raise ValueError("activity_cada_xx_dias debe ser mayor a 0 para periodicidad cada_xx_dias.")
+                    else:
+                        periodicidad = ""
+                        cada_xx_dias = 0
+
+                    if activity:
+                        if activity_name:
+                            activity.nombre = activity_name
+                        activity.responsable = _csv_value(row, "activity_responsable")
+                        activity.entregable = _csv_value(row, "activity_entregable")
+                        activity.fecha_inicial = start_date
+                        activity.fecha_final = end_date
+                        activity.descripcion = _csv_value(row, "activity_descripcion")
+                        activity.recurrente = recurrente
+                        activity.periodicidad = periodicidad
+                        activity.cada_xx_dias = cada_xx_dias if periodicidad == "cada_xx_dias" else None
+                        db.add(activity)
+                        summary["updated"] += 1
+                    else:
+                        if not activity_name:
+                            raise ValueError("activity_nombre es obligatorio al crear una actividad.")
+                        activity = POAActivity(
+                            objective_id=int(objective.id),
+                            codigo=activity_code,
+                            nombre=activity_name,
+                            responsable=_csv_value(row, "activity_responsable"),
+                            entregable=_csv_value(row, "activity_entregable"),
+                            fecha_inicial=start_date,
+                            fecha_final=end_date,
+                            descripcion=_csv_value(row, "activity_descripcion"),
+                            recurrente=recurrente,
+                            periodicidad=periodicidad,
+                            cada_xx_dias=cada_xx_dias if periodicidad == "cada_xx_dias" else None,
+                            entrega_estado="ninguna",
+                            created_by="import_csv",
+                        )
+                        db.add(activity)
+                        db.flush()
+                        activity_by_key[activity_key] = activity
+                        activity_by_code_list.setdefault(activity_code, []).append(activity)
+                        summary["created"] += 1
+                    continue
+
+                if kind == "subactividad":
+                    objective_code = _csv_value(row, "objective_codigo").lower()
+                    activity_code = _csv_value(row, "activity_codigo").lower()
+                    sub_code = _csv_value(row, "subactivity_codigo").lower()
+                    if not activity_code or not sub_code:
+                        raise ValueError("activity_codigo y subactivity_codigo son obligatorios para subactividad.")
+
+                    activity = None
+                    if objective_code:
+                        objective = objective_by_code.get(objective_code)
+                        if objective:
+                            activity = activity_by_key.get(f"{int(objective.id)}::{activity_code}")
+                    if activity is None:
+                        candidates = activity_by_code_list.get(activity_code, [])
+                        if len(candidates) == 1:
+                            activity = candidates[0]
+                    if activity is None:
+                        raise ValueError("No se encontró la actividad destino para esta subactividad.")
+
+                    sub_map = sub_by_activity_code.setdefault(activity_code, {})
+                    sub = sub_map.get(sub_code)
+                    parent_code = _csv_value(row, "subactivity_parent_codigo").lower()
+                    parent_sub = sub_map.get(parent_code) if parent_code else None
+                    level_raw = _parse_import_int(_csv_value(row, "subactivity_nivel"), 0)
+                    level = level_raw if level_raw > 0 else ((int(parent_sub.nivel) + 1) if parent_sub else 1)
+                    if level > MAX_SUBTASK_DEPTH:
+                        raise ValueError(f"subactivity_nivel no puede ser mayor a {MAX_SUBTASK_DEPTH}.")
+                    sub_name = _csv_value(row, "subactivity_nombre")
+                    if not sub and not sub_name:
+                        raise ValueError("subactivity_nombre es obligatorio al crear una subactividad.")
+                    start_date = _parse_import_date(_csv_value(row, "subactivity_fecha_inicial"))
+                    end_date = _parse_import_date(_csv_value(row, "subactivity_fecha_final"))
+                    if (start_date and not end_date) or (end_date and not start_date):
+                        raise ValueError("subactivity_fecha_inicial y subactivity_fecha_final deben definirse juntas.")
+                    if start_date and end_date:
+                        range_error = _validate_date_range(start_date, end_date, "Subactividad")
+                        if range_error:
+                            raise ValueError(range_error)
+                        parent_range_error = _validate_child_date_range(
+                            start_date,
+                            end_date,
+                            activity.fecha_inicial,
+                            activity.fecha_final,
+                            "Subactividad",
+                            "Actividad",
+                        )
+                        if parent_range_error:
+                            raise ValueError(parent_range_error)
+
+                    if sub:
+                        if sub_name:
+                            sub.nombre = sub_name
+                        sub.parent_subactivity_id = int(parent_sub.id) if parent_sub else None
+                        sub.nivel = level
+                        sub.responsable = _csv_value(row, "subactivity_responsable")
+                        sub.entregable = _csv_value(row, "subactivity_entregable")
+                        sub.fecha_inicial = start_date
+                        sub.fecha_final = end_date
+                        sub.descripcion = _csv_value(row, "subactivity_descripcion")
+                        db.add(sub)
+                        summary["updated"] += 1
+                    else:
+                        sub = POASubactivity(
+                            activity_id=int(activity.id),
+                            parent_subactivity_id=int(parent_sub.id) if parent_sub else None,
+                            nivel=level,
+                            codigo=sub_code,
+                            nombre=sub_name,
+                            responsable=_csv_value(row, "subactivity_responsable"),
+                            entregable=_csv_value(row, "subactivity_entregable"),
+                            fecha_inicial=start_date,
+                            fecha_final=end_date,
+                            descripcion=_csv_value(row, "subactivity_descripcion"),
+                            assigned_by="import_csv",
+                        )
+                        db.add(sub)
+                        db.flush()
+                        sub_map[sub_code] = sub
+                        summary["created"] += 1
+            except Exception as row_error:
+                summary["skipped"] += 1
+                summary["errors"].append(f"Fila {row_index}: {row_error}")
+
+        db.commit()
+        return JSONResponse({"success": True, "summary": summary})
+    except (sqlite3.OperationalError, SQLAlchemyError):
+        db.rollback()
+        return JSONResponse(
+            {"success": False, "error": "No se pudo escribir en la base de datos (modo solo lectura o bloqueo)."},
+            status_code=500,
+        )
+    finally:
+        db.close()
+
+
 @router.get("/api/strategic-axes")
 def list_strategic_axes(request: Request):
     _bind_core_symbols()
@@ -3234,7 +4547,63 @@ def list_strategic_axes(request: Request):
             .order_by(StrategicAxisConfig.orden.asc(), StrategicAxisConfig.id.asc())
             .all()
         )
-        return JSONResponse({"success": True, "data": [_serialize_strategic_axis(axis) for axis in axes]})
+        payload_axes = [_serialize_strategic_axis(axis) for axis in axes]
+        objective_ids: List[int] = []
+        for axis_data in payload_axes:
+            for obj in axis_data.get("objetivos", []):
+                obj_id = int(obj.get("id") or 0)
+                if obj_id:
+                    objective_ids.append(obj_id)
+        objective_ids = sorted(set(objective_ids))
+        activities = (
+            db.query(POAActivity)
+            .filter(POAActivity.objective_id.in_(objective_ids))
+            .all()
+            if objective_ids else []
+        )
+        activity_ids = [int(item.id) for item in activities if getattr(item, "id", None)]
+        subactivities = (
+            db.query(POASubactivity)
+            .filter(POASubactivity.activity_id.in_(activity_ids))
+            .all()
+            if activity_ids else []
+        )
+        sub_by_activity: Dict[int, List[POASubactivity]] = {}
+        for sub in subactivities:
+            sub_by_activity.setdefault(int(sub.activity_id), []).append(sub)
+
+        today = datetime.utcnow().date()
+        activity_progress_by_objective: Dict[int, List[int]] = {}
+        for activity in activities:
+            subs = sub_by_activity.get(int(activity.id), [])
+            if subs:
+                done_subs = sum(1 for sub in subs if sub.fecha_final and today >= sub.fecha_final)
+                progress = int(round((done_subs / len(subs)) * 100))
+            else:
+                progress = 100 if _activity_status(activity) == "Terminada" else 0
+            activity_progress_by_objective.setdefault(int(activity.objective_id), []).append(progress)
+
+        mv_agg: Dict[str, List[int]] = {}
+        for axis_data in payload_axes:
+            objective_progress: List[int] = []
+            for obj in axis_data.get("objetivos", []):
+                obj_id = int(obj.get("id") or 0)
+                progress_list = activity_progress_by_objective.get(obj_id, [])
+                obj_progress = int(round(sum(progress_list) / len(progress_list))) if progress_list else 0
+                obj["avance"] = obj_progress
+                objective_progress.append(obj_progress)
+            axis_progress = int(round(sum(objective_progress) / len(objective_progress))) if objective_progress else 0
+            axis_data["avance"] = axis_progress
+            base_code = "".join(ch for ch in str(axis_data.get("codigo") or "").split("-", 1)[0].lower() if ch.isalnum())
+            axis_data["base_code"] = base_code
+            if base_code:
+                mv_agg.setdefault(base_code, []).append(axis_progress)
+
+        mv_data = [
+            {"code": code, "avance": int(round(sum(values) / len(values))) if values else 0}
+            for code, values in sorted(mv_agg.items(), key=lambda item: item[0])
+        ]
+        return JSONResponse({"success": True, "data": payload_axes, "mision_vision_avance": mv_data})
     finally:
         db.close()
 
@@ -3454,6 +4823,7 @@ def create_strategic_objective(axis_id: int, data: dict = Body(...)):
             eje_id=axis_id,
             codigo=_compose_objective_code(axis.codigo or "", objective_order),
             nombre=nombre,
+            hito=(data.get("hito") or "").strip(),
             lider=objective_leader,
             fecha_inicial=start_date,
             fecha_final=end_date,
@@ -3516,6 +4886,7 @@ def update_strategic_objective(objective_id: int, data: dict = Body(...)):
         objective_order = int(data.get("orden") or objective.orden or 1)
         objective.codigo = _compose_objective_code((axis.codigo if axis else ""), objective_order)
         objective.nombre = nombre
+        objective.hito = (data.get("hito") or "").strip()
         objective.lider = objective_leader
         objective.fecha_inicial = start_date
         objective.fecha_final = end_date
