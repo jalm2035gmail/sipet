@@ -4086,7 +4086,7 @@ PLAN_ESTRATEGICO_HTML = dedent("""
         .pe-ring__sub{ font-size: 11px; color: var(--muted); }
         .pe-grid{
           display:grid;
-          grid-template-columns: 1.35fr .85fr;
+          grid-template-columns: 1fr;
           gap: 14px;
           align-items:start;
         }

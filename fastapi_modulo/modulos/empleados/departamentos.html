@@ -90,6 +90,21 @@
       color: #fff;
       border-color: #0f172a;
     }
+    .departamentos-page .btn-icon {
+      width: 34px;
+      height: 34px;
+      padding: 0;
+      border-radius: 10px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .departamentos-page .btn-icon img {
+      width: 16px;
+      height: 16px;
+      object-fit: contain;
+      display: block;
+    }
     .departamentos-page .save-status {
       min-height: 20px;
       font-size: .9rem;
@@ -557,18 +572,21 @@
       };
 
       const renderAreaList = () => {
+        const sortedAreas = [...areasData].sort((a, b) => String(a?.name || '').localeCompare(String(b?.name || ''), 'es', { sensitivity: 'base' }));
         areaView.innerHTML = `
           <section class="area-card">
             <h2>Listado de áreas</h2>
             <p>Consulta áreas por código, responsable y estado.</p>
             <div class="list">
-              ${areasData.length ? areasData.map((area) => `
+              ${sortedAreas.length ? sortedAreas.map((area) => `
                 <div class="list-item" data-area-code="${escapeHtml(area.code)}">
                   <span><strong>${escapeHtml(area.name)}</strong><br><small>${escapeHtml(area.manager || 'Sin responsable')}</small><br><small>Empleados asignados: ${assignedCount(area)}</small></span>
                   <span>
                     <span class="badge">${escapeHtml(area.code || 'N/A')}</span>
                     <span class="badge">${escapeHtml(area.status || 'N/A')}</span>
-                    <button class="btn btn-delete" data-delete-code="${escapeHtml(area.code)}" title="Eliminar" style="margin-left:8px;background:#dc2626;color:#fff;border-color:#dc2626;">Eliminar</button>
+                    <button class="btn btn-icon btn-delete" data-delete-code="${escapeHtml(area.code)}" title="Eliminar" style="margin-left:8px;background:#dc2626;color:#fff;border-color:#dc2626;">
+                      <img src="/icon/eliminar.svg" alt="Eliminar">
+                    </button>
                   </span>
                 </div>
               `).join('') : '<p>Sin áreas registradas.</p>'}

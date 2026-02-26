@@ -19,6 +19,12 @@ COLAB_META_PATH = Path(
 )
 
 
+def _colab_sort_key(row: Dict[str, Any]) -> tuple[str, str]:
+    name = (row.get("nombre") or "").strip().lower()
+    user = (row.get("usuario") or "").strip().lower()
+    return (name or user, user)
+
+
 def _load_colab_meta() -> Dict[str, Dict[str, Any]]:
     try:
         if not COLAB_META_PATH.exists():
@@ -114,6 +120,7 @@ def api_listar_colaboradores(request: Request):
             for row in data:
                 if (row.get("rol") or "").strip().lower() == "superadministrador":
                     row["rol"] = ""
+        data = sorted(data, key=_colab_sort_key)
         return {
             "success": True,
             "data": data,

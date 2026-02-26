@@ -44,7 +44,7 @@ body {
 }
 .sidebar {
     width: 220px;
-    font-family: 'Inter';
+    font-family: 'Nunito Sans', 'Inter', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
     background: linear-gradient(
         180deg,
         var(--sidebar-top, #1f2a3d),
@@ -425,6 +425,7 @@ body {
     background: #fef2f2;
 }
 .sidebar-notifications-panel {
+    font-family: 'Nunito Sans', 'Inter', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
     position: fixed;
     top: 86px;
     left: 230px;
