@@ -499,6 +499,19 @@
             if (key === 'inactivo') return 'inactivo';
             return 'pendiente';
         }
+        function renderJefeOptions(selectEl, selectedId, currentId) {
+            if (!selectEl) return;
+            var options = ['<option value="">Sin jefe inmediato</option>'];
+            for (var i = 0; i < empleadosData.length; i++) {
+                var emp = empleadosData[i] || {};
+                var id = emp.id;
+                if (!id) continue;
+                if (currentId && Number(id) === Number(currentId)) continue;
+                var selected = (selectedId && Number(id) === Number(selectedId)) ? ' selected' : '';
+                options.push('<option value="' + esc(id) + '"' + selected + '>' + esc(emp.nombre || emp.usuario || ('#' + id)) + '</option>');
+            }
+            selectEl.innerHTML = options.join('');
+        }
         function detectMenuBlocks() {
             var nodes = document.querySelectorAll('.sidebar-menu > details > summary .sidebar-item-label, .sidebar-menu > .sidebar-link .sidebar-item-label');
             var labels = [];
@@ -590,6 +603,7 @@
             var correo = document.getElementById('colab-correo');
             var nivel = document.getElementById('colab-nivel');
             var dept = document.getElementById('departamento-select');
+            var jefeInmediato = document.getElementById('colab-jefe-inmediato');
             var colabId = document.getElementById('colab-id');
             var foto = document.getElementById('colab-photo-preview');
             var fotoUrl = document.getElementById('colab-imagen-url');
@@ -601,6 +615,9 @@
             if (usuario) usuario.value = user.usuario || '';
             if (correo) correo.value = user.correo || '';
             if (colabId) colabId.value = user.id || '';
+            if (jefeInmediato) {
+                renderJefeOptions(jefeInmediato, user.jefe_inmediato_id || '', user.id || '');
+            }
             if (nivel) nivel.value = user.nivel_organizacional || '';
             if (colaboradorCheck) colaboradorCheck.checked = !!user.colaborador;
             if (fotoUrl) fotoUrl.value = user.imagen || '';
@@ -751,6 +768,10 @@
                             </select>
                         </div>
                         <div class="emp-field">
+                            <label for="colab-jefe-inmediato">Jefe inmediato</label>
+                            <select id="colab-jefe-inmediato" name="jefe_inmediato_id"></select>
+                        </div>
+                        <div class="emp-field">
                             <label for="colab-colaborador-check">Colaborador</label>
                             <label style="display:inline-flex;align-items:center;gap:8px;font-weight:600;">
                                 <input id="colab-colaborador-check" type="checkbox" name="colaborador" style="width:auto;">
@@ -778,6 +799,7 @@
             
             var form = document.getElementById('colaborador-form');
             var deptSelect = document.getElementById('departamento-select');
+            var jefeInmediatoSelect = document.getElementById('colab-jefe-inmediato');
             var formMsg = document.getElementById('colaborador-form-msg');
             var photoPreview = document.getElementById('colab-photo-preview');
             var photoEditBtn = document.getElementById('colab-photo-edit-btn');
@@ -813,6 +835,9 @@
                 }).catch(() => {
                     deptSelect.innerHTML = '<option value="">Error al cargar</option>';
                 });
+            }
+            if (jefeInmediatoSelect) {
+                renderJefeOptions(jefeInmediatoSelect, '', '');
             }
             if (photoEditBtn && photoInput) {
                 photoEditBtn.addEventListener('click', function() {
@@ -858,6 +883,7 @@
                         usuario: (document.getElementById('colab-usuario')?.value || '').trim(),
                         correo: (document.getElementById('colab-correo')?.value || '').trim(),
                         departamento: (document.getElementById('departamento-select')?.value || '').trim(),
+                        jefe_inmediato_id: (document.getElementById('colab-jefe-inmediato')?.value || '').trim(),
                         nivel_organizacional: (document.getElementById('colab-nivel')?.value || '').trim(),
                         imagen: (document.getElementById('colab-imagen-url')?.value || '').trim(),
                         colaborador: !!document.getElementById('colab-colaborador-check')?.checked,
@@ -897,7 +923,7 @@
                         if (!res.ok || json?.success === false) {
                             throw new Error((json && (json.error || json.detail)) || 'No se pudo guardar');
                         }
-                        if (formMsg) formMsg.textContent = 'Guardado correctamente.';
+                        if (formMsg) formMsg.textContent = (json && (json.message || json.detail)) ? (json.message || json.detail) : 'Guardado correctamente.';
                         await load();
                         setView('form');
                     } catch (err) {
@@ -979,13 +1005,17 @@
                         if (keyUser) idByKey[keyUser] = row.id;
                     });
                     rows.forEach(function(row) {
-                        var boss = (row.jefe || '').trim().toLowerCase();
-                        var bossId = idByKey[boss] || null;
+                        var bossId = row.jefe_inmediato_id ? Number(row.jefe_inmediato_id) : null;
+                        if (!bossId) {
+                            var boss = (row.jefe || '').trim().toLowerCase();
+                            bossId = idByKey[boss] || null;
+                        }
                         var groupKey = bossId ? String(bossId) : 'root';
                         if (!byBoss[groupKey]) byBoss[groupKey] = [];
                         byBoss[groupKey].push(row);
                     });
                     var roots = byBoss.root || rows.filter(function(row) {
+                        if (row.jefe_inmediato_id) return false;
                         var boss = (row.jefe || '').trim().toLowerCase();
                         return !boss || !idByKey[boss];
                     });
@@ -1071,6 +1101,8 @@
             var foto = document.getElementById('colab-photo-preview');
             var fotoUrl = document.getElementById('colab-imagen-url');
             if (idInput) idInput.value = '';
+            var jefeInmediato = document.getElementById('colab-jefe-inmediato');
+            if (jefeInmediato) renderJefeOptions(jefeInmediato, '', '');
             if (fotoUrl) fotoUrl.value = '';
             if (foto) foto.src = '/icon/usuario.png';
             currentAccessState = { rol: 'usuario', menu_blocks: [] };
@@ -1100,7 +1132,7 @@
                 if (!res.ok || json?.success === false) {
                     throw new Error((json && (json.error || json.detail)) || 'No se pudo eliminar');
                 }
-                if (msg) msg.textContent = 'Colaborador eliminado.';
+                if (msg) msg.textContent = (json && (json.message || json.detail)) ? (json.message || json.detail) : 'Colaborador eliminado.';
                 await load();
                 setView('form');
                 setTimeout(function() {

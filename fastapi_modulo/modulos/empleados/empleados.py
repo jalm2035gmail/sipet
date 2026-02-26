@@ -12,7 +12,8 @@ from fastapi_modulo.db import SessionLocal
 router = APIRouter()
 COLAB_UPLOAD_DIR = Path("fastapi_modulo/uploads/colaboradores")
 _APP_ENV = (os.environ.get("APP_ENV") or os.environ.get("ENVIRONMENT") or "development").strip().lower()
-_RUNTIME_STORE_DIR = (os.environ.get("RUNTIME_STORE_DIR") or f"fastapi_modulo/runtime_store/{_APP_ENV}").strip()
+_DEFAULT_SIPET_DATA_DIR = (os.environ.get("SIPET_DATA_DIR") or os.path.expanduser("~/.sipet/data")).strip()
+_RUNTIME_STORE_DIR = (os.environ.get("RUNTIME_STORE_DIR") or os.path.join(_DEFAULT_SIPET_DATA_DIR, "runtime_store", _APP_ENV)).strip()
 COLAB_META_PATH = Path(
     os.environ.get("COLAB_META_PATH") or os.path.join(_RUNTIME_STORE_DIR, "colaboradores_meta.json")
 )
@@ -72,6 +73,7 @@ def api_listar_colaboradores(request: Request):
     try:
         meta = _load_colab_meta()
         rows = db.query(Usuario).all()
+        names_by_id = {u.id: (u.nombre or "").strip() for u in rows}
         roles_by_id = {role.id: normalize_role_name(role.nombre) for role in db.query(Rol).all()}
         viewer_role = normalize_role_name((getattr(request.state, "user_role", None) or "").strip().lower())
         assignable_roles = sorted(_allowed_role_assignments(viewer_role))
@@ -83,7 +85,12 @@ def api_listar_colaboradores(request: Request):
                 "correo": (_decrypt_sensitive(u.correo) or "").strip(),
                 "departamento": u.departamento or "",
                 "imagen": u.imagen or "",
-                "jefe": u.jefe or "",
+                "jefe_inmediato_id": getattr(u, "jefe_inmediato_id", None),
+                "jefe": (
+                    names_by_id.get(getattr(u, "jefe_inmediato_id", None))
+                    or u.jefe
+                    or ""
+                ),
                 "puesto": u.puesto or "",
                 "rol": (
                     roles_by_id.get(u.rol_id)
@@ -128,6 +135,7 @@ def api_organigrama_colaboradores(request: Request):
     try:
         meta = _load_colab_meta()
         rows = db.query(Usuario).all()
+        names_by_id = {u.id: (u.nombre or "").strip() for u in rows}
         roles_by_id = {role.id: normalize_role_name(role.nombre) for role in db.query(Rol).all()}
         all_rows: List[Dict[str, Any]] = [
             {
@@ -137,7 +145,12 @@ def api_organigrama_colaboradores(request: Request):
                 "correo": (_decrypt_sensitive(u.correo) or "").strip(),
                 "departamento": u.departamento or "",
                 "imagen": u.imagen or "",
-                "jefe": u.jefe or "",
+                "jefe_inmediato_id": getattr(u, "jefe_inmediato_id", None),
+                "jefe": (
+                    names_by_id.get(getattr(u, "jefe_inmediato_id", None))
+                    or u.jefe
+                    or ""
+                ),
                 "puesto": u.puesto or "",
                 "rol": (
                     roles_by_id.get(u.rol_id)
@@ -178,8 +191,9 @@ def api_organigrama_colaboradores(request: Request):
             for row in all_rows:
                 if int(row["id"]) in visible_ids:
                     continue
+                boss_id = row.get("jefe_inmediato_id")
                 boss = (row.get("jefe") or "").strip().lower()
-                if boss and boss in {current_name, current_user}:
+                if (boss_id and int(boss_id) == int(current["id"])) or (boss and boss in {current_name, current_user}):
                     visible_ids.add(int(row["id"]))
                     queue.append(row)
 
@@ -215,6 +229,11 @@ def api_guardar_colaborador(request: Request, data: dict = Body(...)):
     correo = (data.get("correo") or "").strip()
     departamento = (data.get("departamento") or "").strip()
     puesto = (data.get("puesto") or "").strip()
+    jefe_inmediato_id = data.get("jefe_inmediato_id")
+    try:
+        jefe_inmediato_id = int(jefe_inmediato_id) if jefe_inmediato_id not in (None, "") else None
+    except Exception:
+        jefe_inmediato_id = None
     celular = (data.get("celular") or "").strip()
     nivel_organizacional = (data.get("nivel_organizacional") or "").strip()
     imagen = (data.get("imagen") or "").strip()
@@ -238,30 +257,59 @@ def api_guardar_colaborador(request: Request, data: dict = Body(...)):
 
     db = SessionLocal()
     try:
+        from sqlalchemy import func
+        from fastapi_modulo.main import ensure_default_roles
+        ensure_default_roles()
         target_role = db.query(Rol).filter(Rol.nombre == requested_role).first()
+        if not target_role:
+            target_role = (
+                db.query(Rol)
+                .filter(func.lower(Rol.nombre) == requested_role.lower())
+                .first()
+            )
+        if not target_role:
+            target_role = (
+                db.query(Rol)
+                .filter(func.lower(Rol.nombre) == "usuario")
+                .first()
+            )
         if not target_role:
             return JSONResponse({"success": False, "error": "Rol no encontrado"}, status_code=404)
         rol_id = target_role.id
         user_hash = _sensitive_lookup_hash(usuario_login)
         email_hash = _sensitive_lookup_hash(correo) if correo else None
+        jefe_inmediato_nombre = ""
+        if jefe_inmediato_id and incoming_id and int(jefe_inmediato_id) == int(incoming_id):
+            return JSONResponse(
+                {"success": False, "error": "El jefe inmediato no puede ser el mismo colaborador"},
+                status_code=400,
+            )
+        if jefe_inmediato_id:
+            jefe_exists = db.query(Usuario).filter(Usuario.id == jefe_inmediato_id).first()
+            if not jefe_exists:
+                return JSONResponse(
+                    {"success": False, "error": "El jefe inmediato seleccionado no existe"},
+                    status_code=400,
+                )
+            jefe_inmediato_nombre = (jefe_exists.nombre or "").strip()
 
         existing = None
         if incoming_id:
             existing = db.query(Usuario).filter(Usuario.id == incoming_id).first()
-        if not existing:
-            existing_query = db.query(Usuario).filter(Usuario.usuario_hash == user_hash)
+        if not incoming_id:
+            duplicate_by_username = db.query(Usuario).filter(Usuario.usuario_hash == user_hash).first()
+            if duplicate_by_username:
+                return JSONResponse(
+                    {"success": False, "error": "No se pudo guardar: el usuario ya existe."},
+                    status_code=409,
+                )
             if email_hash:
-                existing_query = db.query(Usuario).filter(
-                    (Usuario.usuario_hash == user_hash) | (Usuario.correo_hash == email_hash)
-                )
-            existing = existing_query.first()
-        if not existing:
-            existing_plain_query = db.query(Usuario).filter(Usuario.usuario == usuario_login)
-            if correo:
-                existing_plain_query = db.query(Usuario).filter(
-                    (Usuario.usuario == usuario_login) | (Usuario.correo == correo)
-                )
-            existing = existing_plain_query.first()
+                duplicate_by_email = db.query(Usuario).filter(Usuario.correo_hash == email_hash).first()
+                if duplicate_by_email:
+                    return JSONResponse(
+                        {"success": False, "error": "No se pudo guardar: el correo ya existe."},
+                        status_code=409,
+                    )
 
         if existing:
             existing.nombre = nombre
@@ -271,6 +319,8 @@ def api_guardar_colaborador(request: Request, data: dict = Body(...)):
             existing.correo_hash = email_hash
             existing.departamento = departamento
             existing.puesto = puesto
+            existing.jefe_inmediato_id = jefe_inmediato_id
+            existing.jefe = jefe_inmediato_nombre
             existing.celular = celular
             existing.coach = nivel_organizacional
             existing.imagen = imagen or None
@@ -296,6 +346,7 @@ def api_guardar_colaborador(request: Request, data: dict = Body(...)):
                     "correo": _decrypt_sensitive(existing.correo) or "",
                     "departamento": existing.departamento or "",
                     "puesto": existing.puesto or "",
+                    "jefe_inmediato_id": existing.jefe_inmediato_id,
                     "celular": existing.celular or "",
                     "nivel_organizacional": existing.coach or "",
                     "imagen": existing.imagen or "",
@@ -315,6 +366,8 @@ def api_guardar_colaborador(request: Request, data: dict = Body(...)):
             contrasena=hash_password("Temp1234!"),
             departamento=departamento,
             puesto=puesto,
+            jefe=jefe_inmediato_nombre,
+            jefe_inmediato_id=jefe_inmediato_id,
             celular=celular,
             coach=nivel_organizacional,
             imagen=imagen or None,
@@ -341,6 +394,7 @@ def api_guardar_colaborador(request: Request, data: dict = Body(...)):
                 "correo": _decrypt_sensitive(nuevo.correo) or "",
                 "departamento": nuevo.departamento or "",
                 "puesto": nuevo.puesto or "",
+                "jefe_inmediato_id": nuevo.jefe_inmediato_id,
                 "celular": nuevo.celular or "",
                 "nivel_organizacional": nuevo.coach or "",
                 "imagen": nuevo.imagen or "",

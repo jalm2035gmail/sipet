@@ -3,7 +3,7 @@ import os
 # Módulo inicial para endpoints y lógica de departamentos
 from fastapi import APIRouter, Request, Body, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
-from typing import List, Dict, Set
+from typing import List, Dict, Set, Any
 from fastapi_modulo.db import SessionLocal, DepartamentoOrganizacional, Base, engine
 
 router = APIRouter()
@@ -49,9 +49,41 @@ def areas_organizacionales_page(request: Request):
     return RedirectResponse(url="/inicio/departamentos", status_code=307)
 
 
-def _serialize_departamentos(rows: List[DepartamentoOrganizacional]) -> List[Dict[str, str]]:
-    data: List[Dict[str, str]] = []
+def _build_empleados_count_map(rows: List[DepartamentoOrganizacional]) -> Dict[str, int]:
+    # Import diferido para evitar ciclo de importación con fastapi_modulo.main.
+    from fastapi_modulo.main import Usuario
+
+    db = SessionLocal()
+    try:
+        all_users = db.query(Usuario).all()
+    finally:
+        db.close()
+
+    buckets: Dict[str, int] = {}
+    for user in all_users:
+        dep = str(getattr(user, "departamento", "") or "").strip().lower()
+        if not dep:
+            continue
+        buckets[dep] = buckets.get(dep, 0) + 1
+
+    counts: Dict[str, int] = {}
     for row in rows:
+        name_key = str(row.nombre or "").strip().lower()
+        code_key = str(row.codigo or "").strip().lower()
+        counts[code_key] = buckets.get(name_key, 0)
+        if code_key and code_key != name_key:
+            counts[code_key] += buckets.get(code_key, 0)
+    return counts
+
+
+def _serialize_departamentos(
+    rows: List[DepartamentoOrganizacional],
+    count_map: Dict[str, int] | None = None,
+) -> List[Dict[str, Any]]:
+    data: List[Dict[str, Any]] = []
+    count_map = count_map or {}
+    for row in rows:
+        code_key = str(row.codigo or "").strip().lower()
         data.append(
             {
                 "name": str(row.nombre or "").strip(),
@@ -60,6 +92,7 @@ def _serialize_departamentos(rows: List[DepartamentoOrganizacional]) -> List[Dic
                 "code": str(row.codigo or "").strip(),
                 "color": str(row.color or "#1d4ed8").strip() or "#1d4ed8",
                 "status": str(row.estado or "Activo").strip() or "Activo",
+                "empleados_asignados": int(count_map.get(code_key, 0)),
             }
         )
     return data
@@ -74,7 +107,8 @@ def listar_departamentos():
             .order_by(DepartamentoOrganizacional.orden.asc(), DepartamentoOrganizacional.id.asc())
             .all()
         )
-        return {"success": True, "data": _serialize_departamentos(rows)}
+        count_map = _build_empleados_count_map(rows)
+        return {"success": True, "data": _serialize_departamentos(rows, count_map)}
     finally:
         db.close()
 
@@ -121,28 +155,74 @@ async def guardar_departamentos(request: Request, data: dict = Body(...)):
     _ensure_departamentos_schema()
     db = SessionLocal()
     try:
-        db.query(DepartamentoOrganizacional).delete()
+        # Upsert no destructivo para evitar pérdida masiva si el frontend envía payload parcial.
         for idx, item in enumerate(cleaned_rows, start=1):
-            db.add(
-                DepartamentoOrganizacional(
-                    nombre=item["name"],
-                    codigo=item["code"],
-                    padre=item["parent"],
-                    responsable=item["manager"],
-                    color=item["color"],
-                    estado=item["status"],
-                    orden=idx,
-                )
+            existing = (
+                db.query(DepartamentoOrganizacional)
+                .filter(DepartamentoOrganizacional.codigo == item["code"])
+                .first()
             )
+            if existing:
+                existing.nombre = item["name"]
+                existing.padre = item["parent"]
+                existing.responsable = item["manager"]
+                existing.color = item["color"]
+                existing.estado = item["status"]
+                existing.orden = idx
+                db.add(existing)
+            else:
+                db.add(
+                    DepartamentoOrganizacional(
+                        nombre=item["name"],
+                        codigo=item["code"],
+                        padre=item["parent"],
+                        responsable=item["manager"],
+                        color=item["color"],
+                        estado=item["status"],
+                        orden=idx,
+                    )
+                )
         db.commit()
         rows = (
             db.query(DepartamentoOrganizacional)
             .order_by(DepartamentoOrganizacional.orden.asc(), DepartamentoOrganizacional.id.asc())
             .all()
         )
-        return {"success": True, "data": _serialize_departamentos(rows)}
+        count_map = _build_empleados_count_map(rows)
+        return {"success": True, "data": _serialize_departamentos(rows, count_map)}
     except Exception as exc:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Error guardando departamentos: {exc}")
+    finally:
+        db.close()
+
+
+@router.delete("/api/inicio/departamentos/{code}")
+def eliminar_departamento(request: Request, code: str):
+    from fastapi_modulo.main import require_admin_or_superadmin
+
+    require_admin_or_superadmin(request)
+    _ensure_departamentos_schema()
+    target_code = str(code or "").strip()
+    if not target_code:
+        raise HTTPException(status_code=400, detail="Código inválido")
+    db = SessionLocal()
+    try:
+        row = (
+            db.query(DepartamentoOrganizacional)
+            .filter(DepartamentoOrganizacional.codigo == target_code)
+            .first()
+        )
+        if not row:
+            raise HTTPException(status_code=404, detail="Departamento no encontrado")
+        db.delete(row)
+        db.commit()
+        rows = (
+            db.query(DepartamentoOrganizacional)
+            .order_by(DepartamentoOrganizacional.orden.asc(), DepartamentoOrganizacional.id.asc())
+            .all()
+        )
+        count_map = _build_empleados_count_map(rows)
+        return {"success": True, "data": _serialize_departamentos(rows, count_map)}
     finally:
         db.close()

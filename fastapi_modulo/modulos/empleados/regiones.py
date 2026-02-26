@@ -1,76 +1,27 @@
-import json
 import os
-from typing import Dict, List
+from typing import List, Dict
 
 from fastapi import APIRouter, Body, HTTPException, Request
 from fastapi.responses import HTMLResponse
+from fastapi_modulo.db import SessionLocal, RegionOrganizacional, Base, engine
 
 router = APIRouter()
-APP_ENV_DEFAULT = (os.environ.get("APP_ENV") or os.environ.get("ENVIRONMENT") or "development").strip().lower()
-RUNTIME_STORE_DIR = (os.environ.get("RUNTIME_STORE_DIR") or f"fastapi_modulo/runtime_store/{APP_ENV_DEFAULT}").strip()
-
-REGIONES_STORE_PATH = (
-    os.environ.get("REGIONES_STORE_PATH")
-    or os.path.join(RUNTIME_STORE_DIR, "regiones_store.json")
-)
 REGIONES_TEMPLATE_PATH = os.path.join("fastapi_modulo", "templates", "modulos", "empleados", "regiones.html")
 
 
-def _ensure_store_parent_dir(path: str) -> None:
-    parent = os.path.dirname(path)
-    if parent:
-        os.makedirs(parent, exist_ok=True)
+def _ensure_regiones_schema() -> None:
+    Base.metadata.create_all(bind=engine, tables=[RegionOrganizacional.__table__], checkfirst=True)
 
 
-def load_regiones_store() -> List[Dict[str, str]]:
-    if not os.path.exists(REGIONES_STORE_PATH):
-        return []
-    try:
-        with open(REGIONES_STORE_PATH, "r", encoding="utf-8") as fh:
-            loaded = json.load(fh)
-    except (OSError, json.JSONDecodeError):
-        return []
-    if not isinstance(loaded, list):
-        return []
-    rows: List[Dict[str, str]] = []
-    for item in loaded:
-        if not isinstance(item, dict):
-            continue
-        nombre = str(item.get("nombre") or "").strip()
-        codigo = str(item.get("codigo") or "").strip()
-        descripcion = str(item.get("descripcion") or "").strip()
-        if not nombre and not codigo and not descripcion:
-            continue
-        rows.append(
-            {
-                "nombre": nombre,
-                "codigo": codigo,
-                "descripcion": descripcion,
-            }
-        )
-    return rows
-
-
-def save_regiones_store(rows: List[Dict[str, str]]) -> None:
-    safe_rows: List[Dict[str, str]] = []
-    for item in rows:
-        if not isinstance(item, dict):
-            continue
-        nombre = str(item.get("nombre") or "").strip()
-        codigo = str(item.get("codigo") or "").strip()
-        descripcion = str(item.get("descripcion") or "").strip()
-        if not nombre and not codigo and not descripcion:
-            continue
-        safe_rows.append(
-            {
-                "nombre": nombre,
-                "codigo": codigo,
-                "descripcion": descripcion,
-            }
-        )
-    _ensure_store_parent_dir(REGIONES_STORE_PATH)
-    with open(REGIONES_STORE_PATH, "w", encoding="utf-8") as fh:
-        json.dump(safe_rows, fh, ensure_ascii=False, indent=2)
+def _serialize_regiones(rows: List[RegionOrganizacional]) -> List[Dict[str, str]]:
+    return [
+        {
+            "nombre": str(row.nombre or "").strip(),
+            "codigo": str(row.codigo or "").strip(),
+            "descripcion": str(row.descripcion or "").strip(),
+        }
+        for row in rows
+    ]
 
 
 def _load_regiones_template() -> str:
@@ -102,13 +53,75 @@ def inicio_regiones_page(request: Request):
 
 @router.get("/api/inicio/regiones")
 def listar_regiones():
-    return {"success": True, "data": load_regiones_store()}
+    _ensure_regiones_schema()
+    db = SessionLocal()
+    try:
+        rows = (
+            db.query(RegionOrganizacional)
+            .order_by(RegionOrganizacional.orden.asc(), RegionOrganizacional.id.asc())
+            .all()
+        )
+        return {"success": True, "data": _serialize_regiones(rows)}
+    finally:
+        db.close()
 
 
 @router.post("/api/inicio/regiones")
 async def guardar_regiones(data: dict = Body(...)):
+    _ensure_regiones_schema()
     incoming = data.get("data", [])
     if not isinstance(incoming, list):
         raise HTTPException(status_code=400, detail="Formato inválido")
-    save_regiones_store(incoming)
-    return {"success": True, "data": load_regiones_store()}
+    cleaned_rows: List[Dict[str, str]] = []
+    used_codes = set()
+    for item in incoming:
+        if not isinstance(item, dict):
+            continue
+        nombre = str(item.get("nombre") or "").strip()
+        codigo = str(item.get("codigo") or "").strip()
+        descripcion = str(item.get("descripcion") or "").strip()
+        if not nombre or not codigo:
+            continue
+        code_key = codigo.lower()
+        if code_key in used_codes:
+            continue
+        used_codes.add(code_key)
+        cleaned_rows.append({"nombre": nombre, "codigo": codigo, "descripcion": descripcion})
+
+    if not cleaned_rows:
+        raise HTTPException(status_code=400, detail="No hay regiones válidas para guardar")
+
+    db = SessionLocal()
+    try:
+        for idx, item in enumerate(cleaned_rows, start=1):
+            existing = (
+                db.query(RegionOrganizacional)
+                .filter(RegionOrganizacional.codigo == item["codigo"])
+                .first()
+            )
+            if existing:
+                existing.nombre = item["nombre"]
+                existing.descripcion = item["descripcion"]
+                existing.orden = idx
+                db.add(existing)
+            else:
+                db.add(
+                    RegionOrganizacional(
+                        nombre=item["nombre"],
+                        codigo=item["codigo"],
+                        descripcion=item["descripcion"],
+                        orden=idx,
+                    )
+                )
+        db.commit()
+        rows = (
+            db.query(RegionOrganizacional)
+            .order_by(RegionOrganizacional.orden.asc(), RegionOrganizacional.id.asc())
+            .all()
+        )
+        return {"success": True, "data": _serialize_regiones(rows)}
+    except Exception as exc:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error guardando regiones: {exc}")
+    finally:
+        db.close()

@@ -389,14 +389,14 @@ body {
     position: absolute;
     top: calc(100% + 10px);
     right: 0;
-    min-width: 168px;
+    min-width: 190px;
     background: #ffffff;
     border: 1px solid #dbe3ef;
     border-radius: 12px;
     box-shadow: 0 12px 30px rgba(15, 23, 42, 0.18);
     padding: 8px;
     display: none;
-    z-index: 40;
+    z-index: 70;
 }
 .user-dropdown.open {
     display: block;
@@ -412,6 +412,17 @@ body {
 }
 .user-dropdown a:hover {
     background: #f1f5f9;
+}
+.user-dropdown a + a {
+    margin-top: 4px;
+    border-top: 1px solid #e2e8f0;
+    padding-top: 12px;
+}
+.user-dropdown a#logout-link {
+    color: #b91c1c;
+}
+.user-dropdown a#logout-link:hover {
+    background: #fef2f2;
 }
 .sidebar-notifications-panel {
     position: fixed;

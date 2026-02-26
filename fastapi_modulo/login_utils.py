@@ -13,12 +13,7 @@ def _build_login_asset_url(filename, default):
     return f"/templates/imagenes/{selected}?v={version}"
 
 def _load_login_identity():
-    app_env = (os.environ.get("APP_ENV") or os.environ.get("ENVIRONMENT") or "development").strip().lower()
-    runtime_store_dir = (os.environ.get("RUNTIME_STORE_DIR") or f"fastapi_modulo/runtime_store/{app_env}").strip()
-    path = (
-        os.environ.get("IDENTIDAD_LOGIN_CONFIG_PATH")
-        or os.path.join(runtime_store_dir, "identidad_login.json")
-    )
+    path = os.environ.get("IDENTIDAD_LOGIN_CONFIG_PATH") or "fastapi_modulo/identidad_login.json"
     if not os.path.exists(path):
         return DEFAULT_LOGIN_IDENTITY.copy()
     try:

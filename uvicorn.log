@@ -1,152 +1,26 @@
-INFO:     Started server process [58385]
+INFO:     Started server process [6304]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
-INFO:     127.0.0.1:65416 - "GET /inicio/colaboradores HTTP/1.1" 200 OK
-INFO:     127.0.0.1:65416 - "GET /css/global.css HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:65417 - "GET /personalizar/uploads/logo_empresa.png?v=1772065958 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:65416 - "GET /api/colaboradores HTTP/1.1" 200 OK
-INFO:     127.0.0.1:65421 - "GET /organigrama.svg HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:65417 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:65421 - "GET /personalizar/estado HTTP/1.1" 200 OK
-INFO:     127.0.0.1:65421 - "GET /empresa/base-datos HTTP/1.1" 200 OK
-INFO:     127.0.0.1:65417 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:65421 - "GET /personalizar/estado HTTP/1.1" 200 OK
-INFO:     127.0.0.1:49770 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50342 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51045 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51751 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52415 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53077 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53711 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:54291 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:54889 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55599 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56286 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57663 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57663 - "GET /inicio/colaboradores HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57663 - "GET /css/global.css HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:57672 - "GET /personalizar/uploads/logo_empresa.png?v=1772065958 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57663 - "GET /api/colaboradores HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57672 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57663 - "GET /personalizar/estado HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57663 - "GET /api/inicio/departamentos HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57672 - "GET /icon/acceso.svg HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57718 - "GET /icon/cv.svg HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:57719 - "GET /icon/habilidades.svg HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:57794 - "POST /api/colaboradores HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57794 - "GET /api/colaboradores HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57794 - "GET /api/inicio/departamentos HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57860 - "POST /api/colaboradores HTTP/1.1" 500 Internal Server Error
-ERROR:    Exception in ASGI application
-Traceback (most recent call last):
-  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1969, in _exec_single_context
-    self.dialect.do_execute(
-  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/default.py", line 922, in do_execute
-    cursor.execute(statement, parameters)
-sqlite3.IntegrityError: UNIQUE constraint failed: users.email
-
-The above exception was the direct cause of the following exception:
-
-Traceback (most recent call last):
-  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/uvicorn/protocols/http/httptools_impl.py", line 426, in run_asgi
-    result = await app(  # type: ignore[func-returns-value]
-  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/uvicorn/middleware/proxy_headers.py", line 84, in __call__
-    return await self.app(scope, receive, send)
-  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/fastapi/applications.py", line 1106, in __call__
-    await super().__call__(scope, receive, send)
-  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/applications.py", line 122, in __call__
-    await self.middleware_stack(scope, receive, send)
-  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/errors.py", line 184, in __call__
-    raise exc
-  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/errors.py", line 162, in __call__
-    await self.app(scope, receive, _send)
-  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/base.py", line 108, in __call__
-    response = await self.dispatch_func(request, call_next)
-  File "/Users/jalm/Dropbox/Apps/SIPET/fastapi_modulo/main.py", line 1891, in enforce_backend_login
-    status_code=403,
-  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/base.py", line 84, in call_next
-    raise app_exc
-  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/base.py", line 70, in coro
-    await self.app(scope, receive_or_disconnect, send_no_error)
-  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/exceptions.py", line 79, in __call__
-    raise exc
-  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/exceptions.py", line 68, in __call__
-    await self.app(scope, receive, sender)
-  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/fastapi/middleware/asyncexitstack.py", line 20, in __call__
-    raise e
-  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/fastapi/middleware/asyncexitstack.py", line 17, in __call__
-    await self.app(scope, receive, send)
-  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/routing.py", line 718, in __call__
-    await route.handle(scope, receive, send)
-  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/routing.py", line 276, in handle
-    await self.app(scope, receive, send)
-  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/routing.py", line 66, in app
-    response = await func(request)
-  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/fastapi/routing.py", line 274, in app
-    raw_response = await run_endpoint_function(
-  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/fastapi/routing.py", line 193, in run_endpoint_function
-    return await run_in_threadpool(dependant.call, **values)
-  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/concurrency.py", line 41, in run_in_threadpool
-    return await anyio.to_thread.run_sync(func, *args)
-  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/anyio/to_thread.py", line 33, in run_sync
-    return await get_asynclib().run_sync_in_worker_thread(
-  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/anyio/_backends/_asyncio.py", line 877, in run_sync_in_worker_thread
-    return await future
-  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/anyio/_backends/_asyncio.py", line 807, in run
-    result = context.run(func, *args)
-  File "/Users/jalm/Dropbox/Apps/SIPET/fastapi_modulo/modulos/empleados/empleados.py", line 320, in api_guardar_colaborador
-    rol_id=rol_id,
-  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/orm/session.py", line 1969, in commit
-    trans.commit(_to_root=True)
-  File "<string>", line 2, in commit
-  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/orm/state_changes.py", line 139, in _go
-    ret_value = fn(self, *arg, **kw)
-  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/orm/session.py", line 1256, in commit
-    self._prepare_impl()
-  File "<string>", line 2, in _prepare_impl
-  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/orm/state_changes.py", line 139, in _go
-    ret_value = fn(self, *arg, **kw)
-  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/orm/session.py", line 1231, in _prepare_impl
-    self.session.flush()
-  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/orm/session.py", line 4312, in flush
-    self._flush(objects)
-  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/orm/session.py", line 4447, in _flush
-    with util.safe_reraise():
-  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/util/langhelpers.py", line 146, in __exit__
-    raise exc_value.with_traceback(exc_tb)
-  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/orm/session.py", line 4408, in _flush
-    flush_context.execute()
-  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/orm/unitofwork.py", line 466, in execute
-    rec.execute(self)
-  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/orm/unitofwork.py", line 642, in execute
-    util.preloaded.orm_persistence.save_obj(
-  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/orm/persistence.py", line 93, in save_obj
-    _emit_insert_statements(
-  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/orm/persistence.py", line 1226, in _emit_insert_statements
-    result = connection.execute(
-  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1416, in execute
-    return meth(
-  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/sql/elements.py", line 516, in _execute_on_connection
-    return connection._execute_clauseelement(
-  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1639, in _execute_clauseelement
-    ret = self._execute_context(
-  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1848, in _execute_context
-    return self._exec_single_context(
-  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1988, in _exec_single_context
-    self._handle_dbapi_exception(
-  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 2343, in _handle_dbapi_exception
-    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
-  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1969, in _exec_single_context
-    self.dialect.do_execute(
-  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/default.py", line 922, in do_execute
-    cursor.execute(statement, parameters)
-sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) UNIQUE constraint failed: users.email
-[SQL: INSERT INTO users (full_name, username, usuario_hash, email, correo_hash, celular, password, departamento, puesto, jefe, coach, rol_id, imagen, role, is_active, webauthn_credential_id, webauthn_public_key, webauthn_sign_count, totp_secret, totp_enabled) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]
-[parameters: ('dos', 'enc$gAAAAABpn7CI2UJ_j17qEMlEtcEcO8RcN2gfpuGQpMQz7aVUBCMxrVxhOr-y6aKvZXQIvSQCpYbNchgMsgkeRoywc4RF3L6Nbg==', 'fe4a99013e7b7a7ab74ad9eab23d54fc77396d9e3ae1d6d5731716cfb2008d92', '', None, '', 'pbkdf2_sha256$120000$581568e423d9381eac098ced12c96201$4cf55806e4d56eca386a4dd67562f4d48474c8bc0bd24c0746499750c48c65cd', '', '', None, '', 5, None, 'usuario', 1, None, None, 0, None, 0)]
-(Background on this error at: https://sqlalche.me/e/20/gkpj)
-INFO:     127.0.0.1:58202 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58764 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59247 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59817 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60442 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58602 - "GET /inicio/departamentos HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58603 - "GET /api/colaboradores HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58602 - "GET /api/inicio/departamentos HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58602 - "GET /personalizar/estado HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58602 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59041 - "GET /logout HTTP/1.1" 303 See Other
+INFO:     127.0.0.1:59041 - "GET /web/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59044 - "POST /web/passkey/auth/options HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:59262 - "POST /web/passkey/auth/options HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:59262 - "POST /web/login HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:59262 - "POST /web/passkey/auth/options HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:59341 - "POST /web/passkey/auth/options HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:59424 - "POST /web/passkey/auth/options HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:59423 - "POST /web/passkey/auth/options HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:59423 - "POST /web/login HTTP/1.1" 303 See Other
+INFO:     127.0.0.1:59423 - "GET /inicio HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59424 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59423 - "GET /personalizar/estado HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59490 - "GET /ajustes/configuracion HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59494 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59490 - "GET /personalizar/estado HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60195 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK

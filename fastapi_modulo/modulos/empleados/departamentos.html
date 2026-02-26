@@ -141,6 +141,98 @@
       margin-bottom: 8px;
       font-weight: 700;
     }
+    .departamentos-page .dept-org-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.5);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1200;
+      padding: 16px;
+    }
+    .departamentos-page .dept-org-modal.open {
+      display: flex;
+    }
+    .departamentos-page .dept-org-dialog {
+      width: min(980px, 96vw);
+      max-height: 90vh;
+      overflow: auto;
+      background: #ffffff;
+      border-radius: 14px;
+      border: 1px solid #dbe3ef;
+      box-shadow: 0 18px 48px rgba(15, 23, 42, 0.24);
+      padding: 14px;
+    }
+    .departamentos-page .dept-org-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .departamentos-page .dept-org-title {
+      margin: 0;
+      font-size: 1rem;
+      color: #0f172a;
+    }
+    .departamentos-page .dept-org-close {
+      border: 1px solid #cbd5e1;
+      border-radius: 10px;
+      background: #fff;
+      color: #0f172a;
+      padding: 6px 10px;
+      cursor: pointer;
+      font-weight: 700;
+    }
+    .departamentos-page .emp-note {
+      margin-top: 12px;
+      border: 1px solid #dbe3ef;
+      border-radius: 12px;
+      background: #fff;
+      overflow: hidden;
+    }
+    .departamentos-page .emp-note-tabs {
+      display: flex;
+      border-bottom: 1px solid #e2e8f0;
+      background: #f8fafc;
+    }
+    .departamentos-page .emp-note-tab {
+      border: 0;
+      background: transparent;
+      padding: 10px 14px;
+      font-weight: 700;
+      cursor: pointer;
+      color: #0f172a;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .departamentos-page .emp-note-tab .tab-icon {
+      width: 16px;
+      height: 16px;
+      display: inline-block;
+      flex: 0 0 auto;
+    }
+    .departamentos-page .emp-note-tab.active {
+      background: #ffffff;
+      border-bottom: 2px solid #0f172a;
+    }
+    .departamentos-page .emp-note-panel {
+      padding: 10px 12px 12px;
+    }
+    .departamentos-page .emp-assigned-list {
+      margin: 0;
+      padding-left: 18px;
+      display: grid;
+      gap: 4px;
+    }
+    .departamentos-page .emp-assigned-meta {
+      color: #334155;
+      margin: 0 0 8px;
+      font-weight: 600;
+      font-size: .92rem;
+    }
     @media (max-width: 980px) {
       .departamentos-page .area-grid,
       .departamentos-page .kanban {
@@ -162,6 +254,7 @@
       let orgLibPromise = null;
       let orgChartInstance = null;
       let orgAvatarUrl = '/templates/icon/organigrama.svg';
+      let colaboradoresData = [];
 
       const escapeHtml = (value) => String(value || '')
         .replace(/&/g, '&amp;')
@@ -200,6 +293,21 @@
           .filter((row) => row.name && row.code);
         areasData = clean;
       };
+      const normalizeText = (value) => String(value || '').trim().toLowerCase();
+      const getAssignedEmployees = (area) => {
+        const areaName = normalizeText(area?.name);
+        const areaCode = normalizeText(area?.code);
+        if (!areaName && !areaCode) return [];
+        return colaboradoresData.filter((col) => {
+          const dep = normalizeText(col?.departamento);
+          return !!dep && (dep === areaName || dep === areaCode);
+        });
+      };
+      const assignedCount = (area) => {
+        const backendCount = Number(area?.empleados_asignados);
+        if (!Number.isNaN(backendCount)) return backendCount;
+        return getAssignedEmployees(area).length;
+      };
 
       const loadAreasData = async () => {
         try {
@@ -209,6 +317,16 @@
           replaceAreasData(json?.data || []);
         } catch (_error) {
           replaceAreasData([]);
+        }
+      };
+      const loadColaboradoresData = async () => {
+        try {
+          const res = await fetch('/api/colaboradores');
+          const json = await res.json().catch(() => ({}));
+          if (!res.ok || json?.success === false) throw new Error();
+          colaboradoresData = Array.isArray(json?.data) ? json.data : [];
+        } catch (_error) {
+          colaboradoresData = [];
         }
       };
 
@@ -224,6 +342,9 @@
             json?.error || json?.detail || json?.message || ''
           ).trim();
           throw new Error(backendMessage || 'No se pudieron guardar departamentos');
+        }
+        if (json?.message) {
+          lastSaveFeedback = { message: String(json.message), tone: 'ok' };
         }
         replaceAreasData(json?.data || []);
       };
@@ -253,6 +374,21 @@
         const selectedColor = normalizeAreaColor(selectedArea.color || '#1d4ed8');
         const selectedStatus = escapeHtml(selectedArea.status || 'Activo');
         const relation = selectedStatus === 'En revisión' ? 'Funcional' : 'Línea';
+        const assigned = getAssignedEmployees(selectedArea);
+        const renderNotebookPanel = (tabName) => {
+          if (tabName === 'empleados') {
+            return `
+              <p class="emp-assigned-meta">Empleados asignados: ${assigned.length}</p>
+              ${assigned.length
+                ? `<ul class="emp-assigned-list">
+                    ${assigned.map((emp) => `<li>${escapeHtml(emp.nombre || emp.usuario || 'Sin nombre')} ${emp.puesto ? `- ${escapeHtml(emp.puesto)}` : ''}</li>`).join('')}
+                  </ul>`
+                : '<p>Sin empleados asignados.</p>'
+              }
+            `;
+          }
+          return '<p>Sin acceso, consulte al administrdor</p>';
+        };
 
         areaView.innerHTML = `
           <section class="area-card">
@@ -302,6 +438,17 @@
                   <textarea placeholder="Observaciones, acuerdos, excepciones"></textarea>
                 </div>
               </div>
+              <div class="emp-note">
+                <div class="emp-note-tabs">
+                  <button type="button" class="emp-note-tab active" data-note-tab="empleados"><img src="/templates/icon/organigrama.svg" alt="" class="tab-icon">Empleados</button>
+                  <button type="button" class="emp-note-tab" data-note-tab="ejes"><img src="/templates/icon/biblioteca.svg" alt="" class="tab-icon">Ejes estratégicos asignados</button>
+                  <button type="button" class="emp-note-tab" data-note-tab="kpis"><img src="/templates/icon/kpi.svg" alt="" class="tab-icon">KPI</button>
+                  <button type="button" class="emp-note-tab" data-note-tab="indice"><img src="/templates/icon/habilidades.svg" alt="" class="tab-icon">Indice de bateo</button>
+                </div>
+                <div class="emp-note-panel" id="area-emp-note-panel">
+                  ${renderNotebookPanel('empleados')}
+                </div>
+              </div>
               <div class="actions">
                 <button type="button" id="area-form-new-btn" class="btn">Nuevo</button>
                 <button type="button" id="area-form-cancel-btn" class="btn">Cancelar</button>
@@ -311,26 +458,23 @@
             </form>
           </section>
         `;
-
         // Poblar select de responsables (colaboradores)
         const managerSelect = areaView.querySelector('#area-manager-select');
         if (managerSelect) {
-          fetch('/api/colaboradores').then(r => r.json()).then(json => {
-            if (json && Array.isArray(json.data)) {
-              managerSelect.innerHTML = '<option value="">Seleccione responsable</option>' +
-                json.data.map(function(col) {
-                  const label = (col.nombre ? col.nombre : col.usuario) + (col.departamento ? ' (' + col.departamento + ')' : '');
-                  return '<option value="' + (col.nombre || col.usuario || '') + '"' + (selectedManager === (col.nombre || col.usuario) ? ' selected' : '') + '>' + label + '</option>';
-                }).join('');
-            } else {
-              managerSelect.innerHTML = '<option value="">Sin colaboradores</option>';
-            }
-          }).catch(() => {
-            managerSelect.innerHTML = '<option value="">Error al cargar</option>';
-          });
+          if (colaboradoresData.length) {
+            managerSelect.innerHTML = '<option value="">Seleccione responsable</option>' +
+              colaboradoresData.map(function(col) {
+                const label = (col.nombre ? col.nombre : col.usuario) + (col.departamento ? ' (' + col.departamento + ')' : '');
+                return '<option value="' + (col.nombre || col.usuario || '') + '"' + (selectedManager === (col.nombre || col.usuario) ? ' selected' : '') + '>' + label + '</option>';
+              }).join('');
+          } else {
+            managerSelect.innerHTML = '<option value="">Sin colaboradores</option>';
+          }
         }
 
         const form = areaView.querySelector('#area-form');
+        const notebookPanel = areaView.querySelector('#area-emp-note-panel');
+        const notebookTabs = areaView.querySelectorAll('.emp-note-tab[data-note-tab]');
         const newBtn = areaView.querySelector('#area-form-new-btn');
         const cancelBtn = areaView.querySelector('#area-form-cancel-btn');
         const saveBtn = areaView.querySelector('#area-form-save-btn');
@@ -355,6 +499,15 @@
           colorInput.addEventListener('input', syncColorSwatch);
           syncColorSwatch();
         }
+        if (notebookTabs.length && notebookPanel) {
+          notebookTabs.forEach((tabBtn) => {
+            tabBtn.addEventListener('click', () => {
+              notebookTabs.forEach((btn) => btn.classList.remove('active'));
+              tabBtn.classList.add('active');
+              notebookPanel.innerHTML = renderNotebookPanel(tabBtn.getAttribute('data-note-tab'));
+            });
+          });
+        }
 
         newBtn && newBtn.addEventListener('click', () => {
           createAreaMode = true;
@@ -377,7 +530,7 @@
           const relationValue = String(areaView.querySelector('#area-relacion-select')?.value || 'Línea').trim();
           const status = relationValue === 'Funcional' ? 'En revisión' : 'Activo';
           if (!name || !code) {
-            alert('Nombre y código son obligatorios.');
+            setSaveStatus('Nombre y código son obligatorios.', 'error');
             return;
           }
           const payload = { name, parent, manager, code, color, status };
@@ -411,7 +564,7 @@
             <div class="list">
               ${areasData.length ? areasData.map((area) => `
                 <div class="list-item" data-area-code="${escapeHtml(area.code)}">
-                  <span><strong>${escapeHtml(area.name)}</strong><br><small>${escapeHtml(area.manager || 'Sin responsable')}</small></span>
+                  <span><strong>${escapeHtml(area.name)}</strong><br><small>${escapeHtml(area.manager || 'Sin responsable')}</small><br><small>Empleados asignados: ${assignedCount(area)}</small></span>
                   <span>
                     <span class="badge">${escapeHtml(area.code || 'N/A')}</span>
                     <span class="badge">${escapeHtml(area.status || 'N/A')}</span>
@@ -437,15 +590,16 @@
             const code = btn.getAttribute('data-delete-code');
             if (!code) return;
             if (!confirm('¿Seguro que deseas eliminar este departamento?')) return;
-            const idx = areasData.findIndex((a) => String(a.code) === String(code));
-            if (idx >= 0) {
-              areasData.splice(idx, 1);
-              try {
-                await persistAreasData();
-                setAreaView('list');
-              } catch (error) {
-                alert(error?.message || 'Error al eliminar.');
+            try {
+              const res = await fetch('/api/inicio/departamentos/' + encodeURIComponent(code), { method: 'DELETE' });
+              const json = await res.json().catch(() => ({}));
+              if (!res.ok || json?.success === false) {
+                throw new Error(String(json?.error || json?.detail || 'No se pudo eliminar.'));
               }
+              replaceAreasData(json?.data || []);
+              setAreaView('list');
+            } catch (error) {
+              alert(error?.message || 'Error al eliminar.');
             }
           });
         });
@@ -467,7 +621,7 @@
                   <h4>${status} (${rows.length})</h4>
                   ${rows.length ? rows.map((area) => `
                     <div class="list-item" style="cursor:default;">
-                      <span><strong>${escapeHtml(area.name)}</strong><br><small>${escapeHtml(area.code)}</small></span>
+                      <span><strong>${escapeHtml(area.name)}</strong><br><small>${escapeHtml(area.code)}</small><br><small>Empleados asignados: ${assignedCount(area)}</small></span>
                     </div>
                   `).join('') : '<p>Sin elementos.</p>'}
                 </div>
@@ -495,6 +649,92 @@
         if (!chartEl) return;
         setupOrgFullscreen(chartEl, fullscreenBtn, fullscreenHint);
         renderOrgChartWithLibrary(chartEl);
+      };
+      const renderDepartmentEmployeesOrg = (area) => {
+        const areaName = normalizeText(area?.name);
+        const areaCode = normalizeText(area?.code);
+        const rows = colaboradoresData.filter((col) => {
+          const dep = normalizeText(col?.departamento);
+          return !!dep && (dep === areaName || dep === areaCode);
+        });
+        if (!rows.length) return '<p>Sin empleados asignados en este departamento.</p>';
+        const byId = {};
+        const idByKey = {};
+        rows.forEach((row) => {
+          const id = Number(row.id || 0);
+          if (id) byId[id] = row;
+          const keyName = normalizeText(row.nombre);
+          const keyUser = normalizeText(row.usuario);
+          if (keyName) idByKey[keyName] = id;
+          if (keyUser) idByKey[keyUser] = id;
+        });
+        const byBoss = {};
+        rows.forEach((row) => {
+          const myId = Number(row.id || 0);
+          const bossIdRaw = Number(row.jefe_inmediato_id || 0);
+          let bossId = bossIdRaw && byId[bossIdRaw] ? bossIdRaw : 0;
+          if (!bossId) {
+            const bossKey = normalizeText(row.jefe);
+            bossId = bossKey ? Number(idByKey[bossKey] || 0) : 0;
+          }
+          const groupKey = bossId && bossId !== myId ? String(bossId) : 'root';
+          if (!byBoss[groupKey]) byBoss[groupKey] = [];
+          byBoss[groupKey].push(row);
+        });
+        const roots = byBoss.root || rows;
+        const renderLevel = (nodes, depth) => {
+          if (!nodes || !nodes.length) return '';
+          return `<div class="org-level" style="margin-top:${depth ? '10px' : '0'};">${
+            nodes.map((node) => {
+              const kids = byBoss[String(node.id)] || [];
+              const avatar = escapeHtml((node.imagen || '').trim() || '/icon/usuario.png');
+              return `
+                <div class="${depth === 0 ? 'org-root' : ''}">
+                  <div class="org-node">
+                    <div class="org-node-avatar"><img src="${avatar}" alt="${escapeHtml(node.nombre || 'Colaborador')}" loading="lazy" onerror="this.src='/icon/usuario.png'"></div>
+                    <strong>${escapeHtml(node.nombre || node.usuario || 'Sin nombre')}</strong>
+                    <span>${escapeHtml(node.puesto || node.usuario || '')}</span>
+                  </div>
+                  ${kids.length ? `<div class="org-divider"></div>${renderLevel(kids, depth + 1)}` : ''}
+                </div>
+              `;
+            }).join('')
+          }</div>`;
+        };
+        return `<div class="usuario-organigrama">${renderLevel(roots, 0)}</div>`;
+      };
+      const ensureDeptOrgModal = () => {
+        let modal = document.getElementById('dept-org-modal');
+        if (modal) return modal;
+        modal = document.createElement('div');
+        modal.id = 'dept-org-modal';
+        modal.className = 'dept-org-modal';
+        modal.innerHTML = `
+          <div class="dept-org-dialog" role="dialog" aria-modal="true" aria-labelledby="dept-org-modal-title">
+            <div class="dept-org-head">
+              <h3 id="dept-org-modal-title" class="dept-org-title">Organigrama del departamento</h3>
+              <button type="button" class="dept-org-close" data-close-dept-org>Cerrar</button>
+            </div>
+            <div id="dept-org-modal-body"></div>
+          </div>
+        `;
+        modal.addEventListener('click', (event) => {
+          if (event.target === modal) modal.classList.remove('open');
+        });
+        modal.querySelector('[data-close-dept-org]')?.addEventListener('click', () => modal.classList.remove('open'));
+        document.addEventListener('keydown', (event) => {
+          if (event.key === 'Escape') modal.classList.remove('open');
+        });
+        document.body.appendChild(modal);
+        return modal;
+      };
+      const openDeptOrgModal = (area) => {
+        const modal = ensureDeptOrgModal();
+        const titleEl = modal.querySelector('#dept-org-modal-title');
+        const bodyEl = modal.querySelector('#dept-org-modal-body');
+        if (titleEl) titleEl.textContent = `Organigrama del departamento: ${String(area?.name || area?.code || 'N/A')}`;
+        if (bodyEl) bodyEl.innerHTML = renderDepartmentEmployeesOrg(area);
+        modal.classList.add('open');
       };
 
       const getFullscreenElement = () => document.fullscreenElement || document.webkitFullscreenElement || null;
@@ -597,6 +837,7 @@
             manager: String(area.manager || '').trim(),
             status: String(area.status || '').trim() || 'Activo',
             color: normalizeAreaColor(area.color),
+            empleados_asignados: assignedCount(area),
           };
         }).filter((node) => node.id && node.name);
         const rootNodes = nodes.filter((node) => !node.parentId);
@@ -639,9 +880,7 @@
           .onNodeClick((d) => {
             const code = String(d?.data?.code || '').trim();
             if (!code || code === 'ROOT') return;
-            createAreaMode = false;
-            selectedAreaCode = code;
-            setAreaView('form');
+            openDeptOrgModal(d?.data || {});
           })
           .linkUpdate(function (d) {
             window.d3.select(this)
@@ -656,6 +895,7 @@
             const code = escapeHtml(data.code || '');
             const name = escapeHtml(data.name || '');
             const border = escapeHtml(data.color || '#1d4ed8');
+            const empleados = Number(data.empleados_asignados || 0);
             const initials = escapeHtml((name || 'A').split(/\s+/).filter(Boolean).slice(0, 2).map(part => part.charAt(0).toUpperCase()).join(''));
             return `
               <div style="
@@ -685,6 +925,7 @@
                     <strong style="font-size:15px; line-height:1.2; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${name}</strong>
                     <div style="font-size:12px; opacity:.85; line-height:1.2; margin-top:2px;">${code}</div>
                     <div style="font-size:12px; opacity:.9; line-height:1.2; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${manager}</div>
+                    <div style="font-size:12px; opacity:.9; line-height:1.2; margin-top:2px;">Empleados asignados: ${empleados}</div>
                   </div>
                 </div>
               </div>
@@ -730,7 +971,7 @@
         }
       });
 
-      loadAreasData().then(() => setAreaView('form'));
+      Promise.all([loadAreasData(), loadColaboradoresData()]).then(() => setAreaView('form'));
     })();
   </script>
 </section>

@@ -19,12 +19,12 @@ from fastapi import File
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import create_engine, Column, Integer, String, Boolean, DateTime, Date, ForeignKey, Text, JSON, UniqueConstraint, func
+from sqlalchemy import create_engine, Column, Integer, String, Boolean, DateTime, Date, ForeignKey, Text, JSON, UniqueConstraint, func, inspect
 from sqlalchemy.orm import sessionmaker, declarative_base, relationship
 from cryptography.fernet import Fernet, InvalidToken
 from textwrap import dedent
 from html import escape
-from fastapi_modulo.db import SessionLocal, Base, engine
+from fastapi_modulo.db import SessionLocal, Base, engine, DepartamentoOrganizacional
 from fastapi_modulo.personalizacion import personalizacion_router
 from fastapi_modulo.membresia import membresia_router
 from fastapi_modulo.modulos.presupuesto.presupuesto import router as presupuesto_router
@@ -64,11 +64,13 @@ templates = Jinja2Templates(directory="fastapi_modulo")
 date = Date
 
 HIDDEN_SYSTEM_USERS = {"0konomiyaki"}
+PROCESS_STARTED_AT = time.time()
 APP_ENV_DEFAULT = (os.environ.get("APP_ENV") or os.environ.get("ENVIRONMENT") or "development").strip().lower()
+DEFAULT_SIPET_DATA_DIR = (os.environ.get("SIPET_DATA_DIR") or os.path.expanduser("~/.sipet/data")).strip()
 RUNTIME_STORE_DIR = (os.environ.get("RUNTIME_STORE_DIR") or f"fastapi_modulo/runtime_store/{APP_ENV_DEFAULT}").strip()
 IDENTIDAD_LOGIN_CONFIG_PATH = (
     os.environ.get("IDENTIDAD_LOGIN_CONFIG_PATH")
-    or os.path.join(RUNTIME_STORE_DIR, "identidad_login.json")
+    or "fastapi_modulo/identidad_login.json"
 ).strip()
 IDENTIDAD_LOGIN_IMAGE_DIR = "fastapi_modulo/templates/imagenes"
 DOCUMENTS_UPLOAD_DIR = "fastapi_modulo/uploads/documentos"
@@ -817,17 +819,25 @@ def _resolve_database_url() -> str:
         if raw_url.startswith("postgres://"):
             return raw_url.replace("postgres://", "postgresql://", 1)
         return raw_url
-    is_prod_like = APP_ENV_DEFAULT in {"production", "prod"} or bool(
-        (os.environ.get("RAILWAY_ENVIRONMENT") or "").strip()
-        or (os.environ.get("RAILWAY_PROJECT_ID") or "").strip()
-    )
+    is_railway = any(str(value or "").strip() for key, value in os.environ.items() if key.startswith("RAILWAY_"))
+    is_prod_like = APP_ENV_DEFAULT in {"production", "prod"} or is_railway
     if is_prod_like:
         raise RuntimeError(
             "DATABASE_URL no está configurada en producción/Railway. "
             "Define DATABASE_URL (PostgreSQL) para evitar fallback a SQLite local."
         )
     default_sqlite_name = f"strategic_planning_{APP_ENV_DEFAULT}.db"
-    sqlite_db_path = (os.environ.get("SQLITE_DB_PATH") or default_sqlite_name).strip()
+    sqlite_db_path = (os.environ.get("SQLITE_DB_PATH") or "").strip()
+    if sqlite_db_path and os.path.basename(sqlite_db_path).lower() == "strategic_planning.db" and not is_prod_like:
+        sqlite_db_path = default_sqlite_name
+    if not sqlite_db_path:
+        os.makedirs(DEFAULT_SIPET_DATA_DIR, exist_ok=True)
+        sqlite_db_path = os.path.join(DEFAULT_SIPET_DATA_DIR, default_sqlite_name)
+    elif not os.path.isabs(sqlite_db_path):
+        os.makedirs(DEFAULT_SIPET_DATA_DIR, exist_ok=True)
+        sqlite_db_path = os.path.join(DEFAULT_SIPET_DATA_DIR, sqlite_db_path)
+    if os.path.isabs(sqlite_db_path):
+        return f"sqlite:///{sqlite_db_path}"
     return f"sqlite:///./{sqlite_db_path}"
 
 
@@ -898,6 +908,7 @@ class Usuario(Base):
     departamento = Column(String)
     puesto = Column(String)
     jefe = Column(String)
+    jefe_inmediato_id = Column(Integer, ForeignKey("users.id"), index=True)
     coach = Column(String)
     rol_id = Column(Integer)
     imagen = Column(String)
@@ -908,6 +919,7 @@ class Usuario(Base):
     webauthn_sign_count = Column(Integer, default=0)
     totp_secret = Column(String)
     totp_enabled = Column(Boolean, default=False)
+    jefe_inmediato = relationship("Usuario", remote_side=[id], backref="subordinados")
 
 
 class StrategicAxisConfig(Base):
@@ -1541,6 +1553,7 @@ def unify_users_table() -> None:
         "departamento": "VARCHAR",
         "puesto": "VARCHAR",
         "jefe": "VARCHAR",
+        "jefe_inmediato_id": "INTEGER",
         "coach": "VARCHAR",
         "rol_id": "INTEGER",
         "imagen": "VARCHAR",
@@ -5340,6 +5353,30 @@ def inicio_page(request: Request):
     )
 
 
+@app.get("/perfil", response_class=HTMLResponse)
+def perfil_page(request: Request):
+    user_name = escape((getattr(request.state, "user_name", None) or "").strip() or "Usuario")
+    user_role = escape((getattr(request.state, "user_role", None) or "").strip() or "usuario")
+    user_tenant = escape((getattr(request.state, "tenant_id", None) or "").strip() or "default")
+    content = f"""
+    <section style="background:#fff;border:1px solid #dbe3ef;border-radius:14px;padding:16px;display:grid;gap:10px;max-width:760px;">
+        <h3 style="margin:0;font-size:1.12rem;color:#0f172a;">Perfil</h3>
+        <p style="margin:0;color:#475569;">Información de la sesión actual.</p>
+        <article style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;"><strong>Usuario</strong><div>{user_name}</div></article>
+        <article style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;"><strong>Rol</strong><div>{user_role}</div></article>
+        <article style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;"><strong>Tenant</strong><div>{user_tenant}</div></article>
+    </section>
+    """
+    return render_backend_page(
+        request,
+        title="Perfil",
+        description="Datos de perfil del usuario autenticado.",
+        content=content,
+        hide_floating_actions=True,
+        show_page_header=True,
+    )
+
+
 @app.get("/control-seguimiento", response_class=HTMLResponse)
 def control_seguimiento_page(request: Request):
     login_identity = _get_login_identity_context()
@@ -5419,6 +5456,95 @@ def _render_database_tools_page(request: Request) -> HTMLResponse:
         hide_floating_actions=True,
         show_page_header=True,
     )
+
+
+def _format_bytes(size: int) -> str:
+    if size <= 0:
+        return "0 B"
+    units = ["B", "KB", "MB", "GB", "TB"]
+    idx = 0
+    value = float(size)
+    while value >= 1024 and idx < len(units) - 1:
+        value /= 1024.0
+        idx += 1
+    return f"{value:.2f} {units[idx]}"
+
+
+def _render_ajustes_configuracion_page(request: Request) -> HTMLResponse:
+    db = SessionLocal()
+    db_name = "PostgreSQL"
+    db_file_path = "N/A"
+    db_size_bytes = 0
+    tables_count = 0
+    users_count = 0
+    active_users_count = 0
+    departments_count = 0
+    runtime_store_path = os.path.abspath(RUNTIME_STORE_DIR)
+    process_uptime_seconds = int(max(0, time.time() - PROCESS_STARTED_AT))
+    try:
+        users_count = db.query(Usuario).count()
+        active_users_count = db.query(Usuario).filter(Usuario.is_active.is_(True)).count()
+        departments_count = db.query(DepartamentoOrganizacional).count()
+    except Exception:
+        pass
+    finally:
+        db.close()
+
+    try:
+        tables_count = len(inspect(engine).get_table_names())
+    except Exception:
+        tables_count = 0
+
+    if IS_SQLITE_DATABASE and PRIMARY_DB_PATH:
+        db_file_path = os.path.abspath(PRIMARY_DB_PATH)
+        db_name = os.path.basename(db_file_path) or "sqlite.db"
+        try:
+            db_size_bytes = os.path.getsize(db_file_path) if os.path.exists(db_file_path) else 0
+        except Exception:
+            db_size_bytes = 0
+
+    disk_total = disk_used = disk_free = 0
+    try:
+        target_path = db_file_path if (IS_SQLITE_DATABASE and db_file_path != "N/A") else runtime_store_path
+        usage = shutil.disk_usage(os.path.dirname(target_path) or ".")
+        disk_total, disk_used, disk_free = usage.total, usage.used, usage.free
+    except Exception:
+        pass
+
+    content = f"""
+    <section style="background:#fff;border:1px solid #dbe3ef;border-radius:14px;padding:16px;display:grid;gap:12px;max-width:980px;">
+        <h3 style="margin:0;font-size:1.12rem;color:#0f172a;">Configuración del sistema</h3>
+        <p style="margin:0;color:#475569;">Datos principales de base de datos y salud operativa.</p>
+        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;">
+            <article style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;"><strong>Entorno</strong><div>{escape(APP_ENV)}</div></article>
+            <article style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;"><strong>Motor BD</strong><div>{"SQLite" if IS_SQLITE_DATABASE else "PostgreSQL"}</div></article>
+            <article style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;"><strong>Nombre BD</strong><div>{escape(db_name)}</div></article>
+            <article style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;"><strong>Ruta BD</strong><div style="word-break:break-all;">{escape(db_file_path)}</div></article>
+            <article style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;"><strong>Tamaño BD</strong><div>{_format_bytes(db_size_bytes)}</div></article>
+            <article style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;"><strong>Tablas</strong><div>{tables_count}</div></article>
+            <article style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;"><strong>Usuarios</strong><div>{users_count} (activos: {active_users_count})</div></article>
+            <article style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;"><strong>Departamentos</strong><div>{departments_count}</div></article>
+            <article style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;"><strong>Uptime proceso</strong><div>{process_uptime_seconds} s</div></article>
+            <article style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;"><strong>Runtime store</strong><div style="word-break:break-all;">{escape(runtime_store_path)}</div></article>
+            <article style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;"><strong>Disco total</strong><div>{_format_bytes(disk_total)}</div></article>
+            <article style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;"><strong>Disco libre</strong><div>{_format_bytes(disk_free)}</div></article>
+        </div>
+    </section>
+    """
+    return render_backend_page(
+        request,
+        title="Configuración",
+        description="Parámetros principales de sistema y eficiencia operativa.",
+        content=content,
+        hide_floating_actions=True,
+        show_page_header=True,
+    )
+
+
+@app.get("/ajustes/configuracion", response_class=HTMLResponse)
+def ajustes_configuracion_page(request: Request):
+    require_admin_or_superadmin(request)
+    return _render_ajustes_configuracion_page(request)
 
 
 @app.get("/empresa/base-datos", response_class=HTMLResponse)
