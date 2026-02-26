@@ -1,15 +1,4 @@
-INFO:     Started server process [24426]
+INFO:     Started server process [28870]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
-INFO:     127.0.0.1:64636 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:65337 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:49675 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:49776 - "GET /poa HTTP/1.1" 200 OK
-INFO:     127.0.0.1:49776 - "GET /css/global.css HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:49777 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:49776 - "GET /personalizar/estado HTTP/1.1" 200 OK
-INFO:     127.0.0.1:49776 - "GET /poa HTTP/1.1" 200 OK
-INFO:     127.0.0.1:49777 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:49776 - "GET /personalizar/estado HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50505 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK

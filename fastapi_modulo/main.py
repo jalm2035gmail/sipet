@@ -974,7 +974,11 @@ class POAActivity(Base):
     entregable = Column(String, default="")
     fecha_inicial = Column(Date)
     fecha_final = Column(Date)
+    inicio_forzado = Column(Boolean, default=False)
     descripcion = Column(String, default="")
+    recurrente = Column(Boolean, default=False)
+    periodicidad = Column(String, default="")
+    cada_xx_dias = Column(Integer)
     entrega_estado = Column(String, default="ninguna")
     entrega_solicitada_por = Column(String, default="")
     entrega_solicitada_at = Column(DateTime)
@@ -990,6 +994,8 @@ class POASubactivity(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     activity_id = Column(Integer, ForeignKey("poa_activities.id"), nullable=False, index=True)
+    parent_subactivity_id = Column(Integer, ForeignKey("poa_subactivities.id"), index=True)
+    nivel = Column(Integer, default=1, index=True)
     nombre = Column(String, nullable=False)
     codigo = Column(String, default="")
     responsable = Column(String, nullable=False)
@@ -1480,6 +1486,8 @@ def ensure_strategic_axes_schema() -> None:
                 conn.execute('ALTER TABLE "poa_activities" ADD COLUMN "fecha_inicial" DATE')
             if "fecha_final" not in poa_cols:
                 conn.execute('ALTER TABLE "poa_activities" ADD COLUMN "fecha_final" DATE')
+            if "inicio_forzado" not in poa_cols:
+                conn.execute('ALTER TABLE "poa_activities" ADD COLUMN "inicio_forzado" BOOLEAN DEFAULT 0')
             if "entrega_estado" not in poa_cols:
                 conn.execute('ALTER TABLE "poa_activities" ADD COLUMN "entrega_estado" VARCHAR DEFAULT "ninguna"')
             if "entrega_solicitada_por" not in poa_cols:
@@ -1490,6 +1498,12 @@ def ensure_strategic_axes_schema() -> None:
                 conn.execute('ALTER TABLE "poa_activities" ADD COLUMN "entrega_aprobada_por" VARCHAR DEFAULT ""')
             if "entrega_aprobada_at" not in poa_cols:
                 conn.execute('ALTER TABLE "poa_activities" ADD COLUMN "entrega_aprobada_at" DATETIME')
+            if "recurrente" not in poa_cols:
+                conn.execute('ALTER TABLE "poa_activities" ADD COLUMN "recurrente" BOOLEAN DEFAULT 0')
+            if "periodicidad" not in poa_cols:
+                conn.execute('ALTER TABLE "poa_activities" ADD COLUMN "periodicidad" VARCHAR DEFAULT ""')
+            if "cada_xx_dias" not in poa_cols:
+                conn.execute('ALTER TABLE "poa_activities" ADD COLUMN "cada_xx_dias" INTEGER')
         poa_subactivities_exists = conn.execute(
             "SELECT 1 FROM sqlite_master WHERE type='table' AND name='poa_subactivities'"
         ).fetchone()
@@ -1499,6 +1513,12 @@ def ensure_strategic_axes_schema() -> None:
                 conn.execute('ALTER TABLE "poa_subactivities" ADD COLUMN "fecha_inicial" DATE')
             if "fecha_final" not in poa_sub_cols:
                 conn.execute('ALTER TABLE "poa_subactivities" ADD COLUMN "fecha_final" DATE')
+            if "parent_subactivity_id" not in poa_sub_cols:
+                conn.execute('ALTER TABLE "poa_subactivities" ADD COLUMN "parent_subactivity_id" INTEGER')
+            if "nivel" not in poa_sub_cols:
+                conn.execute('ALTER TABLE "poa_subactivities" ADD COLUMN "nivel" INTEGER DEFAULT 1')
+            conn.execute('CREATE INDEX IF NOT EXISTS "ix_poa_subactivities_parent_subactivity_id" ON "poa_subactivities" ("parent_subactivity_id")')
+            conn.execute('CREATE INDEX IF NOT EXISTS "ix_poa_subactivities_nivel" ON "poa_subactivities" ("nivel")')
         conn.commit()
 
 
@@ -2258,11 +2278,18 @@ def _validate_child_date_range(
 
 
 def _activity_status(activity: POAActivity, today: Optional[date] = None) -> str:
-    if (activity.entrega_estado or "").strip().lower() == "aprobada":
+    delivery_state = (activity.entrega_estado or "").strip().lower()
+    if delivery_state == "aprobada":
         return "Terminada"
+    if delivery_state == "declarada":
+        return "Terminada"
+    if delivery_state == "pendiente":
+        return "En revisión"
     current = today or datetime.utcnow().date()
-    if activity.fecha_inicial and current < activity.fecha_inicial:
+    if activity.fecha_inicial and current < activity.fecha_inicial and not bool(activity.inicio_forzado):
         return "No iniciada"
+    if activity.fecha_final and current > activity.fecha_final:
+        return "Atrasada"
     return "En proceso"
 
 

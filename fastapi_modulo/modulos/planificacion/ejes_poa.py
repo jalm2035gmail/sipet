@@ -125,11 +125,45 @@ def _collaborator_belongs_to_department(db, collaborator_name: str, department: 
     return bool(exists)
 
 
+MAX_SUBTASK_DEPTH = 4
+VALID_ACTIVITY_PERIODICITIES = {
+    "diaria",
+    "semanal",
+    "quincenal",
+    "mensual",
+    "bimensual",
+    "cada_xx_dias",
+}
+
+
+def _descendant_subactivity_ids(db, activity_id: int, root_id: int) -> List[int]:
+    rows = (
+        db.query(POASubactivity.id, POASubactivity.parent_subactivity_id)
+        .filter(POASubactivity.activity_id == activity_id)
+        .all()
+    )
+    children: Dict[int, List[int]] = {}
+    for sub_id, parent_id in rows:
+        if parent_id is None:
+            continue
+        children.setdefault(int(parent_id), []).append(int(sub_id))
+    collected: List[int] = []
+    stack = [int(root_id)]
+    while stack:
+        current = stack.pop()
+        for child in children.get(current, []):
+            collected.append(child)
+            stack.append(child)
+    return collected
+
+
 def _serialize_poa_subactivity(item: POASubactivity) -> Dict[str, Any]:
     _bind_core_symbols()
     return {
         "id": item.id,
         "activity_id": item.activity_id,
+        "parent_subactivity_id": item.parent_subactivity_id,
+        "nivel": item.nivel or 1,
         "nombre": item.nombre or "",
         "codigo": item.codigo or "",
         "responsable": item.responsable or "",
@@ -151,14 +185,22 @@ def _serialize_poa_activity(item: POAActivity, subactivities: List[POASubactivit
         "entregable": item.entregable or "",
         "fecha_inicial": _date_to_iso(item.fecha_inicial),
         "fecha_final": _date_to_iso(item.fecha_final),
+        "inicio_forzado": bool(item.inicio_forzado),
+        "recurrente": bool(item.recurrente),
+        "periodicidad": item.periodicidad or "",
+        "cada_xx_dias": item.cada_xx_dias or 0,
         "status": _activity_status(item),
         "entrega_estado": item.entrega_estado or "ninguna",
         "entrega_solicitada_por": item.entrega_solicitada_por or "",
         "entrega_solicitada_at": item.entrega_solicitada_at.isoformat() if item.entrega_solicitada_at else "",
         "entrega_aprobada_por": item.entrega_aprobada_por or "",
         "entrega_aprobada_at": item.entrega_aprobada_at.isoformat() if item.entrega_aprobada_at else "",
+        "created_by": item.created_by or "",
         "descripcion": item.descripcion or "",
-        "subactivities": [_serialize_poa_subactivity(sub) for sub in subactivities],
+        "subactivities": [
+            _serialize_poa_subactivity(sub)
+            for sub in sorted(subactivities, key=lambda x: ((x.nivel or 1), x.id or 0))
+        ],
     }
 
 
@@ -1814,6 +1856,7 @@ POA_LIMPIO_HTML = dedent("""
           border-radius: 12px;
           padding: 10px;
           background: #fff;
+          cursor: pointer;
         }
         .poa-obj-card h4{
           margin: 0;
@@ -1842,6 +1885,261 @@ POA_LIMPIO_HTML = dedent("""
           color: #64748b;
           font-style: italic;
         }
+        .poa-modal{
+          position: fixed;
+          inset: 0;
+          display: none;
+          align-items: center;
+          justify-content: center;
+          background: rgba(15,23,42,.44);
+          z-index: 99999;
+          padding: 16px;
+        }
+        .poa-modal.open{ display: flex; }
+        .poa-modal-dialog{
+          width: min(940px, 96vw);
+          max-height: 92vh;
+          overflow: auto;
+          border: 1px solid rgba(148,163,184,.32);
+          border-radius: 16px;
+          background: #f8fafc;
+          box-shadow: 0 22px 44px rgba(15,23,42,.26);
+          padding: 14px;
+        }
+        .poa-modal-head{
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 8px;
+          margin-bottom: 8px;
+        }
+        .poa-branch-path{
+          margin: 0 0 8px;
+          font-size: 11px;
+          font-style: italic;
+          color: #64748b;
+          line-height: 1.35;
+        }
+        .poa-modal-close{
+          width: 32px;
+          height: 32px;
+          border: 1px solid rgba(148,163,184,.34);
+          border-radius: 10px;
+          background: #fff;
+          font-size: 20px;
+          line-height: 1;
+          cursor: pointer;
+        }
+        .poa-form-grid{
+          display: grid;
+          gap: 10px;
+        }
+        .poa-row{
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 10px;
+        }
+        .poa-field{
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+        }
+        .poa-field label{
+          font-size: 12px;
+          font-weight: 700;
+          color: #475569;
+        }
+        .poa-assigned-by{
+          margin: 0 0 2px;
+          font-size: 11px;
+          font-style: italic;
+          color: #64748b;
+        }
+        .poa-input, .poa-textarea, .poa-select{
+          width: 100%;
+          border: 1px solid rgba(148,163,184,.42);
+          border-radius: 12px;
+          padding: 10px 12px;
+          font-size: 14px;
+          background: #fff;
+          color: #0f172a;
+        }
+        .poa-select[multiple]{
+          min-height: 104px;
+          padding: 8px;
+        }
+        .poa-textarea{ min-height: 110px; resize: vertical; }
+        .poa-tabs{
+          display: flex;
+          gap: 6px;
+          border-bottom: 1px solid rgba(148,163,184,.28);
+          margin-top: 2px;
+        }
+        .poa-tab{
+          border: 1px solid rgba(148,163,184,.32);
+          border-bottom: 0;
+          border-radius: 10px 10px 0 0;
+          background: #fff;
+          padding: 8px 10px;
+          font-size: 13px;
+          font-weight: 700;
+          color: #334155;
+          cursor: pointer;
+        }
+        .poa-tab.active{
+          background: rgba(15,61,46,.10);
+          border-color: rgba(15,61,46,.34);
+          color: #0f3d2e;
+        }
+        .poa-tab-panel{
+          display: none;
+          border: 1px solid rgba(148,163,184,.28);
+          border-top: 0;
+          border-radius: 0 0 12px 12px;
+          background: #fff;
+          padding: 12px;
+        }
+        .poa-tab-panel.active{ display: block; }
+        .poa-actions{
+          display: flex;
+          gap: 8px;
+          margin-top: 10px;
+        }
+        .poa-btn{
+          border: 1px solid rgba(148,163,184,.34);
+          border-radius: 10px;
+          padding: 9px 12px;
+          background: #fff;
+          font-weight: 700;
+          font-size: 13px;
+          cursor: pointer;
+        }
+        .poa-btn.primary{
+          background: #0f3d2e;
+          border-color: #0f3d2e;
+          color: #fff;
+        }
+        .poa-modal-msg{
+          min-height: 18px;
+          margin-top: 8px;
+          font-size: 12px;
+          color: #0f3d2e;
+        }
+        .poa-state-strip{
+          display: grid;
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+          gap: 8px;
+          margin-bottom: 10px;
+        }
+        .poa-state-btn{
+          border: 1px solid rgba(148,163,184,.34);
+          border-radius: 10px;
+          padding: 8px;
+          font-size: 12px;
+          font-weight: 700;
+          background: #fff;
+          color: #334155;
+        }
+        .poa-state-btn.active{
+          border-color: rgba(15,61,46,.45);
+          background: rgba(15,61,46,.12);
+          color: #0f3d2e;
+        }
+        .poa-state-actions{
+          display: flex;
+          gap: 8px;
+          flex-wrap: wrap;
+          margin-bottom: 8px;
+        }
+        .poa-summary{
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) minmax(180px, 240px);
+          gap: 10px;
+          margin-bottom: 10px;
+        }
+        .poa-summary-item{
+          border: 1px solid rgba(148,163,184,.28);
+          border-radius: 10px;
+          padding: 8px 10px;
+          background: #fff;
+        }
+        .poa-summary-label{
+          font-size: 11px;
+          color: #64748b;
+          text-transform: uppercase;
+          letter-spacing: .03em;
+        }
+        .poa-summary-value{
+          margin-top: 4px;
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 13px;
+          font-weight: 700;
+          color: #0f172a;
+        }
+        .poa-semaforo{
+          width: 10px;
+          height: 10px;
+          border-radius: 50%;
+          display: inline-block;
+          border: 1px solid rgba(15,23,42,.22);
+          background: #cbd5e1;
+        }
+        .poa-semaforo.gray{ background: #9ca3af; }
+        .poa-semaforo.yellow{ background: #eab308; }
+        .poa-semaforo.orange{ background: #f97316; }
+        .poa-semaforo.green{ background: #22c55e; }
+        .poa-semaforo.red{ background: #ef4444; }
+        .poa-sub-header{
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 8px;
+          margin-bottom: 8px;
+        }
+        .poa-sub-list{
+          display: grid;
+          gap: 8px;
+        }
+        .poa-sub-item{
+          border: 1px solid rgba(148,163,184,.26);
+          border-radius: 10px;
+          padding: 8px;
+          background: #fff;
+        }
+        .poa-sub-item h5{
+          margin: 0;
+          font-size: 14px;
+        }
+        .poa-sub-meta{
+          margin-top: 4px;
+          font-size: 12px;
+          color: #64748b;
+          font-style: italic;
+        }
+        .poa-sub-actions{
+          margin-top: 6px;
+          display: flex;
+          gap: 6px;
+        }
+        .poa-sub-btn{
+          border: 1px solid rgba(148,163,184,.34);
+          border-radius: 8px;
+          padding: 5px 8px;
+          background: #fff;
+          font-size: 12px;
+          font-weight: 700;
+          cursor: pointer;
+        }
+        .poa-sub-btn.warn{
+          border-color: rgba(239,68,68,.28);
+          color: #b91c1c;
+          background: #fff5f5;
+        }
+        @media (max-width: 860px){
+          .poa-row{ grid-template-columns: 1fr; }
+        }
       </style>
 
       <div class="poa-board-head">
@@ -1850,12 +2148,236 @@ POA_LIMPIO_HTML = dedent("""
       </div>
       <div class="poa-board-msg" id="poa-board-msg" aria-live="polite"></div>
       <div class="poa-board-grid" id="poa-board-grid"></div>
+      <div class="poa-modal" id="poa-activity-modal" role="dialog" aria-modal="true" aria-labelledby="poa-activity-title">
+        <section class="poa-modal-dialog">
+          <div class="poa-modal-head">
+            <div>
+              <h3 id="poa-activity-title" style="margin:0;font-size:18px;">Nueva actividad</h3>
+              <p id="poa-activity-subtitle" style="margin:4px 0 0;color:#64748b;font-size:12px;"></p>
+            </div>
+            <button class="poa-modal-close" id="poa-activity-close" type="button" aria-label="Cerrar">×</button>
+          </div>
+          <p class="poa-branch-path" id="poa-activity-branch"></p>
+          <div class="poa-summary">
+            <div class="poa-summary-item">
+              <div class="poa-summary-label">Estatus</div>
+              <div class="poa-summary-value" id="poa-status-value"><span class="poa-semaforo gray"></span>No iniciado</div>
+            </div>
+            <div class="poa-summary-item">
+              <div class="poa-summary-label">Avance</div>
+              <div class="poa-summary-value" id="poa-progress-value">0%</div>
+            </div>
+          </div>
+          <div class="poa-state-strip" id="poa-state-strip">
+            <button type="button" class="poa-state-btn" id="poa-state-no-iniciado" disabled>No iniciado</button>
+            <button type="button" class="poa-state-btn" id="poa-state-en-proceso">En proceso</button>
+            <button type="button" class="poa-state-btn" id="poa-state-terminado">Terminado</button>
+            <button type="button" class="poa-state-btn" id="poa-state-en-revision" disabled>En revisión</button>
+          </div>
+          <div class="poa-state-actions" id="poa-state-actions">
+            <button type="button" class="poa-btn" id="poa-approval-approve" style="display:none;">Aprobar entregable</button>
+            <button type="button" class="poa-btn" id="poa-approval-reject" style="display:none;">Rechazar entregable</button>
+          </div>
+
+          <div class="poa-form-grid">
+            <p class="poa-assigned-by" id="poa-assigned-by">Asignado por: N/D</p>
+            <div class="poa-row">
+              <div class="poa-field">
+                <label for="poa-act-name">Nombre</label>
+                <input id="poa-act-name" class="poa-input" type="text" placeholder="Nombre de la actividad">
+              </div>
+              <div class="poa-field">
+                <label for="poa-act-milestone">Entregable</label>
+                <input id="poa-act-milestone" class="poa-input" type="text" placeholder="Nombre del entregable">
+              </div>
+            </div>
+            <div class="poa-row">
+              <div class="poa-field">
+                <label for="poa-act-owner">Responsable</label>
+                <select id="poa-act-owner" class="poa-select">
+                  <option value="">Selecciona responsable</option>
+                </select>
+              </div>
+              <div class="poa-field">
+                <label for="poa-act-assigned">Personas asignadas</label>
+                <select id="poa-act-assigned" class="poa-select" multiple></select>
+              </div>
+            </div>
+            <div class="poa-row">
+              <div class="poa-field">
+                <label for="poa-act-start">Fecha inicial</label>
+                <input id="poa-act-start" class="poa-input" type="date">
+              </div>
+              <div class="poa-field">
+                <label for="poa-act-end">Fecha final</label>
+                <input id="poa-act-end" class="poa-input" type="date">
+              </div>
+            </div>
+            <div class="poa-row">
+              <div class="poa-field">
+                <label for="poa-act-recurrente">Recurrente</label>
+                <label style="display:flex;align-items:center;gap:8px;margin-top:8px;color:#334155;font-size:13px;">
+                  <input id="poa-act-recurrente" type="checkbox">
+                  Habilitar recurrencia
+                </label>
+              </div>
+              <div class="poa-field">
+                <label for="poa-act-periodicidad">Periodicidad</label>
+                <select id="poa-act-periodicidad" class="poa-select" disabled>
+                  <option value="">Selecciona periodicidad</option>
+                  <option value="diaria">diaria</option>
+                  <option value="semanal">semanal</option>
+                  <option value="quincenal">quincenal</option>
+                  <option value="mensual">mensual</option>
+                  <option value="bimensual">bimensual</option>
+                  <option value="cada_xx_dias">Cada xx dias</option>
+                </select>
+              </div>
+            </div>
+            <div class="poa-field" id="poa-act-every-days-wrap" style="display:none;">
+              <label for="poa-act-every-days">Cada xx dias</label>
+              <input id="poa-act-every-days" class="poa-input" type="number" min="1" step="1" placeholder="Ej. 3">
+            </div>
+          </div>
+
+          <div class="poa-tabs" id="poa-tabs">
+            <button type="button" class="poa-tab active" data-poa-tab="desc">Descripción</button>
+            <button type="button" class="poa-tab" data-poa-tab="sub">Subtareas</button>
+            <button type="button" class="poa-tab" data-poa-tab="kpi">Kpis</button>
+            <button type="button" class="poa-tab" data-poa-tab="budget">Presupuesto</button>
+          </div>
+          <section class="poa-tab-panel active" data-poa-panel="desc">
+            <div class="poa-field" style="margin-top:0;">
+              <label for="poa-act-desc">Descripción</label>
+              <textarea id="poa-act-desc" class="poa-textarea" placeholder="Descripción de la actividad"></textarea>
+            </div>
+          </section>
+          <section class="poa-tab-panel" data-poa-panel="sub">
+            <div class="poa-sub-header">
+              <p id="poa-sub-hint" style="margin:0;color:#64748b;font-size:13px;">Guarda primero la actividad para habilitar subtareas.</p>
+              <button type="button" class="poa-btn" id="poa-sub-add">Agregar subtarea</button>
+            </div>
+            <div class="poa-sub-list" id="poa-sub-list"></div>
+          </section>
+          <section class="poa-tab-panel" data-poa-panel="kpi">
+            <p style="margin:0;color:#64748b;font-size:13px;">Kpis: en construcción.</p>
+          </section>
+          <section class="poa-tab-panel" data-poa-panel="budget">
+            <p style="margin:0;color:#64748b;font-size:13px;">Presupuesto: en construcción.</p>
+          </section>
+
+          <div class="poa-actions">
+            <button type="button" class="poa-btn primary" id="poa-act-save">Guardar actividad</button>
+            <button type="button" class="poa-btn" id="poa-act-cancel">Cancelar</button>
+          </div>
+          <div class="poa-modal-msg" id="poa-act-msg" aria-live="polite"></div>
+        </section>
+      </div>
+      <div class="poa-modal" id="poa-sub-modal" role="dialog" aria-modal="true" aria-labelledby="poa-sub-title">
+        <section class="poa-modal-dialog">
+          <div class="poa-modal-head">
+            <h3 id="poa-sub-title" style="margin:0;font-size:18px;">Subtarea</h3>
+            <button class="poa-modal-close" id="poa-sub-close" type="button" aria-label="Cerrar">×</button>
+          </div>
+          <p class="poa-branch-path" id="poa-sub-branch"></p>
+          <div class="poa-form-grid">
+            <div class="poa-field">
+              <label for="poa-sub-name">Nombre</label>
+              <input id="poa-sub-name" class="poa-input" type="text" placeholder="Nombre de la subtarea">
+            </div>
+            <div class="poa-row">
+              <div class="poa-field">
+                <label for="poa-sub-owner">Responsable</label>
+                <select id="poa-sub-owner" class="poa-select">
+                  <option value="">Selecciona responsable</option>
+                </select>
+              </div>
+              <div class="poa-field">
+                <label for="poa-sub-assigned">Personas asignadas</label>
+                <select id="poa-sub-assigned" class="poa-select" multiple></select>
+              </div>
+            </div>
+            <div class="poa-row">
+              <div class="poa-field">
+                <label for="poa-sub-start">Fecha inicial</label>
+                <input id="poa-sub-start" class="poa-input" type="date">
+              </div>
+              <div class="poa-field">
+                <label for="poa-sub-end">Fecha final</label>
+                <input id="poa-sub-end" class="poa-input" type="date">
+              </div>
+            </div>
+            <div class="poa-field">
+              <label for="poa-sub-desc">Descripción</label>
+              <textarea id="poa-sub-desc" class="poa-textarea" placeholder="Descripción de la subtarea"></textarea>
+            </div>
+          </div>
+          <div class="poa-actions">
+            <button type="button" class="poa-btn primary" id="poa-sub-save">Guardar subtarea</button>
+            <button type="button" class="poa-btn" id="poa-sub-cancel">Cancelar</button>
+          </div>
+          <div class="poa-modal-msg" id="poa-sub-msg" aria-live="polite"></div>
+        </section>
+      </div>
 
       <script>
         (() => {
           const gridEl = document.getElementById("poa-board-grid");
           const msgEl = document.getElementById("poa-board-msg");
+          const modalEl = document.getElementById("poa-activity-modal");
+          const closeBtn = document.getElementById("poa-activity-close");
+          const cancelBtn = document.getElementById("poa-act-cancel");
+          const saveBtn = document.getElementById("poa-act-save");
+          const subAddBtn = document.getElementById("poa-sub-add");
+          const subListEl = document.getElementById("poa-sub-list");
+          const subHintEl = document.getElementById("poa-sub-hint");
+          const titleEl = document.getElementById("poa-activity-title");
+          const subtitleEl = document.getElementById("poa-activity-subtitle");
+          const activityBranchEl = document.getElementById("poa-activity-branch");
+          const assignedByEl = document.getElementById("poa-assigned-by");
+          const actNameEl = document.getElementById("poa-act-name");
+          const actMilestoneEl = document.getElementById("poa-act-milestone");
+          const actOwnerEl = document.getElementById("poa-act-owner");
+          const actAssignedEl = document.getElementById("poa-act-assigned");
+          const actStartEl = document.getElementById("poa-act-start");
+          const actEndEl = document.getElementById("poa-act-end");
+          const actRecurrenteEl = document.getElementById("poa-act-recurrente");
+          const actPeriodicidadEl = document.getElementById("poa-act-periodicidad");
+          const actEveryDaysWrapEl = document.getElementById("poa-act-every-days-wrap");
+          const actEveryDaysEl = document.getElementById("poa-act-every-days");
+          const actDescEl = document.getElementById("poa-act-desc");
+          const actMsgEl = document.getElementById("poa-act-msg");
+          const stateNoIniciadoBtn = document.getElementById("poa-state-no-iniciado");
+          const stateEnProcesoBtn = document.getElementById("poa-state-en-proceso");
+          const stateTerminadoBtn = document.getElementById("poa-state-terminado");
+          const stateEnRevisionBtn = document.getElementById("poa-state-en-revision");
+          const statusValueEl = document.getElementById("poa-status-value");
+          const progressValueEl = document.getElementById("poa-progress-value");
+          const approveBtn = document.getElementById("poa-approval-approve");
+          const rejectBtn = document.getElementById("poa-approval-reject");
+          const subModalEl = document.getElementById("poa-sub-modal");
+          const subCloseBtn = document.getElementById("poa-sub-close");
+          const subCancelBtn = document.getElementById("poa-sub-cancel");
+          const subSaveBtn = document.getElementById("poa-sub-save");
+          const subBranchEl = document.getElementById("poa-sub-branch");
+          const subNameEl = document.getElementById("poa-sub-name");
+          const subOwnerEl = document.getElementById("poa-sub-owner");
+          const subAssignedEl = document.getElementById("poa-sub-assigned");
+          const subStartEl = document.getElementById("poa-sub-start");
+          const subEndEl = document.getElementById("poa-sub-end");
+          const subDescEl = document.getElementById("poa-sub-desc");
+          const subMsgEl = document.getElementById("poa-sub-msg");
           if (!gridEl) return;
+          let objectivesById = {};
+          let activitiesByObjective = {};
+          let approvalsByActivity = {};
+          let currentObjective = null;
+          let currentActivityId = null;
+          let currentActivityData = null;
+          let currentSubactivities = [];
+          let editingSubId = null;
+          let currentParentSubId = 0;
+          let isSaving = false;
 
           const escapeHtml = (value) => String(value || "")
             .replaceAll("&", "&amp;")
@@ -1870,26 +2392,724 @@ POA_LIMPIO_HTML = dedent("""
             if (Number.isNaN(date.getTime())) return value;
             return date.toLocaleDateString("es-CR");
           };
+          const todayIso = () => {
+            const now = new Date();
+            const y = now.getFullYear();
+            const m = String(now.getMonth() + 1).padStart(2, "0");
+            const d = String(now.getDate()).padStart(2, "0");
+            return `${y}-${m}-${d}`;
+          };
           const showMsg = (text, isError = false) => {
             if (!msgEl) return;
             msgEl.textContent = text || "";
             msgEl.style.color = isError ? "#b91c1c" : "#0f3d2e";
+          };
+          const showModalMsg = (text, isError = false) => {
+            if (!actMsgEl) return;
+            actMsgEl.textContent = text || "";
+            actMsgEl.style.color = isError ? "#b91c1c" : "#0f3d2e";
+          };
+          const showSubMsg = (text, isError = false) => {
+            if (!subMsgEl) return;
+            subMsgEl.textContent = text || "";
+            subMsgEl.style.color = isError ? "#b91c1c" : "#0f3d2e";
+          };
+          const openModal = () => {
+            if (!modalEl) return;
+            modalEl.classList.add("open");
+            document.body.style.overflow = "hidden";
+          };
+          const closeModal = () => {
+            if (!modalEl) return;
+            modalEl.classList.remove("open");
+            document.body.style.overflow = "";
+          };
+          const openSubModal = () => {
+            if (!subModalEl) return;
+            subModalEl.classList.add("open");
+            document.body.style.overflow = "hidden";
+          };
+          const closeSubModal = () => {
+            if (!subModalEl) return;
+            subModalEl.classList.remove("open");
+            document.body.style.overflow = modalEl && modalEl.classList.contains("open") ? "hidden" : "";
           };
           const nextCode = (objectiveCode) => {
             const code = String(objectiveCode || "").trim().toLowerCase();
             if (!code) return "m1-01-01-aa-bb-cc-dd-ee";
             return `${code}-aa-bb-cc-dd-ee`;
           };
+          const buildBranchText = (activityName = "Actividad", slots = {}) => {
+            const axisLabel = String(currentObjective?.axis_name || "Eje estratégico").trim() || "Eje estratégico";
+            const objectiveLabel = String(currentObjective?.nombre || "Objetivo").trim() || "Objetivo";
+            const activityLabel = String(activityName || "Actividad").trim() || "Actividad";
+            const tarea = String(slots.tarea || "Tarea").trim() || "Tarea";
+            const subtarea = String(slots.subtarea || "Subtarea").trim() || "Subtarea";
+            const subsub = String(slots.subsubtarea || "Subsubtarea").trim() || "Subsubtarea";
+            return `Ruta: ${axisLabel} / ${objectiveLabel} / ${activityLabel} / ${tarea} / ${subtarea} / ${subsub}`;
+          };
+          const renderActivityBranch = () => {
+            if (!activityBranchEl) return;
+            activityBranchEl.textContent = buildBranchText(actNameEl && actNameEl.value ? actNameEl.value : "Actividad");
+          };
+          const resolveSubBranchSlots = (targetLevel, targetName, parentId) => {
+            const byId = {};
+            (currentSubactivities || []).forEach((item) => {
+              byId[Number(item.id || 0)] = item;
+            });
+            let tarea = "Tarea";
+            let subtarea = "Subtarea";
+            let subsubtarea = "Subsubtarea";
+            let walker = Number(parentId || 0);
+            while (walker) {
+              const node = byId[walker];
+              if (!node) break;
+              const level = Number(node.nivel || 1);
+              const name = String(node.nombre || "").trim();
+              if (level === 1 && name) tarea = name;
+              if (level === 2 && name) subtarea = name;
+              if (level === 3 && name) subsubtarea = name;
+              walker = Number(node.parent_subactivity_id || 0);
+            }
+            const cleanTarget = String(targetName || "").trim();
+            if (targetLevel === 1 && cleanTarget) tarea = cleanTarget;
+            if (targetLevel === 2 && cleanTarget) subtarea = cleanTarget;
+            if (targetLevel === 3 && cleanTarget) subsubtarea = cleanTarget;
+            return { tarea, subtarea, subsubtarea };
+          };
+          const renderSubBranch = (targetLevel = 1, targetName = "", parentId = 0) => {
+            if (!subBranchEl) return;
+            const slots = resolveSubBranchSlots(targetLevel, targetName, parentId);
+            const actName = actNameEl && actNameEl.value ? actNameEl.value : "Actividad";
+            subBranchEl.textContent = buildBranchText(actName, slots);
+          };
+          const setDateBounds = (objective) => {
+            const minDate = String(objective?.fecha_inicial || "");
+            const maxDate = String(objective?.fecha_final || "");
+            [actStartEl, actEndEl].forEach((el) => {
+              if (!el) return;
+              el.min = minDate || "";
+              el.max = maxDate || "";
+            });
+          };
+          const fillCollaborators = async (objective) => {
+            if (!actOwnerEl || !actAssignedEl) return;
+            const axisId = Number(objective?.eje_id || 0);
+            if (!axisId) {
+              actOwnerEl.innerHTML = '<option value="">Selecciona responsable</option>';
+              actAssignedEl.innerHTML = "";
+              return;
+            }
+            try {
+              const response = await fetch(`/api/strategic-axes/${axisId}/collaborators`, {
+                headers: { "Content-Type": "application/json" },
+                credentials: "same-origin",
+              });
+              const payload = await response.json().catch(() => ({}));
+              const list = Array.isArray(payload.data) ? payload.data : [];
+              actOwnerEl.innerHTML = '<option value="">Selecciona responsable</option>' + list.map((name) => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join("");
+              actAssignedEl.innerHTML = list.map((name) => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join("");
+            } catch (_err) {
+              actOwnerEl.innerHTML = '<option value="">Selecciona responsable</option>';
+              actAssignedEl.innerHTML = "";
+            }
+          };
+          const currentApprovalForActivity = () => {
+            if (!currentActivityId) return null;
+            return approvalsByActivity[Number(currentActivityId)] || null;
+          };
+          const renderStateStrip = () => {
+            const rawStatus = String(currentActivityData?.status || "").trim().toLowerCase();
+            const endDate = String(currentActivityData?.fecha_final || "").trim();
+            const displayStatus = (() => {
+              if (rawStatus === "terminada") return "Terminada";
+              if (rawStatus === "en revisión") return "En revisión";
+              if (rawStatus === "atrasada") return "Atrasada";
+              if (endDate && todayIso() > endDate) return "Atrasada";
+              if (rawStatus === "en proceso") return "En proceso";
+              return "No iniciado";
+            })();
+            [stateNoIniciadoBtn, stateEnProcesoBtn, stateTerminadoBtn, stateEnRevisionBtn].forEach((btn) => {
+              if (btn) btn.classList.remove("active");
+            });
+            if (displayStatus === "No iniciado" && stateNoIniciadoBtn) stateNoIniciadoBtn.classList.add("active");
+            if (displayStatus === "En proceso" && stateEnProcesoBtn) stateEnProcesoBtn.classList.add("active");
+            if (displayStatus === "Terminada" && stateTerminadoBtn) stateTerminadoBtn.classList.add("active");
+            if (displayStatus === "En revisión" && stateEnRevisionBtn) stateEnRevisionBtn.classList.add("active");
+            if (stateEnProcesoBtn) stateEnProcesoBtn.disabled = !currentActivityId;
+            if (stateTerminadoBtn) stateTerminadoBtn.disabled = !currentActivityId;
+            if (statusValueEl) {
+              const tone = displayStatus === "Terminada" ? "green"
+                : displayStatus === "En revisión" ? "orange"
+                  : displayStatus === "En proceso" ? "yellow"
+                    : displayStatus === "Atrasada" ? "red"
+                      : "gray";
+              statusValueEl.innerHTML = `<span class="poa-semaforo ${tone}"></span>${escapeHtml(displayStatus)}`;
+            }
+            const subList = Array.isArray(currentSubactivities) ? currentSubactivities : [];
+            let progress = 0;
+            if (subList.length) {
+              const completed = subList.filter((sub) => {
+                const subEnd = String(sub?.fecha_final || "").trim();
+                return !!subEnd && subEnd <= todayIso();
+              }).length;
+              progress = Math.round((completed / subList.length) * 100);
+            } else {
+              progress = displayStatus === "Terminada" ? 100 : 0;
+            }
+            if (progressValueEl) progressValueEl.textContent = `${progress}%`;
+            const approval = currentApprovalForActivity();
+            const canReview = !!approval;
+            if (approveBtn) approveBtn.style.display = canReview ? "inline-flex" : "none";
+            if (rejectBtn) rejectBtn.style.display = canReview ? "inline-flex" : "none";
+          };
+          const resetActivityForm = () => {
+            if (actNameEl) actNameEl.value = "";
+            if (actMilestoneEl) actMilestoneEl.value = "";
+            if (actStartEl) actStartEl.value = "";
+            if (actEndEl) actEndEl.value = "";
+            if (actRecurrenteEl) actRecurrenteEl.checked = false;
+            if (actPeriodicidadEl) actPeriodicidadEl.value = "";
+            if (actEveryDaysEl) actEveryDaysEl.value = "";
+            if (actDescEl) actDescEl.value = "";
+            if (actOwnerEl) actOwnerEl.value = "";
+            if (actAssignedEl) Array.from(actAssignedEl.options || []).forEach((opt) => { opt.selected = false; });
+            currentActivityId = null;
+            currentActivityData = null;
+            currentSubactivities = [];
+            editingSubId = null;
+            currentParentSubId = 0;
+            syncRecurringFields();
+            renderStateStrip();
+          };
+          const populateActivityForm = (activity) => {
+            if (!activity) return;
+            if (actNameEl) actNameEl.value = activity.nombre || "";
+            if (actMilestoneEl) actMilestoneEl.value = activity.entregable || "";
+            if (actOwnerEl) actOwnerEl.value = activity.responsable || "";
+            if (actStartEl) actStartEl.value = activity.fecha_inicial || "";
+            if (actEndEl) actEndEl.value = activity.fecha_final || "";
+            if (actDescEl) actDescEl.value = activity.descripcion || "";
+            if (actRecurrenteEl) actRecurrenteEl.checked = !!activity.recurrente;
+            if (actPeriodicidadEl) actPeriodicidadEl.value = activity.periodicidad || "";
+            if (actEveryDaysEl) actEveryDaysEl.value = activity.cada_xx_dias || "";
+            currentActivityId = Number(activity.id || 0);
+            currentActivityData = activity;
+            currentSubactivities = Array.isArray(activity.subactivities) ? activity.subactivities : [];
+            syncRecurringFields();
+            renderSubtasks();
+            renderStateStrip();
+            renderActivityBranch();
+          };
+          const openActivityForm = async (objectiveId) => {
+            const objective = objectivesById[Number(objectiveId)];
+            if (!objective) return;
+            currentObjective = objective;
+            const existing = (activitiesByObjective[Number(objective.id || 0)] || [])[0] || null;
+            if (titleEl) titleEl.textContent = existing ? "Editar actividad" : "Nueva actividad";
+            if (subtitleEl) subtitleEl.textContent = `${objective.codigo || ""} · ${objective.nombre || "Objetivo"}`;
+            if (assignedByEl) assignedByEl.textContent = `Asignado por: ${existing?.created_by || objective.lider || "N/D"}`;
+            resetActivityForm();
+            showModalMsg("");
+            setDateBounds(objective);
+            await fillCollaborators(objective);
+            if (existing) {
+              populateActivityForm(existing);
+            } else {
+              renderActivityBranch();
+              renderSubtasks();
+            }
+            openModal();
+            if (actNameEl) actNameEl.focus();
+          };
+          const orderSubtasks = (items) => {
+            const childrenByParent = {};
+            (items || []).forEach((item) => {
+              const parent = Number(item.parent_subactivity_id || 0);
+              if (!childrenByParent[parent]) childrenByParent[parent] = [];
+              childrenByParent[parent].push(item);
+            });
+            Object.keys(childrenByParent).forEach((key) => {
+              childrenByParent[key].sort((a, b) => Number(a.id || 0) - Number(b.id || 0));
+            });
+            const out = [];
+            const visit = (parentId) => {
+              const list = childrenByParent[parentId] || [];
+              list.forEach((item) => {
+                out.push(item);
+                visit(Number(item.id || 0));
+              });
+            };
+            visit(0);
+            return out;
+          };
+          const renderSubtasks = () => {
+            if (!subListEl || !subHintEl) return;
+            if (!currentActivityId) {
+              subHintEl.textContent = "Guarda primero la actividad para habilitar subtareas.";
+              subListEl.innerHTML = "";
+              return;
+            }
+            subHintEl.textContent = "Gestiona las subtareas de esta actividad.";
+            if (!currentSubactivities.length) {
+              subListEl.innerHTML = '<div class="poa-sub-meta">Sin subtareas registradas.</div>';
+              return;
+            }
+            subListEl.innerHTML = orderSubtasks(currentSubactivities).map((item) => {
+              const level = Number(item.nivel || 1);
+              const marginLeft = Math.max(0, (level - 1) * 18);
+              return `
+              <article class="poa-sub-item" data-sub-id="${Number(item.id || 0)}" style="margin-left:${marginLeft}px;">
+                <h5>${escapeHtml(item.nombre || "Subtarea sin nombre")}</h5>
+                <div class="poa-sub-meta">Nivel ${level} · ${escapeHtml(fmtDate(item.fecha_inicial))} - ${escapeHtml(fmtDate(item.fecha_final))} · Responsable: ${escapeHtml(item.responsable || "N/D")}</div>
+                <div class="poa-sub-actions">
+                  <button type="button" class="poa-sub-btn" data-sub-add-child="${Number(item.id || 0)}">Agregar hija</button>
+                  <button type="button" class="poa-sub-btn" data-sub-edit="${Number(item.id || 0)}">Editar</button>
+                  <button type="button" class="poa-sub-btn warn" data-sub-delete="${Number(item.id || 0)}">Eliminar</button>
+                </div>
+              </article>
+            `;
+            }).join("");
+            subListEl.querySelectorAll("[data-sub-add-child]").forEach((btn) => {
+              btn.addEventListener("click", () => openSubtaskForm(0, Number(btn.getAttribute("data-sub-add-child"))));
+            });
+            subListEl.querySelectorAll("[data-sub-edit]").forEach((btn) => {
+              btn.addEventListener("click", () => openSubtaskForm(Number(btn.getAttribute("data-sub-edit")), 0));
+            });
+            subListEl.querySelectorAll("[data-sub-delete]").forEach((btn) => {
+              btn.addEventListener("click", async () => deleteSubtask(Number(btn.getAttribute("data-sub-delete"))));
+            });
+          };
+          const fillSubCollaborators = async () => {
+            if (!subOwnerEl || !subAssignedEl || !currentObjective) return;
+            const axisId = Number(currentObjective.eje_id || 0);
+            if (!axisId) {
+              subOwnerEl.innerHTML = '<option value="">Selecciona responsable</option>';
+              subAssignedEl.innerHTML = "";
+              return;
+            }
+            try {
+              const response = await fetch(`/api/strategic-axes/${axisId}/collaborators`, {
+                headers: { "Content-Type": "application/json" },
+                credentials: "same-origin",
+              });
+              const payload = await response.json().catch(() => ({}));
+              const list = Array.isArray(payload.data) ? payload.data : [];
+              subOwnerEl.innerHTML = '<option value="">Selecciona responsable</option>' + list.map((name) => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join("");
+              subAssignedEl.innerHTML = list.map((name) => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join("");
+            } catch (_err) {
+              subOwnerEl.innerHTML = '<option value="">Selecciona responsable</option>';
+              subAssignedEl.innerHTML = "";
+            }
+          };
+          const setSubDateBounds = (parentSub = null) => {
+            const minDate = parentSub?.fecha_inicial || (actStartEl && actStartEl.value ? actStartEl.value : "");
+            const maxDate = parentSub?.fecha_final || (actEndEl && actEndEl.value ? actEndEl.value : "");
+            [subStartEl, subEndEl].forEach((el) => {
+              if (!el) return;
+              el.min = minDate || "";
+              el.max = maxDate || "";
+            });
+          };
+          const openSubtaskForm = async (subId = 0, parentId = 0) => {
+            if (!currentActivityId) {
+              showModalMsg("Guarda la actividad antes de crear subtareas.", true);
+              return;
+            }
+            editingSubId = subId || 0;
+            currentParentSubId = parentId || 0;
+            await fillSubCollaborators();
+            const found = currentSubactivities.find((item) => Number(item.id || 0) === Number(editingSubId));
+            if (found && found.parent_subactivity_id) {
+              currentParentSubId = Number(found.parent_subactivity_id || 0);
+            }
+            const parentSub = currentSubactivities.find((item) => Number(item.id || 0) === Number(currentParentSubId)) || null;
+            const targetLevel = found ? Number(found.nivel || 1) : (parentSub ? Number(parentSub.nivel || 1) + 1 : 1);
+            setSubDateBounds(parentSub);
+            if (subNameEl) subNameEl.value = found?.nombre || "";
+            if (subOwnerEl) subOwnerEl.value = found?.responsable || "";
+            if (subStartEl) subStartEl.value = found?.fecha_inicial || "";
+            if (subEndEl) subEndEl.value = found?.fecha_final || "";
+            if (subDescEl) subDescEl.value = found?.descripcion || "";
+            renderSubBranch(targetLevel, found?.nombre || "", currentParentSubId);
+            showSubMsg("");
+            openSubModal();
+            if (subNameEl) subNameEl.focus();
+          };
+          const saveSubtask = async () => {
+            if (!currentActivityId) {
+              showSubMsg("Guarda primero la actividad.", true);
+              return;
+            }
+            const nombre = (subNameEl && subNameEl.value ? subNameEl.value : "").trim();
+            const responsable = (subOwnerEl && subOwnerEl.value ? subOwnerEl.value : "").trim();
+            const fechaInicial = subStartEl && subStartEl.value ? subStartEl.value : "";
+            const fechaFinal = subEndEl && subEndEl.value ? subEndEl.value : "";
+            const baseDesc = (subDescEl && subDescEl.value ? subDescEl.value : "").trim();
+            const assigned = subAssignedEl ? Array.from(subAssignedEl.selectedOptions || []).map((opt) => opt.value).filter(Boolean) : [];
+            if (!nombre || !responsable) {
+              showSubMsg("Nombre y responsable son obligatorios.", true);
+              return;
+            }
+            if (!fechaInicial || !fechaFinal) {
+              showSubMsg("Fecha inicial y fecha final son obligatorias.", true);
+              return;
+            }
+            if (fechaInicial > fechaFinal) {
+              showSubMsg("La fecha inicial no puede ser mayor que la final.", true);
+              return;
+            }
+            if ((subStartEl && subStartEl.min && fechaInicial < subStartEl.min) || (subEndEl && subEndEl.max && fechaFinal > subEndEl.max)) {
+              showSubMsg("Las fechas deben estar dentro del rango de la actividad.", true);
+              return;
+            }
+            const descripcion = assigned.length
+              ? `${baseDesc}${baseDesc ? "\\n\\n" : ""}Personas asignadas: ${assigned.join(", ")}`
+              : baseDesc;
+            const payload = {
+              nombre,
+              responsable,
+              fecha_inicial: fechaInicial,
+              fecha_final: fechaFinal,
+              descripcion,
+            };
+            if (!editingSubId && currentParentSubId) {
+              payload.parent_subactivity_id = currentParentSubId;
+            }
+            showSubMsg("Guardando subtarea...");
+            try {
+              const url = editingSubId ? `/api/poa/subactivities/${editingSubId}` : `/api/poa/activities/${currentActivityId}/subactivities`;
+              const method = editingSubId ? "PUT" : "POST";
+              const response = await fetch(url, {
+                method,
+                headers: { "Content-Type": "application/json" },
+                credentials: "same-origin",
+                body: JSON.stringify(payload),
+              });
+              const data = await response.json().catch(() => ({}));
+              if (!response.ok || data.success === false) {
+                throw new Error(data.error || "No se pudo guardar la subtarea.");
+              }
+              const item = data.data || {};
+              if (editingSubId) {
+                currentSubactivities = currentSubactivities.map((sub) => Number(sub.id || 0) === Number(editingSubId) ? item : sub);
+              } else {
+                currentSubactivities = [item, ...currentSubactivities];
+              }
+              renderSubtasks();
+              closeSubModal();
+              showModalMsg("Subtarea guardada.");
+            } catch (error) {
+              showSubMsg(error.message || "No se pudo guardar la subtarea.", true);
+            }
+          };
+          const deleteSubtask = async (subId) => {
+            if (!subId) return;
+            if (!window.confirm("¿Eliminar esta subtarea?")) return;
+            try {
+              const response = await fetch(`/api/poa/subactivities/${subId}`, {
+                method: "DELETE",
+                headers: { "Content-Type": "application/json" },
+                credentials: "same-origin",
+              });
+              const data = await response.json().catch(() => ({}));
+              if (!response.ok || data.success === false) {
+                throw new Error(data.error || "No se pudo eliminar la subtarea.");
+              }
+              const removeIds = new Set([Number(subId)]);
+              let changed = true;
+              while (changed) {
+                changed = false;
+                currentSubactivities.forEach((item) => {
+                  const itemId = Number(item.id || 0);
+                  const parentId = Number(item.parent_subactivity_id || 0);
+                  if (!removeIds.has(itemId) && removeIds.has(parentId)) {
+                    removeIds.add(itemId);
+                    changed = true;
+                  }
+                });
+              }
+              currentSubactivities = currentSubactivities.filter((item) => !removeIds.has(Number(item.id || 0)));
+              renderSubtasks();
+              showModalMsg("Subtarea eliminada.");
+            } catch (error) {
+              showModalMsg(error.message || "No se pudo eliminar la subtarea.", true);
+            }
+          };
+          const validateActivityDates = () => {
+            const start = actStartEl && actStartEl.value ? actStartEl.value : "";
+            const end = actEndEl && actEndEl.value ? actEndEl.value : "";
+            if (!start || !end) return "Fecha inicial y fecha final son obligatorias.";
+            if (start > end) return "La fecha inicial no puede ser mayor que la fecha final.";
+            const minDate = String(currentObjective?.fecha_inicial || "");
+            const maxDate = String(currentObjective?.fecha_final || "");
+            if (minDate && start < minDate) return "La fecha inicial no puede ser menor a la del objetivo.";
+            if (maxDate && end > maxDate) return "La fecha final no puede ser mayor a la del objetivo.";
+            return "";
+          };
+          const syncRecurringFields = () => {
+            const enabled = !!(actRecurrenteEl && actRecurrenteEl.checked);
+            if (actPeriodicidadEl) {
+              actPeriodicidadEl.disabled = !enabled;
+              if (!enabled) actPeriodicidadEl.value = "";
+            }
+            const showEveryDays = enabled && actPeriodicidadEl && actPeriodicidadEl.value === "cada_xx_dias";
+            if (actEveryDaysWrapEl) actEveryDaysWrapEl.style.display = showEveryDays ? "block" : "none";
+            if (actEveryDaysEl && !showEveryDays) actEveryDaysEl.value = "";
+          };
+          const saveActivity = async () => {
+            if (isSaving) return;
+            if (!currentObjective) {
+              showModalMsg("Selecciona un objetivo válido.", true);
+              return;
+            }
+            const nombre = (actNameEl && actNameEl.value ? actNameEl.value : "").trim();
+            const entregable = (actMilestoneEl && actMilestoneEl.value ? actMilestoneEl.value : "").trim();
+            const responsable = (actOwnerEl && actOwnerEl.value ? actOwnerEl.value : "").trim();
+            const fechaInicial = actStartEl && actStartEl.value ? actStartEl.value : "";
+            const fechaFinal = actEndEl && actEndEl.value ? actEndEl.value : "";
+            const recurrente = !!(actRecurrenteEl && actRecurrenteEl.checked);
+            const periodicidad = (actPeriodicidadEl && actPeriodicidadEl.value ? actPeriodicidadEl.value : "").trim();
+            const cadaXxDiasRaw = (actEveryDaysEl && actEveryDaysEl.value ? actEveryDaysEl.value : "").trim();
+            const cadaXxDias = cadaXxDiasRaw ? Number(cadaXxDiasRaw) : 0;
+            const descripcionBase = (actDescEl && actDescEl.value ? actDescEl.value : "").trim();
+            const assigned = actAssignedEl ? Array.from(actAssignedEl.selectedOptions || []).map((opt) => opt.value).filter(Boolean) : [];
+            if (!nombre) {
+              showModalMsg("Nombre es obligatorio.", true);
+              return;
+            }
+            if (!responsable) {
+              showModalMsg("Responsable es obligatorio.", true);
+              return;
+            }
+            if (!entregable) {
+              showModalMsg("Entregable es obligatorio.", true);
+              return;
+            }
+            const dateError = validateActivityDates();
+            if (dateError) {
+              showModalMsg(dateError, true);
+              return;
+            }
+            if (recurrente) {
+              if (!periodicidad) {
+                showModalMsg("Selecciona una periodicidad para la actividad recurrente.", true);
+                return;
+              }
+              if (periodicidad === "cada_xx_dias" && (!Number.isInteger(cadaXxDias) || cadaXxDias <= 0)) {
+                showModalMsg("Cada xx dias debe ser un entero mayor a 0.", true);
+                return;
+              }
+            }
+            const descripcion = assigned.length
+              ? `${descripcionBase}${descripcionBase ? "\\n\\n" : ""}Personas asignadas: ${assigned.join(", ")}`
+              : descripcionBase;
+            const payload = {
+              objective_id: Number(currentObjective.id || 0),
+              nombre,
+              entregable,
+              responsable,
+              fecha_inicial: fechaInicial,
+              fecha_final: fechaFinal,
+              recurrente,
+              periodicidad: recurrente ? periodicidad : "",
+              cada_xx_dias: recurrente && periodicidad === "cada_xx_dias" ? cadaXxDias : 0,
+              descripcion,
+            };
+            isSaving = true;
+            if (saveBtn) saveBtn.disabled = true;
+            showModalMsg("Guardando actividad...");
+            try {
+              const response = await fetch(currentActivityId ? `/api/poa/activities/${currentActivityId}` : "/api/poa/activities", {
+                method: currentActivityId ? "PUT" : "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "same-origin",
+                body: JSON.stringify(payload),
+              });
+              const data = await response.json().catch(() => ({}));
+              if (!response.ok || data.success === false) {
+                throw new Error(data.error || "No se pudo guardar la actividad.");
+              }
+              currentActivityId = Number(data.data?.id || currentActivityId || 0);
+              currentActivityData = data.data || currentActivityData;
+              currentSubactivities = Array.isArray(data.data?.subactivities) ? data.data.subactivities : currentSubactivities;
+              renderSubtasks();
+              renderStateStrip();
+              showModalMsg("Actividad guardada correctamente.");
+              await loadBoard();
+            } catch (error) {
+              showModalMsg(error.message || "No se pudo guardar la actividad.", true);
+            } finally {
+              isSaving = false;
+              if (saveBtn) saveBtn.disabled = false;
+            }
+          };
+          const markInProgress = async () => {
+            if (!currentActivityId) {
+              showModalMsg("Guarda primero la actividad para cambiar su estado.", true);
+              return;
+            }
+            showModalMsg("Actualizando estado...");
+            try {
+              const response = await fetch(`/api/poa/activities/${currentActivityId}/mark-in-progress`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "same-origin",
+              });
+              const data = await response.json().catch(() => ({}));
+              if (!response.ok || data.success === false) {
+                throw new Error(data.error || "No se pudo marcar en proceso.");
+              }
+              currentActivityData = data.data || currentActivityData;
+              currentSubactivities = Array.isArray(data.data?.subactivities) ? data.data.subactivities : currentSubactivities;
+              renderStateStrip();
+              showModalMsg("Actividad en proceso.");
+              await loadBoard();
+            } catch (error) {
+              showModalMsg(error.message || "No se pudo marcar en proceso.", true);
+            }
+          };
+          const markFinished = async () => {
+            if (!currentActivityId) {
+              showModalMsg("Guarda primero la actividad para declararla terminada.", true);
+              return;
+            }
+            const entregableName = (actMilestoneEl && actMilestoneEl.value ? actMilestoneEl.value : "").trim() || "N/D";
+            const sendReview = window.confirm(`El entregable es ${entregableName}, ¿Quiere enviarlo a revisión?`);
+            showModalMsg(sendReview ? "Enviando a revisión..." : "Declarando terminado...");
+            try {
+              const response = await fetch(`/api/poa/activities/${currentActivityId}/mark-finished`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "same-origin",
+                body: JSON.stringify({ enviar_revision: sendReview }),
+              });
+              const data = await response.json().catch(() => ({}));
+              if (!response.ok || data.success === false) {
+                throw new Error(data.error || "No se pudo actualizar el estado.");
+              }
+              currentActivityData = data.data || currentActivityData;
+              currentSubactivities = Array.isArray(data.data?.subactivities) ? data.data.subactivities : currentSubactivities;
+              renderStateStrip();
+              showModalMsg(data.message || "Estado actualizado.");
+              await loadBoard();
+            } catch (error) {
+              showModalMsg(error.message || "No se pudo actualizar el estado.", true);
+            }
+          };
+          const resolveApproval = async (action) => {
+            const approval = currentApprovalForActivity();
+            if (!approval) {
+              showModalMsg("No hay entregable pendiente para revisar.", true);
+              return;
+            }
+            showModalMsg(action === "autorizar" ? "Aprobando entregable..." : "Rechazando entregable...");
+            try {
+              const response = await fetch(`/api/poa/approvals/${approval.id}/decision`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "same-origin",
+                body: JSON.stringify({ accion: action, comentario: "" }),
+              });
+              const data = await response.json().catch(() => ({}));
+              if (!response.ok || data.success === false) {
+                throw new Error(data.error || "No se pudo procesar la revisión.");
+              }
+              showModalMsg(data.message || "Revisión procesada.");
+              await loadBoard();
+              if (currentObjective) {
+                const latest = (activitiesByObjective[Number(currentObjective.id || 0)] || [])
+                  .find((item) => Number(item.id || 0) === Number(currentActivityId))
+                  || null;
+                if (latest) {
+                  currentActivityData = latest;
+                  currentSubactivities = Array.isArray(latest.subactivities) ? latest.subactivities : [];
+                }
+                renderStateStrip();
+              }
+            } catch (error) {
+              showModalMsg(error.message || "No se pudo procesar la revisión.", true);
+            }
+          };
+          closeBtn && closeBtn.addEventListener("click", closeModal);
+          cancelBtn && cancelBtn.addEventListener("click", closeModal);
+          subCloseBtn && subCloseBtn.addEventListener("click", closeSubModal);
+          subCancelBtn && subCancelBtn.addEventListener("click", closeSubModal);
+          subSaveBtn && subSaveBtn.addEventListener("click", saveSubtask);
+          subAddBtn && subAddBtn.addEventListener("click", () => openSubtaskForm(0, 0));
+          modalEl && modalEl.addEventListener("click", (event) => {
+            if (event.target === modalEl) closeModal();
+          });
+          subModalEl && subModalEl.addEventListener("click", (event) => {
+            if (event.target === subModalEl) closeSubModal();
+          });
+          document.addEventListener("keydown", (event) => {
+            if (event.key === "Escape" && modalEl && modalEl.classList.contains("open")) closeModal();
+            if (event.key === "Escape" && subModalEl && subModalEl.classList.contains("open")) closeSubModal();
+          });
+          saveBtn && saveBtn.addEventListener("click", saveActivity);
+          stateEnProcesoBtn && stateEnProcesoBtn.addEventListener("click", markInProgress);
+          stateTerminadoBtn && stateTerminadoBtn.addEventListener("click", markFinished);
+          approveBtn && approveBtn.addEventListener("click", () => resolveApproval("autorizar"));
+          rejectBtn && rejectBtn.addEventListener("click", () => resolveApproval("rechazar"));
+          actNameEl && actNameEl.addEventListener("input", renderActivityBranch);
+          actRecurrenteEl && actRecurrenteEl.addEventListener("change", syncRecurringFields);
+          actPeriodicidadEl && actPeriodicidadEl.addEventListener("change", syncRecurringFields);
+          subNameEl && subNameEl.addEventListener("input", () => {
+            const found = currentSubactivities.find((item) => Number(item.id || 0) === Number(editingSubId));
+            const targetLevel = found ? Number(found.nivel || 1) : (() => {
+              const parentSub = currentSubactivities.find((item) => Number(item.id || 0) === Number(currentParentSubId));
+              return parentSub ? Number(parentSub.nivel || 1) + 1 : 1;
+            })();
+            renderSubBranch(targetLevel, subNameEl.value || "", currentParentSubId);
+          });
+          document.querySelectorAll("[data-poa-tab]").forEach((tabBtn) => {
+            tabBtn.addEventListener("click", () => {
+              const tabKey = tabBtn.getAttribute("data-poa-tab");
+              document.querySelectorAll("[data-poa-tab]").forEach((btn) => btn.classList.remove("active"));
+              document.querySelectorAll("[data-poa-panel]").forEach((panel) => panel.classList.remove("active"));
+              tabBtn.classList.add("active");
+              const panel = document.querySelector(`[data-poa-panel="${tabKey}"]`);
+              if (panel) panel.classList.add("active");
+            });
+          });
 
           const renderBoard = (payload) => {
             const objectives = Array.isArray(payload.objectives) ? payload.objectives : [];
             const activities = Array.isArray(payload.activities) ? payload.activities : [];
+            const pendingApprovals = Array.isArray(payload.pending_approvals) ? payload.pending_approvals : [];
+            objectivesById = {};
+            activitiesByObjective = {};
+            approvalsByActivity = {};
+            objectives.forEach((obj) => {
+              objectivesById[Number(obj.id || 0)] = obj;
+            });
             const activityCountByObjective = {};
             activities.forEach((item) => {
               const key = Number(item.objective_id || 0);
               if (!key) return;
               activityCountByObjective[key] = (activityCountByObjective[key] || 0) + 1;
+              if (!activitiesByObjective[key]) activitiesByObjective[key] = [];
+              activitiesByObjective[key].push(item);
             });
+            Object.keys(activitiesByObjective).forEach((key) => {
+              activitiesByObjective[key].sort((a, b) => Number(b.id || 0) - Number(a.id || 0));
+            });
+            pendingApprovals.forEach((approval) => {
+              const actId = Number(approval.activity_id || 0);
+              if (!actId) return;
+              approvalsByActivity[actId] = approval;
+            });
+            if (currentActivityId && currentObjective) {
+              const latest = (activitiesByObjective[Number(currentObjective.id || 0)] || [])
+                .find((item) => Number(item.id || 0) === Number(currentActivityId))
+                || null;
+              if (latest) {
+                currentActivityData = latest;
+                currentSubactivities = Array.isArray(latest.subactivities) ? latest.subactivities : [];
+              }
+              renderStateStrip();
+            }
             const grouped = {};
             objectives.forEach((obj) => {
               const axisName = String(obj.axis_name || "Sin eje").trim() || "Sin eje";
@@ -1906,8 +3126,9 @@ POA_LIMPIO_HTML = dedent("""
               const cards = items.map((obj) => {
                 const countActivities = activityCountByObjective[Number(obj.id || 0)] || 0;
                 return `
-                  <article class="poa-obj-card">
+                  <article class="poa-obj-card" data-objective-id="${Number(obj.id || 0)}">
                     <h4>${escapeHtml(obj.nombre || "Objetivo sin nombre")}</h4>
+                    <div class="meta">Fecha inicial: ${escapeHtml(fmtDate(obj.fecha_inicial))}</div>
                     <div class="meta">Fecha final: ${escapeHtml(fmtDate(obj.fecha_final))}</div>
                     <div class="meta">Actividades: ${countActivities}</div>
                     <span class="code">${escapeHtml(obj.codigo || "xx-yy-zz")}</span>
@@ -1933,6 +3154,11 @@ POA_LIMPIO_HTML = dedent("""
                 const collapsed = col.classList.toggle("collapsed");
                 button.textContent = collapsed ? "+" : "−";
                 button.setAttribute("aria-label", collapsed ? "Mostrar columna" : "Colapsar columna");
+              });
+            });
+            gridEl.querySelectorAll("[data-objective-id]").forEach((card) => {
+              card.addEventListener("click", async () => {
+                await openActivityForm(card.getAttribute("data-objective-id"));
               });
             });
           };
@@ -2718,6 +3944,21 @@ def create_poa_activity(request: Request, data: dict = Body(...)):
     range_error = _validate_date_range(start_date, end_date, "Actividad")
     if range_error:
         return JSONResponse({"success": False, "error": range_error}, status_code=400)
+    recurrente = bool(data.get("recurrente"))
+    periodicidad = (data.get("periodicidad") or "").strip().lower()
+    try:
+        cada_xx_dias = int(data.get("cada_xx_dias") or 0)
+    except (TypeError, ValueError):
+        return JSONResponse({"success": False, "error": "Cada xx días debe ser un número válido"}, status_code=400)
+    if recurrente:
+        if periodicidad not in VALID_ACTIVITY_PERIODICITIES:
+            return JSONResponse({"success": False, "error": "Selecciona una periodicidad válida"}, status_code=400)
+        if periodicidad == "cada_xx_dias":
+            if cada_xx_dias <= 0:
+                return JSONResponse({"success": False, "error": "Cada xx días debe ser mayor a 0"}, status_code=400)
+    else:
+        periodicidad = ""
+        cada_xx_dias = 0
 
     db = SessionLocal()
     try:
@@ -2746,7 +3987,11 @@ def create_poa_activity(request: Request, data: dict = Body(...)):
             entregable=entregable,
             fecha_inicial=start_date,
             fecha_final=end_date,
+            inicio_forzado=bool(data.get("inicio_forzado")),
             descripcion=(data.get("descripcion") or "").strip(),
+            recurrente=recurrente,
+            periodicidad=periodicidad,
+            cada_xx_dias=(cada_xx_dias if periodicidad == "cada_xx_dias" else None),
             created_by=created_by,
         )
         db.add(activity)
@@ -2785,6 +4030,21 @@ def update_poa_activity(request: Request, activity_id: int, data: dict = Body(..
         range_error = _validate_date_range(start_date, end_date, "Actividad")
         if range_error:
             return JSONResponse({"success": False, "error": range_error}, status_code=400)
+        recurrente = bool(data.get("recurrente"))
+        periodicidad = (data.get("periodicidad") or "").strip().lower()
+        try:
+            cada_xx_dias = int(data.get("cada_xx_dias") or 0)
+        except (TypeError, ValueError):
+            return JSONResponse({"success": False, "error": "Cada xx días debe ser un número válido"}, status_code=400)
+        if recurrente:
+            if periodicidad not in VALID_ACTIVITY_PERIODICITIES:
+                return JSONResponse({"success": False, "error": "Selecciona una periodicidad válida"}, status_code=400)
+            if periodicidad == "cada_xx_dias":
+                if cada_xx_dias <= 0:
+                    return JSONResponse({"success": False, "error": "Cada xx días debe ser mayor a 0"}, status_code=400)
+        else:
+            periodicidad = ""
+            cada_xx_dias = 0
         objective = db.query(StrategicObjectiveConfig).filter(StrategicObjectiveConfig.id == activity.objective_id).first()
         if not objective:
             return JSONResponse({"success": False, "error": "Objetivo no encontrado"}, status_code=404)
@@ -2804,7 +4064,11 @@ def update_poa_activity(request: Request, activity_id: int, data: dict = Body(..
         activity.entregable = entregable
         activity.fecha_inicial = start_date
         activity.fecha_final = end_date
+        activity.inicio_forzado = bool(data.get("inicio_forzado")) if "inicio_forzado" in data else bool(activity.inicio_forzado)
         activity.descripcion = (data.get("descripcion") or "").strip()
+        activity.recurrente = recurrente
+        activity.periodicidad = periodicidad
+        activity.cada_xx_dias = cada_xx_dias if periodicidad == "cada_xx_dias" else None
         db.add(activity)
         db.commit()
         db.refresh(activity)
@@ -2829,6 +4093,134 @@ def delete_poa_activity(request: Request, activity_id: int):
         db.delete(activity)
         db.commit()
         return JSONResponse({"success": True})
+    finally:
+        db.close()
+
+
+@router.post("/api/poa/activities/{activity_id}/mark-in-progress")
+def mark_poa_activity_in_progress(request: Request, activity_id: int):
+    _bind_core_symbols()
+    db = SessionLocal()
+    try:
+        activity = db.query(POAActivity).filter(POAActivity.id == activity_id).first()
+        if not activity:
+            return JSONResponse({"success": False, "error": "Actividad no encontrada"}, status_code=404)
+        allowed_ids = {obj.id for obj in _allowed_objectives_for_user(request, db)}
+        if activity.objective_id not in allowed_ids and not is_admin_or_superadmin(request):
+            return JSONResponse({"success": False, "error": "No autorizado para esta actividad"}, status_code=403)
+        session_username = (getattr(request.state, "user_name", None) or request.cookies.get("user_name") or "").strip()
+        user = _current_user_record(request, db)
+        aliases = _user_aliases(user, session_username)
+        is_activity_owner = (activity.responsable or "").strip().lower() in aliases
+        if not (is_activity_owner or is_admin_or_superadmin(request)):
+            return JSONResponse({"success": False, "error": "Solo el responsable puede habilitar en proceso"}, status_code=403)
+        if (activity.entrega_estado or "").strip().lower() == "aprobada":
+            return JSONResponse({"success": False, "error": "La actividad ya está aprobada y terminada"}, status_code=409)
+        activity.inicio_forzado = True
+        if (activity.entrega_estado or "").strip().lower() == "rechazada":
+            activity.entrega_estado = "ninguna"
+        db.add(activity)
+        db.commit()
+        db.refresh(activity)
+        subs = db.query(POASubactivity).filter(POASubactivity.activity_id == activity.id).all()
+        return JSONResponse({"success": True, "data": _serialize_poa_activity(activity, subs)})
+    finally:
+        db.close()
+
+
+@router.post("/api/poa/activities/{activity_id}/mark-finished")
+def mark_poa_activity_finished(request: Request, activity_id: int, data: dict = Body(default={})):
+    _bind_core_symbols()
+    send_review = bool(data.get("enviar_revision"))
+    db = SessionLocal()
+    try:
+        activity = db.query(POAActivity).filter(POAActivity.id == activity_id).first()
+        if not activity:
+            return JSONResponse({"success": False, "error": "Actividad no encontrada"}, status_code=404)
+        allowed_ids = {obj.id for obj in _allowed_objectives_for_user(request, db)}
+        if activity.objective_id not in allowed_ids and not is_admin_or_superadmin(request):
+            return JSONResponse({"success": False, "error": "No autorizado para esta actividad"}, status_code=403)
+        session_username = (getattr(request.state, "user_name", None) or request.cookies.get("user_name") or "").strip()
+        user = _current_user_record(request, db)
+        aliases = _user_aliases(user, session_username)
+        is_activity_owner = (activity.responsable or "").strip().lower() in aliases
+        if not (is_activity_owner or is_admin_or_superadmin(request)):
+            return JSONResponse({"success": False, "error": "Solo el responsable puede declarar terminado"}, status_code=403)
+        current_status = _activity_status(activity)
+        if current_status == "No iniciada":
+            return JSONResponse(
+                {"success": False, "error": "La actividad no ha iniciado; habilítala en proceso o espera la fecha inicial"},
+                status_code=409,
+            )
+        if (activity.entrega_estado or "").strip().lower() == "aprobada":
+            return JSONResponse({"success": False, "error": "La actividad ya fue aprobada y terminada"}, status_code=409)
+
+        if send_review:
+            pending = (
+                db.query(POADeliverableApproval)
+                .filter(
+                    POADeliverableApproval.activity_id == activity.id,
+                    POADeliverableApproval.status == "pendiente",
+                )
+                .first()
+            )
+            if pending:
+                return JSONResponse(
+                    {"success": False, "error": "Ya existe una aprobación pendiente para esta actividad"},
+                    status_code=409,
+                )
+
+            objective = db.query(StrategicObjectiveConfig).filter(StrategicObjectiveConfig.id == activity.objective_id).first()
+            if not objective:
+                return JSONResponse({"success": False, "error": "Objetivo no encontrado"}, status_code=404)
+            axis = db.query(StrategicAxisConfig).filter(StrategicAxisConfig.id == objective.eje_id).first()
+            process_owner = (activity.created_by or "").strip() or _resolve_process_owner_for_objective(objective, axis)
+            if not process_owner:
+                return JSONResponse(
+                    {"success": False, "error": "No se pudo identificar el validador del entregable"},
+                    status_code=400,
+                )
+            approval = POADeliverableApproval(
+                activity_id=activity.id,
+                objective_id=objective.id,
+                process_owner=process_owner,
+                requester=session_username or (activity.responsable or ""),
+                status="pendiente",
+            )
+            activity.entrega_estado = "pendiente"
+            activity.entrega_solicitada_por = session_username or (activity.responsable or "")
+            activity.entrega_solicitada_at = datetime.utcnow()
+            activity.entrega_aprobada_por = ""
+            activity.entrega_aprobada_at = None
+            db.add(approval)
+            db.add(activity)
+            db.commit()
+            db.refresh(activity)
+            subs = db.query(POASubactivity).filter(POASubactivity.activity_id == activity.id).all()
+            return JSONResponse(
+                {
+                    "success": True,
+                    "message": "Entregable enviado a revisión",
+                    "data": _serialize_poa_activity(activity, subs),
+                }
+            )
+
+        activity.entrega_estado = "declarada"
+        activity.entrega_solicitada_por = ""
+        activity.entrega_solicitada_at = None
+        activity.entrega_aprobada_por = ""
+        activity.entrega_aprobada_at = None
+        db.add(activity)
+        db.commit()
+        db.refresh(activity)
+        subs = db.query(POASubactivity).filter(POASubactivity.activity_id == activity.id).all()
+        return JSONResponse(
+            {
+                "success": True,
+                "message": "Actividad declarada terminada",
+                "data": _serialize_poa_activity(activity, subs),
+            }
+        )
     finally:
         db.close()
 
@@ -2873,7 +4265,7 @@ def request_poa_activity_completion(request: Request, activity_id: int):
         if not objective:
             return JSONResponse({"success": False, "error": "Objetivo no encontrado"}, status_code=404)
         axis = db.query(StrategicAxisConfig).filter(StrategicAxisConfig.id == objective.eje_id).first()
-        process_owner = _resolve_process_owner_for_objective(objective, axis)
+        process_owner = (activity.created_by or "").strip() or _resolve_process_owner_for_objective(objective, axis)
         if not process_owner:
             return JSONResponse(
                 {"success": False, "error": "No se pudo identificar dueño del proceso (líder objetivo/departamento eje)"},
@@ -2985,9 +4377,38 @@ def create_poa_subactivity(request: Request, activity_id: int, data: dict = Body
         )
         if parent_error:
             return JSONResponse({"success": False, "error": parent_error}, status_code=400)
+        parent_sub_id = int(data.get("parent_subactivity_id") or 0)
+        parent_sub = None
+        sub_level = 1
+        if parent_sub_id:
+            parent_sub = (
+                db.query(POASubactivity)
+                .filter(POASubactivity.id == parent_sub_id, POASubactivity.activity_id == activity.id)
+                .first()
+            )
+            if not parent_sub:
+                return JSONResponse({"success": False, "error": "Subactividad padre no encontrada"}, status_code=404)
+            sub_level = int(parent_sub.nivel or 1) + 1
+            if sub_level > MAX_SUBTASK_DEPTH:
+                return JSONResponse(
+                    {"success": False, "error": f"Profundidad máxima permitida: {MAX_SUBTASK_DEPTH} niveles"},
+                    status_code=400,
+                )
+            child_error = _validate_child_date_range(
+                start_date,
+                end_date,
+                parent_sub.fecha_inicial,
+                parent_sub.fecha_final,
+                "Subactividad",
+                "Subactividad padre",
+            )
+            if child_error:
+                return JSONResponse({"success": False, "error": child_error}, status_code=400)
         assigned_by = session_username
         sub = POASubactivity(
             activity_id=activity.id,
+            parent_subactivity_id=parent_sub.id if parent_sub else None,
+            nivel=sub_level,
             nombre=nombre,
             codigo=(data.get("codigo") or "").strip(),
             responsable=responsable,
@@ -3045,6 +4466,24 @@ def update_poa_subactivity(request: Request, subactivity_id: int, data: dict = B
         )
         if parent_error:
             return JSONResponse({"success": False, "error": parent_error}, status_code=400)
+        parent_sub = None
+        if sub.parent_subactivity_id:
+            parent_sub = (
+                db.query(POASubactivity)
+                .filter(POASubactivity.id == sub.parent_subactivity_id, POASubactivity.activity_id == activity.id)
+                .first()
+            )
+        if parent_sub:
+            child_error = _validate_child_date_range(
+                start_date,
+                end_date,
+                parent_sub.fecha_inicial,
+                parent_sub.fecha_final,
+                "Subactividad",
+                "Subactividad padre",
+            )
+            if child_error:
+                return JSONResponse({"success": False, "error": child_error}, status_code=400)
         sub.nombre = nombre
         sub.codigo = (data.get("codigo") or "").strip()
         sub.responsable = responsable
@@ -3077,6 +4516,9 @@ def delete_poa_subactivity(request: Request, subactivity_id: int):
         is_activity_owner = (activity.responsable or "").strip().lower() in aliases
         if not (is_activity_owner or is_admin_or_superadmin(request)):
             return JSONResponse({"success": False, "error": "No autorizado para eliminar subactividad"}, status_code=403)
+        descendants = _descendant_subactivity_ids(db, activity.id, sub.id)
+        if descendants:
+            db.query(POASubactivity).filter(POASubactivity.id.in_(descendants)).delete(synchronize_session=False)
         db.delete(sub)
         db.commit()
         return JSONResponse({"success": True})
