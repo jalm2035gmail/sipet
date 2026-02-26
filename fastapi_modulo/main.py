@@ -929,6 +929,7 @@ class StrategicAxisConfig(Base):
     nombre = Column(String, nullable=False)
     codigo = Column(String, default="")
     lider_departamento = Column(String, default="")
+    responsabilidad_directa = Column(String, default="")
     descripcion = Column(String, default="")
     orden = Column(Integer, default=0, index=True)
     is_active = Column(Boolean, default=True)
@@ -1457,6 +1458,8 @@ def ensure_strategic_axes_schema() -> None:
             conn.execute('ALTER TABLE "strategic_axes_config" ADD COLUMN "codigo" VARCHAR DEFAULT ""')
         if "lider_departamento" not in cols:
             conn.execute('ALTER TABLE "strategic_axes_config" ADD COLUMN "lider_departamento" VARCHAR DEFAULT ""')
+        if "responsabilidad_directa" not in cols:
+            conn.execute('ALTER TABLE "strategic_axes_config" ADD COLUMN "responsabilidad_directa" VARCHAR DEFAULT ""')
         objectives_table_exists = conn.execute(
             "SELECT 1 FROM sqlite_master WHERE type='table' AND name='strategic_objectives_config'"
         ).fetchone()

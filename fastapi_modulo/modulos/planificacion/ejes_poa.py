@@ -5,7 +5,7 @@ from textwrap import dedent
 from typing import Any, Dict, List, Set
 import sqlite3
 
-from fastapi import APIRouter, Body, Request
+from fastapi import APIRouter, Body, Request, Query
 from fastapi.responses import HTMLResponse, JSONResponse
 from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
@@ -80,6 +80,7 @@ def _serialize_strategic_axis(axis: StrategicAxisConfig) -> Dict[str, Any]:
         "nombre": axis.nombre or "",
         "codigo": axis.codigo or "",
         "lider_departamento": axis.lider_departamento or "",
+        "responsabilidad_directa": axis.responsabilidad_directa or "",
         "descripcion": axis.descripcion or "",
         "orden": axis.orden or 0,
         "objetivos_count": len(objetivos),
@@ -94,6 +95,34 @@ def _compose_axis_code(base_code: str, order_value: int) -> str:
     if safe_order <= 0:
         safe_order = 1
     return f"{safe_prefix}-{safe_order:02d}"
+
+
+def _compose_objective_code(axis_code: str, order_value: int) -> str:
+    raw_axis = (axis_code or "").strip().lower()
+    axis_parts = [part for part in raw_axis.split("-") if part]
+    if len(axis_parts) >= 2:
+        axis_prefix = f"{axis_parts[0]}-{axis_parts[1]}"
+    elif axis_parts:
+        axis_prefix = f"{axis_parts[0]}-01"
+    else:
+        axis_prefix = "m1-01"
+    safe_order = int(order_value or 0)
+    if safe_order <= 0:
+        safe_order = 1
+    return f"{axis_prefix}-{safe_order:02d}"
+
+
+def _collaborator_belongs_to_department(db, collaborator_name: str, department: str) -> bool:
+    name = (collaborator_name or "").strip()
+    dep = (department or "").strip()
+    if not name or not dep:
+        return False
+    exists = (
+        db.query(Usuario.id)
+        .filter(Usuario.nombre == name, Usuario.departamento == dep)
+        .first()
+    )
+    return bool(exists)
 
 
 def _serialize_poa_subactivity(item: POASubactivity) -> Dict[str, Any]:
@@ -402,19 +431,34 @@ EJES_ESTRATEGICOS_HTML = dedent("""
         .axm-field label{ font-size: 12px; color:#475569; font-weight:700; letter-spacing: .02em; }
         .axm-base-grid{
           display: grid;
-          grid-template-columns: minmax(110px, 150px) minmax(0, 1fr);
+          grid-template-columns: 16fr 20fr;
           gap: 10px;
-          align-items: center;
+          align-items: end;
+        }
+        .axm-axis-main-row{
+          display: grid;
+          grid-template-columns: 15fr 50fr 15fr 20fr;
+          gap: 10px;
+          align-items: end;
+        }
+        .axm-axis-main-row .axm-field{
+          margin-top: 0;
+        }
+        .axm-axis-main-row .axm-base-grid{
+          display: contents;
+        }
+        .axm-axis-main-row .axm-base-grid > *{
+          min-width: 0;
         }
         .axm-base-preview{
-          min-height: 42px;
+          min-height: 40px;
           display: flex;
           align-items: center;
-          padding: 8px 10px;
+          padding: 6px 8px;
           border: 1px dashed rgba(148,163,184,.45);
           border-radius: 10px;
           color: #64748b;
-          font-size: 12px;
+          font-size: 11px;
           font-style: italic;
           line-height: 1.35;
           background: rgba(255,255,255,.7);
@@ -429,11 +473,12 @@ EJES_ESTRATEGICOS_HTML = dedent("""
         }
         .axm-axis-code-readonly{
           width: auto !important;
-          min-width: 110px;
-          max-width: 140px;
+          min-width: 64px;
+          max-width: 78px;
           padding-right: 10px;
           text-align: center;
-          font-weight: 700;
+          font-weight: 400;
+          font-style: italic;
         }
         .axm-textarea{ min-height: 82px; resize: vertical; }
         .axm-actions{ display:flex; gap:8px; flex-wrap:wrap; margin-top: 12px; }
@@ -451,9 +496,59 @@ EJES_ESTRATEGICOS_HTML = dedent("""
         .axm-obj-layout{
           margin-top: 12px;
           display:grid;
-          grid-template-columns: minmax(280px, 0.95fr) minmax(460px, 1.35fr);
-          gap: 14px;
+          grid-template-columns: 30% 70%;
+          gap: 0;
           align-items: start;
+          border: 1px solid rgba(148,163,184,.30);
+          border-radius: 14px;
+          overflow: hidden;
+          background: rgba(255,255,255,.95);
+        }
+        .axm-obj-layout > aside{
+          padding: 12px;
+          border-right: 1px solid rgba(148,163,184,.26);
+          background: #e5e7eb;
+        }
+        .axm-obj-layout > section{
+          padding: 12px;
+        }
+        .axm-obj-axis-list{
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          max-height: 380px;
+          overflow: auto;
+        }
+        .axm-obj-axis-btn{
+          width: 100%;
+          text-align: left;
+          border: 1px solid rgba(148,163,184,.32);
+          border-radius: 12px;
+          padding: 10px 12px;
+          background: rgba(229,231,235,.92);
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 8px;
+          color: #334155;
+          font-size: 12px;
+          font-style: italic;
+          font-weight: 400;
+        }
+        .axm-obj-axis-btn strong{
+          font-size: 12px;
+          font-style: italic;
+          font-weight: 400;
+        }
+        .axm-obj-axis-btn.active{
+          background: #ffffff;
+          border-color: rgba(15,61,46,.30);
+        }
+        .axm-obj-axis-arrow{
+          font-size: 18px;
+          color: #64748b;
+          line-height: 1;
         }
         .axm-obj-list{ display:flex; flex-direction:column; gap: 8px; max-height: 320px; overflow:auto; }
         .axm-obj-btn{
@@ -468,6 +563,12 @@ EJES_ESTRATEGICOS_HTML = dedent("""
         .axm-obj-btn.active{
           background: rgba(15,61,46,.08);
           border-color: rgba(15,61,46,.30);
+        }
+        .axm-obj-sub{
+          margin-top: 4px;
+          font-size: 11px;
+          font-style: italic;
+          color: #64748b;
         }
         .axm-obj-form{
           border:1px solid rgba(148,163,184,.32);
@@ -619,18 +720,19 @@ EJES_ESTRATEGICOS_HTML = dedent("""
           font-size: 12px;
           color: #64748b;
         }
-        @media (max-width: 1200px){
+        @media (max-width: 980px){
           .axm-obj-layout{ grid-template-columns: 1fr; }
+          .axm-obj-layout > aside{ border-right: 0; border-bottom: 1px solid rgba(148,163,184,.26); }
           .axm-obj-form .axm-row{ grid-template-columns: 1fr; }
         }
         @media (max-width: 980px){
           .axm-grid{ grid-template-columns: 1fr; }
           .axm-list{ max-height: 36vh; }
           .axm-row{ grid-template-columns: 1fr; }
-          .axm-obj-layout{ grid-template-columns: 1fr; }
           .axm-obj-grid{ grid-template-columns: 1fr; }
           .axm-tree-roots{ grid-template-columns: 1fr; }
-          .axm-base-grid{ grid-template-columns: 1fr; }
+          .axm-axis-main-row{ grid-template-columns: 1fr; }
+          .axm-axis-main-row .axm-base-grid{ display: grid; grid-template-columns: 1fr; }
         }
       </style>
 
@@ -649,7 +751,6 @@ EJES_ESTRATEGICOS_HTML = dedent("""
         <button type="button" class="axm-tab active" data-axm-tab="identidad"><img src="/templates/icon/identidad.svg" alt="" class="tab-icon">Identidad</button>
         <button type="button" class="axm-tab" data-axm-tab="ejes"><img src="/templates/icon/ejes.svg" alt="" class="tab-icon">Ejes estratégicos</button>
         <button type="button" class="axm-tab" data-axm-tab="objetivos"><img src="/templates/icon/objetivos.svg" alt="" class="tab-icon">Objetivos</button>
-        <button type="button" class="axm-tab" data-axm-tab="lineas"><img src="/templates/icon/lineas.svg" alt="" class="tab-icon">Líneas de accion</button>
         <button type="button" class="axm-tab" data-axm-tab="arbol"><img src="/templates/icon/mapa.svg" alt="" class="tab-icon">Arbol estratégico</button>
       </div>
       <section class="axm-identidad" id="axm-identidad-panel">
@@ -693,11 +794,90 @@ EJES_ESTRATEGICOS_HTML = dedent("""
       <section class="axm-card" id="axm-objetivos-panel" style="display:none;">
         <h3 style="margin:0;font-size:16px;">Objetivos del eje</h3>
         <div class="axm-obj-layout">
-          <div>
-            <div class="axm-actions" style="margin-top:0;">
+          <aside>
+            <h4 style="margin:0 0 8px;font-size:14px;">Ejes estratégicos</h4>
+            <div class="axm-obj-axis-list" id="axm-obj-axis-list"></div>
+          </aside>
+          <section>
+            <div class="axm-actions" style="margin-top:0;justify-content:space-between;">
+              <h4 id="axm-obj-axis-title" style="margin:0;font-size:14px;">Objetivos</h4>
               <button class="axm-btn primary" id="axm-add-obj" type="button">Agregar objetivo</button>
             </div>
             <div class="axm-obj-list" id="axm-obj-list"></div>
+          </section>
+        </div>
+      </section>
+
+      <div class="axm-grid">
+        <aside class="axm-card">
+          <h2 class="axm-title">Ejes estratégicos</h2>
+          <p class="axm-sub">Selecciona un eje para editarlo o crea uno nuevo.</p>
+          <div class="axm-actions">
+            <button class="axm-btn primary" id="axm-add-axis" type="button" onclick="(function(){var m=document.getElementById('axm-axis-modal');if(m){m.classList.add('open');m.style.display='flex';document.body.style.overflow='hidden';}})();">Agregar eje</button>
+          </div>
+          <div class="axm-list" id="axm-axis-list"></div>
+        </aside>
+      </div>
+
+      <div class="axm-modal" id="axm-axis-modal" role="dialog" aria-modal="true" aria-labelledby="axm-axis-modal-title">
+        <section class="axm-modal-dialog">
+          <div class="axm-modal-head">
+            <h2 class="axm-title" id="axm-axis-modal-title">Gestión de ejes y objetivos</h2>
+            <button class="axm-close" id="axm-axis-modal-close" type="button" aria-label="Cerrar">×</button>
+          </div>
+          <p class="axm-sub">Edita, guarda o elimina ejes estratégicos y sus objetivos.</p>
+          <div class="axm-axis-main-row">
+            <div class="axm-field">
+              <label for="axm-axis-code">Código del eje (xx-yy)</label>
+              <input id="axm-axis-code" class="axm-input axm-axis-code-readonly" type="text" readonly>
+            </div>
+            <div class="axm-field">
+              <label for="axm-axis-name">Nombre del eje</label>
+              <input id="axm-axis-name" class="axm-input" type="text" placeholder="Ej. Gobernanza y cumplimiento">
+            </div>
+            <div class="axm-base-grid">
+              <div class="axm-field">
+                <label for="axm-axis-base-code">Cod base</label>
+                <select id="axm-axis-base-code" class="axm-input">
+                  <option value="m1">m1</option>
+                </select>
+              </div>
+              <div class="axm-field">
+                <label for="axm-axis-base-preview">Texto cod base</label>
+                <div id="axm-axis-base-preview" class="axm-base-preview">Selecciona un código para ver su línea asociada.</div>
+              </div>
+            </div>
+          </div>
+          <div class="axm-row">
+            <div class="axm-field">
+              <label for="axm-axis-leader">Líder del eje estratégico</label>
+              <select id="axm-axis-leader" class="axm-input">
+                <option value="">Selecciona departamento</option>
+              </select>
+            </div>
+            <div class="axm-field">
+              <label for="axm-axis-owner">Responsabilidad directa</label>
+              <select id="axm-axis-owner" class="axm-input">
+                <option value="">Selecciona colaborador</option>
+              </select>
+            </div>
+          </div>
+          <div class="axm-field">
+            <label for="axm-axis-desc">Descripción</label>
+            <textarea id="axm-axis-desc" class="axm-textarea" placeholder="Describe el propósito del eje"></textarea>
+          </div>
+          <div class="axm-actions">
+            <button class="axm-btn primary" id="axm-save-axis" type="button">Guardar eje</button>
+            <button class="axm-btn warn" id="axm-delete-axis" type="button">Eliminar eje</button>
+          </div>
+          <div class="axm-msg" id="axm-axis-msg" aria-live="polite"></div>
+        </section>
+      </div>
+      <div class="axm-modal" id="axm-obj-modal" role="dialog" aria-modal="true" aria-labelledby="axm-obj-modal-title">
+        <section class="axm-modal-dialog">
+          <div class="axm-modal-head">
+            <h2 class="axm-title" id="axm-obj-modal-title">Objetivo estratégico</h2>
+            <button class="axm-close" id="axm-obj-modal-close" type="button" aria-label="Cerrar">×</button>
           </div>
           <div class="axm-obj-form">
             <div class="axm-field" style="margin-top:0;">
@@ -705,8 +885,8 @@ EJES_ESTRATEGICOS_HTML = dedent("""
               <input id="axm-obj-name" class="axm-input" type="text" placeholder="Nombre del objetivo">
             </div>
             <div class="axm-field">
-              <label for="axm-obj-code">Código</label>
-              <input id="axm-obj-code" class="axm-input" type="text" placeholder="Ej. OE-13">
+              <label for="axm-obj-code">Código (xx-yy-zz)</label>
+              <input id="axm-obj-code" class="axm-input" type="text" placeholder="xx-yy-zz" readonly>
             </div>
             <div class="axm-field">
               <label for="axm-obj-leader">Lider</label>
@@ -732,65 +912,8 @@ EJES_ESTRATEGICOS_HTML = dedent("""
               <button class="axm-btn primary" id="axm-save-obj" type="button">Guardar objetivo</button>
               <button class="axm-btn warn" id="axm-delete-obj" type="button">Eliminar objetivo</button>
             </div>
+            <div class="axm-msg" id="axm-msg" aria-live="polite"></div>
           </div>
-        </div>
-        <div class="axm-msg" id="axm-msg" aria-live="polite"></div>
-      </section>
-
-      <div class="axm-grid">
-        <aside class="axm-card">
-          <h2 class="axm-title">Ejes estratégicos</h2>
-          <p class="axm-sub">Selecciona un eje para editarlo o crea uno nuevo.</p>
-          <div class="axm-actions">
-            <button class="axm-btn primary" id="axm-add-axis" type="button" onclick="(function(){var m=document.getElementById('axm-axis-modal');if(m){m.classList.add('open');m.style.display='flex';document.body.style.overflow='hidden';}})();">Agregar eje</button>
-          </div>
-          <div class="axm-list" id="axm-axis-list"></div>
-        </aside>
-      </div>
-
-      <div class="axm-modal" id="axm-axis-modal" role="dialog" aria-modal="true" aria-labelledby="axm-axis-modal-title">
-        <section class="axm-modal-dialog">
-          <div class="axm-modal-head">
-            <h2 class="axm-title" id="axm-axis-modal-title">Gestión de ejes y objetivos</h2>
-            <button class="axm-close" id="axm-axis-modal-close" type="button" aria-label="Cerrar">×</button>
-          </div>
-          <p class="axm-sub">Edita, guarda o elimina ejes estratégicos y sus objetivos.</p>
-          <div class="axm-row">
-            <div class="axm-field">
-              <label for="axm-axis-code">Código del eje (xx-yy)</label>
-              <input id="axm-axis-code" class="axm-input axm-axis-code-readonly" type="text" readonly>
-            </div>
-            <div class="axm-field">
-              <label for="axm-axis-name">Nombre del eje</label>
-              <input id="axm-axis-name" class="axm-input" type="text" placeholder="Ej. Gobernanza y cumplimiento">
-            </div>
-          </div>
-          <div class="axm-field">
-            <label for="axm-axis-base-code">Código base (Misión/Visión)</label>
-            <div class="axm-base-grid">
-              <select id="axm-axis-base-code" class="axm-input">
-                <option value="m1">m1</option>
-              </select>
-              <div id="axm-axis-base-preview" class="axm-base-preview">Selecciona un código para ver su línea asociada.</div>
-            </div>
-          </div>
-          <div class="axm-row">
-            <div class="axm-field">
-              <label for="axm-axis-leader">Líder del eje estratégico</label>
-              <select id="axm-axis-leader" class="axm-input">
-                <option value="">Selecciona departamento</option>
-              </select>
-            </div>
-          </div>
-          <div class="axm-field">
-            <label for="axm-axis-desc">Descripción</label>
-            <textarea id="axm-axis-desc" class="axm-textarea" placeholder="Describe el propósito del eje"></textarea>
-          </div>
-          <div class="axm-actions">
-            <button class="axm-btn primary" id="axm-save-axis" type="button">Guardar eje</button>
-            <button class="axm-btn warn" id="axm-delete-axis" type="button">Eliminar eje</button>
-          </div>
-          <div class="axm-msg" id="axm-axis-msg" aria-live="polite"></div>
         </section>
       </div>
 
@@ -945,12 +1068,17 @@ EJES_ESTRATEGICOS_HTML = dedent("""
           const axisListEl = document.getElementById("axm-axis-list");
           const axisModalEl = document.getElementById("axm-axis-modal");
           const axisModalCloseEl = document.getElementById("axm-axis-modal-close");
+          const objModalEl = document.getElementById("axm-obj-modal");
+          const objModalCloseEl = document.getElementById("axm-obj-modal-close");
+          const objAxisListEl = document.getElementById("axm-obj-axis-list");
+          const objAxisTitleEl = document.getElementById("axm-obj-axis-title");
           const objListEl = document.getElementById("axm-obj-list");
           const axisNameEl = document.getElementById("axm-axis-name");
           const axisBaseCodeEl = document.getElementById("axm-axis-base-code");
           const axisBasePreviewEl = document.getElementById("axm-axis-base-preview");
           const axisCodeEl = document.getElementById("axm-axis-code");
           const axisLeaderEl = document.getElementById("axm-axis-leader");
+          const axisOwnerEl = document.getElementById("axm-axis-owner");
           const axisDescEl = document.getElementById("axm-axis-desc");
           const objNameEl = document.getElementById("axm-obj-name");
           const objCodeEl = document.getElementById("axm-obj-code");
@@ -969,6 +1097,7 @@ EJES_ESTRATEGICOS_HTML = dedent("""
 
           let axes = [];
           let departments = [];
+          let axisDepartmentCollaborators = [];
           let collaborators = [];
           let selectedAxisId = null;
           let selectedObjectiveId = null;
@@ -980,11 +1109,25 @@ EJES_ESTRATEGICOS_HTML = dedent("""
             const idx = axes.findIndex((item) => toId(item.id) === toId(axis?.id));
             return idx >= 0 ? idx + 1 : Math.max(1, Number(axis?.orden || 1));
           };
+          const objectivePosition = (objective) => {
+            const axis = selectedAxis();
+            const list = (axis && Array.isArray(axis.objetivos)) ? axis.objetivos : [];
+            const idx = list.findIndex((item) => toId(item.id) === toId(objective?.id));
+            return idx >= 0 ? idx + 1 : Math.max(1, Number(objective?.orden || 1));
+          };
           const buildAxisCode = (baseCode, orderNumber) => {
             const normalizedBase = String(baseCode || "").trim().toLowerCase().replace(/[^a-z0-9]/g, "") || "m1";
             const numericOrder = Number(orderNumber);
             const safeOrder = Number.isFinite(numericOrder) && numericOrder > 0 ? numericOrder : 1;
             return `${normalizedBase}-${String(safeOrder).padStart(2, "0")}`;
+          };
+          const buildObjectiveCode = (axisCode, orderNumber) => {
+            const rawAxis = String(axisCode || "").trim().toLowerCase();
+            const parts = rawAxis.split("-").filter(Boolean);
+            const axisPrefix = parts.length >= 2 ? `${parts[0]}-${parts[1]}` : (parts.length === 1 ? `${parts[0]}-01` : "m1-01");
+            const numericOrder = Number(orderNumber);
+            const safeOrder = Number.isFinite(numericOrder) && numericOrder > 0 ? numericOrder : 1;
+            return `${axisPrefix}-${String(safeOrder).padStart(2, "0")}`;
           };
           const getIdentityCodeOptions = () => {
             const missionCodes = (misionComposer ? misionComposer.getLines() : []).map((line) => String(line.code || "").trim().toLowerCase());
@@ -1041,16 +1184,43 @@ EJES_ESTRATEGICOS_HTML = dedent("""
             axisModalEl.style.display = "none";
             document.body.style.overflow = "";
           };
+          const openObjModal = () => {
+            if (!objModalEl) return;
+            if (objModalEl.parentElement !== document.body) {
+              document.body.appendChild(objModalEl);
+            }
+            objModalEl.classList.add("open");
+            objModalEl.style.display = "flex";
+            objModalEl.style.position = "fixed";
+            objModalEl.style.inset = "0";
+            document.body.style.overflow = "hidden";
+          };
+          const closeObjModal = () => {
+            if (!objModalEl) return;
+            objModalEl.classList.remove("open");
+            objModalEl.style.display = "none";
+            document.body.style.overflow = "";
+          };
           axisModalCloseEl && axisModalCloseEl.addEventListener("click", closeAxisModal);
           axisModalEl && axisModalEl.addEventListener("click", (event) => {
             if (event.target === axisModalEl) closeAxisModal();
           });
+          objModalCloseEl && objModalCloseEl.addEventListener("click", closeObjModal);
+          objModalEl && objModalEl.addEventListener("click", (event) => {
+            if (event.target === objModalEl) closeObjModal();
+          });
           if (axisModalEl && axisModalEl.parentElement !== document.body) {
             document.body.appendChild(axisModalEl);
+          }
+          if (objModalEl && objModalEl.parentElement !== document.body) {
+            document.body.appendChild(objModalEl);
           }
           document.addEventListener("keydown", (event) => {
             if (event.key === "Escape" && axisModalEl && axisModalEl.classList.contains("open")) {
               closeAxisModal();
+            }
+            if (event.key === "Escape" && objModalEl && objModalEl.classList.contains("open")) {
+              closeObjModal();
             }
           });
 
@@ -1147,6 +1317,34 @@ EJES_ESTRATEGICOS_HTML = dedent("""
               );
             axisLeaderEl.innerHTML = options.join("");
           };
+          const renderAxisOwnerOptions = (selectedValue = "") => {
+            if (!axisOwnerEl) return;
+            const options = ['<option value="">Selecciona colaborador</option>']
+              .concat(
+                axisDepartmentCollaborators.map((name) => {
+                  const selected = name === selectedValue ? "selected" : "";
+                  return `<option value="${name}" ${selected}>${name}</option>`;
+                })
+              );
+            axisOwnerEl.innerHTML = options.join("");
+          };
+          const loadAxisDepartmentCollaborators = async (department, selectedValue = "") => {
+            if (!axisOwnerEl) return;
+            const dep = (department || "").trim();
+            if (!dep) {
+              axisDepartmentCollaborators = [];
+              renderAxisOwnerOptions("");
+              return;
+            }
+            try {
+              const payload = await requestJson(`/api/strategic-axes/collaborators-by-department?department=${encodeURIComponent(dep)}`);
+              axisDepartmentCollaborators = Array.isArray(payload.data) ? payload.data : [];
+              renderAxisOwnerOptions(selectedValue || "");
+            } catch (_err) {
+              axisDepartmentCollaborators = [];
+              renderAxisOwnerOptions("");
+            }
+          };
 
           const renderCollaboratorOptions = (selectedValue = "") => {
             if (!objLeaderEl) return;
@@ -1197,6 +1395,30 @@ EJES_ESTRATEGICOS_HTML = dedent("""
               activeBtn.scrollIntoView({ block: "nearest", behavior: "smooth" });
             }
           };
+          const renderObjectiveAxisList = () => {
+            if (!objAxisListEl) return;
+            objAxisListEl.innerHTML = (axes || []).map((axis) => `
+              <button class="axm-obj-axis-btn ${toId(axis.id) === toId(selectedAxisId) ? "active" : ""}" type="button" data-obj-axis-id="${axis.id}">
+                <span>
+                  <strong>${axis.nombre || "Eje sin nombre"}</strong>
+                </span>
+                <span class="axm-obj-axis-arrow">›</span>
+              </button>
+            `).join("");
+            objAxisListEl.querySelectorAll("[data-obj-axis-id]").forEach((button) => {
+              button.addEventListener("click", async () => {
+                selectedAxisId = toId(button.getAttribute("data-obj-axis-id"));
+                selectedObjectiveId = null;
+                renderAll();
+                try {
+                  await loadCollaborators();
+                  renderAll();
+                } catch (_error) {
+                  showMsg("No se pudieron cargar colaboradores para el eje seleccionado.", true);
+                }
+              });
+            });
+          };
 
           const renderAxisEditor = () => {
             const axis = selectedAxis();
@@ -1206,6 +1428,8 @@ EJES_ESTRATEGICOS_HTML = dedent("""
               if (axisCodeEl) axisCodeEl.value = "";
               if (axisBasePreviewEl) axisBasePreviewEl.textContent = "Selecciona un código para ver su línea asociada.";
               renderDepartmentOptions("");
+              axisDepartmentCollaborators = [];
+              renderAxisOwnerOptions("");
               axisDescEl.value = "";
               return;
             }
@@ -1225,11 +1449,15 @@ EJES_ESTRATEGICOS_HTML = dedent("""
             if (axisCodeEl) axisCodeEl.value = buildAxisCode(selectedBase, axisPosition(axis));
             updateAxisBasePreview();
             renderDepartmentOptions(axis.lider_departamento || "");
+            loadAxisDepartmentCollaborators(axis.lider_departamento || "", axis.responsabilidad_directa || "");
             axisDescEl.value = axis.descripcion || "";
           };
 
           const renderObjectives = () => {
             const axis = selectedAxis();
+            if (objAxisTitleEl) {
+              objAxisTitleEl.textContent = axis ? `Objetivos: ${axis.nombre || "Eje seleccionado"}` : "Objetivos";
+            }
             if (!axis || !objListEl) {
               if (objListEl) objListEl.innerHTML = "";
               selectedObjectiveId = null;
@@ -1239,6 +1467,7 @@ EJES_ESTRATEGICOS_HTML = dedent("""
               if (objStartEl) objStartEl.value = "";
               if (objEndEl) objEndEl.value = "";
               renderCollaboratorOptions("");
+              if (objListEl) objListEl.innerHTML = '<div class="axm-axis-meta">Selecciona un eje en la columna izquierda.</div>';
               return;
             }
             if (!selectedObjectiveId || !(axis.objetivos || []).some((obj) => obj.id === selectedObjectiveId)) {
@@ -1247,6 +1476,7 @@ EJES_ESTRATEGICOS_HTML = dedent("""
             objListEl.innerHTML = (axis.objetivos || []).map((obj) => `
               <button class="axm-obj-btn ${obj.id === selectedObjectiveId ? "active" : ""}" type="button" data-obj-id="${obj.id}">
                 <strong>${obj.codigo || "OBJ"} - ${obj.nombre || "Sin nombre"}</strong>
+                <div class="axm-obj-sub">Fecha inicial: ${obj.fecha_inicial || "N/D"} · Fecha final: ${obj.fecha_final || "N/D"}</div>
               </button>
             `).join("");
 
@@ -1254,13 +1484,14 @@ EJES_ESTRATEGICOS_HTML = dedent("""
               button.addEventListener("click", () => {
                 selectedObjectiveId = Number(button.getAttribute("data-obj-id"));
                 renderAll();
+                openObjModal();
               });
             });
 
             const objective = selectedObjective();
             if (!objective) return;
             if (objNameEl) objNameEl.value = objective.nombre || "";
-            if (objCodeEl) objCodeEl.value = objective.codigo || "";
+            if (objCodeEl) objCodeEl.value = buildObjectiveCode(axis.codigo || "", objectivePosition(objective));
             if (objDescEl) objDescEl.value = objective.descripcion || "";
             if (objStartEl) objStartEl.value = objective.fecha_inicial || "";
             if (objEndEl) objEndEl.value = objective.fecha_final || "";
@@ -1269,6 +1500,7 @@ EJES_ESTRATEGICOS_HTML = dedent("""
 
           const renderAll = () => {
             renderAxisList();
+            renderObjectiveAxisList();
             renderAxisEditor();
             renderObjectives();
             renderStrategicTree();
@@ -1329,6 +1561,7 @@ EJES_ESTRATEGICOS_HTML = dedent("""
                   base_code: getIdentityCodeOptions()[0] || "m1",
                   codigo: "",
                   lider_departamento: "",
+                  responsabilidad_directa: "",
                   descripcion: "",
                   orden: axes.length + 1,
                 }),
@@ -1359,6 +1592,7 @@ EJES_ESTRATEGICOS_HTML = dedent("""
               base_code: axisBaseCodeEl && axisBaseCodeEl.value ? axisBaseCodeEl.value.trim() : "",
               codigo: axisCodeEl && axisCodeEl.value ? axisCodeEl.value.trim() : "",
               lider_departamento: axisLeaderEl && axisLeaderEl.value ? axisLeaderEl.value.trim() : "",
+              responsabilidad_directa: axisOwnerEl && axisOwnerEl.value ? axisOwnerEl.value.trim() : "",
               descripcion: axisDescEl.value.trim(),
               orden: axisPosition(axis),
             };
@@ -1398,11 +1632,13 @@ EJES_ESTRATEGICOS_HTML = dedent("""
               showMsg("Primero selecciona un eje.", true);
               return;
             }
+            openObjModal();
             const body = {
-              codigo: "",
+              codigo: buildObjectiveCode(axis.codigo || "", (axis.objetivos || []).length + 1),
               nombre: "Nuevo objetivo",
               lider: "",
               descripcion: "",
+              orden: (axis.objetivos || []).length + 1,
             };
             try {
               const payload = await requestJson(`/api/strategic-axes/${axis.id}/objectives`, { method: "POST", body: JSON.stringify(body) });
@@ -1410,6 +1646,10 @@ EJES_ESTRATEGICOS_HTML = dedent("""
               selectedObjectiveId = payload.data?.id || selectedObjectiveId;
               renderAll();
               showMsg("Objetivo agregado.");
+              if (objNameEl) {
+                objNameEl.focus();
+                objNameEl.select();
+              }
             } catch (err) {
               showMsg(err.message || "No se pudo agregar el objetivo.", true);
             }
@@ -1428,6 +1668,7 @@ EJES_ESTRATEGICOS_HTML = dedent("""
               fecha_inicial: objStartEl && objStartEl.value ? objStartEl.value : "",
               fecha_final: objEndEl && objEndEl.value ? objEndEl.value : "",
               descripcion: objDescEl && objDescEl.value ? objDescEl.value.trim() : "",
+              orden: objectivePosition(objective),
             };
             if (!body.nombre) {
               showMsg("El nombre del objetivo es obligatorio.", true);
@@ -1463,6 +1704,10 @@ EJES_ESTRATEGICOS_HTML = dedent("""
             }
           });
 
+          axisLeaderEl && axisLeaderEl.addEventListener("change", async () => {
+            await loadAxisDepartmentCollaborators(axisLeaderEl.value || "", "");
+          });
+
           Promise.all([loadDepartments(), loadAxes()]).then(loadCollaborators).catch((err) => {
             showMsg(err.message || "No se pudieron cargar los ejes.", true);
           });
@@ -1471,10 +1716,254 @@ EJES_ESTRATEGICOS_HTML = dedent("""
     </section>
 """)
 
+POA_LIMPIO_HTML = dedent("""
+    <section class="poa-board-wrap">
+      <style>
+        .poa-board-wrap *{ box-sizing:border-box; }
+        .poa-board-wrap{
+          padding: 10px;
+          color: #0f172a;
+        }
+        .poa-board-head{
+          background: rgba(255,255,255,.92);
+          border: 1px solid rgba(148,163,184,.28);
+          border-radius: 14px;
+          padding: 12px 14px;
+          margin-bottom: 10px;
+        }
+        .poa-board-head h2{
+          margin: 0;
+          font-size: 20px;
+        }
+        .poa-board-head p{
+          margin: 6px 0 0;
+          color: #64748b;
+          font-size: 13px;
+        }
+        .poa-board-msg{
+          min-height: 20px;
+          margin: 0 2px 10px;
+          font-size: 13px;
+          color: #0f3d2e;
+        }
+        .poa-board-grid{
+          display: flex;
+          align-items: stretch;
+          gap: 10px;
+          overflow: auto;
+          padding-bottom: 8px;
+        }
+        .poa-axis-col{
+          flex: 0 0 320px;
+          width: 320px;
+          border: 1px solid rgba(148,163,184,.30);
+          border-radius: 14px;
+          background: rgba(255,255,255,.95);
+          box-shadow: 0 8px 20px rgba(15,23,42,.06);
+          transition: width .18s ease, flex-basis .18s ease;
+        }
+        .poa-axis-col.collapsed{
+          flex-basis: 72px;
+          width: 72px;
+        }
+        .poa-axis-head{
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 8px;
+          padding: 10px;
+          border-bottom: 1px solid rgba(148,163,184,.24);
+          min-height: 48px;
+        }
+        .poa-axis-title{
+          margin: 0;
+          font-size: 18px;
+          line-height: 1.2;
+          max-width: 255px;
+        }
+        .poa-axis-col.collapsed .poa-axis-title{
+          writing-mode: vertical-rl;
+          transform: rotate(180deg);
+          font-size: 14px;
+          max-width: none;
+          white-space: nowrap;
+        }
+        .poa-axis-toggle{
+          border: 1px solid rgba(148,163,184,.30);
+          background: #fff;
+          border-radius: 8px;
+          width: 28px;
+          height: 28px;
+          font-size: 18px;
+          line-height: 1;
+          cursor: pointer;
+          color: #334155;
+          flex: 0 0 auto;
+        }
+        .poa-axis-cards{
+          padding: 10px;
+          display: grid;
+          gap: 8px;
+          align-content: start;
+        }
+        .poa-axis-col.collapsed .poa-axis-cards{
+          display: none;
+        }
+        .poa-obj-card{
+          border: 1px solid rgba(148,163,184,.28);
+          border-radius: 12px;
+          padding: 10px;
+          background: #fff;
+        }
+        .poa-obj-card h4{
+          margin: 0;
+          font-size: 15px;
+          line-height: 1.3;
+        }
+        .poa-obj-card .meta{
+          margin-top: 6px;
+          font-size: 12px;
+          color: #64748b;
+        }
+        .poa-obj-card .code{
+          display: inline-block;
+          margin-top: 8px;
+          border: 1px solid rgba(15,61,46,.26);
+          border-radius: 999px;
+          padding: 2px 8px;
+          font-size: 11px;
+          font-weight: 700;
+          color: #0f3d2e;
+          background: rgba(15,61,46,.08);
+        }
+        .poa-obj-card .code-next{
+          margin-top: 4px;
+          font-size: 11px;
+          color: #64748b;
+          font-style: italic;
+        }
+      </style>
+
+      <div class="poa-board-head">
+        <h2>Tablero POA por eje</h2>
+        <p>Cada columna corresponde a un eje y contiene las tarjetas de sus objetivos.</p>
+      </div>
+      <div class="poa-board-msg" id="poa-board-msg" aria-live="polite"></div>
+      <div class="poa-board-grid" id="poa-board-grid"></div>
+
+      <script>
+        (() => {
+          const gridEl = document.getElementById("poa-board-grid");
+          const msgEl = document.getElementById("poa-board-msg");
+          if (!gridEl) return;
+
+          const escapeHtml = (value) => String(value || "")
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll('"', "&quot;")
+            .replaceAll("'", "&#039;");
+          const fmtDate = (iso) => {
+            const value = String(iso || "").trim();
+            if (!value) return "N/D";
+            const date = new Date(value);
+            if (Number.isNaN(date.getTime())) return value;
+            return date.toLocaleDateString("es-CR");
+          };
+          const showMsg = (text, isError = false) => {
+            if (!msgEl) return;
+            msgEl.textContent = text || "";
+            msgEl.style.color = isError ? "#b91c1c" : "#0f3d2e";
+          };
+          const nextCode = (objectiveCode) => {
+            const code = String(objectiveCode || "").trim().toLowerCase();
+            if (!code) return "m1-01-01-aa-bb-cc-dd-ee";
+            return `${code}-aa-bb-cc-dd-ee`;
+          };
+
+          const renderBoard = (payload) => {
+            const objectives = Array.isArray(payload.objectives) ? payload.objectives : [];
+            const activities = Array.isArray(payload.activities) ? payload.activities : [];
+            const activityCountByObjective = {};
+            activities.forEach((item) => {
+              const key = Number(item.objective_id || 0);
+              if (!key) return;
+              activityCountByObjective[key] = (activityCountByObjective[key] || 0) + 1;
+            });
+            const grouped = {};
+            objectives.forEach((obj) => {
+              const axisName = String(obj.axis_name || "Sin eje").trim() || "Sin eje";
+              if (!grouped[axisName]) grouped[axisName] = [];
+              grouped[axisName].push(obj);
+            });
+            const axisNames = Object.keys(grouped).sort((a, b) => a.localeCompare(b, "es"));
+            if (!axisNames.length) {
+              gridEl.innerHTML = '<div class="poa-obj-card" style="min-width:320px;"><h4>Sin objetivos</h4><div class="meta">No hay objetivos disponibles para mostrar.</div></div>';
+              return;
+            }
+            gridEl.innerHTML = axisNames.map((axisName) => {
+              const items = grouped[axisName] || [];
+              const cards = items.map((obj) => {
+                const countActivities = activityCountByObjective[Number(obj.id || 0)] || 0;
+                return `
+                  <article class="poa-obj-card">
+                    <h4>${escapeHtml(obj.nombre || "Objetivo sin nombre")}</h4>
+                    <div class="meta">Fecha final: ${escapeHtml(fmtDate(obj.fecha_final))}</div>
+                    <div class="meta">Actividades: ${countActivities}</div>
+                    <span class="code">${escapeHtml(obj.codigo || "xx-yy-zz")}</span>
+                    <div class="code-next">${escapeHtml(nextCode(obj.codigo || ""))}</div>
+                  </article>
+                `;
+              }).join("");
+              return `
+                <section class="poa-axis-col" data-axis-col>
+                  <header class="poa-axis-head">
+                    <h3 class="poa-axis-title">${escapeHtml(axisName)}</h3>
+                    <button type="button" class="poa-axis-toggle" data-axis-toggle aria-label="Colapsar columna">−</button>
+                  </header>
+                  <div class="poa-axis-cards">${cards || '<article class="poa-obj-card"><div class="meta">Sin objetivos</div></article>'}</div>
+                </section>
+              `;
+            }).join("");
+
+            gridEl.querySelectorAll("[data-axis-toggle]").forEach((button) => {
+              button.addEventListener("click", () => {
+                const col = button.closest("[data-axis-col]");
+                if (!col) return;
+                const collapsed = col.classList.toggle("collapsed");
+                button.textContent = collapsed ? "+" : "−";
+                button.setAttribute("aria-label", collapsed ? "Mostrar columna" : "Colapsar columna");
+              });
+            });
+          };
+
+          const loadBoard = async () => {
+            showMsg("Cargando tablero POA...");
+            try {
+              const response = await fetch("/api/poa/board-data", {
+                headers: { "Content-Type": "application/json" },
+                credentials: "same-origin",
+              });
+              const payload = await response.json().catch(() => ({}));
+              if (!response.ok || payload.success === false) {
+                throw new Error(payload.error || "No se pudo cargar la vista POA.");
+              }
+              renderBoard(payload);
+              showMsg("");
+            } catch (error) {
+              showMsg(error.message || "No se pudo cargar la vista POA.", true);
+            }
+          };
+
+          loadBoard();
+        })();
+      </script>
+    </section>
+""")
+
 
 @router.get("/planes", response_class=HTMLResponse)
 @router.get("/plan-estrategico", response_class=HTMLResponse)
-@router.get("/poa", response_class=HTMLResponse)
 @router.get("/ejes-estrategicos", response_class=HTMLResponse)
 def ejes_estrategicos_page(request: Request):
     _bind_core_symbols()
@@ -1483,6 +1972,23 @@ def ejes_estrategicos_page(request: Request):
         title="Ejes estratégicos",
         description="Edición y administración de ejes y objetivos estratégicos.",
         content=EJES_ESTRATEGICOS_HTML,
+        hide_floating_actions=True,
+        show_page_header=True,
+        view_buttons=[
+            {"label": "Form", "icon": "/templates/icon/formulario.svg", "view": "form", "active": True},
+        ],
+    )
+
+
+@router.get("/poa", response_class=HTMLResponse)
+@router.get("/poa/crear", response_class=HTMLResponse)
+def poa_page(request: Request):
+    _bind_core_symbols()
+    return render_backend_page(
+        request,
+        title="POA",
+        description="Pantalla de trabajo POA.",
+        content=POA_LIMPIO_HTML,
         hide_floating_actions=True,
         show_page_header=True,
         view_buttons=[
@@ -1524,6 +2030,30 @@ def list_strategic_axis_departments():
                 departments.append(value)
         unique_departments = sorted(set(departments), key=lambda item: item.lower())
         return JSONResponse({"success": True, "data": unique_departments})
+    finally:
+        db.close()
+
+
+@router.get("/api/strategic-axes/collaborators-by-department")
+def list_collaborators_by_department(department: str = Query(default="")):
+    _bind_core_symbols()
+    dep = (department or "").strip()
+    if not dep:
+        return JSONResponse({"success": True, "data": []})
+    db = SessionLocal()
+    try:
+        rows = (
+            db.query(Usuario.nombre)
+            .filter(Usuario.departamento == dep)
+            .all()
+        )
+        collaborators = []
+        for row in rows:
+            value = (row[0] or "").strip()
+            if value:
+                collaborators.append(value)
+        unique_collaborators = sorted(set(collaborators), key=lambda item: item.lower())
+        return JSONResponse({"success": True, "data": unique_collaborators})
     finally:
         db.close()
 
@@ -1574,6 +2104,7 @@ def create_strategic_axis(request: Request, data: dict = Body(...)):
             nombre=nombre,
             codigo=_compose_axis_code(base_code, axis_order),
             lider_departamento=(data.get("lider_departamento") or "").strip(),
+            responsabilidad_directa=(data.get("responsabilidad_directa") or "").strip(),
             descripcion=(data.get("descripcion") or "").strip(),
             orden=axis_order,
             is_active=True,
@@ -1611,6 +2142,7 @@ def update_strategic_axis(axis_id: int, data: dict = Body(...)):
         axis.nombre = nombre
         axis.codigo = _compose_axis_code(base_code, axis_order)
         axis.lider_departamento = (data.get("lider_departamento") or "").strip()
+        axis.responsabilidad_directa = (data.get("responsabilidad_directa") or "").strip()
         axis.descripcion = (data.get("descripcion") or "").strip()
         axis.orden = axis_order
         db.add(axis)
@@ -1674,21 +2206,33 @@ def create_strategic_objective(axis_id: int, data: dict = Body(...)):
             range_error = _validate_date_range(start_date, end_date, "Objetivo")
             if range_error:
                 return JSONResponse({"success": False, "error": range_error}, status_code=400)
+        objective_leader = (data.get("lider") or "").strip()
+        axis_department = (axis.lider_departamento or "").strip()
+        if objective_leader and axis_department:
+            if not _collaborator_belongs_to_department(db, objective_leader, axis_department):
+                return JSONResponse(
+                    {
+                        "success": False,
+                        "error": "El líder debe pertenecer al personal del área/departamento del eje.",
+                    },
+                    status_code=400,
+                )
         max_order = (
             db.query(func.max(StrategicObjectiveConfig.orden))
             .filter(StrategicObjectiveConfig.eje_id == axis_id)
             .scalar()
             or 0
         )
+        objective_order = int(data.get("orden") or (max_order + 1))
         objective = StrategicObjectiveConfig(
             eje_id=axis_id,
-            codigo=(data.get("codigo") or "").strip(),
+            codigo=_compose_objective_code(axis.codigo or "", objective_order),
             nombre=nombre,
-            lider=(data.get("lider") or "").strip(),
+            lider=objective_leader,
             fecha_inicial=start_date,
             fecha_final=end_date,
             descripcion=(data.get("descripcion") or "").strip(),
-            orden=int(data.get("orden") or (max_order + 1)),
+            orden=objective_order,
             is_active=True,
         )
         db.add(objective)
@@ -1731,14 +2275,26 @@ def update_strategic_objective(objective_id: int, data: dict = Body(...)):
             range_error = _validate_date_range(start_date, end_date, "Objetivo")
             if range_error:
                 return JSONResponse({"success": False, "error": range_error}, status_code=400)
-        objective.codigo = (data.get("codigo") or "").strip()
+        axis = db.query(StrategicAxisConfig).filter(StrategicAxisConfig.id == objective.eje_id).first()
+        objective_leader = (data.get("lider") or "").strip()
+        axis_department = (axis.lider_departamento or "").strip() if axis else ""
+        if objective_leader and axis_department:
+            if not _collaborator_belongs_to_department(db, objective_leader, axis_department):
+                return JSONResponse(
+                    {
+                        "success": False,
+                        "error": "El líder debe pertenecer al personal del área/departamento del eje.",
+                    },
+                    status_code=400,
+                )
+        objective_order = int(data.get("orden") or objective.orden or 1)
+        objective.codigo = _compose_objective_code((axis.codigo if axis else ""), objective_order)
         objective.nombre = nombre
-        objective.lider = (data.get("lider") or "").strip()
+        objective.lider = objective_leader
         objective.fecha_inicial = start_date
         objective.fecha_final = end_date
         objective.descripcion = (data.get("descripcion") or "").strip()
-        if data.get("orden") is not None:
-            objective.orden = int(data.get("orden"))
+        objective.orden = objective_order
         db.add(objective)
         db.commit()
         db.refresh(objective)

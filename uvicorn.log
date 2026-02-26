@@ -1,37 +1,15 @@
-INFO:     Started server process [20361]
+INFO:     Started server process [24426]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
-INFO:     127.0.0.1:53322 - "GET /api/strategic-axes/1/collaborators HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53322 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53322 - "GET /planes HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53322 - "GET /dist/output.css HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53402 - "GET /css/global.css HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53405 - "GET /personalizar/uploads/logo_empresa.png?v=1772065958 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53406 - "GET /imagenes/icon.png?v=1770659882 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53322 - "GET /icon/identidad.svg HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53406 - "GET /icon/ejes.svg HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53406 - "GET /icon/objetivos.svg HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53322 - "GET /icon/lineas.svg HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53322 - "GET /icon/mapa.svg HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53402 - "GET /api/strategic-axes/departments HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53409 - "GET /api/strategic-axes HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53406 - "GET /editar.svg HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53405 - "GET /eliminar.svg HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53410 - "GET /inicio.svg HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53402 - "GET /empresa.svg HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53409 - "GET /proyectando.svg HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53322 - "GET /notificaciones.svg HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53406 - "GET /reporte.svg HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53405 - "GET /settings.svg HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53410 - "GET /plan.svg HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53402 - "GET /icon/formulario.svg HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53409 - "GET /kpi.svg HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53406 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53405 - "GET /api/strategic-axes/1/collaborators HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53410 - "GET /icon/notificaciones.svg HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53402 - "GET /personalizar/uploads/logo_usuario.png HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53322 - "GET /personalizar/estado HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53322 - "GET /imagenes/icon.png?v=1770659882 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53322 - "GET /api/strategic-axes/1/collaborators HTTP/1.1" 200 OK
-INFO:     127.0.0.1:54109 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64636 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65337 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49675 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49776 - "GET /poa HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49776 - "GET /css/global.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:49777 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49776 - "GET /personalizar/estado HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49776 - "GET /poa HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49777 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49776 - "GET /personalizar/estado HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50505 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
