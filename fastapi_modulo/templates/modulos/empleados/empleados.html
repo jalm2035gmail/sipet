@@ -1375,9 +1375,11 @@
                         .childrenMargin(function() { return 60; })
                         .compactMarginBetween(function() { return 25; })
                         .compactMarginPair(function() { return 80; })
+                        .pagingStep(function() { return 999999; })
+                        .minPagingVisibleNodes(function() { return 999999; })
                         .linkYOffset(18)
                         .setActiveNodeCentered(false)
-                        .initialExpandLevel(1)
+                        .initialExpandLevel(99)
                         .compact(false)
                         .onNodeClick(function(d) {
                             var nodeId = String(d && d.data && d.data.id ? d.data.id : '').trim();
@@ -1429,6 +1431,7 @@
                                 '</div>';
                         })
                         .render();
+                    if (orgChartInstance && typeof orgChartInstance.expandAll === 'function') orgChartInstance.expandAll();
                     bindOrgToolbar(empCard.querySelector('.emp-org-toolbar'));
                     if (orgChartInstance && typeof orgChartInstance.fit === 'function') orgChartInstance.fit();
                 })

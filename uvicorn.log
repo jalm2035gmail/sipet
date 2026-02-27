@@ -1,21 +1,5 @@
-INFO:     Started server process [61012]
+INFO:     Started server process [66519]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
-INFO:     127.0.0.1:58800 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58800 - "GET /planes HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58800 - "GET /api/strategic-identity HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58823 - "GET /api/strategic-axes HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58825 - "GET /api/poa/board-data HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58827 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58826 - "GET /personalizar/estado HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58800 - "GET /api/strategic-axes/departments HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58800 - "GET /api/strategic-axes/1/collaborators HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58800 - "GET /planes HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58800 - "GET /api/strategic-identity HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58826 - "GET /api/strategic-axes/departments HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58857 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58825 - "GET /api/poa/board-data HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58827 - "GET /api/strategic-axes HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58823 - "GET /personalizar/estado HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58823 - "GET /api/strategic-axes/1/collaborators HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63608 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK

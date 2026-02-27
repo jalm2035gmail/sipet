@@ -85,6 +85,8 @@ def _serialize_strategic_axis(axis: StrategicAxisConfig) -> Dict[str, Any]:
         "codigo": axis.codigo or "",
         "lider_departamento": axis.lider_departamento or "",
         "responsabilidad_directa": axis.responsabilidad_directa or "",
+        "fecha_inicial": _date_to_iso(axis.fecha_inicial),
+        "fecha_final": _date_to_iso(axis.fecha_final),
         "descripcion": axis.descripcion or "",
         "orden": axis.orden or 0,
         "objetivos_count": len(objetivos),
@@ -892,10 +894,15 @@ EJES_ESTRATEGICOS_HTML = dedent("""
           width: auto !important;
           min-width: 64px;
           max-width: 78px;
-          padding-right: 10px;
-          text-align: center;
+          padding: 0 !important;
+          border: 0 !important;
+          border-radius: 0 !important;
+          background: transparent !important;
+          box-shadow: none !important;
+          text-align: left;
           font-weight: 400;
           font-style: italic;
+          pointer-events: none;
         }
         .axm-textarea{ min-height: 82px; resize: vertical; }
         .axm-actions{ display:flex; gap:8px; flex-wrap:wrap; margin-top: 12px; }
@@ -999,6 +1006,29 @@ EJES_ESTRATEGICOS_HTML = dedent("""
           border-radius: 12px;
           padding: 14px;
           background: rgba(255,255,255,.95);
+        }
+        .axm-obj-main-row{
+          display: grid;
+          grid-template-columns: 15fr 85fr;
+          gap: 10px;
+          align-items: end;
+        }
+        .axm-obj-main-row .axm-field{
+          margin-top: 0;
+        }
+        .axm-obj-code-readonly{
+          width: auto !important;
+          min-width: 80px;
+          max-width: 110px;
+          padding: 0 !important;
+          border: 0 !important;
+          border-radius: 0 !important;
+          background: transparent !important;
+          box-shadow: none !important;
+          text-align: left;
+          font-weight: 400;
+          font-style: italic;
+          pointer-events: none;
         }
         .axm-obj-form .axm-row{
           grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -1240,6 +1270,64 @@ EJES_ESTRATEGICOS_HTML = dedent("""
           border-radius: 18px;
           padding: 14px;
           margin-bottom: 12px;
+          width: calc(100vw - 64px);
+          max-width: none;
+          position: relative;
+          left: 50%;
+          transform: translateX(-50%);
+        }
+        .axm-tree-modal-dialog{
+          width: min(1500px, 98vw);
+          max-height: 94vh;
+        }
+        .axm-tree-modal-dialog .axm-arbol{
+          display: block !important;
+          width: auto;
+          max-width: none;
+          position: static;
+          left: auto;
+          transform: none;
+          margin: 0;
+          padding: 0;
+          border: 0;
+          background: transparent;
+          box-shadow: none;
+        }
+        .axm-gantt-wrap{
+          border: 1px solid rgba(148,163,184,.30);
+          border-radius: 14px;
+          background: linear-gradient(180deg, rgba(248,250,252,.96), rgba(255,255,255,.98));
+          padding: 10px;
+        }
+        .axm-gantt-legend{
+          display: flex;
+          gap: 10px;
+          flex-wrap: wrap;
+          margin-bottom: 8px;
+          color: #475569;
+          font-size: 12px;
+        }
+        .axm-gantt-chip{
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 4px 8px;
+          border: 1px solid rgba(148,163,184,.30);
+          border-radius: 999px;
+          background: #fff;
+        }
+        .axm-gantt-dot{
+          width: 10px;
+          height: 10px;
+          border-radius: 50%;
+          display: inline-block;
+        }
+        .axm-gantt-host{
+          min-height: 68vh;
+          border: 1px solid rgba(148,163,184,.30);
+          border-radius: 12px;
+          background: #fff;
+          overflow: auto;
         }
         .axm-arbol h3{
           margin: 0;
@@ -1266,30 +1354,58 @@ EJES_ESTRATEGICOS_HTML = dedent("""
         .axm-org-zoom button{
           width:34px;
           height:34px;
-          border:1px solid rgba(148,163,184,.45);
+          border:1px solid rgba(15,23,42,.85);
           border-radius:10px;
-          background:#ffffff;
-          color:#0f172a;
+          background:#0f172a;
+          color:#f8fafc;
           font-weight:700;
           cursor:pointer;
+          transition: transform .16s ease, background .16s ease, box-shadow .16s ease;
+          box-shadow: 0 4px 10px rgba(15,23,42,.24);
+        }
+        .axm-org-zoom button:hover{
+          transform: scale(1.08);
+          background:#1e293b;
+          box-shadow: 0 8px 18px rgba(15,23,42,.28);
         }
         .axm-org-fit{
-          border:1px solid rgba(148,163,184,.45);
+          border:1px solid rgba(15,23,42,.85);
           border-radius:10px;
-          background:#ffffff;
-          color:#0f172a;
+          background:#0f172a;
+          color:#f8fafc;
           font-size:12px;
           font-weight:700;
           padding:8px 12px;
           cursor:pointer;
+          transition: transform .16s ease, background .16s ease, box-shadow .16s ease;
+          box-shadow: 0 4px 10px rgba(15,23,42,.24);
+        }
+        .axm-org-fit:hover{
+          transform: scale(1.08);
+          background:#1e293b;
+          box-shadow: 0 8px 18px rgba(15,23,42,.28);
         }
         .axm-org-chart-wrap{
-          min-height:620px;
+          min-height: calc(100vh - 250px);
           border:1px solid rgba(148,163,184,.35);
           border-radius:14px;
           background:linear-gradient(180deg, rgba(248,250,252,.96), rgba(255,255,255,.98));
           padding:8px;
           overflow:auto;
+        }
+        @media (max-width: 1024px){
+          .axm-arbol{
+            width: calc(100vw - 24px);
+          }
+          .axm-tree-modal-dialog{
+            width: min(98vw, 100%);
+          }
+          .axm-org-chart-wrap{
+            min-height: 68vh;
+          }
+          .axm-gantt-host{
+            min-height: 62vh;
+          }
         }
         .axm-arbol{
           --bg:#f6f8fb;
@@ -1397,6 +1513,29 @@ EJES_ESTRATEGICOS_HTML = dedent("""
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
+        }
+        .axm-arbol .axm-node-toggle{
+          width: 52px;
+          height: 52px;
+          border-radius: 999px;
+          border: 2px solid #0f172a;
+          background: #0f172a;
+          color: #f8fafc;
+          display: grid;
+          place-items: center;
+          box-shadow: 0 8px 16px rgba(15,23,42,.30);
+          font-weight: 800;
+          line-height: 1;
+          margin: auto;
+        }
+        .axm-arbol .axm-node-toggle-sign{
+          font-size: 24px;
+          margin-top: -2px;
+        }
+        .axm-arbol .axm-node-toggle-count{
+          font-size: 10px;
+          opacity: .92;
+          margin-top: -1px;
         }
         .axm-tree-roots{
           display: grid;
@@ -1633,12 +1772,29 @@ EJES_ESTRATEGICOS_HTML = dedent("""
           </div>
         </section>
       </article>
+      <section class="axm-card" id="axm-plan-header-card" style="margin-bottom:12px;">
+        <div class="axm-row" style="margin-top:0;">
+          <div class="axm-field" style="margin-top:0;">
+            <label for="axm-plan-years">Vigencia del plan (años):</label>
+            <select id="axm-plan-years" class="axm-input">
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+              <option value="5">5</option>
+            </select>
+          </div>
+          <div class="axm-field" style="margin-top:0;">
+            <label for="axm-plan-start">Inicio del plan:</label>
+            <input id="axm-plan-start" class="axm-input" type="date">
+          </div>
+        </div>
+      </section>
 
       <div class="axm-tabs">
         <button type="button" class="axm-tab active" data-axm-tab="identidad"><img src="/templates/icon/identidad.svg" alt="" class="tab-icon">Identidad</button>
         <button type="button" class="axm-tab" data-axm-tab="ejes"><img src="/templates/icon/ejes.svg" alt="" class="tab-icon">Ejes estratégicos</button>
         <button type="button" class="axm-tab" data-axm-tab="objetivos"><img src="/templates/icon/objetivos.svg" alt="" class="tab-icon">Objetivos</button>
-        <button type="button" class="axm-tab" data-axm-tab="arbol"><img src="/templates/icon/mapa.svg" alt="" class="tab-icon">Arbol estratégico</button>
       </div>
       <section class="axm-identidad" id="axm-identidad-panel">
         <details class="axm-id-acc" open>
@@ -1700,21 +1856,44 @@ EJES_ESTRATEGICOS_HTML = dedent("""
         </details>
       </section>
       <div class="axm-id-msg" id="axm-identidad-msg" aria-live="polite"></div>
-      <section class="axm-arbol" id="axm-arbol-panel">
-        <h3>Organigrama estratégico</h3>
-        <p class="axm-arbol-sub">Vista organigrama: Misión/Visión como base, líneas por código y ejes vinculados.</p>
-        <div class="axm-org-toolbar">
-          <span class="axm-arbol-sub" style="margin:0;">Haz clic en un nodo para abrir su formulario correspondiente.</span>
-          <div class="axm-org-zoom">
-            <button type="button" id="axm-tree-expand" title="Expandir todo">▾▾</button>
-            <button type="button" id="axm-tree-collapse" title="Contraer todo">▸▸</button>
-            <button type="button" id="axm-tree-zoom-out" title="Alejar">-</button>
-            <button type="button" id="axm-tree-zoom-in" title="Acercar">+</button>
-            <button type="button" id="axm-tree-fit" class="axm-org-fit">Ajustar</button>
+      <div class="axm-modal" id="axm-tree-modal" role="dialog" aria-modal="true" aria-labelledby="axm-tree-modal-title">
+        <section class="axm-modal-dialog axm-tree-modal-dialog">
+          <div class="axm-modal-head">
+            <h2 class="axm-title" id="axm-tree-modal-title">Organigrama estratégico</h2>
+            <button class="axm-close" id="axm-tree-modal-close" type="button" aria-label="Cerrar">×</button>
           </div>
-        </div>
-        <div id="axm-tree-chart" class="axm-org-chart-wrap"></div>
-      </section>
+          <section class="axm-arbol" id="axm-arbol-panel">
+            <p class="axm-arbol-sub">Vista organigrama: Misión/Visión como base, líneas por código y ejes vinculados.</p>
+            <div class="axm-org-toolbar">
+              <span class="axm-arbol-sub" style="margin:0;">Haz clic en un nodo para abrir su formulario correspondiente.</span>
+              <div class="axm-org-zoom">
+                <button type="button" id="axm-tree-expand" title="Expandir todo">▾▾</button>
+                <button type="button" id="axm-tree-collapse" title="Contraer todo">▸▸</button>
+                <button type="button" id="axm-tree-zoom-out" title="Alejar">-</button>
+                <button type="button" id="axm-tree-zoom-in" title="Acercar">+</button>
+                <button type="button" id="axm-tree-fit" class="axm-org-fit">Ajustar</button>
+              </div>
+            </div>
+            <div id="axm-tree-chart" class="axm-org-chart-wrap"></div>
+          </section>
+        </section>
+      </div>
+      <div class="axm-modal" id="axm-gantt-modal" role="dialog" aria-modal="true" aria-labelledby="axm-gantt-modal-title">
+        <section class="axm-modal-dialog axm-tree-modal-dialog">
+          <div class="axm-modal-head">
+            <h2 class="axm-title" id="axm-gantt-modal-title">Vista Gantt del plan estratégico</h2>
+            <button class="axm-close" id="axm-gantt-modal-close" type="button" aria-label="Cerrar">×</button>
+          </div>
+          <div class="axm-gantt-wrap">
+            <div class="axm-gantt-legend">
+              <span class="axm-gantt-chip"><span class="axm-gantt-dot" style="background:#0f3d2e;"></span>Eje estratégico</span>
+              <span class="axm-gantt-chip"><span class="axm-gantt-dot" style="background:#2563eb;"></span>Objetivo estratégico</span>
+              <span class="axm-gantt-chip"><span class="axm-gantt-dot" style="background:#ef4444;"></span>Hoy</span>
+            </div>
+            <div id="axm-gantt-host" class="axm-gantt-host"></div>
+          </div>
+        </section>
+      </div>
       <section class="axm-tab-panel" id="axm-tab-panel">No tiene acceso, consulte con el administrador</section>
       <section class="axm-card" id="axm-objetivos-panel" style="display:none;">
         <h3 style="margin:0;font-size:16px;">Objetivos del eje</h3>
@@ -1737,22 +1916,6 @@ EJES_ESTRATEGICOS_HTML = dedent("""
         <aside class="axm-card">
           <h2 class="axm-title">Plan estratégico</h2>
           <p class="axm-sub">Selecciona un eje para editarlo o crea uno nuevo.</p>
-          <div class="axm-row">
-            <div class="axm-field">
-              <label for="axm-plan-years">Vigencia del plan (años):</label>
-              <select id="axm-plan-years" class="axm-input">
-                <option value="1">1</option>
-                <option value="2">2</option>
-                <option value="3">3</option>
-                <option value="4">4</option>
-                <option value="5">5</option>
-              </select>
-            </div>
-            <div class="axm-field">
-              <label for="axm-plan-start">Inicio del plan:</label>
-              <input id="axm-plan-start" class="axm-input" type="date">
-            </div>
-          </div>
           <div class="axm-actions">
             <button class="axm-btn primary" id="axm-add-axis" type="button" onclick="(function(){var m=document.getElementById('axm-axis-modal');if(m){m.classList.add('open');m.style.display='flex';document.body.style.overflow='hidden';}})();">Agregar eje</button>
             <button class="axm-btn" id="axm-download-template" type="button">Descargar plantilla CSV</button>
@@ -1806,6 +1969,16 @@ EJES_ESTRATEGICOS_HTML = dedent("""
               </select>
             </div>
           </div>
+          <div class="axm-row">
+            <div class="axm-field">
+              <label for="axm-axis-start">Fecha inicial</label>
+              <input id="axm-axis-start" class="axm-input" type="date">
+            </div>
+            <div class="axm-field">
+              <label for="axm-axis-end">Fecha final</label>
+              <input id="axm-axis-end" class="axm-input" type="date">
+            </div>
+          </div>
           <div class="axm-field">
             <label for="axm-axis-progress">Avance</label>
             <input id="axm-axis-progress" class="axm-input" type="text" readonly>
@@ -1837,13 +2010,15 @@ EJES_ESTRATEGICOS_HTML = dedent("""
             <button class="axm-close" id="axm-obj-modal-close" type="button" aria-label="Cerrar">×</button>
           </div>
           <div class="axm-obj-form">
-            <div class="axm-field" style="margin-top:0;">
-              <label for="axm-obj-name">Nombre</label>
-              <input id="axm-obj-name" class="axm-input" type="text" placeholder="Nombre del objetivo">
-            </div>
-            <div class="axm-field">
-              <label for="axm-obj-code">Código (xx-yy-zz)</label>
-              <input id="axm-obj-code" class="axm-input" type="text" placeholder="xx-yy-zz" readonly>
+            <div class="axm-obj-main-row">
+              <div class="axm-field">
+                <label for="axm-obj-code">Código</label>
+                <input id="axm-obj-code" class="axm-input axm-obj-code-readonly" type="text" placeholder="xx-yy-zz" readonly>
+              </div>
+              <div class="axm-field">
+                <label for="axm-obj-name">Nombre</label>
+                <input id="axm-obj-name" class="axm-input" type="text" placeholder="Nombre del objetivo">
+              </div>
             </div>
             <div class="axm-field">
               <label for="axm-obj-hito">Hito</label>
@@ -1935,10 +2110,17 @@ EJES_ESTRATEGICOS_HTML = dedent("""
       <script>
         (() => {
           const tabs = document.querySelectorAll(".axm-tab[data-axm-tab]");
+          const openTreeBtn = document.querySelector('.view-pill[data-view="arbol"]');
+          const openGanttBtn = document.querySelector('.view-pill[data-view="gantt"]');
           const panel = document.getElementById("axm-tab-panel");
           const identidadPanel = document.getElementById("axm-identidad-panel");
           const blockedContainer = document.querySelector(".axm-grid");
           const objetivosPanel = document.getElementById("axm-objetivos-panel");
+          const treeModalEl = document.getElementById("axm-tree-modal");
+          const treeModalCloseEl = document.getElementById("axm-tree-modal-close");
+          const ganttModalEl = document.getElementById("axm-gantt-modal");
+          const ganttModalCloseEl = document.getElementById("axm-gantt-modal-close");
+          const ganttHostEl = document.getElementById("axm-gantt-host");
           const arbolPanel = document.getElementById("axm-arbol-panel");
           const treeChartEl = document.getElementById("axm-tree-chart");
           const treeExpandBtn = document.getElementById("axm-tree-expand");
@@ -2236,10 +2418,9 @@ EJES_ESTRATEGICOS_HTML = dedent("""
             const showIdentidad = tabKey === "identidad";
             const showEjes = tabKey === "ejes";
             const showObjetivos = tabKey === "objetivos";
-            const showArbol = tabKey === "arbol";
             if (panel) {
               panel.textContent = "No tiene acceso, consulte con el administrador";
-              panel.style.display = showIdentidad || showEjes || showObjetivos || showArbol ? "none" : "flex";
+              panel.style.display = showIdentidad || showEjes || showObjetivos ? "none" : "flex";
             }
             if (identidadPanel) {
               identidadPanel.style.display = showIdentidad ? "block" : "none";
@@ -2249,12 +2430,6 @@ EJES_ESTRATEGICOS_HTML = dedent("""
             }
             if (objetivosPanel) {
               objetivosPanel.style.display = showObjetivos ? "block" : "none";
-            }
-            if (arbolPanel) {
-              arbolPanel.style.display = showArbol ? "block" : "none";
-            }
-            if (showArbol) {
-              renderStrategicTree();
             }
           };
           if (tabs.length) {
@@ -2266,6 +2441,30 @@ EJES_ESTRATEGICOS_HTML = dedent("""
               });
             });
           }
+          openTreeBtn && openTreeBtn.addEventListener("click", () => {
+            if (!treeModalEl) return;
+            if (treeModalEl.parentElement !== document.body) {
+              document.body.appendChild(treeModalEl);
+            }
+            treeModalEl.classList.add("open");
+            treeModalEl.style.display = "flex";
+            treeModalEl.style.position = "fixed";
+            treeModalEl.style.inset = "0";
+            document.body.style.overflow = "hidden";
+            renderStrategicTree();
+          });
+          openGanttBtn && openGanttBtn.addEventListener("click", async () => {
+            if (!ganttModalEl) return;
+            if (ganttModalEl.parentElement !== document.body) {
+              document.body.appendChild(ganttModalEl);
+            }
+            ganttModalEl.classList.add("open");
+            ganttModalEl.style.display = "flex";
+            ganttModalEl.style.position = "fixed";
+            ganttModalEl.style.inset = "0";
+            document.body.style.overflow = "hidden";
+            await renderStrategicGantt();
+          });
           const activeTab = document.querySelector(".axm-tab.active");
           applyTabView(activeTab ? activeTab.getAttribute("data-axm-tab") : "identidad");
 
@@ -2284,6 +2483,10 @@ EJES_ESTRATEGICOS_HTML = dedent("""
           const axisProgressEl = document.getElementById("axm-axis-progress");
           const axisLeaderEl = document.getElementById("axm-axis-leader");
           const axisOwnerEl = document.getElementById("axm-axis-owner");
+          const axisStartEl = document.getElementById("axm-axis-start");
+          const axisEndEl = document.getElementById("axm-axis-end");
+          const planYearsEl = document.getElementById("axm-plan-years");
+          const planStartEl = document.getElementById("axm-plan-start");
           const axisDescEl = document.getElementById("axm-axis-desc");
           const axisObjectivesListEl = document.getElementById("axm-axis-objectives-list");
           const objNameEl = document.getElementById("axm-obj-name");
@@ -2327,6 +2530,7 @@ EJES_ESTRATEGICOS_HTML = dedent("""
           let selectedAxisId = null;
           let selectedObjectiveId = null;
           let editingKpiIndex = -1;
+          const PLAN_STORAGE_KEY = "sipet_plan_macro_v1";
           const toId = (value) => {
             const n = Number(value);
             return Number.isFinite(n) ? n : null;
@@ -2422,6 +2626,20 @@ EJES_ESTRATEGICOS_HTML = dedent("""
             const result = await strategicTreeLibPromise;
             return result !== false && !!(window.d3 && window.d3.OrgChart);
           };
+          const ensureD3Library = async () => {
+            if (window.d3) return true;
+            try {
+              await loadScript("/static/vendor/d3.min.js");
+              return !!window.d3;
+            } catch (_err) {
+              try {
+                await loadScript("https://cdn.jsdelivr.net/npm/d3@7");
+                return !!window.d3;
+              } catch (_err2) {
+                return false;
+              }
+            }
+          };
 
           const openAxisModal = () => {
             if (!axisModalEl) return;
@@ -2469,6 +2687,18 @@ EJES_ESTRATEGICOS_HTML = dedent("""
             objModalEl.style.display = "none";
             document.body.style.overflow = "";
           };
+          const closeTreeModal = () => {
+            if (!treeModalEl) return;
+            treeModalEl.classList.remove("open");
+            treeModalEl.style.display = "none";
+            document.body.style.overflow = "";
+          };
+          const closeGanttModal = () => {
+            if (!ganttModalEl) return;
+            ganttModalEl.classList.remove("open");
+            ganttModalEl.style.display = "none";
+            document.body.style.overflow = "";
+          };
           axisModalCloseEl && axisModalCloseEl.addEventListener("click", closeAxisModal);
           axisModalEl && axisModalEl.addEventListener("click", (event) => {
             if (event.target === axisModalEl) closeAxisModal();
@@ -2477,11 +2707,25 @@ EJES_ESTRATEGICOS_HTML = dedent("""
           objModalEl && objModalEl.addEventListener("click", (event) => {
             if (event.target === objModalEl) closeObjModal();
           });
+          treeModalCloseEl && treeModalCloseEl.addEventListener("click", closeTreeModal);
+          treeModalEl && treeModalEl.addEventListener("click", (event) => {
+            if (event.target === treeModalEl) closeTreeModal();
+          });
+          ganttModalCloseEl && ganttModalCloseEl.addEventListener("click", closeGanttModal);
+          ganttModalEl && ganttModalEl.addEventListener("click", (event) => {
+            if (event.target === ganttModalEl) closeGanttModal();
+          });
           if (axisModalEl && axisModalEl.parentElement !== document.body) {
             document.body.appendChild(axisModalEl);
           }
           if (objModalEl && objModalEl.parentElement !== document.body) {
             document.body.appendChild(objModalEl);
+          }
+          if (treeModalEl && treeModalEl.parentElement !== document.body) {
+            document.body.appendChild(treeModalEl);
+          }
+          if (ganttModalEl && ganttModalEl.parentElement !== document.body) {
+            document.body.appendChild(ganttModalEl);
           }
           document.addEventListener("keydown", (event) => {
             if (event.key === "Escape" && axisModalEl && axisModalEl.classList.contains("open")) {
@@ -2490,7 +2734,20 @@ EJES_ESTRATEGICOS_HTML = dedent("""
             if (event.key === "Escape" && objModalEl && objModalEl.classList.contains("open")) {
               closeObjModal();
             }
+            if (event.key === "Escape" && treeModalEl && treeModalEl.classList.contains("open")) {
+              closeTreeModal();
+            }
+            if (event.key === "Escape" && ganttModalEl && ganttModalEl.classList.contains("open")) {
+              closeGanttModal();
+            }
           });
+          const centerStrategicTreeScroll = () => {
+            if (!treeChartEl) return;
+            const maxLeft = Math.max(0, treeChartEl.scrollWidth - treeChartEl.clientWidth);
+            const maxTop = Math.max(0, treeChartEl.scrollHeight - treeChartEl.clientHeight);
+            treeChartEl.scrollLeft = Math.round(maxLeft / 2);
+            treeChartEl.scrollTop = Math.round(maxTop / 2);
+          };
 
           const renderStrategicTree = () => {
             if (!treeChartEl) return;
@@ -2707,12 +2964,29 @@ EJES_ESTRATEGICOS_HTML = dedent("""
                 .compactMarginBetween(() => 25)
                 .compactMarginPair(() => 80)
                 .linkYOffset(18)
-                .setActiveNodeCentered(false)
+                .setActiveNodeCentered(true)
                 .initialExpandLevel(99)
                 .compact(false)
+                .nodeButtonWidth(() => 56)
+                .nodeButtonHeight(() => 56)
+                .nodeButtonX(() => -28)
+                .nodeButtonY(() => -28)
+                .buttonContent(({ node }) => {
+                  const expanded = !!(node && node.children);
+                  const sign = expanded ? "−" : "+";
+                  const count = Number(node?.data?._directSubordinates || 0);
+                  const countText = Number.isFinite(count) && count > 0 ? `${count}` : "";
+                  return `
+                    <div class="axm-node-toggle">
+                      <div class="axm-node-toggle-sign">${sign}</div>
+                      <div class="axm-node-toggle-count">${countText}</div>
+                    </div>
+                  `;
+                })
                 .onNodeClick(async (d) => {
                   const data = d?.data || {};
                   if (data.type === "mission" || data.type === "vision" || data.type === "line") {
+                    closeTreeModal();
                     applyTabView("identidad");
                     const missionAcc = document.querySelector("#axm-identidad-panel details:nth-of-type(1)");
                     const visionAcc = document.querySelector("#axm-identidad-panel details:nth-of-type(2)");
@@ -2726,12 +3000,14 @@ EJES_ESTRATEGICOS_HTML = dedent("""
                     return;
                   }
                   if (data.type === "axis" && data.axisId) {
+                    closeTreeModal();
                     selectedAxisId = toId(data.axisId);
                     renderAll();
                     openAxisModal();
                     return;
                   }
                   if (data.type === "objective" && data.objectiveId) {
+                    closeTreeModal();
                     selectedAxisId = toId(data.axisId) || selectedAxisId;
                     selectedObjectiveId = toId(data.objectiveId);
                     renderAll();
@@ -2740,10 +3016,12 @@ EJES_ESTRATEGICOS_HTML = dedent("""
                     return;
                   }
                   if (data.type === "activity" && data.activityId) {
+                    closeTreeModal();
                     window.location.href = `/poa?objective_id=${Number(data.objectiveId || 0)}&activity_id=${Number(data.activityId || 0)}`;
                     return;
                   }
                   if (data.type === "subactivity" && data.subactivityId) {
+                    closeTreeModal();
                     window.location.href = `/poa?objective_id=${Number(data.objectiveId || 0)}&activity_id=${Number(data.activityId || 0)}&subactivity_id=${Number(data.subactivityId || 0)}`;
                   }
                 })
@@ -2802,6 +3080,7 @@ EJES_ESTRATEGICOS_HTML = dedent("""
                 .render();
               if (strategicTreeChart && typeof strategicTreeChart.expandAll === "function") strategicTreeChart.expandAll();
               if (strategicTreeChart && typeof strategicTreeChart.fit === "function") strategicTreeChart.fit();
+              setTimeout(centerStrategicTreeScroll, 30);
             });
           };
           if (treeZoomInBtn) {
@@ -2813,12 +3092,14 @@ EJES_ESTRATEGICOS_HTML = dedent("""
             treeExpandBtn.addEventListener("click", () => {
               if (strategicTreeChart && typeof strategicTreeChart.expandAll === "function") strategicTreeChart.expandAll();
               if (strategicTreeChart && typeof strategicTreeChart.fit === "function") strategicTreeChart.fit();
+              setTimeout(centerStrategicTreeScroll, 30);
             });
           }
           if (treeCollapseBtn) {
             treeCollapseBtn.addEventListener("click", () => {
               if (strategicTreeChart && typeof strategicTreeChart.collapseAll === "function") strategicTreeChart.collapseAll();
               if (strategicTreeChart && typeof strategicTreeChart.fit === "function") strategicTreeChart.fit();
+              setTimeout(centerStrategicTreeScroll, 30);
             });
           }
           if (treeZoomOutBtn) {
@@ -2829,6 +3110,7 @@ EJES_ESTRATEGICOS_HTML = dedent("""
           if (treeFitBtn) {
             treeFitBtn.addEventListener("click", () => {
               if (strategicTreeChart && typeof strategicTreeChart.fit === "function") strategicTreeChart.fit();
+              setTimeout(centerStrategicTreeScroll, 30);
             });
           }
           const renderTrackingBoard = () => {
@@ -3043,6 +3325,169 @@ EJES_ESTRATEGICOS_HTML = dedent("""
             if (start > end) return `${label}: la fecha inicial no puede ser mayor que la final.`;
             return "";
           };
+          const computePlanEnd = (startDate, years) => {
+            if (!startDate || !years) return "";
+            const base = new Date(`${startDate}T00:00:00`);
+            if (Number.isNaN(base.getTime())) return "";
+            base.setFullYear(base.getFullYear() + Number(years));
+            base.setDate(base.getDate() - 1);
+            const month = String(base.getMonth() + 1).padStart(2, "0");
+            const day = String(base.getDate()).padStart(2, "0");
+            return `${base.getFullYear()}-${month}-${day}`;
+          };
+          const getPlanWindow = () => {
+            const years = Number(planYearsEl && planYearsEl.value ? planYearsEl.value : 0);
+            const start = planStartEl && planStartEl.value ? String(planStartEl.value) : "";
+            const end = computePlanEnd(start, years);
+            return { years, start, end };
+          };
+          const savePlanWindow = () => {
+            try {
+              const payload = {
+                years: String(planYearsEl && planYearsEl.value ? planYearsEl.value : "1"),
+                start: String(planStartEl && planStartEl.value ? planStartEl.value : ""),
+              };
+              window.localStorage.setItem(PLAN_STORAGE_KEY, JSON.stringify(payload));
+            } catch (_err) {}
+          };
+          const loadPlanWindow = () => {
+            try {
+              const raw = window.localStorage.getItem(PLAN_STORAGE_KEY);
+              if (!raw) return;
+              const data = JSON.parse(raw);
+              if (planYearsEl && ["1", "2", "3", "4", "5"].includes(String(data?.years || ""))) {
+                planYearsEl.value = String(data.years);
+              }
+              if (planStartEl && data?.start) {
+                planStartEl.value = String(data.start);
+              }
+            } catch (_err) {}
+          };
+          const syncAxisDateBounds = () => {
+            const win = getPlanWindow();
+            [axisStartEl, axisEndEl].forEach((el) => {
+              if (!el) return;
+              el.min = win.start || "";
+              el.max = win.end || "";
+            });
+          };
+          const validateAxisWithinPlan = (axisStart, axisEnd) => {
+            if (!axisStart && !axisEnd) return "";
+            const win = getPlanWindow();
+            if (!win.start || !win.end) return "";
+            if (axisStart && axisStart < win.start) return "Eje estratégico: fecha inicial fuera del marco del plan.";
+            if (axisEnd && axisEnd > win.end) return "Eje estratégico: fecha final fuera del marco del plan.";
+            return "";
+          };
+          const renderStrategicGantt = async () => {
+            if (!ganttHostEl) return;
+            const ok = await ensureD3Library();
+            if (!ok) {
+              ganttHostEl.innerHTML = '<p style="padding:10px;color:#b91c1c;">No se pudo cargar la librería para la vista Gantt.</p>';
+              return;
+            }
+            const axisList = Array.isArray(axes) ? axes : [];
+            const rows = [];
+            axisList.forEach((axis) => {
+              const axisStart = String(axis.fecha_inicial || "");
+              const axisEnd = String(axis.fecha_final || "");
+              if (axisStart && axisEnd) {
+                rows.push({
+                  level: 0,
+                  type: "axis",
+                  label: `${axis.codigo || "xx-yy"} · ${axis.nombre || "Eje sin nombre"}`,
+                  start: new Date(`${axisStart}T00:00:00`),
+                  end: new Date(`${axisEnd}T00:00:00`),
+                });
+              }
+              (Array.isArray(axis.objetivos) ? axis.objetivos : []).forEach((obj) => {
+                const start = String(obj.fecha_inicial || "");
+                const end = String(obj.fecha_final || "");
+                if (!start || !end) return;
+                rows.push({
+                  level: 1,
+                  type: "objective",
+                  label: `${obj.codigo || "xx-yy-zz"} · ${obj.nombre || "Objetivo"}`,
+                  start: new Date(`${start}T00:00:00`),
+                  end: new Date(`${end}T00:00:00`),
+                });
+              });
+            });
+            if (!rows.length) {
+              ganttHostEl.innerHTML = '<p style="padding:10px;color:#64748b;">No hay fechas suficientes en ejes/objetivos para generar Gantt.</p>';
+              return;
+            }
+            const planWin = getPlanWindow();
+            const dataMin = new Date(Math.min(...rows.map((item) => item.start.getTime())));
+            const dataMax = new Date(Math.max(...rows.map((item) => item.end.getTime())));
+            const domainStart = planWin.start ? new Date(`${planWin.start}T00:00:00`) : dataMin;
+            const domainEnd = planWin.end ? new Date(`${planWin.end}T00:00:00`) : dataMax;
+            const margin = { top: 44, right: 24, bottom: 30, left: 390 };
+            const rowH = 34;
+            const chartW = Math.max(900, ganttHostEl.clientWidth + 280);
+            const width = margin.left + chartW + margin.right;
+            const height = margin.top + (rows.length * rowH) + margin.bottom;
+            ganttHostEl.innerHTML = "";
+            const svg = window.d3.select(ganttHostEl).append("svg")
+              .attr("width", width)
+              .attr("height", height)
+              .style("min-width", `${width}px`)
+              .style("display", "block");
+            const x = window.d3.scaleTime().domain([domainStart, domainEnd]).range([margin.left, margin.left + chartW]);
+            const y = (idx) => margin.top + (idx * rowH);
+
+            svg.append("g")
+              .attr("transform", `translate(0, ${margin.top - 10})`)
+              .call(window.d3.axisTop(x).ticks(window.d3.timeMonth.every(1)).tickSize(-rows.length * rowH).tickFormat(window.d3.timeFormat("%b %Y")))
+              .call((g) => g.selectAll("text").attr("fill", "#475569").attr("font-size", 11))
+              .call((g) => g.selectAll("line").attr("stroke", "rgba(148,163,184,.28)"))
+              .call((g) => g.select(".domain").attr("stroke", "rgba(148,163,184,.35)"));
+
+            rows.forEach((row, idx) => {
+              const yy = y(idx);
+              if (idx % 2 === 0) {
+                svg.append("rect")
+                  .attr("x", margin.left)
+                  .attr("y", yy)
+                  .attr("width", chartW)
+                  .attr("height", rowH)
+                  .attr("fill", "rgba(248,250,252,.70)");
+              }
+              svg.append("text")
+                .attr("x", margin.left - 10 - (row.level ? 16 : 0))
+                .attr("y", yy + (rowH / 2) + 4)
+                .attr("text-anchor", "end")
+                .attr("fill", row.level ? "#334155" : "#0f172a")
+                .attr("font-size", row.level ? 12 : 12.5)
+                .attr("font-style", row.level ? "italic" : "normal")
+                .attr("font-weight", row.level ? 500 : 700)
+                .text(row.label);
+              const startX = x(row.start);
+              const endX = x(row.end);
+              const barW = Math.max(3, endX - startX);
+              svg.append("rect")
+                .attr("x", startX)
+                .attr("y", yy + 7)
+                .attr("width", barW)
+                .attr("height", rowH - 14)
+                .attr("rx", 7)
+                .attr("fill", row.type === "axis" ? "#0f3d2e" : "#2563eb")
+                .attr("opacity", row.type === "axis" ? 0.88 : 0.80);
+            });
+
+            const today = new Date();
+            if (today >= domainStart && today <= domainEnd) {
+              const tx = x(today);
+              svg.append("line")
+                .attr("x1", tx)
+                .attr("x2", tx)
+                .attr("y1", margin.top - 8)
+                .attr("y2", margin.top + rows.length * rowH)
+                .attr("stroke", "#ef4444")
+                .attr("stroke-width", 1.8)
+                .attr("stroke-dasharray", "4,3");
+            }
+          };
 
           const renderDepartmentOptions = (selectedValue = "") => {
             if (!axisLeaderEl) return;
@@ -3220,11 +3665,14 @@ EJES_ESTRATEGICOS_HTML = dedent("""
               if (axisBaseCodeEl) axisBaseCodeEl.innerHTML = "";
               if (axisCodeEl) axisCodeEl.value = "";
               if (axisProgressEl) axisProgressEl.value = "0%";
+              if (axisStartEl) axisStartEl.value = "";
+              if (axisEndEl) axisEndEl.value = "";
               if (axisBasePreviewEl) axisBasePreviewEl.textContent = "Selecciona un código para ver su línea asociada.";
               renderDepartmentOptions("");
               axisDepartmentCollaborators = [];
               renderAxisOwnerOptions("");
               axisDescEl.value = "";
+              syncAxisDateBounds();
               renderAxisObjectivesPanel();
               return;
             }
@@ -3243,6 +3691,9 @@ EJES_ESTRATEGICOS_HTML = dedent("""
             }
             if (axisCodeEl) axisCodeEl.value = buildAxisCode(selectedBase, axisPosition(axis));
             if (axisProgressEl) axisProgressEl.value = `${Number(axis.avance || 0)}%`;
+            if (axisStartEl) axisStartEl.value = axis.fecha_inicial || "";
+            if (axisEndEl) axisEndEl.value = axis.fecha_final || "";
+            syncAxisDateBounds();
             updateAxisBasePreview();
             renderDepartmentOptions(axis.lider_departamento || "");
             loadAxisDepartmentCollaborators(axis.lider_departamento || "", axis.responsabilidad_directa || "");
@@ -3458,6 +3909,8 @@ EJES_ESTRATEGICOS_HTML = dedent("""
                   codigo: "",
                   lider_departamento: "",
                   responsabilidad_directa: "",
+                  fecha_inicial: "",
+                  fecha_final: "",
                   descripcion: "",
                   orden: axes.length + 1,
                 }),
@@ -3489,11 +3942,23 @@ EJES_ESTRATEGICOS_HTML = dedent("""
               codigo: axisCodeEl && axisCodeEl.value ? axisCodeEl.value.trim() : "",
               lider_departamento: axisLeaderEl && axisLeaderEl.value ? axisLeaderEl.value.trim() : "",
               responsabilidad_directa: axisOwnerEl && axisOwnerEl.value ? axisOwnerEl.value.trim() : "",
+              fecha_inicial: axisStartEl && axisStartEl.value ? axisStartEl.value : "",
+              fecha_final: axisEndEl && axisEndEl.value ? axisEndEl.value : "",
               descripcion: axisDescEl.value.trim(),
               orden: axisPosition(axis),
             };
             if (!body.nombre) {
               showMsg("El nombre del eje es obligatorio.", true);
+              return;
+            }
+            const axisDateError = visualRangeError(body.fecha_inicial, body.fecha_final, "Eje estratégico");
+            if (axisDateError) {
+              showMsg(axisDateError, true);
+              return;
+            }
+            const planDateError = validateAxisWithinPlan(body.fecha_inicial, body.fecha_final);
+            if (planDateError) {
+              showMsg(planDateError, true);
               return;
             }
             try {
@@ -3606,6 +4071,16 @@ EJES_ESTRATEGICOS_HTML = dedent("""
           axisLeaderEl && axisLeaderEl.addEventListener("change", async () => {
             await loadAxisDepartmentCollaborators(axisLeaderEl.value || "", "");
           });
+          planYearsEl && planYearsEl.addEventListener("change", () => {
+            savePlanWindow();
+            syncAxisDateBounds();
+          });
+          planStartEl && planStartEl.addEventListener("change", () => {
+            savePlanWindow();
+            syncAxisDateBounds();
+          });
+          loadPlanWindow();
+          syncAxisDateBounds();
 
           Promise.all([loadDepartments(), loadAxes()]).then(loadCollaborators).catch((err) => {
             showMsg(err.message || "No se pudieron cargar los ejes.", true);
@@ -5158,7 +5633,8 @@ def ejes_estrategicos_page(request: Request):
         hide_floating_actions=True,
         show_page_header=True,
         view_buttons=[
-            {"label": "Form", "icon": "/templates/icon/formulario.svg", "view": "form", "active": True},
+            {"label": "Arbol estratégico", "icon": "/templates/icon/mapa.svg", "view": "arbol"},
+            {"label": "Gantt", "icon": "/templates/icon/grafica.svg", "view": "gantt"},
         ],
     )
 
@@ -5820,6 +6296,21 @@ def create_strategic_axis(request: Request, data: dict = Body(...)):
     try:
         max_order = db.query(func.max(StrategicAxisConfig.orden)).scalar() or 0
         axis_order = int(data.get("orden") or (max_order + 1))
+        start_date, start_error = _parse_date_field(data.get("fecha_inicial"), "Fecha inicial", required=False)
+        if start_error:
+            return JSONResponse({"success": False, "error": start_error}, status_code=400)
+        end_date, end_error = _parse_date_field(data.get("fecha_final"), "Fecha final", required=False)
+        if end_error:
+            return JSONResponse({"success": False, "error": end_error}, status_code=400)
+        if (start_date and not end_date) or (end_date and not start_date):
+            return JSONResponse(
+                {"success": False, "error": "Eje estratégico: fecha inicial y fecha final deben definirse juntas"},
+                status_code=400,
+            )
+        if start_date and end_date:
+            range_error = _validate_date_range(start_date, end_date, "Eje estratégico")
+            if range_error:
+                return JSONResponse({"success": False, "error": range_error}, status_code=400)
         base_code = (data.get("base_code") or "").strip()
         if not base_code:
             raw_code = (data.get("codigo") or "").strip().lower()
@@ -5829,6 +6320,8 @@ def create_strategic_axis(request: Request, data: dict = Body(...)):
             codigo=_compose_axis_code(base_code, axis_order),
             lider_departamento=(data.get("lider_departamento") or "").strip(),
             responsabilidad_directa=(data.get("responsabilidad_directa") or "").strip(),
+            fecha_inicial=start_date,
+            fecha_final=end_date,
             descripcion=(data.get("descripcion") or "").strip(),
             orden=axis_order,
             is_active=True,
@@ -5859,6 +6352,21 @@ def update_strategic_axis(axis_id: int, data: dict = Body(...)):
         if not nombre:
             return JSONResponse({"success": False, "error": "El nombre del eje es obligatorio"}, status_code=400)
         axis_order = int(data.get("orden") or axis.orden or 1)
+        start_date, start_error = _parse_date_field(data.get("fecha_inicial"), "Fecha inicial", required=False)
+        if start_error:
+            return JSONResponse({"success": False, "error": start_error}, status_code=400)
+        end_date, end_error = _parse_date_field(data.get("fecha_final"), "Fecha final", required=False)
+        if end_error:
+            return JSONResponse({"success": False, "error": end_error}, status_code=400)
+        if (start_date and not end_date) or (end_date and not start_date):
+            return JSONResponse(
+                {"success": False, "error": "Eje estratégico: fecha inicial y fecha final deben definirse juntas"},
+                status_code=400,
+            )
+        if start_date and end_date:
+            range_error = _validate_date_range(start_date, end_date, "Eje estratégico")
+            if range_error:
+                return JSONResponse({"success": False, "error": range_error}, status_code=400)
         base_code = (data.get("base_code") or "").strip()
         if not base_code:
             raw_code = (data.get("codigo") or axis.codigo or "").strip().lower()
@@ -5867,6 +6375,8 @@ def update_strategic_axis(axis_id: int, data: dict = Body(...)):
         axis.codigo = _compose_axis_code(base_code, axis_order)
         axis.lider_departamento = (data.get("lider_departamento") or "").strip()
         axis.responsabilidad_directa = (data.get("responsabilidad_directa") or "").strip()
+        axis.fecha_inicial = start_date
+        axis.fecha_final = end_date
         axis.descripcion = (data.get("descripcion") or "").strip()
         axis.orden = axis_order
         db.add(axis)

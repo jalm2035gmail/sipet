@@ -1036,6 +1036,8 @@
           .childrenMargin(() => 60)
           .compactMarginBetween(() => 25)
           .compactMarginPair(() => 80)
+          .pagingStep(() => 999999)
+          .minPagingVisibleNodes(() => 999999)
           .linkYOffset(20)
           .setActiveNodeCentered(false)
           .onNodeClick((d) => {
@@ -1048,7 +1050,7 @@
               .attr('stroke-width', 1.1)
               .attr('stroke', 'rgba(15, 23, 42, 0.38)');
           })
-          .initialExpandLevel(1)
+          .initialExpandLevel(99)
           .compact(false)
           .nodeContent((d) => {
             const data = d?.data || {};
@@ -1098,6 +1100,9 @@
             `;
           })
           .render();
+        if (orgChartInstance && typeof orgChartInstance.expandAll === 'function') {
+          orgChartInstance.expandAll();
+        }
         if (orgChartInstance && typeof orgChartInstance.fit === 'function') {
           orgChartInstance.fit();
         }
