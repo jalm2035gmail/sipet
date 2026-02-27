@@ -5,11 +5,12 @@ from textwrap import dedent
 from typing import Any, Dict, List, Set
 import sqlite3
 import csv
+import json
 from io import StringIO
 
 from fastapi import APIRouter, Body, Request, Query, UploadFile, File
 from fastapi.responses import HTMLResponse, JSONResponse, Response
-from sqlalchemy import func
+from sqlalchemy import func, text
 from sqlalchemy.exc import SQLAlchemyError
 
 router = APIRouter()
@@ -137,6 +138,165 @@ VALID_ACTIVITY_PERIODICITIES = {
     "bimensual",
     "cada_xx_dias",
 }
+
+
+def _ensure_strategic_identity_table(db) -> None:
+    db.execute(
+        text(
+            """
+            CREATE TABLE IF NOT EXISTS strategic_identity_config (
+              bloque VARCHAR(20) PRIMARY KEY,
+              payload TEXT NOT NULL DEFAULT '[]',
+              updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+    )
+
+
+def _normalize_identity_lines(raw: Any, prefix: str) -> List[Dict[str, str]]:
+    rows = raw if isinstance(raw, list) else []
+    clean: List[Dict[str, str]] = []
+    for idx, item in enumerate(rows):
+        if not isinstance(item, dict):
+            continue
+        code_raw = str(item.get("code") or "").strip().lower()
+        text_raw = str(item.get("text") or "").strip()
+        safe_code = "".join(ch for ch in code_raw if ch.isalnum()) or f"{prefix}{idx + 1}"
+        clean.append({"code": safe_code, "text": text_raw})
+    if not clean:
+        clean = [{"code": f"{prefix}1", "text": ""}]
+    return clean
+
+
+def _ensure_objective_kpi_table(db) -> None:
+    db.execute(
+        text(
+            """
+            CREATE TABLE IF NOT EXISTS strategic_objective_kpis (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              objective_id INTEGER NOT NULL,
+              nombre VARCHAR(255) NOT NULL DEFAULT '',
+              proposito TEXT NOT NULL DEFAULT '',
+              formula TEXT NOT NULL DEFAULT '',
+              periodicidad VARCHAR(100) NOT NULL DEFAULT '',
+              estandar VARCHAR(20) NOT NULL DEFAULT '',
+              referencia VARCHAR(120) NOT NULL DEFAULT '',
+              orden INTEGER NOT NULL DEFAULT 0
+            )
+            """
+        )
+    )
+    # Backfill para instalaciones existentes sin la columna de referencia.
+    try:
+        cols = db.execute(text("PRAGMA table_info(strategic_objective_kpis)")).fetchall()
+        col_names = {str(col[1]).strip().lower() for col in cols if len(col) > 1}
+        if "referencia" not in col_names:
+            db.execute(
+                text(
+                    "ALTER TABLE strategic_objective_kpis ADD COLUMN referencia VARCHAR(120) NOT NULL DEFAULT ''"
+                )
+            )
+    except Exception:
+        # Evita romper el flujo si la BD no soporta PRAGMA/ALTER esperado.
+        pass
+
+
+def _normalize_kpi_items(raw: Any) -> List[Dict[str, str]]:
+    rows = raw if isinstance(raw, list) else []
+    allowed = {"mayor", "menor", "entre", "igual"}
+    cleaned: List[Dict[str, str]] = []
+    for idx, item in enumerate(rows, start=1):
+        if not isinstance(item, dict):
+            continue
+        nombre = str(item.get("nombre") or "").strip()
+        if not nombre:
+            continue
+        estandar = str(item.get("estandar") or "").strip().lower()
+        if estandar not in allowed:
+            estandar = ""
+        referencia = str(item.get("referencia") or "").strip()
+        cleaned.append(
+            {
+                "nombre": nombre,
+                "proposito": str(item.get("proposito") or "").strip(),
+                "formula": str(item.get("formula") or "").strip(),
+                "periodicidad": str(item.get("periodicidad") or "").strip(),
+                "estandar": estandar,
+                "referencia": referencia,
+                "orden": idx,
+            }
+        )
+    return cleaned
+
+
+def _kpis_by_objective_ids(db, objective_ids: List[int]) -> Dict[int, List[Dict[str, Any]]]:
+    result: Dict[int, List[Dict[str, Any]]] = {}
+    if not objective_ids:
+        return result
+    _ensure_objective_kpi_table(db)
+    db.commit()
+    placeholders = ", ".join([f":id_{idx}" for idx, _ in enumerate(objective_ids)])
+    sql = text(
+        f"""
+        SELECT id, objective_id, nombre, proposito, formula, periodicidad, estandar, referencia, orden
+        FROM strategic_objective_kpis
+        WHERE objective_id IN ({placeholders})
+        ORDER BY objective_id ASC, orden ASC, id ASC
+        """
+    )
+    params = {f"id_{idx}": int(obj_id) for idx, obj_id in enumerate(objective_ids)}
+    rows = db.execute(sql, params).fetchall()
+    for row in rows:
+        objective_id = int(row[1] or 0)
+        if objective_id <= 0:
+            continue
+        result.setdefault(objective_id, []).append(
+            {
+                "id": int(row[0] or 0),
+                "nombre": str(row[2] or ""),
+                "proposito": str(row[3] or ""),
+                "formula": str(row[4] or ""),
+                "periodicidad": str(row[5] or ""),
+                "estandar": str(row[6] or ""),
+                "referencia": str(row[7] or ""),
+                "orden": int(row[8] or 0),
+            }
+        )
+    return result
+
+
+def _replace_objective_kpis(db, objective_id: int, items: Any) -> None:
+    clean = _normalize_kpi_items(items)
+    _ensure_objective_kpi_table(db)
+    db.execute(text("DELETE FROM strategic_objective_kpis WHERE objective_id = :oid"), {"oid": int(objective_id)})
+    for item in clean:
+        db.execute(
+            text(
+                """
+                INSERT INTO strategic_objective_kpis (
+                  objective_id, nombre, proposito, formula, periodicidad, estandar, referencia, orden
+                ) VALUES (
+                  :objective_id, :nombre, :proposito, :formula, :periodicidad, :estandar, :referencia, :orden
+                )
+                """
+            ),
+            {
+                "objective_id": int(objective_id),
+                "nombre": item["nombre"],
+                "proposito": item["proposito"],
+                "formula": item["formula"],
+                "periodicidad": item["periodicidad"],
+                "estandar": item["estandar"],
+                "referencia": item["referencia"],
+                "orden": int(item["orden"]),
+            },
+        )
+
+
+def _delete_objective_kpis(db, objective_id: int) -> None:
+    _ensure_objective_kpi_table(db)
+    db.execute(text("DELETE FROM strategic_objective_kpis WHERE objective_id = :oid"), {"oid": int(objective_id)})
 
 STRATEGIC_POA_CSV_HEADERS = [
     "tipo_registro",
@@ -521,6 +681,21 @@ EJES_ESTRATEGICOS_HTML = dedent("""
           text-decoration: underline;
           text-underline-offset: 2px;
         }
+        .axm-id-actions{
+          display:flex;
+          gap:8px;
+          flex-wrap:wrap;
+        }
+        .axm-id-actions .axm-btn{
+          padding: 7px 10px;
+          font-size: 12px;
+        }
+        .axm-id-msg{
+          margin-top: 8px;
+          font-size: 12px;
+          color: #0f3d2e;
+          min-height: 18px;
+        }
         .axm-id-right{
           border: 0;
           border-radius: 0;
@@ -543,7 +718,7 @@ EJES_ESTRATEGICOS_HTML = dedent("""
         }
         .axm-id-full{
           margin: 0;
-          color: #1f2937;
+          color: var(--sidebar-bottom, #0f172a);
           line-height: 1.6;
           white-space: pre-line;
           text-align: center;
@@ -812,6 +987,13 @@ EJES_ESTRATEGICOS_HTML = dedent("""
           font-style: italic;
           color: #64748b;
         }
+        .axm-obj-code{
+          margin-top: 3px;
+          font-size: 11px;
+          font-style: italic;
+          font-weight: 400;
+          color: #64748b;
+        }
         .axm-obj-form{
           border:1px solid rgba(148,163,184,.32);
           border-radius: 12px;
@@ -938,6 +1120,75 @@ EJES_ESTRATEGICOS_HTML = dedent("""
           font-size: 12px;
           color: #64748b;
           font-style: italic;
+        }
+        .axm-kpi-form{
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 10px;
+        }
+        .axm-kpi-form .axm-field{ margin-top: 0; }
+        .axm-kpi-form .axm-field.full{ grid-column: 1 / -1; }
+        .axm-kpi-actions{
+          grid-column: 1 / -1;
+          display: flex;
+          gap: 8px;
+          flex-wrap: wrap;
+          margin-top: 2px;
+        }
+        .axm-kpi-list{
+          margin-top: 12px;
+          display: grid;
+          gap: 8px;
+          max-height: 260px;
+          overflow: auto;
+        }
+        .axm-kpi-item{
+          border: 1px solid rgba(148,163,184,.28);
+          border-radius: 10px;
+          padding: 8px 10px;
+          background: rgba(255,255,255,.95);
+        }
+        .axm-kpi-item-head{
+          display: flex;
+          justify-content: space-between;
+          gap: 8px;
+          align-items: center;
+        }
+        .axm-kpi-item h5{
+          margin: 0;
+          font-size: 14px;
+          color: #0f172a;
+        }
+        .axm-kpi-item-meta{
+          margin-top: 3px;
+          font-size: 12px;
+          color: #64748b;
+          font-style: italic;
+        }
+        .axm-kpi-item-actions{
+          display: flex;
+          gap: 6px;
+        }
+        .axm-kpi-btn{
+          border: 1px solid rgba(148,163,184,.35);
+          border-radius: 8px;
+          background: #fff;
+          color: #334155;
+          font-size: 12px;
+          padding: 4px 8px;
+          cursor: pointer;
+        }
+        .axm-kpi-btn.danger{
+          color: #b91c1c;
+          border-color: rgba(239,68,68,.35);
+          background: #fff1f2;
+        }
+        .axm-kpi-hint{
+          margin-top: 8px;
+          font-size: 12px;
+          color: #64748b;
+          font-style: italic;
+          min-height: 1.2em;
         }
         .axm-obj-grid{ display:grid; grid-template-columns: 150px 1fr; gap: 8px; }
         .axm-msg{ margin-top: 10px; font-size: 13px; color:#0f3d2e; min-height: 1.2em; }
@@ -1396,6 +1647,11 @@ EJES_ESTRATEGICOS_HTML = dedent("""
             <div class="axm-id-left">
               <div class="axm-id-lines" id="axm-mision-lines"></div>
               <button type="button" class="axm-id-add" id="axm-mision-add">Agregar línea</button>
+              <div class="axm-id-actions">
+                <button type="button" class="axm-btn" id="axm-mision-edit">Editar</button>
+                <button type="button" class="axm-btn primary" id="axm-mision-save">Guardar</button>
+                <button type="button" class="axm-btn" id="axm-mision-delete">Eliminar</button>
+              </div>
               <div id="axm-mision-hidden" style="display:none;"></div>
             </div>
             <div class="axm-id-right">
@@ -1410,6 +1666,11 @@ EJES_ESTRATEGICOS_HTML = dedent("""
             <div class="axm-id-left">
               <div class="axm-id-lines" id="axm-vision-lines"></div>
               <button type="button" class="axm-id-add" id="axm-vision-add">Agregar línea</button>
+              <div class="axm-id-actions">
+                <button type="button" class="axm-btn" id="axm-vision-edit">Editar</button>
+                <button type="button" class="axm-btn primary" id="axm-vision-save">Guardar</button>
+                <button type="button" class="axm-btn" id="axm-vision-delete">Eliminar</button>
+              </div>
               <div id="axm-vision-hidden" style="display:none;"></div>
             </div>
             <div class="axm-id-right">
@@ -1418,7 +1679,27 @@ EJES_ESTRATEGICOS_HTML = dedent("""
             </div>
           </div>
         </details>
+        <details class="axm-id-acc">
+          <summary>Valores</summary>
+          <div class="axm-id-grid">
+            <div class="axm-id-left">
+              <div class="axm-id-lines" id="axm-valores-lines"></div>
+              <button type="button" class="axm-id-add" id="axm-valores-add">Agregar línea</button>
+              <div class="axm-id-actions">
+                <button type="button" class="axm-btn" id="axm-valores-edit">Editar</button>
+                <button type="button" class="axm-btn primary" id="axm-valores-save">Guardar</button>
+                <button type="button" class="axm-btn" id="axm-valores-delete">Eliminar</button>
+              </div>
+              <div id="axm-valores-hidden" style="display:none;"></div>
+            </div>
+            <div class="axm-id-right">
+              <h4>Valores</h4>
+              <p class="axm-id-full" id="axm-valores-full"></p>
+            </div>
+          </div>
+        </details>
       </section>
+      <div class="axm-id-msg" id="axm-identidad-msg" aria-live="polite"></div>
       <section class="axm-arbol" id="axm-arbol-panel">
         <h3>Organigrama estratégico</h3>
         <p class="axm-arbol-sub">Vista organigrama: Misión/Visión como base, líneas por código y ejes vinculados.</p>
@@ -1454,8 +1735,24 @@ EJES_ESTRATEGICOS_HTML = dedent("""
 
       <div class="axm-grid">
         <aside class="axm-card">
-          <h2 class="axm-title">Ejes estratégicos</h2>
+          <h2 class="axm-title">Plan estratégico</h2>
           <p class="axm-sub">Selecciona un eje para editarlo o crea uno nuevo.</p>
+          <div class="axm-row">
+            <div class="axm-field">
+              <label for="axm-plan-years">Vigencia del plan (años):</label>
+              <select id="axm-plan-years" class="axm-input">
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+              </select>
+            </div>
+            <div class="axm-field">
+              <label for="axm-plan-start">Inicio del plan:</label>
+              <input id="axm-plan-start" class="axm-input" type="date">
+            </div>
+          </div>
           <div class="axm-actions">
             <button class="axm-btn primary" id="axm-add-axis" type="button" onclick="(function(){var m=document.getElementById('axm-axis-modal');if(m){m.classList.add('open');m.style.display='flex';document.body.style.overflow='hidden';}})();">Agregar eje</button>
             <button class="axm-btn" id="axm-download-template" type="button">Descargar plantilla CSV</button>
@@ -1584,7 +1881,44 @@ EJES_ESTRATEGICOS_HTML = dedent("""
               </div>
             </section>
             <section class="axm-obj-panel" data-obj-panel="kpi">
-              <p class="axm-axis-meta" style="margin:0;">Kpis: en construcción.</p>
+              <div class="axm-kpi-form">
+                <div class="axm-field full">
+                  <label for="axm-kpi-name">Nombre</label>
+                  <input id="axm-kpi-name" class="axm-input" type="text" placeholder="Nombre del KPI">
+                </div>
+                <div class="axm-field full">
+                  <label for="axm-kpi-purpose">Propósito</label>
+                  <textarea id="axm-kpi-purpose" class="axm-textarea" placeholder="Propósito del KPI"></textarea>
+                </div>
+                <div class="axm-field full">
+                  <label for="axm-kpi-formula">Fórmula</label>
+                  <textarea id="axm-kpi-formula" class="axm-textarea" placeholder="Fórmula de cálculo"></textarea>
+                </div>
+                <div class="axm-field">
+                  <label for="axm-kpi-periodicity">Periodicidad</label>
+                  <input id="axm-kpi-periodicity" class="axm-input" type="text" placeholder="Mensual, trimestral, anual, etc.">
+                </div>
+                <div class="axm-field">
+                  <label for="axm-kpi-standard">Estándar</label>
+                  <select id="axm-kpi-standard" class="axm-input">
+                    <option value="">Selecciona estándar</option>
+                    <option value="mayor">Mayor</option>
+                    <option value="menor">Menor</option>
+                    <option value="entre">Entre</option>
+                    <option value="igual">Igual</option>
+                  </select>
+                </div>
+                <div class="axm-field">
+                  <label for="axm-kpi-reference">Referencia</label>
+                  <input id="axm-kpi-reference" class="axm-input" type="text" placeholder="Ej. 8% o 5%-8%">
+                </div>
+                <div class="axm-kpi-actions">
+                  <button class="axm-btn primary" id="axm-kpi-add" type="button">Agregar KPI</button>
+                  <button class="axm-btn" id="axm-kpi-cancel" type="button">Cancelar edición</button>
+                </div>
+              </div>
+              <div class="axm-kpi-hint" id="axm-kpi-msg"></div>
+              <div class="axm-kpi-list" id="axm-kpi-list"></div>
             </section>
             <section class="axm-obj-panel" data-obj-panel="acts">
               <div class="axm-obj-acts" id="axm-obj-acts-list"></div>
@@ -1613,6 +1947,22 @@ EJES_ESTRATEGICOS_HTML = dedent("""
           const treeZoomOutBtn = document.getElementById("axm-tree-zoom-out");
           const treeFitBtn = document.getElementById("axm-tree-fit");
           const trackBoardEl = document.getElementById("axm-track-board");
+          const escapeHtml = (value) => String(value || "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#39;");
+          const identidadMsgEl = document.getElementById("axm-identidad-msg");
+          const misionEditBtn = document.getElementById("axm-mision-edit");
+          const misionSaveBtn = document.getElementById("axm-mision-save");
+          const misionDeleteBtn = document.getElementById("axm-mision-delete");
+          const visionEditBtn = document.getElementById("axm-vision-edit");
+          const visionSaveBtn = document.getElementById("axm-vision-save");
+          const visionDeleteBtn = document.getElementById("axm-vision-delete");
+          const valoresEditBtn = document.getElementById("axm-valores-edit");
+          const valoresSaveBtn = document.getElementById("axm-valores-save");
+          const valoresDeleteBtn = document.getElementById("axm-valores-delete");
           const setupIdentityComposer = (prefix, linesId, hiddenId, fullId, addId) => {
             const linesHost = document.getElementById(linesId);
             const hiddenHost = document.getElementById(hiddenId);
@@ -1620,6 +1970,7 @@ EJES_ESTRATEGICOS_HTML = dedent("""
             const addBtn = document.getElementById(addId);
             if (!linesHost || !hiddenHost || !fullHost || !addBtn) return null;
             let lines = [{ code: `${prefix}1`, text: "" }];
+            let editable = false;
             let onChange = () => {};
             const cleanCode = (value, idx) => {
               const raw = (value || "").trim().toLowerCase();
@@ -1659,6 +2010,7 @@ EJES_ESTRATEGICOS_HTML = dedent("""
                 codeInput.className = "axm-id-code";
                 codeInput.value = cleanCode(value.code, idx);
                 codeInput.placeholder = `Código ${prefix}${idx + 1}`;
+                codeInput.readOnly = !editable;
                 codeInput.addEventListener("input", () => {
                   lines[idx].code = codeInput.value;
                   syncOutputs();
@@ -1668,6 +2020,7 @@ EJES_ESTRATEGICOS_HTML = dedent("""
                 input.className = "axm-id-input";
                 input.value = value.text || "";
                 input.placeholder = `Escribe ${prefix}${idx + 1}`;
+                input.readOnly = !editable;
                 input.addEventListener("input", () => {
                   lines[idx].text = input.value;
                   syncOutputs();
@@ -1678,34 +2031,59 @@ EJES_ESTRATEGICOS_HTML = dedent("""
                 editBtn.setAttribute("aria-label", `Editar ${prefix}${idx + 1}`);
                 editBtn.innerHTML = '<img src="/icon/editar.svg" alt="">';
                 editBtn.addEventListener("click", () => {
+                  if (!editable) return;
                   input.focus();
                   input.select();
                 });
+                editBtn.disabled = !editable;
                 const removeBtn = document.createElement("button");
                 removeBtn.type = "button";
                 removeBtn.className = "axm-id-action delete";
                 removeBtn.setAttribute("aria-label", `Eliminar ${prefix}${idx + 1}`);
                 removeBtn.innerHTML = '<img src="/icon/eliminar.svg" alt="">';
                 removeBtn.addEventListener("click", () => {
+                  if (!editable) return;
                   lines.splice(idx, 1);
                   if (!lines.length) lines = [{ code: `${prefix}1`, text: "" }];
                   render();
                 });
+                removeBtn.disabled = !editable;
                 row.appendChild(codeInput);
                 row.appendChild(input);
                 row.appendChild(editBtn);
                 row.appendChild(removeBtn);
                 linesHost.appendChild(row);
               });
+              addBtn.disabled = !editable;
               syncOutputs();
             };
             addBtn.addEventListener("click", () => {
+              if (!editable) return;
               lines.push({ code: `${prefix}${lines.length + 1}`, text: "" });
               render();
             });
             render();
             return {
               getLines,
+              setEditable: (flag) => {
+                editable = !!flag;
+                render();
+              },
+              isEditable: () => !!editable,
+              setLines: (incoming) => {
+                const next = Array.isArray(incoming) ? incoming : [];
+                lines = next.length
+                  ? next.map((item, idx) => ({
+                      code: cleanCode(item?.code, idx),
+                      text: String(item?.text || ""),
+                    }))
+                  : [{ code: `${prefix}1`, text: "" }];
+                render();
+              },
+              clearLines: () => {
+                lines = [{ code: `${prefix}1`, text: "" }];
+                render();
+              },
               onChange: (handler) => {
                 onChange = typeof handler === "function" ? handler : () => {};
                 onChange(getLines());
@@ -1714,6 +2092,146 @@ EJES_ESTRATEGICOS_HTML = dedent("""
           };
           const misionComposer = setupIdentityComposer("m", "axm-mision-lines", "axm-mision-hidden", "axm-mision-full", "axm-mision-add");
           const visionComposer = setupIdentityComposer("v", "axm-vision-lines", "axm-vision-hidden", "axm-vision-full", "axm-vision-add");
+          const valoresComposer = setupIdentityComposer("val", "axm-valores-lines", "axm-valores-hidden", "axm-valores-full", "axm-valores-add");
+          const setIdentityMsg = (text, isError = false) => {
+            if (!identidadMsgEl) return;
+            identidadMsgEl.textContent = text || "";
+            identidadMsgEl.style.color = isError ? "#b91c1c" : "#0f3d2e";
+          };
+          const loadIdentityFromDb = async () => {
+            const response = await fetch("/api/strategic-identity", { method: "GET", credentials: "same-origin" });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok || data?.success === false) {
+              throw new Error(data?.error || data?.detail || "No se pudo cargar Identidad.");
+            }
+            const mission = Array.isArray(data?.data?.mision) ? data.data.mision : [];
+            const vision = Array.isArray(data?.data?.vision) ? data.data.vision : [];
+            const valores = Array.isArray(data?.data?.valores) ? data.data.valores : [];
+            if (misionComposer && mission.length) misionComposer.setLines(mission);
+            if (visionComposer && vision.length) visionComposer.setLines(vision);
+            if (valoresComposer && valores.length) valoresComposer.setLines(valores);
+          };
+          const saveIdentityBlockToDb = async (block, lines) => {
+            const response = await fetch(`/api/strategic-identity/${encodeURIComponent(block)}`, {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              credentials: "same-origin",
+              body: JSON.stringify({ lineas: Array.isArray(lines) ? lines : [] }),
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok || data?.success === false) {
+              throw new Error(data?.error || data?.detail || "No se pudo guardar Identidad.");
+            }
+          };
+          const clearIdentityBlockInDb = async (block) => {
+            const response = await fetch(`/api/strategic-identity/${encodeURIComponent(block)}`, {
+              method: "DELETE",
+              credentials: "same-origin",
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok || data?.success === false) {
+              throw new Error(data?.error || data?.detail || "No se pudo eliminar Identidad.");
+            }
+            return data;
+          };
+          loadIdentityFromDb().then(() => {
+            renderStrategicTree();
+            renderAxisEditor();
+          }).catch((err) => {
+            setIdentityMsg(err.message || "No se pudo cargar Identidad desde BD.", true);
+          });
+          misionEditBtn && misionEditBtn.addEventListener("click", () => {
+            if (!misionComposer) return;
+            misionComposer.setEditable(true);
+            setIdentityMsg("Edición habilitada en Misión.");
+          });
+          misionSaveBtn && misionSaveBtn.addEventListener("click", async () => {
+            if (!misionComposer) return;
+            try {
+              await saveIdentityBlockToDb("mision", misionComposer.getLines());
+              misionComposer.setEditable(false);
+              renderStrategicTree();
+              renderAxisEditor();
+              setIdentityMsg("Misión guardada correctamente.");
+            } catch (err) {
+              setIdentityMsg(err.message || "No se pudo guardar Misión.", true);
+            }
+          });
+          misionDeleteBtn && misionDeleteBtn.addEventListener("click", async () => {
+            if (!misionComposer) return;
+            if (!confirm("¿Está seguro de eliminar las líneas de Misión?")) return;
+            try {
+              const payload = await clearIdentityBlockInDb("mision");
+              const lines = Array.isArray(payload?.data?.lineas) ? payload.data.lineas : [];
+              misionComposer.setLines(lines);
+              misionComposer.setEditable(false);
+              renderStrategicTree();
+              renderAxisEditor();
+              setIdentityMsg("Misión eliminada.");
+            } catch (err) {
+              setIdentityMsg(err.message || "No se pudo eliminar Misión.", true);
+            }
+          });
+          visionEditBtn && visionEditBtn.addEventListener("click", () => {
+            if (!visionComposer) return;
+            visionComposer.setEditable(true);
+            setIdentityMsg("Edición habilitada en Visión.");
+          });
+          visionSaveBtn && visionSaveBtn.addEventListener("click", async () => {
+            if (!visionComposer) return;
+            try {
+              await saveIdentityBlockToDb("vision", visionComposer.getLines());
+              visionComposer.setEditable(false);
+              renderStrategicTree();
+              renderAxisEditor();
+              setIdentityMsg("Visión guardada correctamente.");
+            } catch (err) {
+              setIdentityMsg(err.message || "No se pudo guardar Visión.", true);
+            }
+          });
+          visionDeleteBtn && visionDeleteBtn.addEventListener("click", async () => {
+            if (!visionComposer) return;
+            if (!confirm("¿Está seguro de eliminar las líneas de Visión?")) return;
+            try {
+              const payload = await clearIdentityBlockInDb("vision");
+              const lines = Array.isArray(payload?.data?.lineas) ? payload.data.lineas : [];
+              visionComposer.setLines(lines);
+              visionComposer.setEditable(false);
+              renderStrategicTree();
+              renderAxisEditor();
+              setIdentityMsg("Visión eliminada.");
+            } catch (err) {
+              setIdentityMsg(err.message || "No se pudo eliminar Visión.", true);
+            }
+          });
+          valoresEditBtn && valoresEditBtn.addEventListener("click", () => {
+            if (!valoresComposer) return;
+            valoresComposer.setEditable(true);
+            setIdentityMsg("Edición habilitada en Valores.");
+          });
+          valoresSaveBtn && valoresSaveBtn.addEventListener("click", async () => {
+            if (!valoresComposer) return;
+            try {
+              await saveIdentityBlockToDb("valores", valoresComposer.getLines());
+              valoresComposer.setEditable(false);
+              setIdentityMsg("Valores guardados correctamente.");
+            } catch (err) {
+              setIdentityMsg(err.message || "No se pudo guardar Valores.", true);
+            }
+          });
+          valoresDeleteBtn && valoresDeleteBtn.addEventListener("click", async () => {
+            if (!valoresComposer) return;
+            if (!confirm("¿Está seguro de eliminar las líneas de Valores?")) return;
+            try {
+              const payload = await clearIdentityBlockInDb("valores");
+              const lines = Array.isArray(payload?.data?.lineas) ? payload.data.lineas : [];
+              valoresComposer.setLines(lines);
+              valoresComposer.setEditable(false);
+              setIdentityMsg("Valores eliminados.");
+            } catch (err) {
+              setIdentityMsg(err.message || "No se pudo eliminar Valores.", true);
+            }
+          });
           const applyTabView = (tabKey) => {
             const showIdentidad = tabKey === "identidad";
             const showEjes = tabKey === "ejes";
@@ -1776,6 +2294,16 @@ EJES_ESTRATEGICOS_HTML = dedent("""
           const objStartEl = document.getElementById("axm-obj-start");
           const objEndEl = document.getElementById("axm-obj-end");
           const objDescEl = document.getElementById("axm-obj-desc");
+          const kpiNameEl = document.getElementById("axm-kpi-name");
+          const kpiPurposeEl = document.getElementById("axm-kpi-purpose");
+          const kpiFormulaEl = document.getElementById("axm-kpi-formula");
+          const kpiPeriodicityEl = document.getElementById("axm-kpi-periodicity");
+          const kpiStandardEl = document.getElementById("axm-kpi-standard");
+          const kpiReferenceEl = document.getElementById("axm-kpi-reference");
+          const kpiAddBtn = document.getElementById("axm-kpi-add");
+          const kpiCancelBtn = document.getElementById("axm-kpi-cancel");
+          const kpiListEl = document.getElementById("axm-kpi-list");
+          const kpiMsgEl = document.getElementById("axm-kpi-msg");
           const objActsListEl = document.getElementById("axm-obj-acts-list");
           const msgEl = document.getElementById("axm-msg");
           const axisMsgEl = document.getElementById("axm-axis-msg");
@@ -1798,6 +2326,7 @@ EJES_ESTRATEGICOS_HTML = dedent("""
           let strategicTreeLibPromise = null;
           let selectedAxisId = null;
           let selectedObjectiveId = null;
+          let editingKpiIndex = -1;
           const toId = (value) => {
             const n = Number(value);
             return Number.isFinite(n) ? n : null;
@@ -2179,7 +2708,7 @@ EJES_ESTRATEGICOS_HTML = dedent("""
                 .compactMarginPair(() => 80)
                 .linkYOffset(18)
                 .setActiveNodeCentered(false)
-                .initialExpandLevel(1)
+                .initialExpandLevel(99)
                 .compact(false)
                 .onNodeClick(async (d) => {
                   const data = d?.data || {};
@@ -2254,7 +2783,7 @@ EJES_ESTRATEGICOS_HTML = dedent("""
                     <div class="oc-card" data-status="${status}">
                       <div class="oc-top">
                         <div class="oc-title">
-                          <div class="oc-name">${escapeHtml(data.title || "Área / Puesto")}</div>
+                          <div class="oc-name" style="color:#0f172a;">${escapeHtml(data.title || "Área / Puesto")}</div>
                           <div class="oc-sub">
                             <span class="oc-pill">${typeBadge}</span>
                             ${owner}
@@ -2264,13 +2793,14 @@ EJES_ESTRATEGICOS_HTML = dedent("""
                       </div>
                       <div class="oc-progress"><div class="oc-fill" style="width:${progress}%; background:${grad};"></div></div>
                       <div class="oc-bottom">
-                        <div class="oc-status">${statusLabel(status)}</div>
+                        <div class="oc-status" style="color:${status === "danger" ? "#ef4444" : (status === "warning" ? "#f59e0b" : "#16a34a")};">${statusLabel(status)}</div>
                         <div class="oc-kpis">${k1}${k2}</div>
                       </div>
                     </div>
                   `;
                 })
                 .render();
+              if (strategicTreeChart && typeof strategicTreeChart.expandAll === "function") strategicTreeChart.expandAll();
               if (strategicTreeChart && typeof strategicTreeChart.fit === "function") strategicTreeChart.fit();
             });
           };
@@ -2384,6 +2914,128 @@ EJES_ESTRATEGICOS_HTML = dedent("""
             const axis = selectedAxis();
             if (!axis) return null;
             return (axis.objetivos || []).find((obj) => obj.id === selectedObjectiveId) || null;
+          };
+          const KPI_STANDARD_VALUES = ["mayor", "menor", "entre", "igual"];
+          const normalizeObjectiveKpis = (rows) => {
+            const list = Array.isArray(rows) ? rows : [];
+            return list
+              .filter((item) => item && typeof item === "object")
+              .map((item) => {
+                const estandarRaw = String(item.estandar || "").trim().toLowerCase();
+                return {
+                  nombre: String(item.nombre || "").trim(),
+                  proposito: String(item.proposito || "").trim(),
+                  formula: String(item.formula || "").trim(),
+                  periodicidad: String(item.periodicidad || "").trim(),
+                  estandar: KPI_STANDARD_VALUES.includes(estandarRaw) ? estandarRaw : "",
+                  referencia: String(item.referencia || "").trim(),
+                };
+              })
+              .filter((item) => item.nombre);
+          };
+          const setKpiMsg = (text, isError = false) => {
+            if (!kpiMsgEl) return;
+            kpiMsgEl.style.color = isError ? "#b91c1c" : "#64748b";
+            kpiMsgEl.textContent = text || "";
+          };
+          const clearKpiForm = () => {
+            if (kpiNameEl) kpiNameEl.value = "";
+            if (kpiPurposeEl) kpiPurposeEl.value = "";
+            if (kpiFormulaEl) kpiFormulaEl.value = "";
+            if (kpiPeriodicityEl) kpiPeriodicityEl.value = "";
+            if (kpiStandardEl) kpiStandardEl.value = "";
+            if (kpiReferenceEl) kpiReferenceEl.value = "";
+            editingKpiIndex = -1;
+            if (kpiAddBtn) kpiAddBtn.textContent = "Agregar KPI";
+            setKpiMsg("");
+          };
+          const readKpiForm = () => {
+            const nombre = kpiNameEl && kpiNameEl.value ? kpiNameEl.value.trim() : "";
+            const proposito = kpiPurposeEl && kpiPurposeEl.value ? kpiPurposeEl.value.trim() : "";
+            const formula = kpiFormulaEl && kpiFormulaEl.value ? kpiFormulaEl.value.trim() : "";
+            const periodicidad = kpiPeriodicityEl && kpiPeriodicityEl.value ? kpiPeriodicityEl.value.trim() : "";
+            const estandar = kpiStandardEl && kpiStandardEl.value ? String(kpiStandardEl.value).trim().toLowerCase() : "";
+            const referencia = kpiReferenceEl && kpiReferenceEl.value ? kpiReferenceEl.value.trim() : "";
+            if (!nombre) {
+              setKpiMsg("El nombre del KPI es obligatorio.", true);
+              return null;
+            }
+            if (estandar && !KPI_STANDARD_VALUES.includes(estandar)) {
+              setKpiMsg("El estándar del KPI no es válido.", true);
+              return null;
+            }
+            if (estandar && !referencia) {
+              setKpiMsg("Captura la referencia del estándar (ej. 8%).", true);
+              return null;
+            }
+            return { nombre, proposito, formula, periodicidad, estandar, referencia };
+          };
+          const editKpiAt = (index) => {
+            const objective = selectedObjective();
+            const list = normalizeObjectiveKpis(objective?.kpis || []);
+            if (!objective || index < 0 || index >= list.length) return;
+            const item = list[index];
+            if (kpiNameEl) kpiNameEl.value = item.nombre || "";
+            if (kpiPurposeEl) kpiPurposeEl.value = item.proposito || "";
+            if (kpiFormulaEl) kpiFormulaEl.value = item.formula || "";
+            if (kpiPeriodicityEl) kpiPeriodicityEl.value = item.periodicidad || "";
+            if (kpiStandardEl) kpiStandardEl.value = item.estandar || "";
+            if (kpiReferenceEl) kpiReferenceEl.value = item.referencia || "";
+            editingKpiIndex = index;
+            if (kpiAddBtn) kpiAddBtn.textContent = "Actualizar KPI";
+            setKpiMsg("Editando KPI seleccionado.");
+          };
+          const deleteKpiAt = (index) => {
+            const objective = selectedObjective();
+            if (!objective) return;
+            const list = normalizeObjectiveKpis(objective.kpis || []);
+            if (index < 0 || index >= list.length) return;
+            list.splice(index, 1);
+            objective.kpis = list;
+            clearKpiForm();
+            renderObjectiveKpisPanel();
+            setKpiMsg("KPI eliminado del objetivo.");
+          };
+          const renderObjectiveKpisPanel = () => {
+            if (!kpiListEl) return;
+            const objective = selectedObjective();
+            if (!objective) {
+              kpiListEl.innerHTML = '<div class="axm-axis-meta">Selecciona un objetivo para gestionar KPIs.</div>';
+              clearKpiForm();
+              return;
+            }
+            objective.kpis = normalizeObjectiveKpis(objective.kpis || []);
+            const list = objective.kpis;
+            if (!list.length) {
+              kpiListEl.innerHTML = '<div class="axm-axis-meta">Sin KPIs registrados para este objetivo.</div>';
+            } else {
+              kpiListEl.innerHTML = list.map((item, idx) => `
+                <article class="axm-kpi-item">
+                  <div class="axm-kpi-item-head">
+                    <h5>${escapeHtml(item.nombre || "KPI")}</h5>
+                    <div class="axm-kpi-item-actions">
+                      <button type="button" class="axm-kpi-btn" data-kpi-edit="${idx}">Editar</button>
+                      <button type="button" class="axm-kpi-btn danger" data-kpi-delete="${idx}">Eliminar</button>
+                    </div>
+                  </div>
+                  <div class="axm-kpi-item-meta">Propósito: ${escapeHtml(item.proposito || "N/D")}</div>
+                  <div class="axm-kpi-item-meta">Fórmula: ${escapeHtml(item.formula || "N/D")}</div>
+                  <div class="axm-kpi-item-meta">Periodicidad: ${escapeHtml(item.periodicidad || "N/D")} · Estándar: ${escapeHtml(item.estandar ? `${item.estandar} a ${item.referencia || "N/D"}` : "N/D")}</div>
+                </article>
+              `).join("");
+            }
+            kpiListEl.querySelectorAll("[data-kpi-edit]").forEach((button) => {
+              button.addEventListener("click", () => {
+                const idx = Number(button.getAttribute("data-kpi-edit"));
+                editKpiAt(Number.isFinite(idx) ? idx : -1);
+              });
+            });
+            kpiListEl.querySelectorAll("[data-kpi-delete]").forEach((button) => {
+              button.addEventListener("click", () => {
+                const idx = Number(button.getAttribute("data-kpi-delete"));
+                deleteKpiAt(Number.isFinite(idx) ? idx : -1);
+              });
+            });
           };
           const visualRangeError = (start, end, label) => {
             if (!start && !end) return "";
@@ -2614,6 +3266,7 @@ EJES_ESTRATEGICOS_HTML = dedent("""
               if (objStartEl) objStartEl.value = "";
               if (objEndEl) objEndEl.value = "";
               renderCollaboratorOptions("");
+              renderObjectiveKpisPanel();
               renderObjectiveActivitiesPanel();
               if (objListEl) objListEl.innerHTML = '<div class="axm-axis-meta">Selecciona un eje en la columna izquierda.</div>';
               return;
@@ -2623,7 +3276,8 @@ EJES_ESTRATEGICOS_HTML = dedent("""
             }
             objListEl.innerHTML = (axis.objetivos || []).map((obj) => `
               <button class="axm-obj-btn ${obj.id === selectedObjectiveId ? "active" : ""}" type="button" data-obj-id="${obj.id}">
-                <strong>${obj.codigo || "OBJ"} - ${obj.nombre || "Sin nombre"}</strong>
+                <strong>${obj.nombre || "Sin nombre"}</strong>
+                <div class="axm-obj-code">${obj.codigo || "OBJ"}</div>
                 <div class="axm-obj-sub">Hito: ${obj.hito || "N/D"} · Avance: ${Number(obj.avance || 0)}% · Fecha inicial: ${obj.fecha_inicial || "N/D"} · Fecha final: ${obj.fecha_final || "N/D"}</div>
               </button>
             `).join("");
@@ -2646,6 +3300,7 @@ EJES_ESTRATEGICOS_HTML = dedent("""
             if (objStartEl) objStartEl.value = objective.fecha_inicial || "";
             if (objEndEl) objEndEl.value = objective.fecha_final || "";
             renderCollaboratorOptions(objective.lider || "");
+            renderObjectiveKpisPanel();
             renderObjectiveActivitiesPanel();
           };
 
@@ -2664,6 +3319,9 @@ EJES_ESTRATEGICOS_HTML = dedent("""
           });
           if (visionComposer) visionComposer.onChange(() => {
             renderStrategicTree();
+            renderAxisEditor();
+          });
+          if (valoresComposer) valoresComposer.onChange(() => {
             renderAxisEditor();
           });
           document.querySelectorAll("[data-axis-tab]").forEach((tabBtn) => {
@@ -2685,6 +3343,29 @@ EJES_ESTRATEGICOS_HTML = dedent("""
               const panelItem = document.querySelector(`[data-obj-panel="${tabKey}"]`);
               if (panelItem) panelItem.classList.add("active");
             });
+          });
+          kpiAddBtn && kpiAddBtn.addEventListener("click", () => {
+            const objective = selectedObjective();
+            if (!objective) {
+              setKpiMsg("Selecciona un objetivo para agregar KPIs.", true);
+              return;
+            }
+            const item = readKpiForm();
+            if (!item) return;
+            const list = normalizeObjectiveKpis(objective.kpis || []);
+            if (editingKpiIndex >= 0 && editingKpiIndex < list.length) {
+              list[editingKpiIndex] = item;
+            } else {
+              list.push(item);
+            }
+            objective.kpis = list;
+            renderObjectiveKpisPanel();
+            clearKpiForm();
+            setKpiMsg("KPI listo. Guarda el objetivo para persistir en base de datos.");
+          });
+          kpiCancelBtn && kpiCancelBtn.addEventListener("click", () => {
+            clearKpiForm();
+            setKpiMsg("Edición de KPI cancelada.");
           });
 
           const loadAxes = async () => {
@@ -2885,6 +3566,7 @@ EJES_ESTRATEGICOS_HTML = dedent("""
               fecha_inicial: objStartEl && objStartEl.value ? objStartEl.value : "",
               fecha_final: objEndEl && objEndEl.value ? objEndEl.value : "",
               descripcion: objDescEl && objDescEl.value ? objDescEl.value.trim() : "",
+              kpis: normalizeObjectiveKpis(objective.kpis || []),
               orden: objectivePosition(objective),
             };
             if (!body.nombre) {
@@ -4470,8 +5152,8 @@ def ejes_estrategicos_page(request: Request):
     _bind_core_symbols()
     return render_backend_page(
         request,
-        title="Ejes estratégicos",
-        description="Edición y administración de ejes y objetivos estratégicos.",
+        title="Plan estratégico",
+        description="Edición y administración del plan estratégico de la institución",
         content=EJES_ESTRATEGICOS_HTML,
         hide_floating_actions=True,
         show_page_header=True,
@@ -4868,6 +5550,116 @@ async def import_strategic_poa_csv(file: UploadFile = File(...)):
         db.close()
 
 
+@router.get("/api/strategic-identity")
+def get_strategic_identity():
+    _bind_core_symbols()
+    db = SessionLocal()
+    try:
+        _ensure_strategic_identity_table(db)
+        db.commit()
+        rows = db.execute(
+            text("SELECT bloque, payload FROM strategic_identity_config WHERE bloque IN ('mision', 'vision', 'valores')")
+        ).fetchall()
+        payload_map = {str(row[0] or "").strip().lower(): str(row[1] or "[]") for row in rows}
+        mission_raw = payload_map.get("mision", "[]")
+        vision_raw = payload_map.get("vision", "[]")
+        valores_raw = payload_map.get("valores", "[]")
+        try:
+            mission_json = json.loads(mission_raw)
+        except Exception:
+            mission_json = []
+        try:
+            vision_json = json.loads(vision_raw)
+        except Exception:
+            vision_json = []
+        try:
+            valores_json = json.loads(valores_raw)
+        except Exception:
+            valores_json = []
+        return JSONResponse(
+            {
+                "success": True,
+                "data": {
+                    "mision": _normalize_identity_lines(mission_json, "m"),
+                    "vision": _normalize_identity_lines(vision_json, "v"),
+                    "valores": _normalize_identity_lines(valores_json, "val"),
+                },
+            }
+        )
+    finally:
+        db.close()
+
+
+@router.put("/api/strategic-identity/{bloque}")
+def save_strategic_identity_block(bloque: str, data: dict = Body(...)):
+    _bind_core_symbols()
+    block = str(bloque or "").strip().lower()
+    if block not in {"mision", "vision", "valores"}:
+        return JSONResponse({"success": False, "error": "Bloque inválido"}, status_code=400)
+    prefix = "m" if block == "mision" else ("v" if block == "vision" else "val")
+    lines = _normalize_identity_lines(data.get("lineas"), prefix)
+    encoded = json.dumps(lines, ensure_ascii=False)
+    db = SessionLocal()
+    try:
+        _ensure_strategic_identity_table(db)
+        db.execute(
+            text(
+                """
+                INSERT INTO strategic_identity_config (bloque, payload, updated_at)
+                VALUES (:bloque, :payload, CURRENT_TIMESTAMP)
+                ON CONFLICT (bloque)
+                DO UPDATE SET payload = EXCLUDED.payload, updated_at = CURRENT_TIMESTAMP
+                """
+            ),
+            {"bloque": block, "payload": encoded},
+        )
+        db.commit()
+        return JSONResponse({"success": True, "data": {"bloque": block, "lineas": lines}})
+    except (sqlite3.OperationalError, SQLAlchemyError):
+        db.rollback()
+        return JSONResponse(
+            {"success": False, "error": "No se pudo escribir en la base de datos (modo solo lectura o bloqueo)."},
+            status_code=500,
+        )
+    finally:
+        db.close()
+
+
+@router.delete("/api/strategic-identity/{bloque}")
+def clear_strategic_identity_block(bloque: str):
+    _bind_core_symbols()
+    block = str(bloque or "").strip().lower()
+    if block not in {"mision", "vision", "valores"}:
+        return JSONResponse({"success": False, "error": "Bloque inválido"}, status_code=400)
+    prefix = "m" if block == "mision" else ("v" if block == "vision" else "val")
+    lines = _normalize_identity_lines([], prefix)
+    encoded = json.dumps(lines, ensure_ascii=False)
+    db = SessionLocal()
+    try:
+        _ensure_strategic_identity_table(db)
+        db.execute(
+            text(
+                """
+                INSERT INTO strategic_identity_config (bloque, payload, updated_at)
+                VALUES (:bloque, :payload, CURRENT_TIMESTAMP)
+                ON CONFLICT (bloque)
+                DO UPDATE SET payload = EXCLUDED.payload, updated_at = CURRENT_TIMESTAMP
+                """
+            ),
+            {"bloque": block, "payload": encoded},
+        )
+        db.commit()
+        return JSONResponse({"success": True, "data": {"bloque": block, "lineas": lines}})
+    except (sqlite3.OperationalError, SQLAlchemyError):
+        db.rollback()
+        return JSONResponse(
+            {"success": False, "error": "No se pudo escribir en la base de datos (modo solo lectura o bloqueo)."},
+            status_code=500,
+        )
+    finally:
+        db.close()
+
+
 @router.get("/api/strategic-axes")
 def list_strategic_axes(request: Request):
     _bind_core_symbols()
@@ -4887,6 +5679,11 @@ def list_strategic_axes(request: Request):
                 if obj_id:
                     objective_ids.append(obj_id)
         objective_ids = sorted(set(objective_ids))
+        kpis_by_objective = _kpis_by_objective_ids(db, objective_ids)
+        for axis_data in payload_axes:
+            for obj in axis_data.get("objetivos", []):
+                obj_id = int(obj.get("id") or 0)
+                obj["kpis"] = kpis_by_objective.get(obj_id, [])
         activities = (
             db.query(POAActivity)
             .filter(POAActivity.objective_id.in_(objective_ids))
@@ -5166,6 +5963,9 @@ def create_strategic_objective(axis_id: int, data: dict = Body(...)):
         db.add(objective)
         db.commit()
         db.refresh(objective)
+        if "kpis" in data:
+            _replace_objective_kpis(db, int(objective.id), data.get("kpis"))
+            db.commit()
         return JSONResponse({"success": True, "data": _serialize_strategic_objective(objective)})
     except (sqlite3.OperationalError, SQLAlchemyError):
         db.rollback()
@@ -5225,6 +6025,8 @@ def update_strategic_objective(objective_id: int, data: dict = Body(...)):
         objective.descripcion = (data.get("descripcion") or "").strip()
         objective.orden = objective_order
         db.add(objective)
+        if "kpis" in data:
+            _replace_objective_kpis(db, int(objective.id), data.get("kpis"))
         db.commit()
         db.refresh(objective)
         return JSONResponse({"success": True, "data": _serialize_strategic_objective(objective)})
@@ -5240,6 +6042,7 @@ def delete_strategic_objective(objective_id: int):
         objective = db.query(StrategicObjectiveConfig).filter(StrategicObjectiveConfig.id == objective_id).first()
         if not objective:
             return JSONResponse({"success": False, "error": "Objetivo no encontrado"}, status_code=404)
+        _delete_objective_kpis(db, int(objective.id))
         db.delete(objective)
         db.commit()
         return JSONResponse({"success": True})
