@@ -300,6 +300,341 @@ def _delete_objective_kpis(db, objective_id: int) -> None:
     _ensure_objective_kpi_table(db)
     db.execute(text("DELETE FROM strategic_objective_kpis WHERE objective_id = :oid"), {"oid": int(objective_id)})
 
+
+def _ensure_objective_milestone_table(db) -> None:
+    db.execute(
+        text(
+            """
+            CREATE TABLE IF NOT EXISTS strategic_objective_milestones (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              objective_id INTEGER NOT NULL,
+              nombre VARCHAR(255) NOT NULL DEFAULT '',
+              logrado INTEGER NOT NULL DEFAULT 0,
+              fecha_realizacion DATE,
+              orden INTEGER NOT NULL DEFAULT 0
+            )
+            """
+        )
+    )
+    try:
+        cols = db.execute(text("PRAGMA table_info(strategic_objective_milestones)")).fetchall()
+        col_names = {str(col[1]).strip().lower() for col in cols if len(col) > 1}
+        if "logrado" not in col_names:
+            db.execute(
+                text(
+                    "ALTER TABLE strategic_objective_milestones ADD COLUMN logrado INTEGER NOT NULL DEFAULT 0"
+                )
+            )
+        if "fecha_realizacion" not in col_names:
+            db.execute(
+                text(
+                    "ALTER TABLE strategic_objective_milestones ADD COLUMN fecha_realizacion DATE"
+                )
+            )
+    except Exception:
+        pass
+
+
+def _normalize_milestone_items(raw: Any) -> List[Dict[str, Any]]:
+    rows = raw if isinstance(raw, list) else []
+    cleaned: List[Dict[str, Any]] = []
+    for idx, item in enumerate(rows, start=1):
+        if isinstance(item, dict):
+            nombre = str(item.get("nombre") or item.get("text") or "").strip()
+            logrado = bool(item.get("logrado"))
+            fecha_realizacion = str(item.get("fecha_realizacion") or "").strip()
+        else:
+            nombre = str(item or "").strip()
+            logrado = False
+            fecha_realizacion = ""
+        if not nombre:
+            continue
+        cleaned.append({"nombre": nombre, "logrado": logrado, "fecha_realizacion": fecha_realizacion, "orden": idx})
+    return cleaned
+
+
+def _milestones_by_objective_ids(db, objective_ids: List[int]) -> Dict[int, List[Dict[str, Any]]]:
+    result: Dict[int, List[Dict[str, Any]]] = {}
+    if not objective_ids:
+        return result
+    _ensure_objective_milestone_table(db)
+    db.commit()
+    placeholders = ", ".join([f":id_{idx}" for idx, _ in enumerate(objective_ids)])
+    sql = text(
+        f"""
+        SELECT id, objective_id, nombre, logrado, fecha_realizacion, orden
+        FROM strategic_objective_milestones
+        WHERE objective_id IN ({placeholders})
+        ORDER BY objective_id ASC, orden ASC, id ASC
+        """
+    )
+    params = {f"id_{idx}": int(obj_id) for idx, obj_id in enumerate(objective_ids)}
+    rows = db.execute(sql, params).fetchall()
+    for row in rows:
+        objective_id = int(row[1] or 0)
+        if objective_id <= 0:
+            continue
+        result.setdefault(objective_id, []).append(
+            {
+                "id": int(row[0] or 0),
+                "nombre": str(row[2] or ""),
+                "logrado": bool(row[3]),
+                "fecha_realizacion": str(row[4] or ""),
+                "orden": int(row[5] or 0),
+            }
+        )
+    return result
+
+
+def _replace_objective_milestones(db, objective_id: int, items: Any) -> List[Dict[str, Any]]:
+    clean = _normalize_milestone_items(items)
+    _ensure_objective_milestone_table(db)
+    db.execute(text("DELETE FROM strategic_objective_milestones WHERE objective_id = :oid"), {"oid": int(objective_id)})
+    for item in clean:
+        db.execute(
+            text(
+                """
+                INSERT INTO strategic_objective_milestones (objective_id, nombre, logrado, fecha_realizacion, orden)
+                VALUES (:objective_id, :nombre, :logrado, :fecha_realizacion, :orden)
+                """
+            ),
+            {
+                "objective_id": int(objective_id),
+                "nombre": item["nombre"],
+                "logrado": 1 if item.get("logrado") else 0,
+                "fecha_realizacion": item.get("fecha_realizacion") or None,
+                "orden": int(item["orden"]),
+            },
+        )
+    return clean
+
+
+def _delete_objective_milestones(db, objective_id: int) -> None:
+    _ensure_objective_milestone_table(db)
+    db.execute(text("DELETE FROM strategic_objective_milestones WHERE objective_id = :oid"), {"oid": int(objective_id)})
+
+
+def _ensure_poa_budget_table(db) -> None:
+    db.execute(
+        text(
+            """
+            CREATE TABLE IF NOT EXISTS poa_activity_budgets (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              activity_id INTEGER NOT NULL,
+              tipo VARCHAR(120) NOT NULL DEFAULT '',
+              rubro VARCHAR(255) NOT NULL DEFAULT '',
+              mensual NUMERIC NOT NULL DEFAULT 0,
+              anual NUMERIC NOT NULL DEFAULT 0,
+              autorizado INTEGER NOT NULL DEFAULT 0,
+              orden INTEGER NOT NULL DEFAULT 0
+            )
+            """
+        )
+    )
+
+
+def _to_budget_amount(value: Any) -> float:
+    raw = str(value or "").strip().replace(",", "")
+    if not raw:
+        return 0.0
+    try:
+        num = float(raw)
+    except (TypeError, ValueError):
+        return 0.0
+    if num < 0:
+        return 0.0
+    return round(num, 2)
+
+
+def _normalize_budget_items(raw: Any) -> List[Dict[str, Any]]:
+    allowed_types = {
+        "Sueldos y similares",
+        "Honorarios",
+        "Gastos de promoción y publicidad",
+        "Gastos no deducibles",
+        "Gastos en tecnologia",
+        "Otros gastos de administración y promoción",
+    }
+    rows = raw if isinstance(raw, list) else []
+    cleaned: List[Dict[str, Any]] = []
+    for idx, item in enumerate(rows, start=1):
+        if not isinstance(item, dict):
+            continue
+        tipo = str(item.get("tipo") or "").strip()
+        rubro = str(item.get("rubro") or "").strip()
+        if not tipo or tipo not in allowed_types:
+            continue
+        if not rubro:
+            continue
+        mensual = _to_budget_amount(item.get("mensual"))
+        anual = _to_budget_amount(item.get("anual"))
+        cleaned.append(
+            {
+                "tipo": tipo,
+                "rubro": rubro,
+                "mensual": mensual,
+                "anual": anual,
+                "autorizado": bool(item.get("autorizado")),
+                "orden": idx,
+            }
+        )
+    return cleaned
+
+
+def _budgets_by_activity_ids(db, activity_ids: List[int]) -> Dict[int, List[Dict[str, Any]]]:
+    result: Dict[int, List[Dict[str, Any]]] = {}
+    if not activity_ids:
+        return result
+    _ensure_poa_budget_table(db)
+    db.commit()
+    placeholders = ", ".join([f":id_{idx}" for idx, _ in enumerate(activity_ids)])
+    sql = text(
+        f"""
+        SELECT id, activity_id, tipo, rubro, mensual, anual, autorizado, orden
+        FROM poa_activity_budgets
+        WHERE activity_id IN ({placeholders})
+        ORDER BY activity_id ASC, orden ASC, id ASC
+        """
+    )
+    params = {f"id_{idx}": int(activity_id) for idx, activity_id in enumerate(activity_ids)}
+    rows = db.execute(sql, params).fetchall()
+    for row in rows:
+        activity_id = int(row[1] or 0)
+        if activity_id <= 0:
+            continue
+        result.setdefault(activity_id, []).append(
+            {
+                "id": int(row[0] or 0),
+                "tipo": str(row[2] or ""),
+                "rubro": str(row[3] or ""),
+                "mensual": float(row[4] or 0),
+                "anual": float(row[5] or 0),
+                "autorizado": bool(row[6]),
+                "orden": int(row[7] or 0),
+            }
+        )
+    return result
+
+
+def _replace_activity_budgets(db, activity_id: int, items: Any) -> List[Dict[str, Any]]:
+    clean = _normalize_budget_items(items)
+    _ensure_poa_budget_table(db)
+    db.execute(text("DELETE FROM poa_activity_budgets WHERE activity_id = :aid"), {"aid": int(activity_id)})
+    for item in clean:
+        db.execute(
+            text(
+                """
+                INSERT INTO poa_activity_budgets (
+                  activity_id, tipo, rubro, mensual, anual, autorizado, orden
+                ) VALUES (
+                  :activity_id, :tipo, :rubro, :mensual, :anual, :autorizado, :orden
+                )
+                """
+            ),
+            {
+                "activity_id": int(activity_id),
+                "tipo": item["tipo"],
+                "rubro": item["rubro"],
+                "mensual": float(item["mensual"]),
+                "anual": float(item["anual"]),
+                "autorizado": 1 if item.get("autorizado") else 0,
+                "orden": int(item["orden"]),
+            },
+        )
+    return clean
+
+
+def _delete_activity_budgets(db, activity_id: int) -> None:
+    _ensure_poa_budget_table(db)
+    db.execute(text("DELETE FROM poa_activity_budgets WHERE activity_id = :aid"), {"aid": int(activity_id)})
+
+
+def _ensure_activity_milestone_link_table(db) -> None:
+    db.execute(
+        text(
+            """
+            CREATE TABLE IF NOT EXISTS poa_activity_milestone_links (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              activity_id INTEGER NOT NULL,
+              milestone_id INTEGER NOT NULL,
+              orden INTEGER NOT NULL DEFAULT 0
+            )
+            """
+        )
+    )
+
+
+def _normalize_impacted_milestone_ids(raw: Any) -> List[int]:
+    rows = raw if isinstance(raw, list) else []
+    clean: List[int] = []
+    for value in rows:
+        try:
+            milestone_id = int(value)
+        except (TypeError, ValueError):
+            continue
+        if milestone_id > 0 and milestone_id not in clean:
+            clean.append(milestone_id)
+    return clean
+
+
+def _activity_milestones_by_activity_ids(db, activity_ids: List[int]) -> Dict[int, List[Dict[str, Any]]]:
+    result: Dict[int, List[Dict[str, Any]]] = {}
+    if not activity_ids:
+        return result
+    _ensure_objective_milestone_table(db)
+    _ensure_activity_milestone_link_table(db)
+    db.commit()
+    placeholders = ", ".join([f":id_{idx}" for idx, _ in enumerate(activity_ids)])
+    sql = text(
+        f"""
+        SELECT l.activity_id, m.id, m.nombre, l.orden
+        FROM poa_activity_milestone_links l
+        JOIN strategic_objective_milestones m ON m.id = l.milestone_id
+        WHERE l.activity_id IN ({placeholders})
+        ORDER BY l.activity_id ASC, l.orden ASC, l.id ASC
+        """
+    )
+    params = {f"id_{idx}": int(activity_id) for idx, activity_id in enumerate(activity_ids)}
+    rows = db.execute(sql, params).fetchall()
+    for row in rows:
+        activity_id = int(row[0] or 0)
+        if activity_id <= 0:
+            continue
+        result.setdefault(activity_id, []).append(
+            {
+                "id": int(row[1] or 0),
+                "nombre": str(row[2] or ""),
+                "orden": int(row[3] or 0),
+            }
+        )
+    return result
+
+
+def _replace_activity_milestone_links(db, activity_id: int, milestone_ids: Any) -> List[int]:
+    clean_ids = _normalize_impacted_milestone_ids(milestone_ids)
+    _ensure_activity_milestone_link_table(db)
+    db.execute(text("DELETE FROM poa_activity_milestone_links WHERE activity_id = :aid"), {"aid": int(activity_id)})
+    for idx, milestone_id in enumerate(clean_ids, start=1):
+        db.execute(
+            text(
+                """
+                INSERT INTO poa_activity_milestone_links (activity_id, milestone_id, orden)
+                VALUES (:activity_id, :milestone_id, :orden)
+                """
+            ),
+            {
+                "activity_id": int(activity_id),
+                "milestone_id": int(milestone_id),
+                "orden": idx,
+            },
+        )
+    return clean_ids
+
+
+def _delete_activity_milestone_links(db, activity_id: int) -> None:
+    _ensure_activity_milestone_link_table(db)
+    db.execute(text("DELETE FROM poa_activity_milestone_links WHERE activity_id = :aid"), {"aid": int(activity_id)})
+
 STRATEGIC_POA_CSV_HEADERS = [
     "tipo_registro",
     "axis_codigo",
@@ -473,7 +808,12 @@ def _serialize_poa_subactivity(item: POASubactivity) -> Dict[str, Any]:
     }
 
 
-def _serialize_poa_activity(item: POAActivity, subactivities: List[POASubactivity]) -> Dict[str, Any]:
+def _serialize_poa_activity(
+    item: POAActivity,
+    subactivities: List[POASubactivity],
+    budget_items: List[Dict[str, Any]] | None = None,
+    hitos_impacta: List[Dict[str, Any]] | None = None,
+) -> Dict[str, Any]:
     _bind_core_symbols()
     today = datetime.utcnow().date()
     if subactivities:
@@ -503,6 +843,8 @@ def _serialize_poa_activity(item: POAActivity, subactivities: List[POASubactivit
         "entrega_aprobada_at": item.entrega_aprobada_at.isoformat() if item.entrega_aprobada_at else "",
         "created_by": item.created_by or "",
         "descripcion": item.descripcion or "",
+        "budget_items": budget_items or [],
+        "hitos_impacta": hitos_impacta or [],
         "subactivities": [
             _serialize_poa_subactivity(sub)
             for sub in sorted(subactivities, key=lambda x: ((x.nivel or 1), x.id or 0))
@@ -803,6 +1145,60 @@ EJES_ESTRATEGICOS_HTML = dedent("""
           display: flex;
           gap: 12px;
           flex-wrap: wrap;
+        }
+        .axm-track-hitos{
+          margin-top: 10px;
+          border: 1px solid rgba(148,163,184,.24);
+          border-radius: 10px;
+          background: rgba(248,250,252,.82);
+          padding: 10px;
+          display: grid;
+          grid-template-columns: auto 1fr;
+          gap: 12px;
+          align-items: center;
+        }
+        .axm-track-hitos-chart{
+          width: 76px;
+          height: 76px;
+          border-radius: 50%;
+          border: 1px solid rgba(148,163,184,.25);
+          display: grid;
+          place-items: center;
+          color: #0f172a;
+          font-weight: 800;
+          font-size: 15px;
+          background: #fff;
+        }
+        .axm-track-hitos-chart span{
+          width: 50px;
+          height: 50px;
+          border-radius: 50%;
+          display: grid;
+          place-items: center;
+          background: #fff;
+          border: 1px solid rgba(226,232,240,.92);
+          box-shadow: inset 0 0 0 1px rgba(148,163,184,.18);
+        }
+        .axm-track-hitos-info{
+          display: grid;
+          gap: 5px;
+        }
+        .axm-track-hitos-title{
+          font-size: 12px;
+          color: #475569;
+          text-transform: uppercase;
+          letter-spacing: .03em;
+          font-weight: 700;
+        }
+        .axm-track-hitos-values{
+          display:flex;
+          gap:10px;
+          flex-wrap:wrap;
+          font-size: 12px;
+          color:#334155;
+        }
+        .axm-track-hitos-values b{
+          color:#0f172a;
         }
         .axm-grid{
           display:grid;
@@ -1306,6 +1702,62 @@ EJES_ESTRATEGICOS_HTML = dedent("""
           margin-bottom: 8px;
           color: #475569;
           font-size: 12px;
+        }
+        .axm-gantt-controls{
+          display:flex;
+          gap:10px;
+          align-items:flex-start;
+          justify-content:space-between;
+          flex-wrap:wrap;
+          margin-bottom:10px;
+        }
+        .axm-gantt-actions{
+          display:inline-flex;
+          gap:8px;
+          align-items:center;
+          flex-wrap:wrap;
+        }
+        .axm-gantt-action{
+          border:1px solid rgba(15,23,42,.2);
+          background:#0f172a;
+          color:#fff;
+          border-radius:999px;
+          padding:6px 12px;
+          font-size:12px;
+          cursor:pointer;
+          transition:transform .14s ease, opacity .14s ease;
+        }
+        .axm-gantt-action:hover{
+          transform:scale(1.04);
+          opacity:.92;
+        }
+        .axm-gantt-blocks{
+          display:flex;
+          gap:8px;
+          align-items:center;
+          flex-wrap:wrap;
+        }
+        .axm-gantt-block{
+          display:inline-flex;
+          align-items:center;
+          gap:6px;
+          border:1px solid rgba(148,163,184,.34);
+          border-radius:999px;
+          padding:5px 9px;
+          background:#fff;
+          color:#334155;
+          font-size:12px;
+          cursor:pointer;
+          user-select:none;
+        }
+        .axm-gantt-block input{
+          accent-color:#0f3d2e;
+          cursor:pointer;
+        }
+        .axm-gantt-block code{
+          font-style:italic;
+          color:#0f3d2e;
+          background:transparent;
         }
         .axm-gantt-chip{
           display: inline-flex;
@@ -1890,6 +2342,13 @@ EJES_ESTRATEGICOS_HTML = dedent("""
               <span class="axm-gantt-chip"><span class="axm-gantt-dot" style="background:#2563eb;"></span>Objetivo estratégico</span>
               <span class="axm-gantt-chip"><span class="axm-gantt-dot" style="background:#ef4444;"></span>Hoy</span>
             </div>
+            <div class="axm-gantt-controls">
+              <div class="axm-gantt-actions">
+                <button type="button" class="axm-gantt-action" id="axm-gantt-show-all">Mostrar bloques</button>
+                <button type="button" class="axm-gantt-action" id="axm-gantt-hide-all">Ocultar bloques</button>
+              </div>
+              <div class="axm-gantt-blocks" id="axm-gantt-blocks"></div>
+            </div>
             <div id="axm-gantt-host" class="axm-gantt-host"></div>
           </div>
         </section>
@@ -2021,10 +2480,6 @@ EJES_ESTRATEGICOS_HTML = dedent("""
               </div>
             </div>
             <div class="axm-field">
-              <label for="axm-obj-hito">Hito</label>
-              <input id="axm-obj-hito" class="axm-input" type="text" placeholder="Hito estratégico">
-            </div>
-            <div class="axm-field">
               <label for="axm-obj-progress">Avance</label>
               <input id="axm-obj-progress" class="axm-input" type="text" readonly>
             </div>
@@ -2046,6 +2501,7 @@ EJES_ESTRATEGICOS_HTML = dedent("""
             </div>
             <div class="axm-obj-tabs">
               <button type="button" class="axm-obj-tab active" data-obj-tab="desc">Descripción</button>
+              <button type="button" class="axm-obj-tab" data-obj-tab="hitos">Hitos</button>
               <button type="button" class="axm-obj-tab" data-obj-tab="kpi">Kpis</button>
               <button type="button" class="axm-obj-tab" data-obj-tab="acts">Actividades</button>
             </div>
@@ -2054,6 +2510,30 @@ EJES_ESTRATEGICOS_HTML = dedent("""
                 <label for="axm-obj-desc">Descripción</label>
                 <textarea id="axm-obj-desc" class="axm-textarea" placeholder="Descripción del objetivo"></textarea>
               </div>
+            </section>
+            <section class="axm-obj-panel" data-obj-panel="hitos">
+              <div class="axm-kpi-form">
+                <div class="axm-field full">
+                  <label for="axm-hito-name">Hito</label>
+                  <input id="axm-hito-name" class="axm-input" type="text" placeholder="Describe el hito">
+                </div>
+                <div class="axm-field">
+                  <label for="axm-hito-date">Fecha de realización</label>
+                  <input id="axm-hito-date" class="axm-input" type="date">
+                </div>
+                <div class="axm-field">
+                  <label style="display:flex;align-items:center;gap:8px;font-weight:600;color:#334155;">
+                    <input id="axm-hito-done" type="checkbox" style="accent-color:#0f3d2e;">
+                    Logrado
+                  </label>
+                </div>
+                <div class="axm-kpi-actions">
+                  <button class="axm-btn primary" id="axm-hito-add" type="button">Agregar hito</button>
+                  <button class="axm-btn" id="axm-hito-cancel" type="button">Cancelar edición</button>
+                </div>
+              </div>
+              <div class="axm-kpi-hint" id="axm-hito-msg"></div>
+              <div class="axm-kpi-list" id="axm-hito-list"></div>
             </section>
             <section class="axm-obj-panel" data-obj-panel="kpi">
               <div class="axm-kpi-form">
@@ -2121,6 +2601,9 @@ EJES_ESTRATEGICOS_HTML = dedent("""
           const ganttModalEl = document.getElementById("axm-gantt-modal");
           const ganttModalCloseEl = document.getElementById("axm-gantt-modal-close");
           const ganttHostEl = document.getElementById("axm-gantt-host");
+          const ganttBlocksEl = document.getElementById("axm-gantt-blocks");
+          const ganttShowAllBtn = document.getElementById("axm-gantt-show-all");
+          const ganttHideAllBtn = document.getElementById("axm-gantt-hide-all");
           const arbolPanel = document.getElementById("axm-arbol-panel");
           const treeChartEl = document.getElementById("axm-tree-chart");
           const treeExpandBtn = document.getElementById("axm-tree-expand");
@@ -2491,12 +2974,18 @@ EJES_ESTRATEGICOS_HTML = dedent("""
           const axisObjectivesListEl = document.getElementById("axm-axis-objectives-list");
           const objNameEl = document.getElementById("axm-obj-name");
           const objCodeEl = document.getElementById("axm-obj-code");
-          const objHitoEl = document.getElementById("axm-obj-hito");
           const objProgressEl = document.getElementById("axm-obj-progress");
           const objLeaderEl = document.getElementById("axm-obj-leader");
           const objStartEl = document.getElementById("axm-obj-start");
           const objEndEl = document.getElementById("axm-obj-end");
           const objDescEl = document.getElementById("axm-obj-desc");
+          const hitoNameEl = document.getElementById("axm-hito-name");
+          const hitoDateEl = document.getElementById("axm-hito-date");
+          const hitoDoneEl = document.getElementById("axm-hito-done");
+          const hitoAddBtn = document.getElementById("axm-hito-add");
+          const hitoCancelBtn = document.getElementById("axm-hito-cancel");
+          const hitoListEl = document.getElementById("axm-hito-list");
+          const hitoMsgEl = document.getElementById("axm-hito-msg");
           const kpiNameEl = document.getElementById("axm-kpi-name");
           const kpiPurposeEl = document.getElementById("axm-kpi-purpose");
           const kpiFormulaEl = document.getElementById("axm-kpi-formula");
@@ -2529,7 +3018,9 @@ EJES_ESTRATEGICOS_HTML = dedent("""
           let strategicTreeLibPromise = null;
           let selectedAxisId = null;
           let selectedObjectiveId = null;
+          let editingHitoIndex = -1;
           let editingKpiIndex = -1;
+          let ganttVisibility = {};
           const PLAN_STORAGE_KEY = "sipet_plan_macro_v1";
           const toId = (value) => {
             const n = Number(value);
@@ -3132,6 +3623,20 @@ EJES_ESTRATEGICOS_HTML = dedent("""
             const visionProgress = visionAxes.length
               ? Math.round(visionAxes.reduce((sum, axis) => sum + Number(axis.avance || 0), 0) / visionAxes.length)
               : 0;
+            const milestones = objectives.flatMap((obj) => {
+              if (Array.isArray(obj.hitos) && obj.hitos.length) return obj.hitos;
+              return obj.hito ? [{ nombre: obj.hito, logrado: false, fecha_realizacion: "" }] : [];
+            });
+            const milestonesTotal = milestones.length;
+            const milestonesDone = milestones.filter((item) => !!item.logrado).length;
+            const milestonesPending = Math.max(0, milestonesTotal - milestonesDone);
+            const todayIso = new Date().toISOString().slice(0, 10);
+            const milestonesOverdue = milestones.filter((item) => {
+              const due = String(item?.fecha_realizacion || "");
+              return !item?.logrado && !!due && due < todayIso;
+            }).length;
+            const milestonesPct = milestonesTotal ? Math.round((milestonesDone * 100) / milestonesTotal) : 0;
+            const milestoneChartBg = `conic-gradient(#16a34a 0 ${milestonesPct}%, #e2e8f0 ${milestonesPct}% 100%)`;
 
             trackBoardEl.innerHTML = `
               <h4>Tablero de seguimiento</h4>
@@ -3145,6 +3650,18 @@ EJES_ESTRATEGICOS_HTML = dedent("""
               <div class="axm-track-meta">
                 <span>Misión: ${missionProgress}%</span>
                 <span>Visión: ${visionProgress}%</span>
+              </div>
+              <div class="axm-track-hitos">
+                <div class="axm-track-hitos-chart" style="background:${milestoneChartBg};"><span>${milestonesPct}%</span></div>
+                <div class="axm-track-hitos-info">
+                  <div class="axm-track-hitos-title">Hitos logrados</div>
+                  <div class="axm-track-hitos-values">
+                    <span>Total: <b>${milestonesTotal}</b></span>
+                    <span>Logrados: <b>${milestonesDone}</b></span>
+                    <span>Pendientes: <b>${milestonesPending}</b></span>
+                    <span>Atrasados: <b style="color:#b91c1c;">${milestonesOverdue}</b></span>
+                  </div>
+                </div>
               </div>
             `;
           };
@@ -3196,6 +3713,101 @@ EJES_ESTRATEGICOS_HTML = dedent("""
             const axis = selectedAxis();
             if (!axis) return null;
             return (axis.objetivos || []).find((obj) => obj.id === selectedObjectiveId) || null;
+          };
+          const normalizeObjectiveMilestones = (rows) => {
+            const list = Array.isArray(rows) ? rows : [];
+            return list
+              .map((item) => {
+                if (!item || typeof item !== "object") return { nombre: "", logrado: false, fecha_realizacion: "" };
+                return {
+                  nombre: String(item.nombre || item.text || "").trim(),
+                  logrado: !!item.logrado,
+                  fecha_realizacion: String(item.fecha_realizacion || "").trim(),
+                };
+              })
+              .filter((item) => item.nombre);
+          };
+          const setHitoMsg = (text, isError = false) => {
+            if (!hitoMsgEl) return;
+            hitoMsgEl.style.color = isError ? "#b91c1c" : "#64748b";
+            hitoMsgEl.textContent = text || "";
+          };
+          const clearHitoForm = () => {
+            if (hitoNameEl) hitoNameEl.value = "";
+            if (hitoDateEl) hitoDateEl.value = "";
+            if (hitoDoneEl) hitoDoneEl.checked = false;
+            editingHitoIndex = -1;
+            if (hitoAddBtn) hitoAddBtn.textContent = "Agregar hito";
+            setHitoMsg("");
+          };
+          const readHitoForm = () => {
+            const nombre = hitoNameEl && hitoNameEl.value ? hitoNameEl.value.trim() : "";
+            const fecha_realizacion = hitoDateEl && hitoDateEl.value ? String(hitoDateEl.value) : "";
+            const logrado = !!(hitoDoneEl && hitoDoneEl.checked);
+            if (!nombre) {
+              setHitoMsg("El texto del hito es obligatorio.", true);
+              return null;
+            }
+            return { nombre, logrado, fecha_realizacion };
+          };
+          const editHitoAt = (index) => {
+            const objective = selectedObjective();
+            const list = normalizeObjectiveMilestones(objective?.hitos || []);
+            if (!objective || index < 0 || index >= list.length) return;
+            const item = list[index];
+            if (hitoNameEl) hitoNameEl.value = item.nombre || "";
+            if (hitoDateEl) hitoDateEl.value = item.fecha_realizacion || "";
+            if (hitoDoneEl) hitoDoneEl.checked = !!item.logrado;
+            editingHitoIndex = index;
+            if (hitoAddBtn) hitoAddBtn.textContent = "Actualizar hito";
+            setHitoMsg("Editando hito seleccionado.");
+          };
+          const deleteHitoAt = (index) => {
+            const objective = selectedObjective();
+            if (!objective) return;
+            const list = normalizeObjectiveMilestones(objective.hitos || []);
+            if (index < 0 || index >= list.length) return;
+            list.splice(index, 1);
+            objective.hitos = list;
+            objective.hito = list.length ? String(list[0].nombre || "") : "";
+            clearHitoForm();
+            renderObjectiveMilestonesPanel();
+            setHitoMsg("Hito eliminado del objetivo.");
+          };
+          const renderObjectiveMilestonesPanel = () => {
+            if (!hitoListEl) return;
+            const objective = selectedObjective();
+            if (!objective) {
+              hitoListEl.innerHTML = '<div class="axm-axis-meta">Selecciona un objetivo para gestionar hitos.</div>';
+              clearHitoForm();
+              return;
+            }
+            objective.hitos = normalizeObjectiveMilestones(objective.hitos || []);
+            objective.hito = objective.hitos.length ? String(objective.hitos[0].nombre || "") : "";
+            const list = objective.hitos;
+            if (!list.length) {
+              hitoListEl.innerHTML = '<div class="axm-axis-meta">Sin hitos registrados para este objetivo.</div>';
+            } else {
+              hitoListEl.innerHTML = list.map((item, idx) => `
+                <article class="axm-kpi-item">
+                  <div class="axm-kpi-item-head">
+                    <h5>${escapeHtml(item.nombre || `Hito ${idx + 1}`)}</h5>
+                    <div class="axm-kpi-item-actions">
+                      <button type="button" class="axm-kpi-btn" data-hito-edit="${idx}">Editar</button>
+                      <button type="button" class="axm-kpi-btn danger" data-hito-delete="${idx}">Eliminar</button>
+                    </div>
+                  </div>
+                  <div class="axm-kpi-item-meta">Fecha: ${escapeHtml(item.fecha_realizacion || "N/D")}</div>
+                  <div class="axm-kpi-item-meta">Estado: ${item.logrado ? "Logrado" : "Pendiente"}</div>
+                </article>
+              `).join("");
+            }
+            hitoListEl.querySelectorAll("[data-hito-edit]").forEach((button) => {
+              button.addEventListener("click", () => editHitoAt(Number(button.getAttribute("data-hito-edit") || -1)));
+            });
+            hitoListEl.querySelectorAll("[data-hito-delete]").forEach((button) => {
+              button.addEventListener("click", () => deleteHitoAt(Number(button.getAttribute("data-hito-delete") || -1)));
+            });
           };
           const KPI_STANDARD_VALUES = ["mayor", "menor", "entre", "igual"];
           const normalizeObjectiveKpis = (rows) => {
@@ -3379,6 +3991,46 @@ EJES_ESTRATEGICOS_HTML = dedent("""
             if (axisEnd && axisEnd > win.end) return "Eje estratégico: fecha final fuera del marco del plan.";
             return "";
           };
+          const axisGanttKey = (axis) => String(axis?.codigo || `axis-${axis?.id || ""}`).trim();
+          const syncGanttVisibility = () => {
+            const next = {};
+            (Array.isArray(axes) ? axes : []).forEach((axis) => {
+              const key = axisGanttKey(axis);
+              if (!key) return;
+              next[key] = Object.prototype.hasOwnProperty.call(ganttVisibility, key) ? !!ganttVisibility[key] : true;
+            });
+            ganttVisibility = next;
+          };
+          const renderGanttBlockFilters = () => {
+            if (!ganttBlocksEl) return;
+            const axisList = Array.isArray(axes) ? axes : [];
+            if (!axisList.length) {
+              ganttBlocksEl.innerHTML = "";
+              return;
+            }
+            syncGanttVisibility();
+            ganttBlocksEl.innerHTML = axisList.map((axis) => {
+              const key = axisGanttKey(axis);
+              const checked = ganttVisibility[key] !== false ? "checked" : "";
+              const code = escapeHtml(axis.codigo || "xx-yy");
+              const name = escapeHtml(axis.nombre || "Eje");
+              return `
+                <label class="axm-gantt-block">
+                  <input type="checkbox" data-gantt-axis="${escapeHtml(key)}" ${checked}>
+                  <code>${code}</code>
+                  <span>${name}</span>
+                </label>
+              `;
+            }).join("");
+            ganttBlocksEl.querySelectorAll("input[data-gantt-axis]").forEach((checkbox) => {
+              checkbox.addEventListener("change", async () => {
+                const key = String(checkbox.getAttribute("data-gantt-axis") || "");
+                if (!key) return;
+                ganttVisibility[key] = !!checkbox.checked;
+                await renderStrategicGantt();
+              });
+            });
+          };
           const renderStrategicGantt = async () => {
             if (!ganttHostEl) return;
             const ok = await ensureD3Library();
@@ -3386,9 +4038,13 @@ EJES_ESTRATEGICOS_HTML = dedent("""
               ganttHostEl.innerHTML = '<p style="padding:10px;color:#b91c1c;">No se pudo cargar la librería para la vista Gantt.</p>';
               return;
             }
+            renderGanttBlockFilters();
+            syncGanttVisibility();
             const axisList = Array.isArray(axes) ? axes : [];
             const rows = [];
             axisList.forEach((axis) => {
+              const axisKey = axisGanttKey(axis);
+              if (ganttVisibility[axisKey] === false) return;
               const axisStart = String(axis.fecha_inicial || "");
               const axisEnd = String(axis.fecha_final || "");
               if (axisStart && axisEnd) {
@@ -3488,6 +4144,18 @@ EJES_ESTRATEGICOS_HTML = dedent("""
                 .attr("stroke-dasharray", "4,3");
             }
           };
+          ganttShowAllBtn && ganttShowAllBtn.addEventListener("click", async () => {
+            syncGanttVisibility();
+            Object.keys(ganttVisibility).forEach((key) => { ganttVisibility[key] = true; });
+            renderGanttBlockFilters();
+            await renderStrategicGantt();
+          });
+          ganttHideAllBtn && ganttHideAllBtn.addEventListener("click", async () => {
+            syncGanttVisibility();
+            Object.keys(ganttVisibility).forEach((key) => { ganttVisibility[key] = false; });
+            renderGanttBlockFilters();
+            await renderStrategicGantt();
+          });
 
           const renderDepartmentOptions = (selectedValue = "") => {
             if (!axisLeaderEl) return;
@@ -3711,12 +4379,12 @@ EJES_ESTRATEGICOS_HTML = dedent("""
               selectedObjectiveId = null;
               if (objNameEl) objNameEl.value = "";
               if (objCodeEl) objCodeEl.value = "";
-              if (objHitoEl) objHitoEl.value = "";
               if (objProgressEl) objProgressEl.value = "0%";
               if (objDescEl) objDescEl.value = "";
               if (objStartEl) objStartEl.value = "";
               if (objEndEl) objEndEl.value = "";
               renderCollaboratorOptions("");
+              renderObjectiveMilestonesPanel();
               renderObjectiveKpisPanel();
               renderObjectiveActivitiesPanel();
               if (objListEl) objListEl.innerHTML = '<div class="axm-axis-meta">Selecciona un eje en la columna izquierda.</div>';
@@ -3745,12 +4413,15 @@ EJES_ESTRATEGICOS_HTML = dedent("""
             if (!objective) return;
             if (objNameEl) objNameEl.value = objective.nombre || "";
             if (objCodeEl) objCodeEl.value = buildObjectiveCode(axis.codigo || "", objectivePosition(objective));
-            if (objHitoEl) objHitoEl.value = objective.hito || "";
             if (objProgressEl) objProgressEl.value = `${Number(objective.avance || 0)}%`;
             if (objDescEl) objDescEl.value = objective.descripcion || "";
             if (objStartEl) objStartEl.value = objective.fecha_inicial || "";
             if (objEndEl) objEndEl.value = objective.fecha_final || "";
+            if (!Array.isArray(objective.hitos)) {
+              objective.hitos = objective.hito ? [{ nombre: objective.hito, logrado: false, fecha_realizacion: "" }] : [];
+            }
             renderCollaboratorOptions(objective.lider || "");
+            renderObjectiveMilestonesPanel();
             renderObjectiveKpisPanel();
             renderObjectiveActivitiesPanel();
           };
@@ -3795,6 +4466,30 @@ EJES_ESTRATEGICOS_HTML = dedent("""
               if (panelItem) panelItem.classList.add("active");
             });
           });
+          hitoAddBtn && hitoAddBtn.addEventListener("click", () => {
+            const objective = selectedObjective();
+            if (!objective) {
+              setHitoMsg("Selecciona un objetivo para agregar hitos.", true);
+              return;
+            }
+            const item = readHitoForm();
+            if (!item) return;
+            const list = normalizeObjectiveMilestones(objective.hitos || []);
+            if (editingHitoIndex >= 0 && editingHitoIndex < list.length) {
+              list[editingHitoIndex] = item;
+            } else {
+              list.push(item);
+            }
+            objective.hitos = list;
+            objective.hito = list.length ? String(list[0].nombre || "") : "";
+            renderObjectiveMilestonesPanel();
+            clearHitoForm();
+            setHitoMsg("Hito listo. Guarda el objetivo para persistir en base de datos.");
+          });
+          hitoCancelBtn && hitoCancelBtn.addEventListener("click", () => {
+            clearHitoForm();
+            setHitoMsg("Edición de hito cancelada.");
+          });
           kpiAddBtn && kpiAddBtn.addEventListener("click", () => {
             const objective = selectedObjective();
             if (!objective) {
@@ -3822,6 +4517,13 @@ EJES_ESTRATEGICOS_HTML = dedent("""
           const loadAxes = async () => {
             const payload = await requestJson("/api/strategic-axes");
             axes = Array.isArray(payload.data) ? payload.data : [];
+            axes.forEach((axis) => {
+              (Array.isArray(axis.objetivos) ? axis.objetivos : []).forEach((obj) => {
+                if (!Array.isArray(obj.hitos)) {
+                  obj.hitos = obj.hito ? [{ nombre: obj.hito, logrado: false, fecha_realizacion: "" }] : [];
+                }
+              });
+            });
             const currentId = toId(selectedAxisId);
             if (!currentId || !axes.some((axis) => toId(axis.id) === currentId)) {
               selectedAxisId = axes.length ? toId(axes[0].id) : null;
@@ -3997,7 +4699,7 @@ EJES_ESTRATEGICOS_HTML = dedent("""
             const body = {
               codigo: buildObjectiveCode(axis.codigo || "", (axis.objetivos || []).length + 1),
               nombre: "Nuevo objetivo",
-              hito: "",
+              hitos: [],
               lider: "",
               descripcion: "",
               orden: (axis.objetivos || []).length + 1,
@@ -4026,11 +4728,11 @@ EJES_ESTRATEGICOS_HTML = dedent("""
             const body = {
               nombre: objNameEl && objNameEl.value ? objNameEl.value.trim() : "",
               codigo: objCodeEl && objCodeEl.value ? objCodeEl.value.trim() : "",
-              hito: objHitoEl && objHitoEl.value ? objHitoEl.value.trim() : "",
               lider: objLeaderEl && objLeaderEl.value ? objLeaderEl.value.trim() : "",
               fecha_inicial: objStartEl && objStartEl.value ? objStartEl.value : "",
               fecha_final: objEndEl && objEndEl.value ? objEndEl.value : "",
               descripcion: objDescEl && objDescEl.value ? objDescEl.value.trim() : "",
+              hitos: normalizeObjectiveMilestones(objective.hitos || []),
               kpis: normalizeObjectiveKpis(objective.kpis || []),
               orden: objectivePosition(objective),
             };
@@ -4310,6 +5012,10 @@ POA_LIMPIO_HTML = dedent("""
           background: #fff;
           color: #0f172a;
         }
+        .poa-input.num{
+          text-align: right;
+          font-variant-numeric: tabular-nums;
+        }
         .poa-select[multiple]{
           min-height: 104px;
           padding: 8px;
@@ -4483,6 +5189,56 @@ POA_LIMPIO_HTML = dedent("""
           color: #b91c1c;
           background: #fff5f5;
         }
+        .poa-budget-form{
+          display: grid;
+          gap: 10px;
+        }
+        .poa-budget-table-wrap{
+          margin-top: 8px;
+          border: 1px solid rgba(148,163,184,.28);
+          border-radius: 10px;
+          overflow: auto;
+          background: #fff;
+        }
+        .poa-budget-table{
+          width: 100%;
+          border-collapse: collapse;
+          min-width: 760px;
+        }
+        .poa-budget-table th,
+        .poa-budget-table td{
+          border-bottom: 1px solid rgba(148,163,184,.20);
+          padding: 8px 10px;
+          font-size: 12px;
+          color: #0f172a;
+          background: #fff;
+        }
+        .poa-budget-table th{
+          background: rgba(15,61,46,.08);
+          color: #0f3d2e;
+          font-weight: 800;
+          text-transform: uppercase;
+          letter-spacing: .02em;
+          text-align: left;
+        }
+        .poa-budget-table .num{
+          text-align: right;
+          font-variant-numeric: tabular-nums;
+          white-space: nowrap;
+        }
+        .poa-budget-total{
+          margin-top: 8px;
+          display: flex;
+          gap: 14px;
+          justify-content: flex-end;
+          color: #334155;
+          font-size: 12px;
+          font-weight: 700;
+        }
+        .poa-budget-total b{
+          color: #0f172a;
+          font-size: 13px;
+        }
         @media (max-width: 860px){
           .poa-row{ grid-template-columns: 1fr; }
         }
@@ -4568,6 +5324,10 @@ POA_LIMPIO_HTML = dedent("""
                 <input id="poa-act-end" class="poa-input" type="date">
               </div>
             </div>
+            <div class="poa-field">
+              <label for="poa-act-impact-hitos">Hitos que impacta</label>
+              <select id="poa-act-impact-hitos" class="poa-select" multiple></select>
+            </div>
             <div class="poa-row">
               <div class="poa-field">
                 <label for="poa-act-recurrente">Recurrente</label>
@@ -4618,7 +5378,72 @@ POA_LIMPIO_HTML = dedent("""
             <p style="margin:0;color:#64748b;font-size:13px;">Kpis: en construcción.</p>
           </section>
           <section class="poa-tab-panel" data-poa-panel="budget">
-            <p style="margin:0;color:#64748b;font-size:13px;">Presupuesto: en construcción.</p>
+            <div class="poa-budget-form">
+              <div class="poa-row">
+                <div class="poa-field">
+                  <label for="poa-budget-type">Tipo</label>
+                  <select id="poa-budget-type" class="poa-select">
+                    <option value="">Selecciona tipo</option>
+                    <option value="Sueldos y similares">Sueldos y similares</option>
+                    <option value="Honorarios">Honorarios</option>
+                    <option value="Gastos de promoción y publicidad">Gastos de promoción y publicidad</option>
+                    <option value="Gastos no deducibles">Gastos no deducibles</option>
+                    <option value="Gastos en tecnologia">Gastos en tecnologia</option>
+                    <option value="Otros gastos de administración y promoción">Otros gastos de administración y promoción</option>
+                  </select>
+                </div>
+                <div class="poa-field">
+                  <label for="poa-budget-rubro">Rubro</label>
+                  <input id="poa-budget-rubro" class="poa-input" type="text" placeholder="Rubro presupuestal">
+                </div>
+              </div>
+              <div class="poa-row">
+                <div class="poa-field">
+                  <label for="poa-budget-monthly">Mensual</label>
+                  <input id="poa-budget-monthly" class="poa-input num" type="number" min="0" step="0.01" placeholder="0.00">
+                </div>
+                <div class="poa-field">
+                  <label for="poa-budget-annual">Anual</label>
+                  <input id="poa-budget-annual" class="poa-input num" type="number" min="0" step="0.01" placeholder="Mensual x 12 o monto único">
+                </div>
+              </div>
+              <div class="poa-row">
+                <div class="poa-field">
+                  <label style="display:flex;align-items:center;gap:8px;margin-top:8px;color:#334155;font-size:13px;">
+                    <input id="poa-budget-approved" type="checkbox">
+                    Autorizado
+                  </label>
+                </div>
+                <div class="poa-field" style="justify-content:flex-end;">
+                  <div class="poa-actions" style="margin-top:0;">
+                    <button type="button" class="poa-btn primary" id="poa-budget-add">Agregar rubro</button>
+                    <button type="button" class="poa-btn" id="poa-budget-cancel">Cancelar</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="poa-budget-table-wrap">
+              <table class="poa-budget-table">
+                <thead>
+                  <tr>
+                    <th>Tipo</th>
+                    <th>Rubro</th>
+                    <th class="num">Mensual</th>
+                    <th class="num">Anual</th>
+                    <th>Autorizado</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="poa-budget-list">
+                  <tr><td colspan="6" style="color:#64748b;">Sin rubros registrados.</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="poa-budget-total">
+              <span>Mensual total: <b id="poa-budget-monthly-total">0.00</b></span>
+              <span>Anual total: <b id="poa-budget-annual-total">0.00</b></span>
+            </div>
+            <div class="poa-modal-msg" id="poa-budget-msg" aria-live="polite"></div>
           </section>
 
           <div class="poa-actions">
@@ -4699,12 +5524,24 @@ POA_LIMPIO_HTML = dedent("""
           const actAssignedEl = document.getElementById("poa-act-assigned");
           const actStartEl = document.getElementById("poa-act-start");
           const actEndEl = document.getElementById("poa-act-end");
+          const actImpactHitosEl = document.getElementById("poa-act-impact-hitos");
           const actRecurrenteEl = document.getElementById("poa-act-recurrente");
           const actPeriodicidadEl = document.getElementById("poa-act-periodicidad");
           const actEveryDaysWrapEl = document.getElementById("poa-act-every-days-wrap");
           const actEveryDaysEl = document.getElementById("poa-act-every-days");
           const actDescEl = document.getElementById("poa-act-desc");
           const actMsgEl = document.getElementById("poa-act-msg");
+          const budgetTypeEl = document.getElementById("poa-budget-type");
+          const budgetRubroEl = document.getElementById("poa-budget-rubro");
+          const budgetMonthlyEl = document.getElementById("poa-budget-monthly");
+          const budgetAnnualEl = document.getElementById("poa-budget-annual");
+          const budgetApprovedEl = document.getElementById("poa-budget-approved");
+          const budgetAddBtn = document.getElementById("poa-budget-add");
+          const budgetCancelBtn = document.getElementById("poa-budget-cancel");
+          const budgetListEl = document.getElementById("poa-budget-list");
+          const budgetMonthlyTotalEl = document.getElementById("poa-budget-monthly-total");
+          const budgetAnnualTotalEl = document.getElementById("poa-budget-annual-total");
+          const budgetMsgEl = document.getElementById("poa-budget-msg");
           const stateNoIniciadoBtn = document.getElementById("poa-state-no-iniciado");
           const stateEnProcesoBtn = document.getElementById("poa-state-en-proceso");
           const stateTerminadoBtn = document.getElementById("poa-state-terminado");
@@ -4733,6 +5570,8 @@ POA_LIMPIO_HTML = dedent("""
           let currentActivityId = null;
           let currentActivityData = null;
           let currentSubactivities = [];
+          let currentBudgetItems = [];
+          let editingBudgetIndex = -1;
           let editingSubId = null;
           let currentParentSubId = 0;
           let isSaving = false;
@@ -4771,6 +5610,118 @@ POA_LIMPIO_HTML = dedent("""
             if (!subMsgEl) return;
             subMsgEl.textContent = text || "";
             subMsgEl.style.color = isError ? "#b91c1c" : "#0f3d2e";
+          };
+          const showBudgetMsg = (text, isError = false) => {
+            if (!budgetMsgEl) return;
+            budgetMsgEl.textContent = text || "";
+            budgetMsgEl.style.color = isError ? "#b91c1c" : "#0f3d2e";
+          };
+          const toMoney = (value) => {
+            const num = Number(value || 0);
+            if (!Number.isFinite(num) || num < 0) return 0;
+            return Math.round(num * 100) / 100;
+          };
+          const formatMoney = (value) => toMoney(value).toLocaleString("es-CR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+          const normalizeBudgetItems = (rows) => {
+            const list = Array.isArray(rows) ? rows : [];
+            return list
+              .map((item) => ({
+                tipo: String(item?.tipo || "").trim(),
+                rubro: String(item?.rubro || "").trim(),
+                mensual: toMoney(item?.mensual),
+                anual: toMoney(item?.anual),
+                autorizado: !!item?.autorizado,
+              }))
+              .filter((item) => item.tipo && item.rubro);
+          };
+          const clearBudgetForm = () => {
+            if (budgetTypeEl) budgetTypeEl.value = "";
+            if (budgetRubroEl) budgetRubroEl.value = "";
+            if (budgetMonthlyEl) budgetMonthlyEl.value = "";
+            if (budgetAnnualEl) budgetAnnualEl.value = "";
+            if (budgetApprovedEl) budgetApprovedEl.checked = false;
+            editingBudgetIndex = -1;
+            if (budgetAddBtn) budgetAddBtn.textContent = "Agregar rubro";
+            showBudgetMsg("");
+          };
+          const renderBudgetItems = () => {
+            if (!budgetListEl) return;
+            const list = normalizeBudgetItems(currentBudgetItems);
+            currentBudgetItems = list;
+            const monthlyTotal = list.reduce((sum, item) => sum + toMoney(item.mensual), 0);
+            const annualTotal = list.reduce((sum, item) => sum + toMoney(item.anual), 0);
+            if (budgetMonthlyTotalEl) budgetMonthlyTotalEl.textContent = formatMoney(monthlyTotal);
+            if (budgetAnnualTotalEl) budgetAnnualTotalEl.textContent = formatMoney(annualTotal);
+            if (!list.length) {
+              budgetListEl.innerHTML = '<tr><td colspan="6" style="color:#64748b;">Sin rubros registrados.</td></tr>';
+              return;
+            }
+            budgetListEl.innerHTML = list.map((item, idx) => `
+              <tr>
+                <td>${escapeHtml(item.tipo)}</td>
+                <td>${escapeHtml(item.rubro)}</td>
+                <td class="num">${escapeHtml(formatMoney(item.mensual))}</td>
+                <td class="num">${escapeHtml(formatMoney(item.anual))}</td>
+                <td>${item.autorizado ? "Sí" : "No"}</td>
+                <td>
+                  <button type="button" class="poa-sub-btn" data-budget-edit="${idx}">Editar</button>
+                  <button type="button" class="poa-sub-btn warn" data-budget-delete="${idx}">Eliminar</button>
+                </td>
+              </tr>
+            `).join("");
+            budgetListEl.querySelectorAll("[data-budget-edit]").forEach((btn) => {
+              btn.addEventListener("click", () => {
+                const idx = Number(btn.getAttribute("data-budget-edit") || -1);
+                const row = currentBudgetItems[idx];
+                if (!row) return;
+                if (budgetTypeEl) budgetTypeEl.value = row.tipo || "";
+                if (budgetRubroEl) budgetRubroEl.value = row.rubro || "";
+                if (budgetMonthlyEl) budgetMonthlyEl.value = toMoney(row.mensual) ? String(toMoney(row.mensual)) : "";
+                if (budgetAnnualEl) budgetAnnualEl.value = toMoney(row.anual) ? String(toMoney(row.anual)) : "";
+                if (budgetApprovedEl) budgetApprovedEl.checked = !!row.autorizado;
+                editingBudgetIndex = idx;
+                if (budgetAddBtn) budgetAddBtn.textContent = "Actualizar rubro";
+                showBudgetMsg("Editando rubro de presupuesto.");
+                activatePoaTab("budget");
+              });
+            });
+            budgetListEl.querySelectorAll("[data-budget-delete]").forEach((btn) => {
+              btn.addEventListener("click", () => {
+                const idx = Number(btn.getAttribute("data-budget-delete") || -1);
+                if (idx < 0 || idx >= currentBudgetItems.length) return;
+                currentBudgetItems.splice(idx, 1);
+                renderBudgetItems();
+                showBudgetMsg("Rubro eliminado.");
+              });
+            });
+          };
+          const addOrUpdateBudgetItem = () => {
+            const tipo = (budgetTypeEl && budgetTypeEl.value ? budgetTypeEl.value : "").trim();
+            const rubro = (budgetRubroEl && budgetRubroEl.value ? budgetRubroEl.value : "").trim();
+            const mensual = toMoney(budgetMonthlyEl && budgetMonthlyEl.value ? budgetMonthlyEl.value : 0);
+            let anual = toMoney(budgetAnnualEl && budgetAnnualEl.value ? budgetAnnualEl.value : 0);
+            if (!tipo || !rubro) {
+              showBudgetMsg("Tipo y rubro son obligatorios.", true);
+              return;
+            }
+            if (!anual && mensual) anual = toMoney(mensual * 12);
+            const row = { tipo, rubro, mensual, anual, autorizado: !!(budgetApprovedEl && budgetApprovedEl.checked) };
+            if (editingBudgetIndex >= 0 && editingBudgetIndex < currentBudgetItems.length) {
+              currentBudgetItems[editingBudgetIndex] = row;
+            } else {
+              currentBudgetItems.push(row);
+            }
+            clearBudgetForm();
+            renderBudgetItems();
+            showBudgetMsg("Rubro listo. Guarda la actividad para persistir.");
+          };
+          const syncBudgetAnnual = () => {
+            if (!budgetMonthlyEl || !budgetAnnualEl) return;
+            const mensual = toMoney(budgetMonthlyEl.value || 0);
+            const anualRaw = String(budgetAnnualEl.value || "").trim();
+            if (anualRaw) return;
+            if (!mensual) return;
+            budgetAnnualEl.value = String(toMoney(mensual * 12));
           };
           const openModal = () => {
             if (!modalEl) return;
@@ -4872,6 +5823,22 @@ POA_LIMPIO_HTML = dedent("""
               actAssignedEl.innerHTML = "";
             }
           };
+          const renderImpactedMilestonesOptions = (objective, selectedIds = []) => {
+            if (!actImpactHitosEl) return;
+            const selectedSet = new Set((Array.isArray(selectedIds) ? selectedIds : []).map((value) => Number(value || 0)).filter((value) => value > 0));
+            const hitos = Array.isArray(objective?.hitos) ? objective.hitos : [];
+            if (!hitos.length) {
+              actImpactHitosEl.innerHTML = "";
+              return;
+            }
+            actImpactHitosEl.innerHTML = hitos.map((hito) => {
+              const id = Number(hito?.id || 0);
+              if (!id) return "";
+              const selected = selectedSet.has(id) ? "selected" : "";
+              const label = String(hito?.nombre || "Hito").trim() || "Hito";
+              return `<option value="${id}" ${selected}>${escapeHtml(label)}</option>`;
+            }).join("");
+          };
           const currentApprovalForActivity = () => {
             if (!currentActivityId) return null;
             return approvalsByActivity[Number(currentActivityId)] || null;
@@ -4932,13 +5899,18 @@ POA_LIMPIO_HTML = dedent("""
             if (actDescEl) actDescEl.value = "";
             if (actOwnerEl) actOwnerEl.value = "";
             if (actAssignedEl) Array.from(actAssignedEl.options || []).forEach((opt) => { opt.selected = false; });
+            if (actImpactHitosEl) actImpactHitosEl.innerHTML = "";
             currentActivityId = null;
             currentActivityData = null;
             currentSubactivities = [];
+            currentBudgetItems = [];
             editingSubId = null;
+            editingBudgetIndex = -1;
             currentParentSubId = 0;
             syncRecurringFields();
             renderStateStrip();
+            clearBudgetForm();
+            renderBudgetItems();
           };
           const populateActivityForm = (activity) => {
             if (!activity) return;
@@ -4954,10 +5926,14 @@ POA_LIMPIO_HTML = dedent("""
             currentActivityId = Number(activity.id || 0);
             currentActivityData = activity;
             currentSubactivities = Array.isArray(activity.subactivities) ? activity.subactivities : [];
+            currentBudgetItems = normalizeBudgetItems(activity.budget_items || []);
+            renderImpactedMilestonesOptions(currentObjective, (activity.hitos_impacta || []).map((item) => Number(item?.id || 0)));
             syncRecurringFields();
             renderSubtasks();
             renderStateStrip();
             renderActivityBranch();
+            clearBudgetForm();
+            renderBudgetItems();
           };
           const activatePoaTab = (tabKey) => {
             document.querySelectorAll("[data-poa-tab]").forEach((btn) => btn.classList.remove("active"));
@@ -4983,6 +5959,7 @@ POA_LIMPIO_HTML = dedent("""
             showModalMsg("");
             setDateBounds(objective);
             await fillCollaborators(objective);
+            renderImpactedMilestonesOptions(objective, []);
             if (existing) {
               populateActivityForm(existing);
               if (options.focusSubId) {
@@ -5251,6 +6228,7 @@ POA_LIMPIO_HTML = dedent("""
             const cadaXxDias = cadaXxDiasRaw ? Number(cadaXxDiasRaw) : 0;
             const descripcionBase = (actDescEl && actDescEl.value ? actDescEl.value : "").trim();
             const assigned = actAssignedEl ? Array.from(actAssignedEl.selectedOptions || []).map((opt) => opt.value).filter(Boolean) : [];
+            const impactedMilestoneIds = actImpactHitosEl ? Array.from(actImpactHitosEl.selectedOptions || []).map((opt) => Number(opt.value || 0)).filter((value) => value > 0) : [];
             if (!nombre) {
               showModalMsg("Nombre es obligatorio.", true);
               return;
@@ -5292,6 +6270,8 @@ POA_LIMPIO_HTML = dedent("""
               periodicidad: recurrente ? periodicidad : "",
               cada_xx_dias: recurrente && periodicidad === "cada_xx_dias" ? cadaXxDias : 0,
               descripcion,
+              budget_items: normalizeBudgetItems(currentBudgetItems),
+              impacted_milestone_ids: impactedMilestoneIds,
             };
             isSaving = true;
             if (saveBtn) saveBtn.disabled = true;
@@ -5310,7 +6290,9 @@ POA_LIMPIO_HTML = dedent("""
               currentActivityId = Number(data.data?.id || currentActivityId || 0);
               currentActivityData = data.data || currentActivityData;
               currentSubactivities = Array.isArray(data.data?.subactivities) ? data.data.subactivities : currentSubactivities;
+              currentBudgetItems = normalizeBudgetItems(data.data?.budget_items || currentBudgetItems);
               renderSubtasks();
+              renderBudgetItems();
               renderStateStrip();
               showModalMsg("Actividad guardada correctamente.");
               await loadBoard();
@@ -5425,6 +6407,9 @@ POA_LIMPIO_HTML = dedent("""
             if (event.key === "Escape" && subModalEl && subModalEl.classList.contains("open")) closeSubModal();
           });
           saveBtn && saveBtn.addEventListener("click", saveActivity);
+          budgetAddBtn && budgetAddBtn.addEventListener("click", addOrUpdateBudgetItem);
+          budgetCancelBtn && budgetCancelBtn.addEventListener("click", clearBudgetForm);
+          budgetMonthlyEl && budgetMonthlyEl.addEventListener("input", syncBudgetAnnual);
           stateEnProcesoBtn && stateEnProcesoBtn.addEventListener("click", markInProgress);
           stateTerminadoBtn && stateTerminadoBtn.addEventListener("click", markFinished);
           approveBtn && approveBtn.addEventListener("click", () => resolveApproval("autorizar"));
@@ -6156,10 +7141,14 @@ def list_strategic_axes(request: Request):
                     objective_ids.append(obj_id)
         objective_ids = sorted(set(objective_ids))
         kpis_by_objective = _kpis_by_objective_ids(db, objective_ids)
+        milestones_by_objective = _milestones_by_objective_ids(db, objective_ids)
         for axis_data in payload_axes:
             for obj in axis_data.get("objetivos", []):
                 obj_id = int(obj.get("id") or 0)
                 obj["kpis"] = kpis_by_objective.get(obj_id, [])
+                obj["hitos"] = milestones_by_objective.get(obj_id, [])
+                if obj["hitos"]:
+                    obj["hito"] = str(obj["hitos"][0].get("nombre") or obj.get("hito") or "")
         activities = (
             db.query(POAActivity)
             .filter(POAActivity.objective_id.in_(objective_ids))
@@ -6473,10 +7462,23 @@ def create_strategic_objective(axis_id: int, data: dict = Body(...)):
         db.add(objective)
         db.commit()
         db.refresh(objective)
+        milestone_rows: List[Dict[str, Any]] = []
+        if "hitos" in data:
+            milestone_rows = _replace_objective_milestones(db, int(objective.id), data.get("hitos"))
+            if milestone_rows:
+                objective.hito = str(milestone_rows[0].get("nombre") or "").strip()
+                db.add(objective)
+                db.commit()
+                db.refresh(objective)
         if "kpis" in data:
             _replace_objective_kpis(db, int(objective.id), data.get("kpis"))
             db.commit()
-        return JSONResponse({"success": True, "data": _serialize_strategic_objective(objective)})
+        payload = _serialize_strategic_objective(objective)
+        if "hitos" in data:
+            payload["hitos"] = milestone_rows
+            if milestone_rows:
+                payload["hito"] = str(milestone_rows[0].get("nombre") or "")
+        return JSONResponse({"success": True, "data": payload})
     except (sqlite3.OperationalError, SQLAlchemyError):
         db.rollback()
         return JSONResponse(
@@ -6535,11 +7537,21 @@ def update_strategic_objective(objective_id: int, data: dict = Body(...)):
         objective.descripcion = (data.get("descripcion") or "").strip()
         objective.orden = objective_order
         db.add(objective)
+        milestone_rows: List[Dict[str, Any]] = []
+        if "hitos" in data:
+            milestone_rows = _replace_objective_milestones(db, int(objective.id), data.get("hitos"))
+            objective.hito = str(milestone_rows[0].get("nombre") or "").strip() if milestone_rows else ""
+            db.add(objective)
         if "kpis" in data:
             _replace_objective_kpis(db, int(objective.id), data.get("kpis"))
         db.commit()
         db.refresh(objective)
-        return JSONResponse({"success": True, "data": _serialize_strategic_objective(objective)})
+        payload = _serialize_strategic_objective(objective)
+        if "hitos" in data:
+            payload["hitos"] = milestone_rows
+            if milestone_rows:
+                payload["hito"] = str(milestone_rows[0].get("nombre") or "")
+        return JSONResponse({"success": True, "data": payload})
     finally:
         db.close()
 
@@ -6553,6 +7565,7 @@ def delete_strategic_objective(objective_id: int):
         if not objective:
             return JSONResponse({"success": False, "error": "Objetivo no encontrado"}, status_code=404)
         _delete_objective_kpis(db, int(objective.id))
+        _delete_objective_milestones(db, int(objective.id))
         db.delete(objective)
         db.commit()
         return JSONResponse({"success": True})
@@ -6611,6 +7624,7 @@ def poa_board_data(request: Request):
             if axis_ids else []
         )
         axis_name_map = {axis.id: axis.nombre for axis in axes}
+        milestones_by_objective = _milestones_by_objective_ids(db, objective_ids)
 
         activities = (
             db.query(POAActivity)
@@ -6630,6 +7644,11 @@ def poa_board_data(request: Request):
         sub_by_activity: Dict[int, List[POASubactivity]] = {}
         for sub in subactivities:
             sub_by_activity.setdefault(sub.activity_id, []).append(sub)
+        budgets_by_activity = _budgets_by_activity_ids(db, [int(activity.id) for activity in activities if getattr(activity, "id", None)])
+        impacted_milestones_by_activity = _activity_milestones_by_activity_ids(
+            db,
+            [int(activity.id) for activity in activities if getattr(activity, "id", None)],
+        )
 
         pending_approvals = (
             db.query(POADeliverableApproval)
@@ -6669,11 +7688,17 @@ def poa_board_data(request: Request):
                     {
                         **_serialize_strategic_objective(obj),
                         "axis_name": axis_name_map.get(obj.eje_id, ""),
+                        "hitos": milestones_by_objective.get(int(obj.id), []),
                     }
                     for obj in objectives
                 ],
                 "activities": [
-                    _serialize_poa_activity(activity, sub_by_activity.get(activity.id, []))
+                    _serialize_poa_activity(
+                        activity,
+                        sub_by_activity.get(activity.id, []),
+                        budgets_by_activity.get(int(activity.id), []),
+                        impacted_milestones_by_activity.get(int(activity.id), []),
+                    )
                     for activity in activities
                 ],
                 "pending_approvals": approvals_for_user,
@@ -6975,6 +8000,7 @@ def create_poa_activity(request: Request, data: dict = Body(...)):
     else:
         periodicidad = ""
         cada_xx_dias = 0
+    impacted_milestone_ids = _normalize_impacted_milestone_ids(data.get("impacted_milestone_ids"))
 
     db = SessionLocal()
     try:
@@ -6984,6 +8010,13 @@ def create_poa_activity(request: Request, data: dict = Body(...)):
         objective = db.query(StrategicObjectiveConfig).filter(StrategicObjectiveConfig.id == objective_id).first()
         if not objective:
             return JSONResponse({"success": False, "error": "Objetivo no encontrado"}, status_code=404)
+        valid_milestone_ids = {int(item.get("id") or 0) for item in _milestones_by_objective_ids(db, [objective_id]).get(objective_id, [])}
+        invalid_milestones = [mid for mid in impacted_milestone_ids if mid not in valid_milestone_ids]
+        if invalid_milestones:
+            return JSONResponse(
+                {"success": False, "error": "Los hitos seleccionados no pertenecen al objetivo."},
+                status_code=400,
+            )
         parent_error = _validate_child_date_range(
             start_date,
             end_date,
@@ -7013,7 +8046,15 @@ def create_poa_activity(request: Request, data: dict = Body(...)):
         db.add(activity)
         db.commit()
         db.refresh(activity)
-        return JSONResponse({"success": True, "data": _serialize_poa_activity(activity, [])})
+        budget_rows: List[Dict[str, Any]] = []
+        linked_milestones: List[Dict[str, Any]] = []
+        if "budget_items" in data:
+            budget_rows = _replace_activity_budgets(db, int(activity.id), data.get("budget_items"))
+        if "impacted_milestone_ids" in data:
+            _replace_activity_milestone_links(db, int(activity.id), impacted_milestone_ids)
+            linked_milestones = _activity_milestones_by_activity_ids(db, [int(activity.id)]).get(int(activity.id), [])
+            db.commit()
+        return JSONResponse({"success": True, "data": _serialize_poa_activity(activity, [], budget_rows, linked_milestones)})
     finally:
         db.close()
 
@@ -7061,9 +8102,17 @@ def update_poa_activity(request: Request, activity_id: int, data: dict = Body(..
         else:
             periodicidad = ""
             cada_xx_dias = 0
+        impacted_milestone_ids = _normalize_impacted_milestone_ids(data.get("impacted_milestone_ids"))
         objective = db.query(StrategicObjectiveConfig).filter(StrategicObjectiveConfig.id == activity.objective_id).first()
         if not objective:
             return JSONResponse({"success": False, "error": "Objetivo no encontrado"}, status_code=404)
+        valid_milestone_ids = {int(item.get("id") or 0) for item in _milestones_by_objective_ids(db, [int(objective.id)]).get(int(objective.id), [])}
+        invalid_milestones = [mid for mid in impacted_milestone_ids if mid not in valid_milestone_ids]
+        if invalid_milestones:
+            return JSONResponse(
+                {"success": False, "error": "Los hitos seleccionados no pertenecen al objetivo."},
+                status_code=400,
+            )
         parent_error = _validate_child_date_range(
             start_date,
             end_date,
@@ -7086,10 +8135,19 @@ def update_poa_activity(request: Request, activity_id: int, data: dict = Body(..
         activity.periodicidad = periodicidad
         activity.cada_xx_dias = cada_xx_dias if periodicidad == "cada_xx_dias" else None
         db.add(activity)
+        budget_rows: List[Dict[str, Any]] = []
+        linked_milestones: List[Dict[str, Any]] = []
+        if "budget_items" in data:
+            budget_rows = _replace_activity_budgets(db, int(activity.id), data.get("budget_items"))
+        if "impacted_milestone_ids" in data:
+            _replace_activity_milestone_links(db, int(activity.id), impacted_milestone_ids)
         db.commit()
         db.refresh(activity)
         subs = db.query(POASubactivity).filter(POASubactivity.activity_id == activity.id).all()
-        return JSONResponse({"success": True, "data": _serialize_poa_activity(activity, subs)})
+        if not budget_rows:
+            budget_rows = _budgets_by_activity_ids(db, [int(activity.id)]).get(int(activity.id), [])
+        linked_milestones = _activity_milestones_by_activity_ids(db, [int(activity.id)]).get(int(activity.id), [])
+        return JSONResponse({"success": True, "data": _serialize_poa_activity(activity, subs, budget_rows, linked_milestones)})
     finally:
         db.close()
 
@@ -7106,6 +8164,8 @@ def delete_poa_activity(request: Request, activity_id: int):
         if activity.objective_id not in allowed_ids and not is_admin_or_superadmin(request):
             return JSONResponse({"success": False, "error": "No autorizado para eliminar esta actividad"}, status_code=403)
         db.query(POASubactivity).filter(POASubactivity.activity_id == activity.id).delete()
+        _delete_activity_budgets(db, int(activity.id))
+        _delete_activity_milestone_links(db, int(activity.id))
         db.delete(activity)
         db.commit()
         return JSONResponse({"success": True})
