@@ -49,12 +49,12 @@
                 <summary>
                     <span class="sidebar-main-left">
                         <span class="sidebar-main-icon" style="--icon-src: url('/icon/inicio.svg');" aria-hidden="true"></span>
-                        <span class="sidebar-main-label">Inicio</span>
+                        <span class="sidebar-main-label">BSC</span>
                     </span>
                     <span class="sidebar-main-caret">▾</span>
                 </summary>
                 <div class="sidebar-submenu">
-                    <a href="/inicio">Inicio</a>
+                    <a href="/inicio">BSC</a>
                 </div>
             </details>
             <details class="sidebar-block" open>
@@ -233,7 +233,7 @@
                     <span class="bar"></span>
                 </button>
                 <div class="navbar-title">
-                    <span class="navbar-menu-name">{{ page_title or title or "Inicio" }}</span>
+                    <span class="navbar-menu-name">{{ page_title or title or "BSC" }}</span>
                     <a class="navbar-route" href="{{ request.url.path | default('/inicio') }}">{{ request.url.path | default('/inicio') }}</a>
                 </div>
             </div>
@@ -538,8 +538,8 @@
                     ? explicitHref
                     : (source.dataset.route || fallbackRoute);
 
-                navbarMenuName.textContent = mainLabel || 'Inicio';
-                navbarRoute.textContent = formatRouteLabel(mainLabel || 'Inicio', subLabel);
+                navbarMenuName.textContent = mainLabel || 'BSC';
+                navbarRoute.textContent = formatRouteLabel(mainLabel || 'BSC', subLabel);
                 navbarRoute.href = routeHref || '/';
             };
 
@@ -551,10 +551,19 @@
 
             const setSidebarState = (open) => {
                 const width = open ? expandedWidth : collapsedWidth;
+                const isMobile = window.matchMedia('(max-width: 900px)').matches;
                 sidebarElem.classList.toggle('is-collapsed', !open);
-                navbar.style.marginLeft = width;
-                mainContent.style.marginLeft = width;
-                mainContent.style.width = open ? `calc(100vw - ${expandedWidth})` : `calc(100vw - ${collapsedWidth})`;
+                if (isMobile) {
+                    navbar.style.marginLeft = '0';
+                    navbar.style.width = '100%';
+                    mainContent.style.marginLeft = '0';
+                    mainContent.style.width = '100%';
+                } else {
+                    navbar.style.marginLeft = width;
+                    navbar.style.width = open ? `calc(100vw - ${expandedWidth})` : `calc(100vw - ${collapsedWidth})`;
+                    mainContent.style.marginLeft = width;
+                    mainContent.style.width = open ? `calc(100vw - ${expandedWidth})` : `calc(100vw - ${collapsedWidth})`;
+                }
                 if (!open) {
                     sidebarBlocks.forEach((item) => {
                         item.removeAttribute('open');
@@ -781,6 +790,9 @@
                 setMenuInfo(menuLinks[0]);
             }
             setSidebarState(true);
+            window.addEventListener('resize', () => {
+                setSidebarState(isSidebarOpen);
+            });
             setFloatingScreen(floatingDefaultScreen);
             if (identityForm) {
                 const editButtons = document.querySelectorAll('.identity-asset-edit[data-target-input]');

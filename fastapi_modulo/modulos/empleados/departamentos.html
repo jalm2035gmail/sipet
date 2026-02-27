@@ -248,6 +248,116 @@
       font-weight: 600;
       font-size: .92rem;
     }
+    .departamentos-page{
+      --bg:#f6f8fb;
+      --card:#ffffff;
+      --border:#e7edf5;
+      --text:#0f172a;
+      --muted:#64748b;
+      --shadow: 0 14px 32px rgba(15,23,42,.10);
+      --radius:16px;
+    }
+    .departamentos-page .oc-card{
+      width: 320px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      transition: transform .18s ease, box-shadow .18s ease;
+    }
+    .departamentos-page .oc-card:hover{
+      transform: translateY(-3px);
+      box-shadow: 0 18px 40px rgba(15,23,42,.14);
+    }
+    .departamentos-page .oc-top{
+      padding: 12px 14px;
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      background: linear-gradient(180deg,#fff,#fbfdff);
+    }
+    .departamentos-page .oc-name{
+      font-weight: 700;
+      font-size: 14px;
+      letter-spacing: -.01em;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .departamentos-page .oc-sub{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      margin-top: 8px;
+    }
+    .departamentos-page .oc-pill{
+      font-size: 11px;
+      color:#334155;
+      background:#f8fafc;
+      border:1px solid var(--border);
+      border-radius:999px;
+      padding: 6px 10px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100%;
+    }
+    .departamentos-page .oc-score{
+      font-weight: 800;
+      font-size: 13px;
+      background:#0f172a;
+      color:#fff;
+      border-radius:12px;
+      padding: 8px 10px;
+      height: fit-content;
+      flex: 0 0 auto;
+    }
+    .departamentos-page .oc-progress{
+      height: 10px;
+      background:#e2e8f0;
+      border-top:1px solid var(--border);
+      border-bottom:1px solid var(--border);
+    }
+    .departamentos-page .oc-fill{
+      height:100%;
+      width:0%;
+    }
+    .departamentos-page .oc-bottom{
+      padding: 12px 14px 14px;
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-end;
+      gap: 10px;
+    }
+    .departamentos-page .oc-status{
+      font-weight: 800;
+      font-size: 12px;
+    }
+    .departamentos-page .oc-card[data-status="ok"] .oc-status{ color:#16a34a; }
+    .departamentos-page .oc-card[data-status="warning"] .oc-status{ color:#f59e0b; }
+    .departamentos-page .oc-card[data-status="danger"] .oc-status{ color:#ef4444; }
+    .departamentos-page .oc-kpis{
+      display:flex;
+      gap:10px;
+    }
+    .departamentos-page .oc-kpi span{
+      display:block;
+      font-size:10px;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .departamentos-page .oc-kpi strong{
+      display:block;
+      font-size:13px;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
     @media (max-width: 980px) {
       .departamentos-page .area-grid,
       .departamentos-page .kanban {
@@ -287,6 +397,17 @@
       const normalizeAreaColor = (value) => {
         const raw = String(value || '').trim();
         return /^#[0-9a-fA-F]{6}$/.test(raw) ? raw : '#1d4ed8';
+      };
+      const statusFromProgress = (progress) => {
+        const p = Number(progress || 0);
+        if (p >= 85) return 'ok';
+        if (p >= 60) return 'warning';
+        return 'danger';
+      };
+      const statusLabel = (status) => {
+        if (status === 'danger') return 'Atrasado';
+        if (status === 'warning') return 'En riesgo';
+        return 'OK';
       };
 
       const normalizeAreaRow = (row, fallbackIndex = 0) => {
@@ -655,16 +776,36 @@
             <h2>Organigrama de áreas</h2>
             <p>Vista jerárquica interactiva.</p>
             <div class="org-toolbar">
-              <button type="button" id="area-org-fullscreen-btn" class="btn">Ver en pantalla completa</button>
+              <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                <button type="button" id="area-org-expand-btn" class="btn">Expandir todo</button>
+                <button type="button" id="area-org-collapse-btn" class="btn">Contraer todo</button>
+                <button type="button" id="area-org-fullscreen-btn" class="btn">Ver en pantalla completa</button>
+              </div>
               <span id="area-org-fullscreen-hint" class="org-fullscreen-hint">Esc para salir de pantalla completa</span>
             </div>
             <div id="area-org-chart" class="org-chart-wrap"></div>
           </section>
         `;
         const chartEl = areaView.querySelector('#area-org-chart');
+        const expandBtn = areaView.querySelector('#area-org-expand-btn');
+        const collapseBtn = areaView.querySelector('#area-org-collapse-btn');
         const fullscreenBtn = areaView.querySelector('#area-org-fullscreen-btn');
         const fullscreenHint = areaView.querySelector('#area-org-fullscreen-hint');
         if (!chartEl) return;
+        if (expandBtn) {
+          expandBtn.addEventListener('click', () => {
+            if (!orgChartInstance) return;
+            if (typeof orgChartInstance.expandAll === 'function') orgChartInstance.expandAll();
+            if (typeof orgChartInstance.fit === 'function') orgChartInstance.fit();
+          });
+        }
+        if (collapseBtn) {
+          collapseBtn.addEventListener('click', () => {
+            if (!orgChartInstance) return;
+            if (typeof orgChartInstance.collapseAll === 'function') orgChartInstance.collapseAll();
+            if (typeof orgChartInstance.fit === 'function') orgChartInstance.fit();
+          });
+        }
         setupOrgFullscreen(chartEl, fullscreenBtn, fullscreenHint);
         renderOrgChartWithLibrary(chartEl);
       };
@@ -890,9 +1031,11 @@
         orgChartInstance = new window.d3.OrgChart()
           .container(container)
           .data(nodes)
-          .nodeWidth(() => 260)
-          .nodeHeight(() => 120)
-          .childrenMargin(() => 48)
+          .nodeWidth(() => 340)
+          .nodeHeight(() => 160)
+          .childrenMargin(() => 60)
+          .compactMarginBetween(() => 25)
+          .compactMarginPair(() => 80)
           .linkYOffset(20)
           .setActiveNodeCentered(false)
           .onNodeClick((d) => {
@@ -905,46 +1048,51 @@
               .attr('stroke-width', 1.1)
               .attr('stroke', 'rgba(15, 23, 42, 0.38)');
           })
-          .initialExpandLevel(99)
+          .initialExpandLevel(1)
           .compact(false)
           .nodeContent((d) => {
             const data = d?.data || {};
-            const manager = escapeHtml(data.manager || 'Sin responsable');
-            const code = escapeHtml(data.code || '');
-            const name = escapeHtml(data.name || '');
-            const border = escapeHtml(data.color || '#1d4ed8');
+            const rawName = String(data.name || '').trim();
+            const rawOwner = String(data.owner || data.manager || '').trim();
+            const rawType = String(data.type || '').trim().toLowerCase();
+            const numericProgress = Number(data.progress);
+            const progress = Number.isFinite(numericProgress) ? Math.max(0, Math.min(100, numericProgress)) : 0;
+            const status = String(data.status || data.status_key || '').trim() || statusFromProgress(progress);
+            const name = escapeHtml(rawName || 'Área / Puesto');
+            const typeBadge = rawType === 'consejo' ? '🏛 Consejo'
+              : rawType === 'direccion' ? '🧭 Dirección'
+              : rawType === 'control' ? '🛡 Control'
+              : rawType === 'operacion' ? '⚙ Operación'
+              : '🏷 Área';
+            const owner = rawOwner ? `<span class="oc-pill">👤 ${escapeHtml(rawOwner)}</span>` : '';
+            const kpi1 = (data.kpi_1 ?? '') !== ''
+              ? `<div class="oc-kpi"><span>${escapeHtml(data.kpi_1_label || 'KPI')}</span><strong>${escapeHtml(data.kpi_1)}</strong></div>`
+              : `<div class="oc-kpi"><span>Empleados</span><strong>${Number(data.empleados_asignados || 0)}</strong></div>`;
+            const kpi2 = (data.kpi_2 ?? '') !== ''
+              ? `<div class="oc-kpi"><span>${escapeHtml(data.kpi_2_label || 'KPI')}</span><strong>${escapeHtml(data.kpi_2)}</strong></div>`
+              : `<div class="oc-kpi"><span>Código</span><strong>${escapeHtml(data.code || '-')}</strong></div>`;
             const empleados = Number(data.empleados_asignados || 0);
-            const initials = escapeHtml((name || 'A').split(/\s+/).filter(Boolean).slice(0, 2).map(part => part.charAt(0).toUpperCase()).join(''));
+            const grad = status === 'danger'
+              ? 'linear-gradient(90deg,#ef4444,#fb7185)'
+              : status === 'warning'
+                ? 'linear-gradient(90deg,#f59e0b,#fbbf24)'
+                : 'linear-gradient(90deg,#16a34a,#22c55e)';
             return `
-              <div style="
-                width:100%;
-                height:100%;
-                border:2px solid ${border};
-                border-radius:12px;
-                background:#ffffff;
-                box-shadow:0 8px 20px rgba(15,23,42,.12);
-                padding:10px 12px;
-                color:#0f172a;
-                display:flex;
-                flex-direction:column;
-                justify-content:center;
-                gap:6px;
-                box-sizing:border-box;
-                overflow:hidden;
-              ">
-                <div class="org-node-layout">
-                  <div class="org-node-avatar">
-                    ${orgAvatarUrl
-                      ? `<img src="${escapeHtml(orgAvatarUrl)}" alt="Área">`
-                      : `<span class="org-node-avatar-fallback">${initials}</span>`
-                    }
+              <div class="oc-card" data-status="${escapeHtml(status)}" title="Empleados asignados: ${empleados}">
+                <div class="oc-top">
+                  <div class="oc-title">
+                    <div class="oc-name">${name}</div>
+                    <div class="oc-sub">
+                      <span class="oc-pill">${typeBadge}</span>
+                      ${owner}
+                    </div>
                   </div>
-                  <div class="org-node-data">
-                    <strong style="font-size:15px; line-height:1.2; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${name}</strong>
-                    <div style="font-size:12px; opacity:.85; line-height:1.2; margin-top:2px;">${code}</div>
-                    <div style="font-size:12px; opacity:.9; line-height:1.2; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${manager}</div>
-                    <div style="font-size:12px; opacity:.9; line-height:1.2; margin-top:2px;">Empleados asignados: ${empleados}</div>
-                  </div>
+                  <div class="oc-score">${Math.round(progress)}%</div>
+                </div>
+                <div class="oc-progress"><div class="oc-fill" style="width:${progress}%;background:${grad};"></div></div>
+                <div class="oc-bottom">
+                  <div class="oc-status">${statusLabel(status)}</div>
+                  <div class="oc-kpis">${kpi1}${kpi2}</div>
                 </div>
               </div>
             `;

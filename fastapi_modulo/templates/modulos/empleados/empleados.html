@@ -279,6 +279,185 @@
             display: grid;
             gap: 12px;
         }
+        #empleados-module{
+            --bg:#f6f8fb;
+            --card:#ffffff;
+            --border:#e7edf5;
+            --text:#0f172a;
+            --muted:#64748b;
+            --shadow: 0 14px 32px rgba(15,23,42,.10);
+            --radius:16px;
+        }
+        .oc-card{
+            width: 320px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            transition: transform .18s ease, box-shadow .18s ease;
+        }
+        .oc-card:hover{
+            transform: translateY(-3px);
+            box-shadow: 0 18px 40px rgba(15,23,42,.14);
+        }
+        .oc-top{
+            padding: 12px 14px;
+            display:flex;
+            justify-content:space-between;
+            gap:10px;
+            background: linear-gradient(180deg,#fff,#fbfdff);
+        }
+        .oc-name{
+            font-weight: 700;
+            font-size: 14px;
+            letter-spacing: -.01em;
+            color: var(--text);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .oc-sub{
+            display:flex;
+            flex-wrap:wrap;
+            gap:8px;
+            margin-top: 8px;
+        }
+        .oc-pill{
+            font-size: 11px;
+            color:#334155;
+            background:#f8fafc;
+            border:1px solid var(--border);
+            border-radius:999px;
+            padding: 6px 10px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
+        }
+        .oc-score{
+            font-weight: 800;
+            font-size: 13px;
+            background:#0f172a;
+            color:#fff;
+            border-radius:12px;
+            padding: 8px 10px;
+            height: fit-content;
+            flex: 0 0 auto;
+        }
+        .oc-progress{
+            height: 10px;
+            background:#e2e8f0;
+            border-top:1px solid var(--border);
+            border-bottom:1px solid var(--border);
+        }
+        .oc-fill{ height:100%; width:0%; }
+        .oc-bottom{
+            padding: 12px 14px 14px;
+            display:flex;
+            justify-content:space-between;
+            align-items:flex-end;
+            gap: 10px;
+        }
+        .oc-status{
+            font-weight: 800;
+            font-size: 12px;
+        }
+        .oc-card[data-status="ok"] .oc-status{ color:#16a34a; }
+        .oc-card[data-status="warning"] .oc-status{ color:#f59e0b; }
+        .oc-card[data-status="danger"] .oc-status{ color:#ef4444; }
+        .oc-kpis{
+            display:flex; gap:10px;
+        }
+        .oc-kpi span{
+            display:block;
+            font-size:10px;
+            color: var(--muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .oc-kpi strong{
+            display:block;
+            font-size:13px;
+            color: var(--text);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .emp-org-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 10px;
+        }
+        .emp-org-zoom {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .emp-org-zoom button {
+            width: 34px;
+            height: 34px;
+            border: 1px solid #cbd5e1;
+            border-radius: 10px;
+            background: #ffffff;
+            color: #0f172a;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .emp-org-fit {
+            border: 1px solid #cbd5e1;
+            border-radius: 10px;
+            background: #ffffff;
+            color: #0f172a;
+            font-size: 0.86rem;
+            font-weight: 600;
+            padding: 8px 12px;
+            cursor: pointer;
+        }
+        .emp-org-chart-wrap {
+            min-height: 580px;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+            overflow: auto;
+            padding: 8px;
+        }
+        .emp-org-node-layout {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+        }
+        .emp-org-node-avatar {
+            width: 52px;
+            height: 52px;
+            border-radius: 14px;
+            overflow: hidden;
+            background: #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #0f172a;
+            font-size: 0.82rem;
+            font-weight: 700;
+            flex: 0 0 auto;
+        }
+        .emp-org-node-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+        .emp-org-node-data {
+            min-width: 0;
+            display: grid;
+            gap: 2px;
+        }
         .emp-kanban-card {
             position: relative;
             display: grid;
@@ -473,6 +652,8 @@
         if (!tbody || !viewButtons.length || !empCard) return;
         
         var empleadosData = [];
+        var orgChartInstance = null;
+        var orgLibPromise = null;
         var viewerCanViewAll = false;
         var viewerCanManageAccess = false;
         var viewerAssignableRoles = [];
@@ -646,6 +827,170 @@
             var user = empleadosData[pos];
             setView('form');
             setTimeout(function() { fillFormWithColaborador(user); }, 80);
+        }
+        function openColaboradorFromId(colabId) {
+            var numericId = Number(colabId);
+            if (!numericId) return;
+            var selected = null;
+            for (var i = 0; i < empleadosData.length; i++) {
+                var row = empleadosData[i] || {};
+                if (Number(row.id) === numericId) {
+                    selected = row;
+                    break;
+                }
+            }
+            if (!selected) return;
+            setView('form');
+            setTimeout(function() { fillFormWithColaborador(selected); }, 80);
+        }
+        function normalizeText(value) {
+            return String(value || '').trim().toLowerCase();
+        }
+        function statusFromProgress(progress) {
+            var p = Number(progress || 0);
+            if (p >= 85) return 'ok';
+            if (p >= 60) return 'warning';
+            return 'danger';
+        }
+        function statusLabel(status) {
+            if (status === 'danger') return 'Atrasado';
+            if (status === 'warning') return 'En riesgo';
+            return 'OK';
+        }
+        function collaboratorProgress(data) {
+            var n = Number(data && data.progress);
+            if (Number.isFinite(n)) return Math.max(0, Math.min(100, n));
+            var estado = normalizeText(data && data.estado);
+            if (estado === 'activo') return 90;
+            if (estado === 'inactivo') return 30;
+            return 60;
+        }
+        function statusBorderColor(estado) {
+            var key = normalizeText(estado);
+            if (key === 'inactivo') return '#ef4444';
+            if (key === 'pendiente') return '#f59e0b';
+            return '#0f766e';
+        }
+        function loadScript(src) {
+            return new Promise(function(resolve, reject) {
+                if (document.querySelector('script[src="' + src + '"]')) {
+                    resolve();
+                    return;
+                }
+                var script = document.createElement('script');
+                script.src = src;
+                script.async = true;
+                script.onload = function() { resolve(); };
+                script.onerror = function() { reject(new Error('No se pudo cargar ' + src)); };
+                document.head.appendChild(script);
+            });
+        }
+        async function ensureOrgChartLibrary() {
+            if (window.d3 && window.d3.OrgChart) return true;
+            if (!orgLibPromise) {
+                orgLibPromise = (async function() {
+                    try {
+                        await loadScript('/static/vendor/d3.min.js');
+                        await loadScript('/static/vendor/d3-flextree.min.js');
+                        await loadScript('/static/vendor/d3-org-chart.min.js');
+                    } catch (_localError) {
+                        await loadScript('https://cdn.jsdelivr.net/npm/d3@7');
+                        await loadScript('https://cdn.jsdelivr.net/npm/d3-flextree@2.1.2/build/d3-flextree.js');
+                        await loadScript('https://cdn.jsdelivr.net/npm/d3-org-chart@3');
+                    }
+                })().catch(function() { return false; });
+            }
+            var result = await orgLibPromise;
+            return result !== false && !!(window.d3 && window.d3.OrgChart);
+        }
+        function buildOrgNodes(rows) {
+            var nodes = [];
+            var byId = {};
+            var idByKey = {};
+            for (var i = 0; i < rows.length; i++) {
+                var row = rows[i] || {};
+                var id = Number(row.id || 0);
+                if (!id) continue;
+                byId[id] = row;
+                var nameKey = normalizeText(row.nombre);
+                var userKey = normalizeText(row.usuario);
+                if (nameKey) idByKey[nameKey] = id;
+                if (userKey) idByKey[userKey] = id;
+            }
+            for (var j = 0; j < rows.length; j++) {
+                var r = rows[j] || {};
+                var rowId = Number(r.id || 0);
+                if (!rowId) continue;
+                var parentId = Number(r.jefe_inmediato_id || 0);
+                if (!parentId || !byId[parentId] || parentId === rowId) {
+                    var bossKey = normalizeText(r.jefe);
+                    parentId = bossKey ? Number(idByKey[bossKey] || 0) : 0;
+                }
+                if (parentId === rowId || !byId[parentId]) parentId = 0;
+                nodes.push({
+                    id: String(rowId),
+                    parentId: parentId ? String(parentId) : null,
+                    nombre: String(r.nombre || '').trim(),
+                    usuario: String(r.usuario || '').trim(),
+                    puesto: String(r.puesto || '').trim(),
+                    departamento: String(r.departamento || '').trim(),
+                    imagen: String(r.imagen || '').trim(),
+                    estado: String(r.estado || 'Activo').trim()
+                });
+            }
+            var roots = nodes.filter(function(node) { return !node.parentId; });
+            if (roots.length > 1) {
+                var virtualRootId = '__root__colaboradores__';
+                for (var k = 0; k < roots.length; k++) {
+                    roots[k].parentId = virtualRootId;
+                }
+                nodes.unshift({
+                    id: virtualRootId,
+                    parentId: null,
+                    nombre: 'Colaboradores',
+                    usuario: '',
+                    puesto: '',
+                    departamento: '',
+                    imagen: '/icon/usuario.png',
+                    estado: 'Activo'
+                });
+            }
+            return nodes;
+        }
+        function bindOrgToolbar(toolbarEl) {
+            if (!toolbarEl || !orgChartInstance) return;
+            var zoomInBtn = toolbarEl.querySelector('[data-org-zoom="in"]');
+            var zoomOutBtn = toolbarEl.querySelector('[data-org-zoom="out"]');
+            var fitBtn = toolbarEl.querySelector('[data-org-zoom="fit"]');
+            var expandBtn = toolbarEl.querySelector('[data-org-zoom="expand"]');
+            var collapseBtn = toolbarEl.querySelector('[data-org-zoom="collapse"]');
+            if (zoomInBtn) {
+                zoomInBtn.addEventListener('click', function() {
+                    if (orgChartInstance && typeof orgChartInstance.zoomIn === 'function') orgChartInstance.zoomIn();
+                });
+            }
+            if (zoomOutBtn) {
+                zoomOutBtn.addEventListener('click', function() {
+                    if (orgChartInstance && typeof orgChartInstance.zoomOut === 'function') orgChartInstance.zoomOut();
+                });
+            }
+            if (fitBtn) {
+                fitBtn.addEventListener('click', function() {
+                    if (orgChartInstance && typeof orgChartInstance.fit === 'function') orgChartInstance.fit();
+                });
+            }
+            if (expandBtn) {
+                expandBtn.addEventListener('click', function() {
+                    if (orgChartInstance && typeof orgChartInstance.expandAll === 'function') orgChartInstance.expandAll();
+                    if (orgChartInstance && typeof orgChartInstance.fit === 'function') orgChartInstance.fit();
+                });
+            }
+            if (collapseBtn) {
+                collapseBtn.addEventListener('click', function() {
+                    if (orgChartInstance && typeof orgChartInstance.collapseAll === 'function') orgChartInstance.collapseAll();
+                    if (orgChartInstance && typeof orgChartInstance.fit === 'function') orgChartInstance.fit();
+                });
+            }
         }
         
         // Renderizar vista de lista
@@ -991,54 +1336,101 @@
             empCard.innerHTML = '<h3 class="emp-head">Organigrama de colaboradores</h3><p class="emp-empty">Cargando...</p>';
             fetch('/api/colaboradores/organigrama')
                 .then(function(r) { return r.json().then(function(j){ return { ok: r.ok, j: j }; }); })
-                .then(function(res) {
+                .then(async function(res) {
                     if (!res.ok || !res.j || res.j.success === false) throw new Error();
                     var rows = Array.isArray(res.j.data) ? res.j.data : [];
                     if (!rows.length) {
                         empCard.innerHTML = '<h3 class="emp-head">Organigrama de colaboradores</h3><p class="emp-empty">Sin colaboradores visibles.</p>';
                         return;
                     }
-                    var byBoss = {};
-                    var idByKey = {};
-                    rows.forEach(function(row) {
-                        var keyName = (row.nombre || '').trim().toLowerCase();
-                        var keyUser = (row.usuario || '').trim().toLowerCase();
-                        if (keyName) idByKey[keyName] = row.id;
-                        if (keyUser) idByKey[keyUser] = row.id;
-                    });
-                    rows.forEach(function(row) {
-                        var bossId = row.jefe_inmediato_id ? Number(row.jefe_inmediato_id) : null;
-                        if (!bossId) {
-                            var boss = (row.jefe || '').trim().toLowerCase();
-                            bossId = idByKey[boss] || null;
-                        }
-                        var groupKey = bossId ? String(bossId) : 'root';
-                        if (!byBoss[groupKey]) byBoss[groupKey] = [];
-                        byBoss[groupKey].push(row);
-                    });
-                    var roots = byBoss.root || rows.filter(function(row) {
-                        if (row.jefe_inmediato_id) return false;
-                        var boss = (row.jefe || '').trim().toLowerCase();
-                        return !boss || !idByKey[boss];
-                    });
-                    var renderLevel = function(nodes, depth) {
-                        if (!nodes || !nodes.length) return '';
-                        return '<div class="org-level" style="margin-top:' + (depth ? '10px' : '0') + ';">' +
-                            nodes.map(function(n) {
-                                var children = byBoss[String(n.id)] || [];
-                                var avatar = esc((n.imagen || '').trim() || '/icon/usuario.png');
-                                return '<div class="' + (depth === 0 ? 'org-root' : '') + '">' +
-                                    '<div class="org-node">' +
-                                        '<div class="org-node-avatar"><img src="' + avatar + '" alt="' + esc(n.nombre || 'Colaborador') + '" loading="lazy" onerror="this.src=\'/icon/usuario.png\'"></div>' +
-                                        '<strong>' + esc(n.nombre) + '</strong>' +
-                                        '<span>' + esc(n.puesto || n.usuario) + '</span>' +
+                    var available = await ensureOrgChartLibrary();
+                    if (!available) {
+                        empCard.innerHTML = '<h3 class="emp-head">Organigrama de colaboradores</h3><p class="emp-empty">No se pudo cargar la librería de organigrama.</p>';
+                        return;
+                    }
+                    var nodes = buildOrgNodes(rows);
+                    if (!nodes.length) {
+                        empCard.innerHTML = '<h3 class="emp-head">Organigrama de colaboradores</h3><p class="emp-empty">Sin colaboradores visibles.</p>';
+                        return;
+                    }
+                    empCard.innerHTML =
+                        '<h3 class="emp-head">Organigrama de colaboradores</h3>' +
+                        '<div class="emp-org-toolbar">' +
+                            '<span class="emp-empty">Mismo formato visual de departamentos.</span>' +
+                            '<div class="emp-org-zoom">' +
+                                '<button type="button" data-org-zoom="expand" title="Expandir todo">▾▾</button>' +
+                                '<button type="button" data-org-zoom="collapse" title="Contraer todo">▸▸</button>' +
+                                '<button type="button" data-org-zoom="out" title="Alejar">-</button>' +
+                                '<button type="button" data-org-zoom="in" title="Acercar">+</button>' +
+                                '<button type="button" class="emp-org-fit" data-org-zoom="fit">Ajustar</button>' +
+                            '</div>' +
+                        '</div>' +
+                        '<div id="emp-org-chart" class="emp-org-chart-wrap"></div>';
+                    var chartEl = empCard.querySelector('#emp-org-chart');
+                    orgChartInstance = new window.d3.OrgChart()
+                        .container(chartEl)
+                        .data(nodes)
+                        .nodeWidth(function() { return 340; })
+                        .nodeHeight(function() { return 160; })
+                        .childrenMargin(function() { return 60; })
+                        .compactMarginBetween(function() { return 25; })
+                        .compactMarginPair(function() { return 80; })
+                        .linkYOffset(18)
+                        .setActiveNodeCentered(false)
+                        .initialExpandLevel(1)
+                        .compact(false)
+                        .onNodeClick(function(d) {
+                            var nodeId = String(d && d.data && d.data.id ? d.data.id : '').trim();
+                            if (!nodeId || nodeId === '__root__colaboradores__') return;
+                            openColaboradorFromId(nodeId);
+                        })
+                        .linkUpdate(function() {
+                            window.d3.select(this)
+                                .attr('stroke-width', 1.1)
+                                .attr('stroke', 'rgba(15, 23, 42, 0.35)');
+                        })
+                        .nodeContent(function(d) {
+                            var data = d && d.data ? d.data : {};
+                            var name = esc(data.nombre || data.usuario || 'Área / Puesto');
+                            var puesto = esc(data.puesto || data.nivel_organizacional || 'Colaborador');
+                            var owner = data.jefe ? '<span class="oc-pill">👤 ' + esc(data.jefe) + '</span>' : '';
+                            var typeRaw = normalizeText(data.nivel_organizacional || data.rol || '');
+                            var typeBadge = typeRaw === 'direccion' ? '🧭 Dirección'
+                                : typeRaw === 'jefatura' ? '🛡 Control'
+                                : typeRaw === 'coordinacion' ? '⚙ Operación'
+                                : typeRaw === 'staff' ? '🏷 Área'
+                                : '🏷 Área';
+                            var progress = collaboratorProgress(data);
+                            var status = String(data.status || '').trim() || statusFromProgress(progress);
+                            var kpi1 = '<div class="oc-kpi"><span>Departamento</span><strong>' + esc(data.departamento || 'Sin área') + '</strong></div>';
+                            var kpi2 = '<div class="oc-kpi"><span>Usuario</span><strong>' + esc(data.usuario || '-') + '</strong></div>';
+                            var grad = status === 'danger'
+                                ? 'linear-gradient(90deg,#ef4444,#fb7185)'
+                                : status === 'warning'
+                                    ? 'linear-gradient(90deg,#f59e0b,#fbbf24)'
+                                    : 'linear-gradient(90deg,#16a34a,#22c55e)';
+                            return '' +
+                                '<div class="oc-card" data-status="' + esc(status) + '">' +
+                                    '<div class="oc-top">' +
+                                        '<div class="oc-title">' +
+                                            '<div class="oc-name">' + name + '</div>' +
+                                            '<div class="oc-sub">' +
+                                                '<span class="oc-pill">' + typeBadge + '</span>' +
+                                                owner +
+                                            '</div>' +
+                                        '</div>' +
+                                        '<div class="oc-score">' + Math.round(progress) + '%</div>' +
                                     '</div>' +
-                                    (children.length ? '<div class="org-divider"></div>' + renderLevel(children, depth + 1) : '') +
+                                    '<div class="oc-progress"><div class="oc-fill" style="width:' + progress + '%; background:' + grad + ';"></div></div>' +
+                                    '<div class="oc-bottom">' +
+                                        '<div class="oc-status">' + statusLabel(status) + '</div>' +
+                                        '<div class="oc-kpis">' + kpi1 + kpi2 + '</div>' +
+                                    '</div>' +
                                 '</div>';
-                            }).join('') +
-                        '</div>';
-                    };
-                    empCard.innerHTML = '<h3 class="emp-head">Organigrama de colaboradores</h3><div class="usuario-organigrama">' + renderLevel(roots, 0) + '</div>';
+                        })
+                        .render();
+                    bindOrgToolbar(empCard.querySelector('.emp-org-toolbar'));
+                    if (orgChartInstance && typeof orgChartInstance.fit === 'function') orgChartInstance.fit();
                 })
                 .catch(function() {
                     empCard.innerHTML = '<h3 class="emp-head">Organigrama de colaboradores</h3><p class="emp-empty">No se pudo cargar organigrama.</p>';

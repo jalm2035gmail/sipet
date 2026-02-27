@@ -5835,15 +5835,10 @@ def inicio_page(request: Request):
           margin-top: 18px;
           display: grid;
           grid-template-columns: repeat(12, minmax(0, 1fr));
-          grid-template-areas:
-            "trend trend trend trend trend trend trend trend trend trend trend trend"
-            "radar radar radar radar bars bars bars bars donut donut donut donut"
-            "budget budget budget budget budget budget risk risk risk risk risk risk"
-            "activities activities activities activities activities activities activities activities activities activities activities activities";
           gap: 16px;
         }}
         .bscA__card {{
-          grid-column: span 4;
+          grid-column: span 6;
           background: #fff;
           border: 1px solid #eef2f7;
           border-radius: 18px;
@@ -5851,14 +5846,7 @@ def inicio_page(request: Request):
           padding: 18px;
           min-height: 280px;
         }}
-        .bscA__card--wide {{ grid-column: span 6; }}
-        .bscA__card--trend {{ grid-area: trend; }}
-        .bscA__card--radar {{ grid-area: radar; }}
-        .bscA__card--bars {{ grid-area: bars; }}
-        .bscA__card--donut {{ grid-area: donut; }}
-        .bscA__card--budget {{ grid-area: budget; }}
-        .bscA__card--risk {{ grid-area: risk; }}
-        .bscA__card--activities {{ grid-area: activities; }}
+        .bscA__card--wide {{ grid-column: span 12; }}
         .bscA__cardHeader {{
           display: flex;
           justify-content: space-between;
@@ -5982,11 +5970,8 @@ def inicio_page(request: Request):
         }}
         .bscA__empty {{ color:#64748b; text-align:center; font-style:italic; }}
         @media (max-width: 1280px) {{
-          .bscA__grid {{
-            grid-template-areas: none;
-          }}
           .bscA__kpis {{ grid-template-columns:repeat(2, minmax(0,1fr)); }}
-          .bscA__card {{ grid-column: span 6; }}
+          .bscA__card {{ grid-column: span 12; }}
           .bscA__card--wide {{ grid-column: span 12; }}
         }}
         @media (max-width: 780px) {{

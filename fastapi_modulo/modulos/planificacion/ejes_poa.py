@@ -999,6 +999,154 @@ EJES_ESTRATEGICOS_HTML = dedent("""
           color: #64748b;
           font-size: 13px;
         }
+        .axm-org-toolbar{
+          display:flex;
+          justify-content:space-between;
+          align-items:center;
+          gap:10px;
+          flex-wrap:wrap;
+          margin-bottom:10px;
+        }
+        .axm-org-zoom{
+          display:inline-flex;
+          align-items:center;
+          gap:8px;
+        }
+        .axm-org-zoom button{
+          width:34px;
+          height:34px;
+          border:1px solid rgba(148,163,184,.45);
+          border-radius:10px;
+          background:#ffffff;
+          color:#0f172a;
+          font-weight:700;
+          cursor:pointer;
+        }
+        .axm-org-fit{
+          border:1px solid rgba(148,163,184,.45);
+          border-radius:10px;
+          background:#ffffff;
+          color:#0f172a;
+          font-size:12px;
+          font-weight:700;
+          padding:8px 12px;
+          cursor:pointer;
+        }
+        .axm-org-chart-wrap{
+          min-height:620px;
+          border:1px solid rgba(148,163,184,.35);
+          border-radius:14px;
+          background:linear-gradient(180deg, rgba(248,250,252,.96), rgba(255,255,255,.98));
+          padding:8px;
+          overflow:auto;
+        }
+        .axm-arbol{
+          --bg:#f6f8fb;
+          --card:#ffffff;
+          --border:#e7edf5;
+          --text:#0f172a;
+          --muted:#64748b;
+          --shadow: 0 14px 32px rgba(15,23,42,.10);
+          --radius:16px;
+        }
+        .axm-arbol .oc-card{
+          width: 320px;
+          background: var(--card);
+          border: 1px solid var(--border);
+          border-radius: var(--radius);
+          box-shadow: var(--shadow);
+          overflow: hidden;
+          transition: transform .18s ease, box-shadow .18s ease;
+        }
+        .axm-arbol .oc-card:hover{
+          transform: translateY(-3px);
+          box-shadow: 0 18px 40px rgba(15,23,42,.14);
+        }
+        .axm-arbol .oc-top{
+          padding: 12px 14px;
+          display:flex;
+          justify-content:space-between;
+          gap:10px;
+          background: linear-gradient(180deg,#fff,#fbfdff);
+        }
+        .axm-arbol .oc-name{
+          font-weight: 700;
+          font-size: 14px;
+          letter-spacing: -.01em;
+          color: var(--text);
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .axm-arbol .oc-sub{
+          display:flex;
+          flex-wrap:wrap;
+          gap:8px;
+          margin-top: 8px;
+        }
+        .axm-arbol .oc-pill{
+          font-size: 11px;
+          color:#334155;
+          background:#f8fafc;
+          border:1px solid var(--border);
+          border-radius:999px;
+          padding: 6px 10px;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          max-width: 100%;
+        }
+        .axm-arbol .oc-score{
+          font-weight: 800;
+          font-size: 13px;
+          background:#0f172a;
+          color:#fff;
+          border-radius:12px;
+          padding: 8px 10px;
+          height: fit-content;
+          flex: 0 0 auto;
+        }
+        .axm-arbol .oc-progress{
+          height: 10px;
+          background:#e2e8f0;
+          border-top:1px solid var(--border);
+          border-bottom:1px solid var(--border);
+        }
+        .axm-arbol .oc-fill{ height:100%; width:0%; }
+        .axm-arbol .oc-bottom{
+          padding: 12px 14px 14px;
+          display:flex;
+          justify-content:space-between;
+          align-items:flex-end;
+          gap: 10px;
+        }
+        .axm-arbol .oc-status{
+          font-weight: 800;
+          font-size: 12px;
+        }
+        .axm-arbol .oc-card[data-status="ok"] .oc-status{ color:#16a34a; }
+        .axm-arbol .oc-card[data-status="warning"] .oc-status{ color:#f59e0b; }
+        .axm-arbol .oc-card[data-status="danger"] .oc-status{ color:#ef4444; }
+        .axm-arbol .oc-kpis{
+          display:flex;
+          gap:10px;
+        }
+        .axm-arbol .oc-kpi span{
+          display:block;
+          font-size:10px;
+          color: var(--muted);
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .axm-arbol .oc-kpi strong{
+          display:block;
+          font-size:13px;
+          color: var(--text);
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
         .axm-tree-roots{
           display: grid;
           grid-template-columns: 1fr 1fr;
@@ -1274,9 +1422,17 @@ EJES_ESTRATEGICOS_HTML = dedent("""
       <section class="axm-arbol" id="axm-arbol-panel">
         <h3>Organigrama estratégico</h3>
         <p class="axm-arbol-sub">Vista organigrama: Misión/Visión como base, líneas por código y ejes vinculados.</p>
-        <div class="axm-tree-roots" id="axm-tree-roots"></div>
-        <div class="axm-tree-divider"></div>
-        <div class="axm-tree-axes" id="axm-tree-axes"></div>
+        <div class="axm-org-toolbar">
+          <span class="axm-arbol-sub" style="margin:0;">Haz clic en un nodo para abrir su formulario correspondiente.</span>
+          <div class="axm-org-zoom">
+            <button type="button" id="axm-tree-expand" title="Expandir todo">▾▾</button>
+            <button type="button" id="axm-tree-collapse" title="Contraer todo">▸▸</button>
+            <button type="button" id="axm-tree-zoom-out" title="Alejar">-</button>
+            <button type="button" id="axm-tree-zoom-in" title="Acercar">+</button>
+            <button type="button" id="axm-tree-fit" class="axm-org-fit">Ajustar</button>
+          </div>
+        </div>
+        <div id="axm-tree-chart" class="axm-org-chart-wrap"></div>
       </section>
       <section class="axm-tab-panel" id="axm-tab-panel">No tiene acceso, consulte con el administrador</section>
       <section class="axm-card" id="axm-objetivos-panel" style="display:none;">
@@ -1450,8 +1606,12 @@ EJES_ESTRATEGICOS_HTML = dedent("""
           const blockedContainer = document.querySelector(".axm-grid");
           const objetivosPanel = document.getElementById("axm-objetivos-panel");
           const arbolPanel = document.getElementById("axm-arbol-panel");
-          const treeRootsEl = document.getElementById("axm-tree-roots");
-          const treeAxesEl = document.getElementById("axm-tree-axes");
+          const treeChartEl = document.getElementById("axm-tree-chart");
+          const treeExpandBtn = document.getElementById("axm-tree-expand");
+          const treeCollapseBtn = document.getElementById("axm-tree-collapse");
+          const treeZoomInBtn = document.getElementById("axm-tree-zoom-in");
+          const treeZoomOutBtn = document.getElementById("axm-tree-zoom-out");
+          const treeFitBtn = document.getElementById("axm-tree-fit");
           const trackBoardEl = document.getElementById("axm-track-board");
           const setupIdentityComposer = (prefix, linesId, hiddenId, fullId, addId) => {
             const linesHost = document.getElementById(linesId);
@@ -1634,6 +1794,8 @@ EJES_ESTRATEGICOS_HTML = dedent("""
           let axisDepartmentCollaborators = [];
           let collaborators = [];
           let poaActivitiesByObjective = {};
+          let strategicTreeChart = null;
+          let strategicTreeLibPromise = null;
           let selectedAxisId = null;
           let selectedObjectiveId = null;
           const toId = (value) => {
@@ -1700,6 +1862,36 @@ EJES_ESTRATEGICOS_HTML = dedent("""
             axisBasePreviewEl.textContent = (match && match.text)
               ? match.text
               : "Sin texto para este código. Puedes editarlo en Identidad.";
+          };
+          const loadScript = (src) => new Promise((resolve, reject) => {
+            if (document.querySelector(`script[src="${src}"]`)) {
+              resolve();
+              return;
+            }
+            const script = document.createElement("script");
+            script.src = src;
+            script.async = true;
+            script.onload = () => resolve();
+            script.onerror = () => reject(new Error(`No se pudo cargar ${src}`));
+            document.head.appendChild(script);
+          });
+          const ensureStrategicTreeLibrary = async () => {
+            if (window.d3 && window.d3.OrgChart) return true;
+            if (!strategicTreeLibPromise) {
+              strategicTreeLibPromise = (async () => {
+                try {
+                  await loadScript("/static/vendor/d3.min.js");
+                  await loadScript("/static/vendor/d3-flextree.min.js");
+                  await loadScript("/static/vendor/d3-org-chart.min.js");
+                } catch (_localError) {
+                  await loadScript("https://cdn.jsdelivr.net/npm/d3@7");
+                  await loadScript("https://cdn.jsdelivr.net/npm/d3-flextree@2.1.2/build/d3-flextree.js");
+                  await loadScript("https://cdn.jsdelivr.net/npm/d3-org-chart@3");
+                }
+              })().catch(() => false);
+            }
+            const result = await strategicTreeLibPromise;
+            return result !== false && !!(window.d3 && window.d3.OrgChart);
           };
 
           const openAxisModal = () => {
@@ -1772,7 +1964,23 @@ EJES_ESTRATEGICOS_HTML = dedent("""
           });
 
           const renderStrategicTree = () => {
-            if (!treeRootsEl || !treeAxesEl) return;
+            if (!treeChartEl) return;
+            const statusFromProgress = (p) => {
+              if (Number(p || 0) >= 85) return "ok";
+              if (Number(p || 0) >= 60) return "warning";
+              return "danger";
+            };
+            const statusLabel = (s) => {
+              if (s === "danger") return "Atrasado";
+              if (s === "warning") return "En riesgo";
+              return "OK";
+            };
+            const cardStatusFromTree = (key, progress) => {
+              if (key === "red" || key === "orange") return "danger";
+              if (key === "yellow") return "warning";
+              if (key === "green") return "ok";
+              return statusFromProgress(progress);
+            };
             const missionLines = misionComposer ? misionComposer.getLines() : [];
             const visionLines = visionComposer ? visionComposer.getLines() : [];
             const normalizeCode = (value) => String(value || "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -1823,152 +2031,276 @@ EJES_ESTRATEGICOS_HTML = dedent("""
               if (!values.length) return 0;
               return Math.round(values.reduce((sum, item) => sum + Number(item || 0), 0) / values.length);
             };
-            const totalMission = missionLines.filter((line) => (line.text || "").trim()).length;
-            const totalVision = visionLines.filter((line) => (line.text || "").trim()).length;
             const missionProgress = consolidatedProgress(missionLines);
             const visionProgress = consolidatedProgress(visionLines);
-            treeRootsEl.classList.add("axm-org-roots");
-            treeRootsEl.innerHTML = `
-              <article class="axm-org-root-node"><button type="button" class="axm-org-click" data-org-root="mision"><h4>Misión</h4><p>Avance consolidado: ${missionProgress}% · ${totalMission} líneas activas</p></button></article>
-              <article class="axm-org-root-node"><button type="button" class="axm-org-click" data-org-root="vision"><h4>Visión</h4><p>Avance consolidado: ${visionProgress}% · ${totalVision} líneas activas</p></button></article>
-            `;
-
-            const buildBranches = (groupTitle, lines) => {
+            const colorByStatus = (key) => {
+              if (key === "green") return "#16a34a";
+              if (key === "yellow") return "#f59e0b";
+              if (key === "orange") return "#f97316";
+              if (key === "red") return "#ef4444";
+              return "#94a3b8";
+            };
+            const buildLineNodes = (rootId, groupName, lines) => {
               const activeLines = (lines || []).filter((line) => (line.text || "").trim());
-              return activeLines.map((line) => {
+              const list = [];
+              activeLines.forEach((line) => {
                 const code = normalizeCode(line.code || "");
                 const values = progressByCode[code] || [];
                 const progress = values.length ? Math.round(values.reduce((sum, item) => sum + Number(item || 0), 0) / values.length) : 0;
-                const axisNodes = (axesByCode[code] || []).map((axis) => {
+                const lineId = `line-${code || Math.random().toString(36).slice(2, 8)}`;
+                list.push({
+                  id: lineId,
+                  parentId: rootId,
+                  type: "line",
+                  code: String(line.code || "-"),
+                  title: `${groupName} · ${line.text || "Sin línea"}`,
+                  subtitle: `Avance ${progress}%`,
+                  progress,
+                  statusKey: progress >= 100 ? "green" : (progress > 0 ? "yellow" : "gray"),
+                  kpi_1_label: "Ejes",
+                  kpi_1: String((axesByCode[code] || []).length),
+                  kpi_2_label: "Código",
+                  kpi_2: String(line.code || "-"),
+                });
+                (axesByCode[code] || []).forEach((axis) => {
                   const axisObjectives = Array.isArray(axis.objetivos) ? axis.objetivos : [];
-                  const objectiveNodes = axisObjectives.map((objective) => {
-                    const activities = poaActivitiesByObjective[Number(objective.id || 0)] || [];
-                    const activityStates = activities.map((activity) => statusInfo(activity.status, activity.avance, activity.fecha_final));
-                    const objectiveState = aggregateStatus(activityStates);
-                    const activityNodes = activities.map((activity) => {
-                      const actState = statusInfo(activity.status, activity.avance, activity.fecha_final);
-                      const subNodes = (Array.isArray(activity.subactivities) ? activity.subactivities : []).map((sub) => {
-                        const subState = statusInfo("", Number(sub.avance || 0), sub.fecha_final);
-                        return `
-                          <article class="axm-org-subactivity-node axm-node-${subState.key}">
-                            <button type="button" class="axm-org-click" data-org-subactivity-id="${Number(sub.id || 0)}" data-org-objective-id="${Number(objective.id || 0)}" data-org-activity-id="${Number(activity.id || 0)}">
-                              <div class="axm-node-head"><span class="axm-status-dot"></span><strong>${sub.codigo || "SUB"} · ${sub.nombre || "Subactividad"}</strong></div>
-                              <div class="meta">${subState.text} · Avance ${Number(sub.avance || 0)}%</div>
-                            </button>
-                          </article>
-                        `;
-                      }).join("");
-                      return `
-                        <article class="axm-org-activity-node axm-node-${actState.key}">
-                          <button type="button" class="axm-org-click" data-org-activity-id="${Number(activity.id || 0)}" data-org-objective-id="${Number(objective.id || 0)}">
-                            <div class="axm-node-head"><span class="axm-status-dot"></span><strong>${activity.codigo || "ACT"} · ${activity.nombre || "Actividad"}</strong></div>
-                            <p>${actState.text} · Avance ${Number(activity.avance || 0)}%</p>
-                          </button>
-                          <div class="axm-org-subactivities">${subNodes}</div>
-                        </article>
-                      `;
-                    }).join("");
-                    return `
-                      <article class="axm-org-objective-node axm-node-${objectiveState.key}">
-                        <button type="button" class="axm-org-click" data-org-objective-id="${Number(objective.id || 0)}" data-org-axis-id="${Number(axis.id || 0)}">
-                          <div class="axm-node-head"><span class="axm-status-dot"></span><strong>${objective.codigo || "OBJ"} · ${objective.nombre || "Objetivo"}</strong></div>
-                          <p>${objectiveState.text} · Avance ${Number(objective.avance || 0)}%</p>
-                        </button>
-                        <div class="axm-org-activities">${activityNodes || '<article class="axm-org-activity-node axm-node-gray"><div class="meta">Sin actividades POA</div></article>'}</div>
-                      </article>
-                    `;
-                  }).join("");
                   const axisState = aggregateStatus(axisObjectives.map((obj) => {
                     const activities = poaActivitiesByObjective[Number(obj.id || 0)] || [];
                     return aggregateStatus(activities.map((activity) => statusInfo(activity.status, activity.avance, activity.fecha_final)));
                   }));
-                  return `
-                    <article class="axm-org-axis-node axm-node-${axisState.key}">
-                      <button type="button" class="axm-org-click" data-org-axis-node-id="${Number(axis.id || 0)}">
-                        <div class="axm-node-head"><span class="axm-status-dot"></span><h5>${axis.codigo || "sin-codigo"} · ${axis.nombre || "Eje sin nombre"}</h5></div>
-                        <p>${axisState.text} · Avance: ${Number(axis.avance || 0)}%</p>
-                      </button>
-                      <div class="axm-org-objectives">${objectiveNodes || '<article class="axm-org-objective-node axm-node-gray"><div class="meta">Sin objetivos vinculados</div></article>'}</div>
-                    </article>
-                  `;
-                }).join("") || '<article class="axm-org-axis-node"><h5>Sin ejes vinculados</h5><p>Asigna este código base a un eje.</p></article>';
-                return `
-                  <article class="axm-org-branch">
-                    <div class="axm-org-line-node">
-                      <button type="button" class="axm-org-click" data-org-line-code="${line.code || "-"}">
-                        <span class="axm-tree-code">${line.code || "-"}</span>
-                        <strong>${groupTitle} · ${line.text}</strong>
-                        <span class="axm-tree-progress">${progress}%</span>
-                      </button>
-                    </div>
-                    <div class="axm-org-axes-grid">${axisNodes}</div>
-                  </article>
-                `;
-              }).join("");
+                  const axisId = `axis-${Number(axis.id || 0)}`;
+                  list.push({
+                    id: axisId,
+                    parentId: lineId,
+                    type: "axis",
+                    axisId: Number(axis.id || 0),
+                    code: axis.codigo || "sin-codigo",
+                    title: axis.nombre || "Eje sin nombre",
+                    subtitle: `${axisState.text} · Avance ${Number(axis.avance || 0)}%`,
+                    progress: Number(axis.avance || 0),
+                    statusKey: axisState.key,
+                    owner: axis.responsabilidad_directa || axis.lider_departamento || "",
+                    kpi_1_label: "Objetivos",
+                    kpi_1: String(axisObjectives.length),
+                    kpi_2_label: "Código",
+                    kpi_2: String(axis.codigo || "sin-codigo"),
+                  });
+                  axisObjectives.forEach((objective) => {
+                    const activities = poaActivitiesByObjective[Number(objective.id || 0)] || [];
+                    const objectiveState = aggregateStatus(activities.map((activity) => statusInfo(activity.status, activity.avance, activity.fecha_final)));
+                    const objectiveId = `objective-${Number(objective.id || 0)}`;
+                    list.push({
+                      id: objectiveId,
+                      parentId: axisId,
+                      type: "objective",
+                      axisId: Number(axis.id || 0),
+                      objectiveId: Number(objective.id || 0),
+                      code: objective.codigo || "OBJ",
+                      title: objective.nombre || "Objetivo",
+                      subtitle: `${objectiveState.text} · Avance ${Number(objective.avance || 0)}%`,
+                      progress: Number(objective.avance || 0),
+                      statusKey: objectiveState.key,
+                      kpi_1_label: "Actividades",
+                      kpi_1: String(activities.length),
+                      kpi_2_label: "Código",
+                      kpi_2: String(objective.codigo || "OBJ"),
+                    });
+                    activities.forEach((activity) => {
+                      const actState = statusInfo(activity.status, activity.avance, activity.fecha_final);
+                      const activityId = `activity-${Number(activity.id || 0)}`;
+                      list.push({
+                        id: activityId,
+                        parentId: objectiveId,
+                        type: "activity",
+                        objectiveId: Number(objective.id || 0),
+                        activityId: Number(activity.id || 0),
+                        code: activity.codigo || "ACT",
+                        title: activity.nombre || "Actividad",
+                        subtitle: `${actState.text} · Avance ${Number(activity.avance || 0)}%`,
+                        progress: Number(activity.avance || 0),
+                        statusKey: actState.key,
+                        owner: activity.responsable || "",
+                        kpi_1_label: "Subtareas",
+                        kpi_1: String(Array.isArray(activity.subactivities) ? activity.subactivities.length : 0),
+                        kpi_2_label: "Código",
+                        kpi_2: String(activity.codigo || "ACT"),
+                      });
+                      (Array.isArray(activity.subactivities) ? activity.subactivities : []).forEach((sub) => {
+                        const subState = statusInfo("", Number(sub.avance || 0), sub.fecha_final);
+                        list.push({
+                          id: `subactivity-${Number(sub.id || 0)}`,
+                          parentId: activityId,
+                          type: "subactivity",
+                          objectiveId: Number(objective.id || 0),
+                          activityId: Number(activity.id || 0),
+                          subactivityId: Number(sub.id || 0),
+                          code: sub.codigo || "SUB",
+                          title: sub.nombre || "Subactividad",
+                          subtitle: `${subState.text} · Avance ${Number(sub.avance || 0)}%`,
+                          progress: Number(sub.avance || 0),
+                          statusKey: subState.key,
+                          owner: sub.responsable || "",
+                          kpi_1_label: "Código",
+                          kpi_1: String(sub.codigo || "SUB"),
+                          kpi_2_label: "Avance",
+                          kpi_2: `${Number(sub.avance || 0)}%`,
+                        });
+                      });
+                    });
+                  });
+                });
+              });
+              return list;
             };
-
-            const missionBranches = buildBranches("Misión", missionLines);
-            const visionBranches = buildBranches("Visión", visionLines);
-            const branchesHtml = `${missionBranches}${visionBranches}`;
-            treeAxesEl.innerHTML = branchesHtml
-              ? `<div class="axm-org-board">${branchesHtml}</div>`
-              : '<article class="axm-tree-axis"><h5>Sin líneas definidas</h5><p>Agrega líneas en Misión/Visión.</p></article>';
-
-            treeRootsEl.querySelectorAll("[data-org-root]").forEach((btn) => {
-              btn.addEventListener("click", () => {
-                applyTabView("identidad");
-                const key = btn.getAttribute("data-org-root");
-                const missionAcc = document.querySelector("#axm-identidad-panel details:nth-of-type(1)");
-                const visionAcc = document.querySelector("#axm-identidad-panel details:nth-of-type(2)");
-                if (key === "mision" && missionAcc) missionAcc.open = true;
-                if (key === "vision" && visionAcc) visionAcc.open = true;
-              });
-            });
-            treeAxesEl.querySelectorAll("[data-org-line-code]").forEach((btn) => {
-              btn.addEventListener("click", () => {
-                applyTabView("identidad");
-                const raw = String(btn.getAttribute("data-org-line-code") || "").toLowerCase();
-                const isMission = raw.startsWith("m");
-                const missionAcc = document.querySelector("#axm-identidad-panel details:nth-of-type(1)");
-                const visionAcc = document.querySelector("#axm-identidad-panel details:nth-of-type(2)");
-                if (missionAcc) missionAcc.open = isMission;
-                if (visionAcc) visionAcc.open = !isMission;
-              });
-            });
-            treeAxesEl.querySelectorAll("[data-org-axis-node-id]").forEach((btn) => {
-              btn.addEventListener("click", () => {
-                selectedAxisId = toId(btn.getAttribute("data-org-axis-node-id"));
-                renderAll();
-                openAxisModal();
-              });
-            });
-            treeAxesEl.querySelectorAll("[data-org-objective-id]").forEach((btn) => {
-              btn.addEventListener("click", async () => {
-                selectedAxisId = toId(btn.getAttribute("data-org-axis-id")) || selectedAxisId;
-                selectedObjectiveId = toId(btn.getAttribute("data-org-objective-id"));
-                renderAll();
-                try { await loadCollaborators(); } catch (_err) {}
-                openObjModal();
-              });
-            });
-            treeAxesEl.querySelectorAll("[data-org-activity-id]:not([data-org-subactivity-id])").forEach((btn) => {
-              btn.addEventListener("click", () => {
-                const objectiveId = Number(btn.getAttribute("data-org-objective-id") || 0);
-                const activityId = Number(btn.getAttribute("data-org-activity-id") || 0);
-                const url = `/poa?objective_id=${objectiveId}&activity_id=${activityId}`;
-                window.location.href = url;
-              });
-            });
-            treeAxesEl.querySelectorAll("[data-org-subactivity-id]").forEach((btn) => {
-              btn.addEventListener("click", () => {
-                const objectiveId = Number(btn.getAttribute("data-org-objective-id") || 0);
-                const activityId = Number(btn.getAttribute("data-org-activity-id") || 0);
-                const subId = Number(btn.getAttribute("data-org-subactivity-id") || 0);
-                const url = `/poa?objective_id=${objectiveId}&activity_id=${activityId}&subactivity_id=${subId}`;
-                window.location.href = url;
-              });
+            const nodes = [
+              { id: "strategic-root", parentId: null, type: "root", code: "BSC", title: "Árbol estratégico", subtitle: "Mapa de decisión", progress: Math.round((missionProgress + visionProgress) / 2), statusKey: "gray" },
+              { id: "mission-root", parentId: "strategic-root", type: "mission", code: "MIS", title: "Misión", subtitle: `Avance ${missionProgress}%`, progress: missionProgress, statusKey: missionProgress >= 100 ? "green" : (missionProgress > 0 ? "yellow" : "gray") },
+              { id: "vision-root", parentId: "strategic-root", type: "vision", code: "VIS", title: "Visión", subtitle: `Avance ${visionProgress}%`, progress: visionProgress, statusKey: visionProgress >= 100 ? "green" : (visionProgress > 0 ? "yellow" : "gray") },
+              ...buildLineNodes("mission-root", "Misión", missionLines),
+              ...buildLineNodes("vision-root", "Visión", visionLines),
+            ];
+            if (!nodes.length || nodes.length <= 3) {
+              treeChartEl.innerHTML = '<p style="color:#64748b;padding:10px;">Sin líneas definidas. Agrega líneas en Misión/Visión.</p>';
+              return;
+            }
+            ensureStrategicTreeLibrary().then((available) => {
+              if (!available) {
+                treeChartEl.innerHTML = '<p style="color:#b91c1c;padding:10px;">No se pudo cargar la librería de organigrama.</p>';
+                return;
+              }
+              treeChartEl.innerHTML = "";
+              strategicTreeChart = new window.d3.OrgChart()
+                .container(treeChartEl)
+                .data(nodes)
+                .nodeWidth((d) => ((d?.data?.type || "") === "root" ? 2 : 340))
+                .nodeHeight((d) => ((d?.data?.type || "") === "root" ? 2 : 160))
+                .childrenMargin(() => 60)
+                .compactMarginBetween(() => 25)
+                .compactMarginPair(() => 80)
+                .linkYOffset(18)
+                .setActiveNodeCentered(false)
+                .initialExpandLevel(1)
+                .compact(false)
+                .onNodeClick(async (d) => {
+                  const data = d?.data || {};
+                  if (data.type === "mission" || data.type === "vision" || data.type === "line") {
+                    applyTabView("identidad");
+                    const missionAcc = document.querySelector("#axm-identidad-panel details:nth-of-type(1)");
+                    const visionAcc = document.querySelector("#axm-identidad-panel details:nth-of-type(2)");
+                    if (data.type === "mission") { if (missionAcc) missionAcc.open = true; if (visionAcc) visionAcc.open = false; }
+                    if (data.type === "vision") { if (missionAcc) missionAcc.open = false; if (visionAcc) visionAcc.open = true; }
+                    if (data.type === "line") {
+                      const isMission = String(data.code || "").toLowerCase().startsWith("m");
+                      if (missionAcc) missionAcc.open = isMission;
+                      if (visionAcc) visionAcc.open = !isMission;
+                    }
+                    return;
+                  }
+                  if (data.type === "axis" && data.axisId) {
+                    selectedAxisId = toId(data.axisId);
+                    renderAll();
+                    openAxisModal();
+                    return;
+                  }
+                  if (data.type === "objective" && data.objectiveId) {
+                    selectedAxisId = toId(data.axisId) || selectedAxisId;
+                    selectedObjectiveId = toId(data.objectiveId);
+                    renderAll();
+                    try { await loadCollaborators(); } catch (_err) {}
+                    openObjModal();
+                    return;
+                  }
+                  if (data.type === "activity" && data.activityId) {
+                    window.location.href = `/poa?objective_id=${Number(data.objectiveId || 0)}&activity_id=${Number(data.activityId || 0)}`;
+                    return;
+                  }
+                  if (data.type === "subactivity" && data.subactivityId) {
+                    window.location.href = `/poa?objective_id=${Number(data.objectiveId || 0)}&activity_id=${Number(data.activityId || 0)}&subactivity_id=${Number(data.subactivityId || 0)}`;
+                  }
+                })
+                .linkUpdate(function () {
+                  window.d3.select(this).attr("stroke-width", 1.05).attr("stroke", "rgba(15,23,42,.35)");
+                })
+                .nodeContent((d) => {
+                  const data = d?.data || {};
+                  if ((data.type || "") === "root") {
+                    return '<div style="width:1px;height:1px;opacity:0;overflow:hidden;"></div>';
+                  }
+                  const progress = Number(data.progress || 0);
+                  const status = cardStatusFromTree(data.statusKey, progress);
+                  const typeBadge =
+                    data.type === "mission" ? "🎯 Misión" :
+                    data.type === "vision" ? "👁 Visión" :
+                    data.type === "line" ? "🧩 Línea" :
+                    data.type === "axis" ? "🏛 Eje" :
+                    data.type === "objective" ? "🎯 Objetivo" :
+                    data.type === "activity" ? "⚙ Actividad" :
+                    data.type === "subactivity" ? "🛠 Subactividad" :
+                    "🏷 Área";
+                  const owner = data.owner
+                    ? `<span class="oc-pill">👤 ${escapeHtml(data.owner)}</span>`
+                    : "";
+                  const k1 = (data.kpi_1 ?? "") !== ""
+                    ? `<div class="oc-kpi"><span>${escapeHtml(data.kpi_1_label || "KPI")}</span><strong>${escapeHtml(data.kpi_1)}</strong></div>`
+                    : "";
+                  const k2 = (data.kpi_2 ?? "") !== ""
+                    ? `<div class="oc-kpi"><span>${escapeHtml(data.kpi_2_label || "KPI")}</span><strong>${escapeHtml(data.kpi_2)}</strong></div>`
+                    : "";
+                  const grad =
+                    status === "danger" ? "linear-gradient(90deg,#ef4444,#fb7185)" :
+                    status === "warning" ? "linear-gradient(90deg,#f59e0b,#fbbf24)" :
+                    "linear-gradient(90deg,#16a34a,#22c55e)";
+                  return `
+                    <div class="oc-card" data-status="${status}">
+                      <div class="oc-top">
+                        <div class="oc-title">
+                          <div class="oc-name">${escapeHtml(data.title || "Área / Puesto")}</div>
+                          <div class="oc-sub">
+                            <span class="oc-pill">${typeBadge}</span>
+                            ${owner}
+                          </div>
+                        </div>
+                        <div class="oc-score">${Math.round(progress)}%</div>
+                      </div>
+                      <div class="oc-progress"><div class="oc-fill" style="width:${progress}%; background:${grad};"></div></div>
+                      <div class="oc-bottom">
+                        <div class="oc-status">${statusLabel(status)}</div>
+                        <div class="oc-kpis">${k1}${k2}</div>
+                      </div>
+                    </div>
+                  `;
+                })
+                .render();
+              if (strategicTreeChart && typeof strategicTreeChart.fit === "function") strategicTreeChart.fit();
             });
           };
+          if (treeZoomInBtn) {
+            treeZoomInBtn.addEventListener("click", () => {
+              if (strategicTreeChart && typeof strategicTreeChart.zoomIn === "function") strategicTreeChart.zoomIn();
+            });
+          }
+          if (treeExpandBtn) {
+            treeExpandBtn.addEventListener("click", () => {
+              if (strategicTreeChart && typeof strategicTreeChart.expandAll === "function") strategicTreeChart.expandAll();
+              if (strategicTreeChart && typeof strategicTreeChart.fit === "function") strategicTreeChart.fit();
+            });
+          }
+          if (treeCollapseBtn) {
+            treeCollapseBtn.addEventListener("click", () => {
+              if (strategicTreeChart && typeof strategicTreeChart.collapseAll === "function") strategicTreeChart.collapseAll();
+              if (strategicTreeChart && typeof strategicTreeChart.fit === "function") strategicTreeChart.fit();
+            });
+          }
+          if (treeZoomOutBtn) {
+            treeZoomOutBtn.addEventListener("click", () => {
+              if (strategicTreeChart && typeof strategicTreeChart.zoomOut === "function") strategicTreeChart.zoomOut();
+            });
+          }
+          if (treeFitBtn) {
+            treeFitBtn.addEventListener("click", () => {
+              if (strategicTreeChart && typeof strategicTreeChart.fit === "function") strategicTreeChart.fit();
+            });
+          }
           const renderTrackingBoard = () => {
             if (!trackBoardEl) return;
             const axisList = Array.isArray(axes) ? axes : [];

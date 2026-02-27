@@ -8,11 +8,23 @@ from fastapi_modulo.db import SessionLocal, DepartamentoOrganizacional, Base, en
 
 router = APIRouter()
 DEPARTAMENTOS_TEMPLATE_PATH = os.path.join("fastapi_modulo", "modulos", "empleados", "departamentos.html")
+DEPARTAMENTOS_PUBLIC_ACCESS = str(
+    os.getenv("DEPARTAMENTOS_PUBLIC_ACCESS", "0")
+).strip().lower() in {"1", "true", "yes", "on"}
 
 
 def _ensure_departamentos_schema() -> None:
     # Crea la tabla si no existe (producción sin migración previa).
     Base.metadata.create_all(bind=engine, tables=[DepartamentoOrganizacional.__table__], checkfirst=True)
+
+
+def _enforce_departamentos_write_permission(request: Request) -> None:
+    # Temporal: permitir operación abierta del módulo de departamentos.
+    if DEPARTAMENTOS_PUBLIC_ACCESS:
+        return
+    from fastapi_modulo.main import require_admin_or_superadmin
+
+    require_admin_or_superadmin(request)
 
 
 def _render_departamentos_page(request: Request) -> HTMLResponse:
@@ -114,9 +126,7 @@ def listar_departamentos():
 
 @router.post("/api/inicio/departamentos")
 async def guardar_departamentos(request: Request, data: dict = Body(...)):
-    from fastapi_modulo.main import require_admin_or_superadmin
-
-    require_admin_or_superadmin(request)
+    _enforce_departamentos_write_permission(request)
     incoming = data.get("data", [])
     if not isinstance(incoming, list):
         raise HTTPException(status_code=400, detail="Formato inválido")
@@ -199,9 +209,7 @@ async def guardar_departamentos(request: Request, data: dict = Body(...)):
 
 @router.delete("/api/inicio/departamentos/{code}")
 def eliminar_departamento(request: Request, code: str):
-    from fastapi_modulo.main import require_admin_or_superadmin
-
-    require_admin_or_superadmin(request)
+    _enforce_departamentos_write_permission(request)
     _ensure_departamentos_schema()
     target_code = str(code or "").strip()
     if not target_code:
