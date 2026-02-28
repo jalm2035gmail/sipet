@@ -118,6 +118,57 @@
   .tabla-oficial-wrap::-webkit-scrollbar-track {
     background: rgba(15, 23, 42, 0.08);
   }
+  .control-mensual-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 10px;
+  }
+  .cm-acc-modal {
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(2, 6, 23, 0.45);
+    z-index: 1000;
+    padding: 18px;
+  }
+  .cm-acc-modal.is-open {
+    display: flex;
+  }
+  .cm-acc-dialog {
+    width: min(1200px, 96vw);
+    max-height: 90vh;
+    overflow: auto;
+    border-radius: 14px;
+    border: 1px solid rgba(15, 23, 42, 0.15);
+    background: #ffffff;
+    box-shadow: 0 20px 42px rgba(2, 6, 23, 0.35);
+    padding: 14px;
+  }
+  .cm-acc-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+  .cm-acc-title {
+    margin: 0;
+    font-size: 1.05rem;
+    color: #0f172a;
+    font-weight: 800;
+  }
+  .cm-acc-close {
+    width: 32px;
+    height: 32px;
+    border-radius: 999px;
+    border: 1px solid rgba(15, 23, 42, 0.25);
+    background: #ffffff;
+    color: #0f172a;
+    font-size: 1rem;
+    cursor: pointer;
+  }
   .reportes-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
@@ -502,7 +553,8 @@
     overflow: auto;
   }
   .tab-panel[data-panel="reportes"] {
-    overflow: auto;
+    overflow-x: auto;
+    overflow-y: auto;
     max-height: 75vh;
   }
   .tab-panel[data-panel="reportes"]:fullscreen .reportes-fullscreen-hint {
@@ -526,13 +578,15 @@
     border-radius: 14px;
     background: #f2f5fb;
     overflow: hidden;
-    min-width: 1400px;
+    min-width: 0;
+    max-width: 100%;
+    width: 100%;
   }
   .cp-head {
     background: #1f4a88;
     color: #ffffff;
     text-align: center;
-    font-size: 2rem;
+    font-size: clamp(1.15rem, 2.6vw, 2rem);
     font-weight: 800;
     padding: 10px 16px;
   }
@@ -540,17 +594,20 @@
     padding: 12px;
     display: grid;
     gap: 12px;
+    min-width: 0;
   }
   .cp-cards {
     display: grid;
-    grid-template-columns: repeat(5, minmax(170px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
     gap: 10px;
+    min-width: 0;
   }
   .cp-card {
     background: #ffffff;
     border: 1px solid rgba(15, 23, 42, 0.12);
     border-radius: 10px;
     padding: 10px 12px;
+    min-width: 0;
   }
   .cp-card-title {
     margin: 0;
@@ -561,7 +618,7 @@
   .cp-card-value {
     margin: 6px 0 4px;
     color: #1d3d70;
-    font-size: 2rem;
+    font-size: clamp(1.2rem, 2.4vw, 2rem);
     font-weight: 800;
     font-variant-numeric: tabular-nums;
   }
@@ -570,7 +627,7 @@
     border-radius: 6px;
     padding: 4px 8px;
     color: #ffffff;
-    font-size: 1.8rem;
+    font-size: clamp(0.95rem, 1.6vw, 1.2rem);
     font-weight: 800;
     text-align: center;
     font-variant-numeric: tabular-nums;
@@ -598,12 +655,15 @@
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 12px;
+    min-width: 0;
   }
   .cp-panel {
     background: #ffffff;
     border: 1px solid rgba(15, 23, 42, 0.12);
     border-radius: 10px;
     padding: 10px;
+    min-width: 0;
+    overflow: hidden;
   }
   .cp-panel-title {
     margin: 0 0 8px;
@@ -632,6 +692,7 @@
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 12px;
+    min-width: 0;
   }
   .cp-desv-wrap { max-height: 260px; overflow: auto; }
   .cp-desv-table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
@@ -640,7 +701,7 @@
   .cp-dot { display: inline-block; width: 12px; height: 12px; border-radius: 999px; }
   .cp-dist {
     display: grid;
-    grid-template-columns: 1fr 220px;
+    grid-template-columns: minmax(0, 1fr) 220px;
     gap: 12px;
     align-items: center;
   }
@@ -673,9 +734,33 @@
   .cp-h-yellow { background: #fde68a; }
   .cp-h-red { background: #fca5a5; }
   @media (max-width: 1200px) {
-    .cp-cards { grid-template-columns: repeat(2, minmax(170px, 1fr)); }
+    .cp-cards { grid-template-columns: repeat(2, minmax(140px, 1fr)); }
     .cp-row-2, .cp-row-3 { grid-template-columns: 1fr; }
     .cp-dist { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 900px) {
+    .reporte-variacion-row,
+    .area-bar-row {
+      grid-template-columns: minmax(100px, 170px) 1fr auto;
+      gap: 6px;
+    }
+    .reportes-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+  @media (max-width: 640px) {
+    .cp-cards { grid-template-columns: 1fr; }
+    .cp-grid { padding: 8px; gap: 8px; }
+    .cp-panel { padding: 8px; }
+    .cp-dist { gap: 8px; }
+    .gasto-composicion {
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+    .reporte-kpis,
+    .kpi-sipet-grid {
+      grid-template-columns: 1fr;
+    }
   }
 </style>
 
@@ -719,6 +804,9 @@
           </div>
         </div>
         <div class="tab-panel" data-panel="control-mensual" hidden>
+          <div class="control-mensual-actions">
+            <button type="button" id="control-mensual-acc-btn" class="color-btn color-btn--ghost">Ver tabla acumulada</button>
+          </div>
           <div class="tabla-oficial-wrap">
             <table id="control-mensual-table" class="tabla-oficial">
               <thead>
@@ -737,6 +825,9 @@
           </div>
         </div>
         <div class="tab-panel" data-panel="reportes" hidden>
+          <div style="display:flex; justify-content:flex-end; margin-bottom:10px;">
+            <button type="button" id="reportes-fullscreen-btn" class="color-btn color-btn--ghost">Ver en pantalla completa</button>
+          </div>
           <div class="reportes-fullscreen-hint">Esc para volver</div>
           <section class="cp-dashboard">
             <header class="cp-head">Dashboard de Control Presupuestal</header>
@@ -1011,6 +1102,31 @@
         </div>
       </div>
     </section>
+    <div id="control-mensual-acc-modal" class="cm-acc-modal" aria-hidden="true">
+      <div class="cm-acc-dialog" role="dialog" aria-modal="true" aria-labelledby="cm-acc-title">
+        <div class="cm-acc-header">
+          <h3 id="cm-acc-title" class="cm-acc-title">Tabla acumulada de control presupuestal</h3>
+          <button type="button" id="control-mensual-acc-close" class="cm-acc-close" aria-label="Cerrar">x</button>
+        </div>
+        <div class="tabla-oficial-wrap" style="max-height:70vh;">
+          <table class="tabla-oficial" id="control-mensual-acc-table">
+            <thead>
+              <tr>
+                <th>Mes</th>
+                <th class="tabla-oficial-num">Ingresos Proy. Acum.</th>
+                <th class="tabla-oficial-num">Ingresos Real Acum.</th>
+                <th class="tabla-oficial-num">Egresos Proy. Acum.</th>
+                <th class="tabla-oficial-num">Egresos Real Acum.</th>
+                <th class="tabla-oficial-num">Resultado Proy. Acum.</th>
+                <th class="tabla-oficial-num">Resultado Real Acum.</th>
+                <th class="tabla-oficial-num">% Cumpl. Resultado</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
     <div style="margin-top: 24px;">
       <button type="button" class="color-btn color-btn--primary dg-save-trigger">Guardar presupuesto</button>
       <span class="dg-save-status"></span>
@@ -1022,6 +1138,17 @@
 <script>
   document.addEventListener("DOMContentLoaded", function() {
     const btn = document.getElementById("toggle-cod-col-btn");
+    const importBtn = document.getElementById("presupuesto-import-btn");
+    const importFileInput = document.getElementById("presupuesto-import-file");
+    const importStatusEl = document.getElementById("presupuesto-action-status");
+    const saveBtn = document.querySelector(".dg-save-trigger");
+    const saveStatusEl = document.querySelector(".dg-save-status");
+    const reportesPanel = document.querySelector('.tab-panel[data-panel="reportes"]');
+    const reportesFullscreenBtn = document.getElementById("reportes-fullscreen-btn");
+    const controlMensualAccBtn = document.getElementById("control-mensual-acc-btn");
+    const controlMensualAccModal = document.getElementById("control-mensual-acc-modal");
+    const controlMensualAccClose = document.getElementById("control-mensual-acc-close");
+    const controlMensualAccTableBody = document.querySelector("#control-mensual-acc-table tbody");
     const codCols = document.querySelectorAll("#presupuesto-table .cod-col");
     let visible = false;
     if (btn) {
@@ -1056,6 +1183,25 @@
     const controlMensualTable = document.getElementById("control-mensual-table");
     const presupuestoTable = document.getElementById("presupuesto-table");
     const months = ["01","02","03","04","05","06","07","08","09","10","11","12"];
+    const setImportStatus = (message, isError = false) => {
+      if (!importStatusEl) return;
+      importStatusEl.textContent = String(message || "");
+      importStatusEl.style.color = isError ? "#b91c1c" : "#0f3d2e";
+    };
+    const setSaveStatus = (message, isError = false) => {
+      if (!saveStatusEl) return;
+      saveStatusEl.textContent = String(message || "");
+      saveStatusEl.style.color = isError ? "#b91c1c" : "#0f3d2e";
+    };
+    const normalizeRubroKey = (value) => (
+      String(value || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[.,]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim()
+        .toUpperCase()
+    );
     const parseIntegerValue = (rawValue) => {
       const raw = String(rawValue || "").trim();
       if (!raw) return 0;
@@ -1074,13 +1220,26 @@
       return `${numeric.toFixed(1)}%`;
     };
     const formatCurrency = (value) => `$${formatIntegerValue(value)}`;
+    const getSummaryValue = (rowClass, month, kind) => {
+      const row = controlMensualTable?.querySelector(`tbody tr.${rowClass}`);
+      if (!row) return 0;
+      const input = row.querySelector(`input[data-summary-month="${month}"][data-summary-kind="${kind}"]`);
+      return parseIntegerValue(input?.value || "0");
+    };
+    const getSummaryYearValue = (rowClass, kind) => (
+      months.reduce((acc, month) => acc + getSummaryValue(rowClass, month, kind), 0)
+    );
+    const getRowYearValue = (row, kind) => (
+      months.reduce((acc, month) => {
+        const input = row?.querySelector(`input[name*="_${month}_${kind}"]`);
+        return acc + parseIntegerValue(input?.value || "0");
+      }, 0)
+    );
     const buildControlMonthlyCells = (rowIndex, mensualBase) => {
       const cells = [];
       const base = parseIntegerValue(mensualBase);
-      let saldo = 0;
       months.forEach((month) => {
-        saldo = month === "01" ? base : saldo + base;
-        const projectedValue = formatIntegerValue(saldo);
+        const projectedValue = formatIntegerValue(base);
         cells.push(`<td class="tabla-oficial-num month-col month-${month}" data-month-col="${month}"><input class="tabla-oficial-input num" type="text" name="cm_${rowIndex}_${month}_proyectado" value="${projectedValue}" inputmode="numeric"></td>`);
         cells.push(`<td class="tabla-oficial-num month-col month-${month}" data-month-col="${month}"><input class="tabla-oficial-input num" type="text" name="cm_${rowIndex}_${month}_realizado" value="0" inputmode="numeric"></td>`);
         cells.push(`<td class="tabla-oficial-num month-col month-${month} month-percent-col" data-month-col="${month}"><input class="tabla-oficial-input num cm-percent-input" type="text" name="cm_${rowIndex}_${month}_percent" value="0%" inputmode="numeric" readonly></td>`);
@@ -1196,12 +1355,12 @@
         const input = row.querySelector(`input[data-summary-month="${month}"][data-summary-kind="${kind}"]`);
         return parseIntegerValue(input?.value || "0");
       };
-      const ingP = getSummaryValue("control-mensual-total-ingresos", "12", "proyectado");
-      const ingR = getSummaryValue("control-mensual-total-ingresos", "12", "realizado");
-      const egrP = getSummaryValue("control-mensual-total-egresos", "12", "proyectado");
-      const egrR = getSummaryValue("control-mensual-total-egresos", "12", "realizado");
-      const resP = getSummaryValue("control-mensual-resultado", "12", "proyectado");
-      const resR = getSummaryValue("control-mensual-resultado", "12", "realizado");
+      const ingP = getSummaryYearValue("control-mensual-total-ingresos", "proyectado");
+      const ingR = getSummaryYearValue("control-mensual-total-ingresos", "realizado");
+      const egrP = getSummaryYearValue("control-mensual-total-egresos", "proyectado");
+      const egrR = getSummaryYearValue("control-mensual-total-egresos", "realizado");
+      const resP = getSummaryYearValue("control-mensual-resultado", "proyectado");
+      const resR = getSummaryYearValue("control-mensual-resultado", "realizado");
       const setText = (id, value) => { const el = document.getElementById(id); if (el) el.textContent = value; };
       setText("cp-kpi-ingresos", formatCurrency(ingR));
       setText("cp-kpi-ingresos-pct", formatPercentOneDecimal(ingP > 0 ? (ingR / ingP) * 100 : 0));
@@ -1211,8 +1370,8 @@
       setText("cp-kpi-resultado-delta", `${resR - resP >= 0 ? "+" : ""}${formatCurrency(resR - resP)}`);
       const detailRows = Array.from(controlMensualTable.querySelectorAll("tbody tr.control-mensual-detail-row"));
       const avgDesv = detailRows.length ? detailRows.reduce((acc, row) => {
-        const p = parseIntegerValue(row.querySelector('input[name*="_12_proyectado"]')?.value || "0");
-        const r = parseIntegerValue(row.querySelector('input[name*="_12_realizado"]')?.value || "0");
+        const p = getRowYearValue(row, "proyectado");
+        const r = getRowYearValue(row, "realizado");
         return acc + (p !== 0 ? Math.abs(((r - p) / p) * 100) : 0);
       }, 0) / detailRows.length : 0;
       setText("cp-kpi-desv-prom", formatPercentOneDecimal(avgDesv));
@@ -1286,8 +1445,8 @@
       if (desvBody) {
         const rows = detailRows.map((row) => {
           const rubro = (row.querySelector("td:first-child")?.textContent || "").trim();
-          const p = parseIntegerValue(row.querySelector('input[name*="_12_proyectado"]')?.value || "0");
-          const v = parseIntegerValue(row.querySelector('input[name*="_12_realizado"]')?.value || "0");
+          const p = getRowYearValue(row, "proyectado");
+          const v = getRowYearValue(row, "realizado");
           const d = v - p;
           const s = semaforo(p, v);
           return { rubro, p, v, d, s };
@@ -1314,7 +1473,7 @@
         const tipo = (row.getAttribute("data-tipo") || "").toLowerCase();
         if (tipo !== "egreso") return;
         const rubro = (row.querySelector("td:first-child")?.textContent || "").trim();
-        const amount = parseIntegerValue(row.querySelector('input[name*="_12_realizado"]')?.value || "0");
+        const amount = getRowYearValue(row, "realizado");
         const c = catName(rubro);
         cats.set(c, (cats.get(c) || 0) + amount);
       });
@@ -1423,12 +1582,12 @@
         if (cell("cumplimiento")) cell("cumplimiento").textContent = formatPercentOneDecimal(cumplimiento);
       };
 
-      const ingresoProjected = getSummaryValue("control-mensual-total-ingresos", "12", "proyectado");
-      const ingresoRealized = getSummaryValue("control-mensual-total-ingresos", "12", "realizado");
-      const egresoProjected = getSummaryValue("control-mensual-total-egresos", "12", "proyectado");
-      const egresoRealized = getSummaryValue("control-mensual-total-egresos", "12", "realizado");
-      const resultadoProjected = getSummaryValue("control-mensual-resultado", "12", "proyectado");
-      const resultadoRealized = getSummaryValue("control-mensual-resultado", "12", "realizado");
+      const ingresoProjected = getSummaryYearValue("control-mensual-total-ingresos", "proyectado");
+      const ingresoRealized = getSummaryYearValue("control-mensual-total-ingresos", "realizado");
+      const egresoProjected = getSummaryYearValue("control-mensual-total-egresos", "proyectado");
+      const egresoRealized = getSummaryYearValue("control-mensual-total-egresos", "realizado");
+      const resultadoProjected = getSummaryYearValue("control-mensual-resultado", "proyectado");
+      const resultadoRealized = getSummaryYearValue("control-mensual-resultado", "realizado");
 
       updateConceptRow("ingresos", ingresoProjected, ingresoRealized);
       updateConceptRow("egresos", egresoProjected, egresoRealized);
@@ -1479,8 +1638,8 @@
 
       const rubros = detailRows.map((row) => {
         const rubro = (row.querySelector("td:first-child")?.textContent || "").trim();
-        const projected = parseIntegerValue(row.querySelector('input[name*="_12_proyectado"]')?.value || "0");
-        const realized = parseIntegerValue(row.querySelector('input[name*="_12_realizado"]')?.value || "0");
+        const projected = getRowYearValue(row, "proyectado");
+        const realized = getRowYearValue(row, "realizado");
         const diff = realized - projected;
         const pct = projected !== 0 ? (diff / projected) * 100 : 0;
         return { rubro, projected, realized, diff, pct, absPct: Math.abs(pct) };
@@ -1511,17 +1670,12 @@
     };
     const updateReporteTendencia = () => {
       if (!controlMensualTable) return;
-      const getSummaryValue = (rowClass, month, kind) => {
-        const row = controlMensualTable.querySelector(`tbody tr.${rowClass}`);
-        if (!row) return 0;
-        const input = row.querySelector(`input[data-summary-month="${month}"][data-summary-kind="${kind}"]`);
-        return parseIntegerValue(input?.value || "0");
-      };
       const monthNames = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
       const trend = [];
+      let proyAccum = 0;
       let realAccum = 0;
       months.forEach((month, idx) => {
-        const proyAccum = getSummaryValue("control-mensual-resultado", month, "proyectado");
+        proyAccum += getSummaryValue("control-mensual-resultado", month, "proyectado");
         const realMonth = getSummaryValue("control-mensual-resultado", month, "realizado");
         realAccum += realMonth;
         trend.push({ label: monthNames[idx], proy: proyAccum, real: realAccum });
@@ -1582,8 +1736,8 @@
       detailRows.forEach((row) => {
         const rubro = (row.querySelector("td:first-child")?.textContent || "").trim();
         const area = resolveAreaSucursal(rubro);
-        const projected = parseIntegerValue(row.querySelector('input[name*="_12_proyectado"]')?.value || "0");
-        const realized = parseIntegerValue(row.querySelector('input[name*="_12_realizado"]')?.value || "0");
+        const projected = getRowYearValue(row, "proyectado");
+        const realized = getRowYearValue(row, "realizado");
         const current = grouped.get(area) || { area, projected: 0, realized: 0 };
         current.projected += projected;
         current.realized += realized;
@@ -1640,7 +1794,7 @@
         const tipo = (row.getAttribute("data-tipo") || "").toLowerCase();
         if (tipo !== "egreso") return;
         const rubro = (row.querySelector("td:first-child")?.textContent || "").trim();
-        const amount = parseIntegerValue(row.querySelector('input[name*="_12_realizado"]')?.value || "0");
+        const amount = getRowYearValue(row, "realizado");
         const cat = resolveGastoCategoria(rubro);
         categories.set(cat, (categories.get(cat) || 0) + amount);
       });
@@ -1687,12 +1841,12 @@
         const el = document.getElementById(id);
         if (el) el.textContent = value;
       };
-      const ingresosP = getSummaryValue("control-mensual-total-ingresos", "12", "proyectado");
-      const ingresosR = getSummaryValue("control-mensual-total-ingresos", "12", "realizado");
-      const egresosP = getSummaryValue("control-mensual-total-egresos", "12", "proyectado");
-      const egresosR = getSummaryValue("control-mensual-total-egresos", "12", "realizado");
-      const resultadoP = getSummaryValue("control-mensual-resultado", "12", "proyectado");
-      const resultadoR = getSummaryValue("control-mensual-resultado", "12", "realizado");
+      const ingresosP = getSummaryYearValue("control-mensual-total-ingresos", "proyectado");
+      const ingresosR = getSummaryYearValue("control-mensual-total-ingresos", "realizado");
+      const egresosP = getSummaryYearValue("control-mensual-total-egresos", "proyectado");
+      const egresosR = getSummaryYearValue("control-mensual-total-egresos", "realizado");
+      const resultadoP = getSummaryYearValue("control-mensual-resultado", "proyectado");
+      const resultadoR = getSummaryYearValue("control-mensual-resultado", "realizado");
 
       const ejecBaseP = ingresosP + egresosP;
       const ejecBaseR = ingresosR + egresosR;
@@ -1700,8 +1854,8 @@
 
       const detailRows = Array.from(controlMensualTable.querySelectorAll("tbody tr.control-mensual-detail-row"));
       const desviaciones = detailRows.map((row) => {
-        const p = parseIntegerValue(row.querySelector('input[name*="_12_proyectado"]')?.value || "0");
-        const r = parseIntegerValue(row.querySelector('input[name*="_12_realizado"]')?.value || "0");
+        const p = getRowYearValue(row, "proyectado");
+        const r = getRowYearValue(row, "realizado");
         return p !== 0 ? Math.abs(((r - p) / p) * 100) : 0;
       });
       const variacionProm = desviaciones.length ? (desviaciones.reduce((a, b) => a + b, 0) / desviaciones.length) : 0;
@@ -1804,6 +1958,52 @@
       }
       container.innerHTML = alerts.map((a) => `<div class="alerta-item ${a.level}">${a.text}</div>`).join("");
     };
+    const renderControlMensualAccumulatedTable = () => {
+      if (!controlMensualAccTableBody) return;
+      const monthNames = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+      let ingPA = 0;
+      let ingRA = 0;
+      let egrPA = 0;
+      let egrRA = 0;
+      let resPA = 0;
+      let resRA = 0;
+      controlMensualAccTableBody.innerHTML = months.map((m, idx) => {
+        const ingP = getSummaryValue("control-mensual-total-ingresos", m, "proyectado");
+        const ingR = getSummaryValue("control-mensual-total-ingresos", m, "realizado");
+        const egrP = getSummaryValue("control-mensual-total-egresos", m, "proyectado");
+        const egrR = getSummaryValue("control-mensual-total-egresos", m, "realizado");
+        const resP = getSummaryValue("control-mensual-resultado", m, "proyectado");
+        const resR = getSummaryValue("control-mensual-resultado", m, "realizado");
+        ingPA += ingP;
+        ingRA += ingR;
+        egrPA += egrP;
+        egrRA += egrR;
+        resPA += resP;
+        resRA += resR;
+        const pct = resPA !== 0 ? (resRA / resPA) * 100 : 0;
+        return `<tr>
+          <td>${monthNames[idx]}</td>
+          <td class="tabla-oficial-num">${formatIntegerValue(ingPA)}</td>
+          <td class="tabla-oficial-num">${formatIntegerValue(ingRA)}</td>
+          <td class="tabla-oficial-num">${formatIntegerValue(egrPA)}</td>
+          <td class="tabla-oficial-num">${formatIntegerValue(egrRA)}</td>
+          <td class="tabla-oficial-num">${formatIntegerValue(resPA)}</td>
+          <td class="tabla-oficial-num">${formatIntegerValue(resRA)}</td>
+          <td class="tabla-oficial-num month-percent-col">${formatPercentOneDecimal(pct)}</td>
+        </tr>`;
+      }).join("");
+    };
+    const openControlMensualAccumulatedModal = () => {
+      if (!controlMensualAccModal) return;
+      renderControlMensualAccumulatedTable();
+      controlMensualAccModal.classList.add("is-open");
+      controlMensualAccModal.setAttribute("aria-hidden", "false");
+    };
+    const closeControlMensualAccumulatedModal = () => {
+      if (!controlMensualAccModal) return;
+      controlMensualAccModal.classList.remove("is-open");
+      controlMensualAccModal.setAttribute("aria-hidden", "true");
+    };
     const syncControlMensualRubrosFromAnual = () => {
       if (!controlMensualTable || !presupuestoTable) return;
       const anualRows = Array.from(presupuestoTable.querySelectorAll("tbody tr"));
@@ -1840,6 +2040,228 @@
       updateControlDashboard();
     };
     syncControlMensualRubrosFromAnual();
+
+    const collectControlMensualRows = () => {
+      if (!controlMensualTable) return [];
+      const rows = Array.from(controlMensualTable.querySelectorAll("tbody tr.control-mensual-detail-row"));
+      return rows.map((row) => {
+        const rubro = (row.querySelector("td:first-child")?.textContent || "").trim();
+        const monthValues = {};
+        months.forEach((month) => {
+          const projectedInput = row.querySelector(`input[name*="_${month}_proyectado"]`);
+          const realizedInput = row.querySelector(`input[name*="_${month}_realizado"]`);
+          monthValues[month] = {
+            proyectado: parseIntegerValue(projectedInput?.value || "0"),
+            realizado: parseIntegerValue(realizedInput?.value || "0"),
+          };
+        });
+        return { rubro, months: monthValues };
+      }).filter((item) => item.rubro);
+    };
+
+    const applySavedControlMensualRows = (savedRows) => {
+      if (!controlMensualTable || !Array.isArray(savedRows)) return;
+      const rowMap = getControlRowByRubroKey();
+      savedRows.forEach((item) => {
+        const rubroKey = normalizeRubroKey(item?.rubro || "");
+        const row = rowMap.get(rubroKey);
+        if (!row) return;
+        months.forEach((month) => {
+          const monthData = item?.months?.[month] || item?.months?.[Number(month)] || {};
+          const projectedInput = row.querySelector(`input[name*="_${month}_proyectado"]`);
+          const realizedInput = row.querySelector(`input[name*="_${month}_realizado"]`);
+          if (projectedInput && monthData.proyectado !== undefined && monthData.proyectado !== null) {
+            projectedInput.value = formatIntegerValue(parseIntegerValue(monthData.proyectado));
+          }
+          if (realizedInput && monthData.realizado !== undefined && monthData.realizado !== null) {
+            realizedInput.value = formatIntegerValue(parseIntegerValue(monthData.realizado));
+          }
+        });
+      });
+      Array.from(controlMensualTable.querySelectorAll("tbody tr.control-mensual-detail-row")).forEach((row) => recalcControlMensualRow(row));
+      recalcControlMensualTotals();
+    };
+
+    const loadControlMensual = async () => {
+      try {
+        const response = await fetch("/proyectando/control-mensual-datos", { method: "GET" });
+        if (!response.ok) return;
+        const payload = await response.json().catch(() => ({}));
+        if (payload?.success && Array.isArray(payload?.rows) && payload.rows.length > 0) {
+          applySavedControlMensualRows(payload.rows);
+          setSaveStatus(`Datos cargados: ${payload.rows.length} rubros.`);
+        }
+      } catch (error) {
+        setSaveStatus("No se pudieron cargar datos guardados.", true);
+      }
+    };
+
+    const saveControlMensual = async () => {
+      if (!controlMensualTable) return;
+      const rows = collectControlMensualRows();
+      setSaveStatus("Guardando datos...");
+      const response = await fetch("/proyectando/guardar-control-mensual", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rows }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || payload?.success === false) {
+        throw new Error(payload?.error || "No se pudo guardar la información.");
+      }
+      setSaveStatus(`Datos guardados correctamente (${rows.length} rubros).`);
+    };
+
+    const getControlRowByRubroKey = () => {
+      const map = new Map();
+      if (!controlMensualTable) return map;
+      const rows = Array.from(controlMensualTable.querySelectorAll("tbody tr.control-mensual-detail-row"));
+      rows.forEach((row) => {
+        const rubro = (row.querySelector("td:first-child")?.textContent || "").trim();
+        const key = normalizeRubroKey(rubro);
+        if (!key || map.has(key)) return;
+        map.set(key, row);
+      });
+      return map;
+    };
+    loadControlMensual();
+
+    const applyControlMensualImport = (entries) => {
+      if (!controlMensualTable) return { applied: 0, missing: 0, overwritten: 0 };
+      const rowMap = getControlRowByRubroKey();
+      const updates = [];
+      let missing = 0;
+      let overwritten = 0;
+      (Array.isArray(entries) ? entries : []).forEach((entry) => {
+        const row = rowMap.get(String(entry?.rubro_key || "").trim()) || rowMap.get(normalizeRubroKey(entry?.rubro || ""));
+        if (!row) {
+          missing += 1;
+          return;
+        }
+        const mes = String(entry?.mes || "").trim().padStart(2, "0");
+        if (!months.includes(mes)) return;
+        [["proyectado", entry?.proyectado], ["realizado", entry?.realizado]].forEach(([kind, raw]) => {
+          if (raw === null || raw === undefined || raw === "") return;
+          const input = row.querySelector(`input[name*="_${mes}_${kind}"]`);
+          if (!input) return;
+          const oldValue = parseIntegerValue(input.value || "0");
+          const newValue = parseIntegerValue(raw);
+          if (oldValue !== 0 && newValue !== 0 && oldValue !== newValue) {
+            overwritten += 1;
+          }
+          updates.push({ input, value: formatIntegerValue(newValue) });
+        });
+      });
+
+      if (overwritten > 0) {
+        const proceed = window.confirm(`Se detectaron ${overwritten} celdas con información previa. ¿Deseas sobrescribirlas?`);
+        if (!proceed) return { applied: 0, missing, overwritten };
+      }
+
+      updates.forEach((item) => {
+        item.input.value = item.value;
+      });
+      Array.from(controlMensualTable.querySelectorAll("tbody tr.control-mensual-detail-row")).forEach((row) => recalcControlMensualRow(row));
+      recalcControlMensualTotals();
+      return { applied: updates.length, missing, overwritten };
+    };
+
+    const importControlMensualFile = async (file) => {
+      if (!file) return;
+      setImportStatus("Importando datos...");
+      const formData = new FormData();
+      formData.append("file", file);
+      const response = await fetch("/proyectando/importar-control-mensual", {
+        method: "POST",
+        body: formData,
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || payload?.success === false) {
+        const details = Array.isArray(payload?.details) ? payload.details.slice(0, 3).join(" | ") : "";
+        throw new Error(`${payload?.error || "No se pudo importar el archivo."}${details ? ` ${details}` : ""}`);
+      }
+      const result = applyControlMensualImport(payload.entries || []);
+      const dup = Number(payload?.summary?.duplicates_in_file || 0);
+      const initialDataRows = Number(payload?.summary?.initial_data_rows || 0);
+      const importFormat = String(payload?.summary?.format || "");
+      setImportStatus(
+        `Importación completada. Formato: ${importFormat || "n/d"}. Celdas aplicadas: ${result.applied}. Rubros no encontrados: ${result.missing}. Sobrescritas: ${result.overwritten}. Duplicados en archivo: ${dup}. Mes 0 con datos: ${initialDataRows} (informativo, no se importa).`,
+        false
+      );
+      const shouldSave = window.confirm("Importación aplicada correctamente. ¿Quieres guardar los datos?");
+      if (shouldSave) {
+        await saveControlMensual();
+      }
+    };
+
+    if (importBtn && importFileInput) {
+      importBtn.addEventListener("click", () => {
+        importFileInput.click();
+      });
+      importFileInput.addEventListener("change", async () => {
+        const file = importFileInput.files && importFileInput.files[0];
+        if (!file) return;
+        try {
+          await importControlMensualFile(file);
+        } catch (error) {
+          setImportStatus(error.message || "No se pudo importar el archivo.", true);
+        } finally {
+          importFileInput.value = "";
+        }
+      });
+    }
+
+    if (saveBtn) {
+      saveBtn.addEventListener("click", async () => {
+        try {
+          await saveControlMensual();
+        } catch (error) {
+          setSaveStatus(error.message || "No se pudo guardar la información.", true);
+        }
+      });
+    }
+    if (controlMensualAccBtn) {
+      controlMensualAccBtn.addEventListener("click", openControlMensualAccumulatedModal);
+    }
+    if (controlMensualAccClose) {
+      controlMensualAccClose.addEventListener("click", closeControlMensualAccumulatedModal);
+    }
+    if (controlMensualAccModal) {
+      controlMensualAccModal.addEventListener("click", (event) => {
+        if (event.target === controlMensualAccModal) {
+          closeControlMensualAccumulatedModal();
+        }
+      });
+    }
+
+    const syncReportesFullscreenButton = () => {
+      if (!reportesFullscreenBtn || !reportesPanel) return;
+      const inFullscreen = document.fullscreenElement === reportesPanel;
+      reportesFullscreenBtn.textContent = inFullscreen ? "Salir de pantalla completa" : "Ver en pantalla completa";
+    };
+
+    if (reportesFullscreenBtn && reportesPanel) {
+      reportesFullscreenBtn.addEventListener("click", async () => {
+        try {
+          if (document.fullscreenElement === reportesPanel) {
+            await document.exitFullscreen();
+          } else {
+            await reportesPanel.requestFullscreen();
+          }
+        } catch (error) {
+          setImportStatus("No fue posible abrir pantalla completa en este navegador.", true);
+        } finally {
+          syncReportesFullscreenButton();
+        }
+      });
+      document.addEventListener("fullscreenchange", syncReportesFullscreenButton);
+      syncReportesFullscreenButton();
+    }
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && controlMensualAccModal?.classList.contains("is-open")) {
+        closeControlMensualAccumulatedModal();
+      }
+    });
 
     document.querySelectorAll("[data-report-target]").forEach((card) => {
       card.addEventListener("click", () => {

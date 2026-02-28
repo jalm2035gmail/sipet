@@ -1,10 +1,845 @@
-INFO:     Started server process [73467]
+INFO:     Started server process [99272]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
-INFO:     127.0.0.1:51792 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51792 - "GET /poa HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51792 - "GET /personalizar/uploads/logo_empresa.png?v=1772065958 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51813 - "GET /personalizar/estado HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51814 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51809 - "GET /api/poa/board-data HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63456 - "GET /inicio/colaboradores HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63456 - "GET /api/colaboradores HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63457 - "GET /inicio/user_profile_57729d01424c.png HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:63456 - "GET /api/colaboradores HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63456 - "GET /inicio/user_profile_57729d01424c.png HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:63457 - "GET /api/notificaciones/resumen HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1969, in _exec_single_context
+    self.dialect.do_execute(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/default.py", line 922, in do_execute
+    cursor.execute(statement, parameters)
+sqlite3.OperationalError: no such column: poa_subactivities.recurrente
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/uvicorn/protocols/http/httptools_impl.py", line 426, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/uvicorn/middleware/proxy_headers.py", line 84, in __call__
+    return await self.app(scope, receive, send)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/fastapi/applications.py", line 1106, in __call__
+    await super().__call__(scope, receive, send)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/applications.py", line 122, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/errors.py", line 184, in __call__
+    raise exc
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/errors.py", line 162, in __call__
+    await self.app(scope, receive, _send)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/base.py", line 108, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "/Users/jalm/Dropbox/Apps/SIPET/fastapi_modulo/main.py", line 1942, in enforce_backend_login
+    return await call_next(request)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/base.py", line 84, in call_next
+    raise app_exc
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/base.py", line 70, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/exceptions.py", line 79, in __call__
+    raise exc
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/exceptions.py", line 68, in __call__
+    await self.app(scope, receive, sender)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/fastapi/middleware/asyncexitstack.py", line 20, in __call__
+    raise e
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/fastapi/middleware/asyncexitstack.py", line 17, in __call__
+    await self.app(scope, receive, send)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/routing.py", line 718, in __call__
+    await route.handle(scope, receive, send)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/routing.py", line 276, in handle
+    await self.app(scope, receive, send)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/routing.py", line 66, in app
+    response = await func(request)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/fastapi/routing.py", line 274, in app
+    raw_response = await run_endpoint_function(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/fastapi/routing.py", line 193, in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/concurrency.py", line 41, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func, *args)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/anyio/to_thread.py", line 33, in run_sync
+    return await get_asynclib().run_sync_in_worker_thread(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/anyio/_backends/_asyncio.py", line 877, in run_sync_in_worker_thread
+    return await future
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/anyio/_backends/_asyncio.py", line 807, in run
+    result = context.run(func, *args)
+  File "/Users/jalm/Dropbox/Apps/SIPET/fastapi_modulo/modulos/planificacion/ejes_poa.py", line 9823, in notifications_summary
+    .all()
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/orm/query.py", line 2693, in all
+    return self._iter().all()  # type: ignore
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/orm/query.py", line 2847, in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/orm/session.py", line 2308, in execute
+    return self._execute_internal(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/orm/session.py", line 2190, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/orm/context.py", line 293, in orm_execute_statement
+    result = conn.execute(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1416, in execute
+    return meth(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/sql/elements.py", line 516, in _execute_on_connection
+    return connection._execute_clauseelement(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1639, in _execute_clauseelement
+    ret = self._execute_context(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1848, in _execute_context
+    return self._exec_single_context(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1988, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 2343, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1969, in _exec_single_context
+    self.dialect.do_execute(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/default.py", line 922, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such column: poa_subactivities.recurrente
+[SQL: SELECT poa_subactivities.id AS poa_subactivities_id, poa_subactivities.activity_id AS poa_subactivities_activity_id, poa_subactivities.parent_subactivity_id AS poa_subactivities_parent_subactivity_id, poa_subactivities.nivel AS poa_subactivities_nivel, poa_subactivities.nombre AS poa_subactivities_nombre, poa_subactivities.codigo AS poa_subactivities_codigo, poa_subactivities.responsable AS poa_subactivities_responsable, poa_subactivities.entregable AS poa_subactivities_entregable, poa_subactivities.fecha_inicial AS poa_subactivities_fecha_inicial, poa_subactivities.fecha_final AS poa_subactivities_fecha_final, poa_subactivities.descripcion AS poa_subactivities_descripcion, poa_subactivities.recurrente AS poa_subactivities_recurrente, poa_subactivities.periodicidad AS poa_subactivities_periodicidad, poa_subactivities.cada_xx_dias AS poa_subactivities_cada_xx_dias, poa_subactivities.assigned_by AS poa_subactivities_assigned_by, poa_subactivities.created_at AS poa_subactivities_created_at, poa_subactivities.updated_at AS poa_subactivities_updated_at, poa_activities.id AS poa_activities_id, poa_activities.objective_id AS poa_activities_objective_id, poa_activities.nombre AS poa_activities_nombre, poa_activities.codigo AS poa_activities_codigo, poa_activities.responsable AS poa_activities_responsable, poa_activities.entregable AS poa_activities_entregable, poa_activities.fecha_inicial AS poa_activities_fecha_inicial, poa_activities.fecha_final AS poa_activities_fecha_final, poa_activities.inicio_forzado AS poa_activities_inicio_forzado, poa_activities.descripcion AS poa_activities_descripcion, poa_activities.recurrente AS poa_activities_recurrente, poa_activities.periodicidad AS poa_activities_periodicidad, poa_activities.cada_xx_dias AS poa_activities_cada_xx_dias, poa_activities.entrega_estado AS poa_activities_entrega_estado, poa_activities.entrega_solicitada_por AS poa_activities_entrega_solicitada_por, poa_activities.entrega_solicitada_at AS poa_activities_entrega_solicitada_at, poa_activities.entrega_aprobada_por AS poa_activities_entrega_aprobada_por, poa_activities.entrega_aprobada_at AS poa_activities_entrega_aprobada_at, poa_activities.created_by AS poa_activities_created_by, poa_activities.created_at AS poa_activities_created_at, poa_activities.updated_at AS poa_activities_updated_at 
+FROM poa_subactivities JOIN poa_activities ON poa_activities.id = poa_subactivities.activity_id 
+WHERE lower(poa_subactivities.responsable) IN (?, ?, ?) ORDER BY poa_subactivities.fecha_final ASC, poa_subactivities.id ASC]
+[parameters: ('alopez@avancoop.org', 'okonomiyaki', 'super administrador')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+INFO:     127.0.0.1:64109 - "GET /api/notificaciones/resumen HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1969, in _exec_single_context
+    self.dialect.do_execute(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/default.py", line 922, in do_execute
+    cursor.execute(statement, parameters)
+sqlite3.OperationalError: no such column: poa_subactivities.recurrente
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/uvicorn/protocols/http/httptools_impl.py", line 426, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/uvicorn/middleware/proxy_headers.py", line 84, in __call__
+    return await self.app(scope, receive, send)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/fastapi/applications.py", line 1106, in __call__
+    await super().__call__(scope, receive, send)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/applications.py", line 122, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/errors.py", line 184, in __call__
+    raise exc
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/errors.py", line 162, in __call__
+    await self.app(scope, receive, _send)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/base.py", line 108, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "/Users/jalm/Dropbox/Apps/SIPET/fastapi_modulo/main.py", line 1942, in enforce_backend_login
+    return await call_next(request)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/base.py", line 84, in call_next
+    raise app_exc
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/base.py", line 70, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/exceptions.py", line 79, in __call__
+    raise exc
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/exceptions.py", line 68, in __call__
+    await self.app(scope, receive, sender)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/fastapi/middleware/asyncexitstack.py", line 20, in __call__
+    raise e
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/fastapi/middleware/asyncexitstack.py", line 17, in __call__
+    await self.app(scope, receive, send)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/routing.py", line 718, in __call__
+    await route.handle(scope, receive, send)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/routing.py", line 276, in handle
+    await self.app(scope, receive, send)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/routing.py", line 66, in app
+    response = await func(request)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/fastapi/routing.py", line 274, in app
+    raw_response = await run_endpoint_function(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/fastapi/routing.py", line 193, in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/concurrency.py", line 41, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func, *args)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/anyio/to_thread.py", line 33, in run_sync
+    return await get_asynclib().run_sync_in_worker_thread(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/anyio/_backends/_asyncio.py", line 877, in run_sync_in_worker_thread
+    return await future
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/anyio/_backends/_asyncio.py", line 807, in run
+    result = context.run(func, *args)
+  File "/Users/jalm/Dropbox/Apps/SIPET/fastapi_modulo/modulos/planificacion/ejes_poa.py", line 9823, in notifications_summary
+    .all()
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/orm/query.py", line 2693, in all
+    return self._iter().all()  # type: ignore
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/orm/query.py", line 2847, in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/orm/session.py", line 2308, in execute
+    return self._execute_internal(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/orm/session.py", line 2190, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/orm/context.py", line 293, in orm_execute_statement
+    result = conn.execute(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1416, in execute
+    return meth(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/sql/elements.py", line 516, in _execute_on_connection
+    return connection._execute_clauseelement(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1639, in _execute_clauseelement
+    ret = self._execute_context(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1848, in _execute_context
+    return self._exec_single_context(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1988, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 2343, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1969, in _exec_single_context
+    self.dialect.do_execute(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/default.py", line 922, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such column: poa_subactivities.recurrente
+[SQL: SELECT poa_subactivities.id AS poa_subactivities_id, poa_subactivities.activity_id AS poa_subactivities_activity_id, poa_subactivities.parent_subactivity_id AS poa_subactivities_parent_subactivity_id, poa_subactivities.nivel AS poa_subactivities_nivel, poa_subactivities.nombre AS poa_subactivities_nombre, poa_subactivities.codigo AS poa_subactivities_codigo, poa_subactivities.responsable AS poa_subactivities_responsable, poa_subactivities.entregable AS poa_subactivities_entregable, poa_subactivities.fecha_inicial AS poa_subactivities_fecha_inicial, poa_subactivities.fecha_final AS poa_subactivities_fecha_final, poa_subactivities.descripcion AS poa_subactivities_descripcion, poa_subactivities.recurrente AS poa_subactivities_recurrente, poa_subactivities.periodicidad AS poa_subactivities_periodicidad, poa_subactivities.cada_xx_dias AS poa_subactivities_cada_xx_dias, poa_subactivities.assigned_by AS poa_subactivities_assigned_by, poa_subactivities.created_at AS poa_subactivities_created_at, poa_subactivities.updated_at AS poa_subactivities_updated_at, poa_activities.id AS poa_activities_id, poa_activities.objective_id AS poa_activities_objective_id, poa_activities.nombre AS poa_activities_nombre, poa_activities.codigo AS poa_activities_codigo, poa_activities.responsable AS poa_activities_responsable, poa_activities.entregable AS poa_activities_entregable, poa_activities.fecha_inicial AS poa_activities_fecha_inicial, poa_activities.fecha_final AS poa_activities_fecha_final, poa_activities.inicio_forzado AS poa_activities_inicio_forzado, poa_activities.descripcion AS poa_activities_descripcion, poa_activities.recurrente AS poa_activities_recurrente, poa_activities.periodicidad AS poa_activities_periodicidad, poa_activities.cada_xx_dias AS poa_activities_cada_xx_dias, poa_activities.entrega_estado AS poa_activities_entrega_estado, poa_activities.entrega_solicitada_por AS poa_activities_entrega_solicitada_por, poa_activities.entrega_solicitada_at AS poa_activities_entrega_solicitada_at, poa_activities.entrega_aprobada_por AS poa_activities_entrega_aprobada_por, poa_activities.entrega_aprobada_at AS poa_activities_entrega_aprobada_at, poa_activities.created_by AS poa_activities_created_by, poa_activities.created_at AS poa_activities_created_at, poa_activities.updated_at AS poa_activities_updated_at 
+FROM poa_subactivities JOIN poa_activities ON poa_activities.id = poa_subactivities.activity_id 
+WHERE lower(poa_subactivities.responsable) IN (?, ?, ?) ORDER BY poa_subactivities.fecha_final ASC, poa_subactivities.id ASC]
+[parameters: ('alopez@avancoop.org', 'okonomiyaki', 'super administrador')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+INFO:     127.0.0.1:64754 - "GET /api/notificaciones/resumen HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1969, in _exec_single_context
+    self.dialect.do_execute(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/default.py", line 922, in do_execute
+    cursor.execute(statement, parameters)
+sqlite3.OperationalError: no such column: poa_subactivities.recurrente
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/uvicorn/protocols/http/httptools_impl.py", line 426, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/uvicorn/middleware/proxy_headers.py", line 84, in __call__
+    return await self.app(scope, receive, send)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/fastapi/applications.py", line 1106, in __call__
+    await super().__call__(scope, receive, send)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/applications.py", line 122, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/errors.py", line 184, in __call__
+    raise exc
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/errors.py", line 162, in __call__
+    await self.app(scope, receive, _send)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/base.py", line 108, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "/Users/jalm/Dropbox/Apps/SIPET/fastapi_modulo/main.py", line 1942, in enforce_backend_login
+    return await call_next(request)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/base.py", line 84, in call_next
+    raise app_exc
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/base.py", line 70, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/exceptions.py", line 79, in __call__
+    raise exc
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/exceptions.py", line 68, in __call__
+    await self.app(scope, receive, sender)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/fastapi/middleware/asyncexitstack.py", line 20, in __call__
+    raise e
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/fastapi/middleware/asyncexitstack.py", line 17, in __call__
+    await self.app(scope, receive, send)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/routing.py", line 718, in __call__
+    await route.handle(scope, receive, send)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/routing.py", line 276, in handle
+    await self.app(scope, receive, send)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/routing.py", line 66, in app
+    response = await func(request)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/fastapi/routing.py", line 274, in app
+    raw_response = await run_endpoint_function(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/fastapi/routing.py", line 193, in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/concurrency.py", line 41, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func, *args)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/anyio/to_thread.py", line 33, in run_sync
+    return await get_asynclib().run_sync_in_worker_thread(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/anyio/_backends/_asyncio.py", line 877, in run_sync_in_worker_thread
+    return await future
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/anyio/_backends/_asyncio.py", line 807, in run
+    result = context.run(func, *args)
+  File "/Users/jalm/Dropbox/Apps/SIPET/fastapi_modulo/modulos/planificacion/ejes_poa.py", line 9823, in notifications_summary
+    .all()
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/orm/query.py", line 2693, in all
+    return self._iter().all()  # type: ignore
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/orm/query.py", line 2847, in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/orm/session.py", line 2308, in execute
+    return self._execute_internal(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/orm/session.py", line 2190, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/orm/context.py", line 293, in orm_execute_statement
+    result = conn.execute(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1416, in execute
+    return meth(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/sql/elements.py", line 516, in _execute_on_connection
+    return connection._execute_clauseelement(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1639, in _execute_clauseelement
+    ret = self._execute_context(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1848, in _execute_context
+    return self._exec_single_context(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1988, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 2343, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1969, in _exec_single_context
+    self.dialect.do_execute(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/default.py", line 922, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such column: poa_subactivities.recurrente
+[SQL: SELECT poa_subactivities.id AS poa_subactivities_id, poa_subactivities.activity_id AS poa_subactivities_activity_id, poa_subactivities.parent_subactivity_id AS poa_subactivities_parent_subactivity_id, poa_subactivities.nivel AS poa_subactivities_nivel, poa_subactivities.nombre AS poa_subactivities_nombre, poa_subactivities.codigo AS poa_subactivities_codigo, poa_subactivities.responsable AS poa_subactivities_responsable, poa_subactivities.entregable AS poa_subactivities_entregable, poa_subactivities.fecha_inicial AS poa_subactivities_fecha_inicial, poa_subactivities.fecha_final AS poa_subactivities_fecha_final, poa_subactivities.descripcion AS poa_subactivities_descripcion, poa_subactivities.recurrente AS poa_subactivities_recurrente, poa_subactivities.periodicidad AS poa_subactivities_periodicidad, poa_subactivities.cada_xx_dias AS poa_subactivities_cada_xx_dias, poa_subactivities.assigned_by AS poa_subactivities_assigned_by, poa_subactivities.created_at AS poa_subactivities_created_at, poa_subactivities.updated_at AS poa_subactivities_updated_at, poa_activities.id AS poa_activities_id, poa_activities.objective_id AS poa_activities_objective_id, poa_activities.nombre AS poa_activities_nombre, poa_activities.codigo AS poa_activities_codigo, poa_activities.responsable AS poa_activities_responsable, poa_activities.entregable AS poa_activities_entregable, poa_activities.fecha_inicial AS poa_activities_fecha_inicial, poa_activities.fecha_final AS poa_activities_fecha_final, poa_activities.inicio_forzado AS poa_activities_inicio_forzado, poa_activities.descripcion AS poa_activities_descripcion, poa_activities.recurrente AS poa_activities_recurrente, poa_activities.periodicidad AS poa_activities_periodicidad, poa_activities.cada_xx_dias AS poa_activities_cada_xx_dias, poa_activities.entrega_estado AS poa_activities_entrega_estado, poa_activities.entrega_solicitada_por AS poa_activities_entrega_solicitada_por, poa_activities.entrega_solicitada_at AS poa_activities_entrega_solicitada_at, poa_activities.entrega_aprobada_por AS poa_activities_entrega_aprobada_por, poa_activities.entrega_aprobada_at AS poa_activities_entrega_aprobada_at, poa_activities.created_by AS poa_activities_created_by, poa_activities.created_at AS poa_activities_created_at, poa_activities.updated_at AS poa_activities_updated_at 
+FROM poa_subactivities JOIN poa_activities ON poa_activities.id = poa_subactivities.activity_id 
+WHERE lower(poa_subactivities.responsable) IN (?, ?, ?) ORDER BY poa_subactivities.fecha_final ASC, poa_subactivities.id ASC]
+[parameters: ('alopez@avancoop.org', 'okonomiyaki', 'super administrador')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+INFO:     127.0.0.1:65152 - "GET /perfil HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65154 - "GET /user_profile_57729d01424c.png HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:65152 - "GET /api/colaboradores HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65152 - "GET /user_profile_57729d01424c.png HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:65152 - "GET /api/notificaciones/resumen HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1969, in _exec_single_context
+    self.dialect.do_execute(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/default.py", line 922, in do_execute
+    cursor.execute(statement, parameters)
+sqlite3.OperationalError: no such column: poa_subactivities.recurrente
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/uvicorn/protocols/http/httptools_impl.py", line 426, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/uvicorn/middleware/proxy_headers.py", line 84, in __call__
+    return await self.app(scope, receive, send)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/fastapi/applications.py", line 1106, in __call__
+    await super().__call__(scope, receive, send)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/applications.py", line 122, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/errors.py", line 184, in __call__
+    raise exc
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/errors.py", line 162, in __call__
+    await self.app(scope, receive, _send)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/base.py", line 108, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "/Users/jalm/Dropbox/Apps/SIPET/fastapi_modulo/main.py", line 1942, in enforce_backend_login
+    return await call_next(request)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/base.py", line 84, in call_next
+    raise app_exc
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/base.py", line 70, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/exceptions.py", line 79, in __call__
+    raise exc
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/exceptions.py", line 68, in __call__
+    await self.app(scope, receive, sender)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/fastapi/middleware/asyncexitstack.py", line 20, in __call__
+    raise e
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/fastapi/middleware/asyncexitstack.py", line 17, in __call__
+    await self.app(scope, receive, send)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/routing.py", line 718, in __call__
+    await route.handle(scope, receive, send)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/routing.py", line 276, in handle
+    await self.app(scope, receive, send)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/routing.py", line 66, in app
+    response = await func(request)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/fastapi/routing.py", line 274, in app
+    raw_response = await run_endpoint_function(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/fastapi/routing.py", line 193, in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/concurrency.py", line 41, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func, *args)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/anyio/to_thread.py", line 33, in run_sync
+    return await get_asynclib().run_sync_in_worker_thread(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/anyio/_backends/_asyncio.py", line 877, in run_sync_in_worker_thread
+    return await future
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/anyio/_backends/_asyncio.py", line 807, in run
+    result = context.run(func, *args)
+  File "/Users/jalm/Dropbox/Apps/SIPET/fastapi_modulo/modulos/planificacion/ejes_poa.py", line 9823, in notifications_summary
+    .all()
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/orm/query.py", line 2693, in all
+    return self._iter().all()  # type: ignore
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/orm/query.py", line 2847, in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/orm/session.py", line 2308, in execute
+    return self._execute_internal(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/orm/session.py", line 2190, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/orm/context.py", line 293, in orm_execute_statement
+    result = conn.execute(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1416, in execute
+    return meth(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/sql/elements.py", line 516, in _execute_on_connection
+    return connection._execute_clauseelement(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1639, in _execute_clauseelement
+    ret = self._execute_context(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1848, in _execute_context
+    return self._exec_single_context(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1988, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 2343, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1969, in _exec_single_context
+    self.dialect.do_execute(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/default.py", line 922, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such column: poa_subactivities.recurrente
+[SQL: SELECT poa_subactivities.id AS poa_subactivities_id, poa_subactivities.activity_id AS poa_subactivities_activity_id, poa_subactivities.parent_subactivity_id AS poa_subactivities_parent_subactivity_id, poa_subactivities.nivel AS poa_subactivities_nivel, poa_subactivities.nombre AS poa_subactivities_nombre, poa_subactivities.codigo AS poa_subactivities_codigo, poa_subactivities.responsable AS poa_subactivities_responsable, poa_subactivities.entregable AS poa_subactivities_entregable, poa_subactivities.fecha_inicial AS poa_subactivities_fecha_inicial, poa_subactivities.fecha_final AS poa_subactivities_fecha_final, poa_subactivities.descripcion AS poa_subactivities_descripcion, poa_subactivities.recurrente AS poa_subactivities_recurrente, poa_subactivities.periodicidad AS poa_subactivities_periodicidad, poa_subactivities.cada_xx_dias AS poa_subactivities_cada_xx_dias, poa_subactivities.assigned_by AS poa_subactivities_assigned_by, poa_subactivities.created_at AS poa_subactivities_created_at, poa_subactivities.updated_at AS poa_subactivities_updated_at, poa_activities.id AS poa_activities_id, poa_activities.objective_id AS poa_activities_objective_id, poa_activities.nombre AS poa_activities_nombre, poa_activities.codigo AS poa_activities_codigo, poa_activities.responsable AS poa_activities_responsable, poa_activities.entregable AS poa_activities_entregable, poa_activities.fecha_inicial AS poa_activities_fecha_inicial, poa_activities.fecha_final AS poa_activities_fecha_final, poa_activities.inicio_forzado AS poa_activities_inicio_forzado, poa_activities.descripcion AS poa_activities_descripcion, poa_activities.recurrente AS poa_activities_recurrente, poa_activities.periodicidad AS poa_activities_periodicidad, poa_activities.cada_xx_dias AS poa_activities_cada_xx_dias, poa_activities.entrega_estado AS poa_activities_entrega_estado, poa_activities.entrega_solicitada_por AS poa_activities_entrega_solicitada_por, poa_activities.entrega_solicitada_at AS poa_activities_entrega_solicitada_at, poa_activities.entrega_aprobada_por AS poa_activities_entrega_aprobada_por, poa_activities.entrega_aprobada_at AS poa_activities_entrega_aprobada_at, poa_activities.created_by AS poa_activities_created_by, poa_activities.created_at AS poa_activities_created_at, poa_activities.updated_at AS poa_activities_updated_at 
+FROM poa_subactivities JOIN poa_activities ON poa_activities.id = poa_subactivities.activity_id 
+WHERE lower(poa_subactivities.responsable) IN (?, ?, ?) ORDER BY poa_subactivities.fecha_final ASC, poa_subactivities.id ASC]
+[parameters: ('alopez@avancoop.org', 'okonomiyaki', 'super administrador')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+INFO:     127.0.0.1:65319 - "GET /poa HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65322 - "GET /user_profile_57729d01424c.png HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:65319 - "GET /api/colaboradores HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65319 - "GET /user_profile_57729d01424c.png HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:65322 - "GET /api/notificaciones/resumen HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1969, in _exec_single_context
+    self.dialect.do_execute(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/default.py", line 922, in do_execute
+    cursor.execute(statement, parameters)
+sqlite3.OperationalError: no such column: poa_subactivities.recurrente
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/uvicorn/protocols/http/httptools_impl.py", line 426, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/uvicorn/middleware/proxy_headers.py", line 84, in __call__
+    return await self.app(scope, receive, send)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/fastapi/applications.py", line 1106, in __call__
+    await super().__call__(scope, receive, send)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/applications.py", line 122, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/errors.py", line 184, in __call__
+    raise exc
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/errors.py", line 162, in __call__
+    await self.app(scope, receive, _send)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/base.py", line 108, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "/Users/jalm/Dropbox/Apps/SIPET/fastapi_modulo/main.py", line 1942, in enforce_backend_login
+    return await call_next(request)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/base.py", line 84, in call_next
+    raise app_exc
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/base.py", line 70, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/exceptions.py", line 79, in __call__
+    raise exc
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/exceptions.py", line 68, in __call__
+    await self.app(scope, receive, sender)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/fastapi/middleware/asyncexitstack.py", line 20, in __call__
+    raise e
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/fastapi/middleware/asyncexitstack.py", line 17, in __call__
+    await self.app(scope, receive, send)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/routing.py", line 718, in __call__
+    await route.handle(scope, receive, send)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/routing.py", line 276, in handle
+    await self.app(scope, receive, send)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/routing.py", line 66, in app
+    response = await func(request)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/fastapi/routing.py", line 274, in app
+    raw_response = await run_endpoint_function(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/fastapi/routing.py", line 193, in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/concurrency.py", line 41, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func, *args)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/anyio/to_thread.py", line 33, in run_sync
+    return await get_asynclib().run_sync_in_worker_thread(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/anyio/_backends/_asyncio.py", line 877, in run_sync_in_worker_thread
+    return await future
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/anyio/_backends/_asyncio.py", line 807, in run
+    result = context.run(func, *args)
+  File "/Users/jalm/Dropbox/Apps/SIPET/fastapi_modulo/modulos/planificacion/ejes_poa.py", line 9823, in notifications_summary
+    .all()
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/orm/query.py", line 2693, in all
+    return self._iter().all()  # type: ignore
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/orm/query.py", line 2847, in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/orm/session.py", line 2308, in execute
+    return self._execute_internal(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/orm/session.py", line 2190, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/orm/context.py", line 293, in orm_execute_statement
+    result = conn.execute(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1416, in execute
+    return meth(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/sql/elements.py", line 516, in _execute_on_connection
+    return connection._execute_clauseelement(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1639, in _execute_clauseelement
+    ret = self._execute_context(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1848, in _execute_context
+    return self._exec_single_context(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1988, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 2343, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1969, in _exec_single_context
+    self.dialect.do_execute(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/default.py", line 922, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such column: poa_subactivities.recurrente
+[SQL: SELECT poa_subactivities.id AS poa_subactivities_id, poa_subactivities.activity_id AS poa_subactivities_activity_id, poa_subactivities.parent_subactivity_id AS poa_subactivities_parent_subactivity_id, poa_subactivities.nivel AS poa_subactivities_nivel, poa_subactivities.nombre AS poa_subactivities_nombre, poa_subactivities.codigo AS poa_subactivities_codigo, poa_subactivities.responsable AS poa_subactivities_responsable, poa_subactivities.entregable AS poa_subactivities_entregable, poa_subactivities.fecha_inicial AS poa_subactivities_fecha_inicial, poa_subactivities.fecha_final AS poa_subactivities_fecha_final, poa_subactivities.descripcion AS poa_subactivities_descripcion, poa_subactivities.recurrente AS poa_subactivities_recurrente, poa_subactivities.periodicidad AS poa_subactivities_periodicidad, poa_subactivities.cada_xx_dias AS poa_subactivities_cada_xx_dias, poa_subactivities.assigned_by AS poa_subactivities_assigned_by, poa_subactivities.created_at AS poa_subactivities_created_at, poa_subactivities.updated_at AS poa_subactivities_updated_at, poa_activities.id AS poa_activities_id, poa_activities.objective_id AS poa_activities_objective_id, poa_activities.nombre AS poa_activities_nombre, poa_activities.codigo AS poa_activities_codigo, poa_activities.responsable AS poa_activities_responsable, poa_activities.entregable AS poa_activities_entregable, poa_activities.fecha_inicial AS poa_activities_fecha_inicial, poa_activities.fecha_final AS poa_activities_fecha_final, poa_activities.inicio_forzado AS poa_activities_inicio_forzado, poa_activities.descripcion AS poa_activities_descripcion, poa_activities.recurrente AS poa_activities_recurrente, poa_activities.periodicidad AS poa_activities_periodicidad, poa_activities.cada_xx_dias AS poa_activities_cada_xx_dias, poa_activities.entrega_estado AS poa_activities_entrega_estado, poa_activities.entrega_solicitada_por AS poa_activities_entrega_solicitada_por, poa_activities.entrega_solicitada_at AS poa_activities_entrega_solicitada_at, poa_activities.entrega_aprobada_por AS poa_activities_entrega_aprobada_por, poa_activities.entrega_aprobada_at AS poa_activities_entrega_aprobada_at, poa_activities.created_by AS poa_activities_created_by, poa_activities.created_at AS poa_activities_created_at, poa_activities.updated_at AS poa_activities_updated_at 
+FROM poa_subactivities JOIN poa_activities ON poa_activities.id = poa_subactivities.activity_id 
+WHERE lower(poa_subactivities.responsable) IN (?, ?, ?) ORDER BY poa_subactivities.fecha_final ASC, poa_subactivities.id ASC]
+[parameters: ('alopez@avancoop.org', 'okonomiyaki', 'super administrador')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+INFO:     127.0.0.1:49497 - "GET /api/notificaciones/resumen HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1969, in _exec_single_context
+    self.dialect.do_execute(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/default.py", line 922, in do_execute
+    cursor.execute(statement, parameters)
+sqlite3.OperationalError: no such column: poa_subactivities.recurrente
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/uvicorn/protocols/http/httptools_impl.py", line 426, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/uvicorn/middleware/proxy_headers.py", line 84, in __call__
+    return await self.app(scope, receive, send)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/fastapi/applications.py", line 1106, in __call__
+    await super().__call__(scope, receive, send)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/applications.py", line 122, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/errors.py", line 184, in __call__
+    raise exc
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/errors.py", line 162, in __call__
+    await self.app(scope, receive, _send)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/base.py", line 108, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "/Users/jalm/Dropbox/Apps/SIPET/fastapi_modulo/main.py", line 1942, in enforce_backend_login
+    return await call_next(request)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/base.py", line 84, in call_next
+    raise app_exc
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/base.py", line 70, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/exceptions.py", line 79, in __call__
+    raise exc
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/exceptions.py", line 68, in __call__
+    await self.app(scope, receive, sender)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/fastapi/middleware/asyncexitstack.py", line 20, in __call__
+    raise e
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/fastapi/middleware/asyncexitstack.py", line 17, in __call__
+    await self.app(scope, receive, send)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/routing.py", line 718, in __call__
+    await route.handle(scope, receive, send)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/routing.py", line 276, in handle
+    await self.app(scope, receive, send)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/routing.py", line 66, in app
+    response = await func(request)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/fastapi/routing.py", line 274, in app
+    raw_response = await run_endpoint_function(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/fastapi/routing.py", line 193, in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/concurrency.py", line 41, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func, *args)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/anyio/to_thread.py", line 33, in run_sync
+    return await get_asynclib().run_sync_in_worker_thread(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/anyio/_backends/_asyncio.py", line 877, in run_sync_in_worker_thread
+    return await future
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/anyio/_backends/_asyncio.py", line 807, in run
+    result = context.run(func, *args)
+  File "/Users/jalm/Dropbox/Apps/SIPET/fastapi_modulo/modulos/planificacion/ejes_poa.py", line 9823, in notifications_summary
+    .all()
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/orm/query.py", line 2693, in all
+    return self._iter().all()  # type: ignore
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/orm/query.py", line 2847, in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/orm/session.py", line 2308, in execute
+    return self._execute_internal(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/orm/session.py", line 2190, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/orm/context.py", line 293, in orm_execute_statement
+    result = conn.execute(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1416, in execute
+    return meth(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/sql/elements.py", line 516, in _execute_on_connection
+    return connection._execute_clauseelement(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1639, in _execute_clauseelement
+    ret = self._execute_context(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1848, in _execute_context
+    return self._exec_single_context(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1988, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 2343, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1969, in _exec_single_context
+    self.dialect.do_execute(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/default.py", line 922, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such column: poa_subactivities.recurrente
+[SQL: SELECT poa_subactivities.id AS poa_subactivities_id, poa_subactivities.activity_id AS poa_subactivities_activity_id, poa_subactivities.parent_subactivity_id AS poa_subactivities_parent_subactivity_id, poa_subactivities.nivel AS poa_subactivities_nivel, poa_subactivities.nombre AS poa_subactivities_nombre, poa_subactivities.codigo AS poa_subactivities_codigo, poa_subactivities.responsable AS poa_subactivities_responsable, poa_subactivities.entregable AS poa_subactivities_entregable, poa_subactivities.fecha_inicial AS poa_subactivities_fecha_inicial, poa_subactivities.fecha_final AS poa_subactivities_fecha_final, poa_subactivities.descripcion AS poa_subactivities_descripcion, poa_subactivities.recurrente AS poa_subactivities_recurrente, poa_subactivities.periodicidad AS poa_subactivities_periodicidad, poa_subactivities.cada_xx_dias AS poa_subactivities_cada_xx_dias, poa_subactivities.assigned_by AS poa_subactivities_assigned_by, poa_subactivities.created_at AS poa_subactivities_created_at, poa_subactivities.updated_at AS poa_subactivities_updated_at, poa_activities.id AS poa_activities_id, poa_activities.objective_id AS poa_activities_objective_id, poa_activities.nombre AS poa_activities_nombre, poa_activities.codigo AS poa_activities_codigo, poa_activities.responsable AS poa_activities_responsable, poa_activities.entregable AS poa_activities_entregable, poa_activities.fecha_inicial AS poa_activities_fecha_inicial, poa_activities.fecha_final AS poa_activities_fecha_final, poa_activities.inicio_forzado AS poa_activities_inicio_forzado, poa_activities.descripcion AS poa_activities_descripcion, poa_activities.recurrente AS poa_activities_recurrente, poa_activities.periodicidad AS poa_activities_periodicidad, poa_activities.cada_xx_dias AS poa_activities_cada_xx_dias, poa_activities.entrega_estado AS poa_activities_entrega_estado, poa_activities.entrega_solicitada_por AS poa_activities_entrega_solicitada_por, poa_activities.entrega_solicitada_at AS poa_activities_entrega_solicitada_at, poa_activities.entrega_aprobada_por AS poa_activities_entrega_aprobada_por, poa_activities.entrega_aprobada_at AS poa_activities_entrega_aprobada_at, poa_activities.created_by AS poa_activities_created_by, poa_activities.created_at AS poa_activities_created_at, poa_activities.updated_at AS poa_activities_updated_at 
+FROM poa_subactivities JOIN poa_activities ON poa_activities.id = poa_subactivities.activity_id 
+WHERE lower(poa_subactivities.responsable) IN (?, ?, ?) ORDER BY poa_subactivities.fecha_final ASC, poa_subactivities.id ASC]
+[parameters: ('alopez@avancoop.org', 'okonomiyaki', 'super administrador')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+INFO:     127.0.0.1:50222 - "GET /api/notificaciones/resumen HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1969, in _exec_single_context
+    self.dialect.do_execute(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/default.py", line 922, in do_execute
+    cursor.execute(statement, parameters)
+sqlite3.OperationalError: no such column: poa_subactivities.recurrente
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/uvicorn/protocols/http/httptools_impl.py", line 426, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/uvicorn/middleware/proxy_headers.py", line 84, in __call__
+    return await self.app(scope, receive, send)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/fastapi/applications.py", line 1106, in __call__
+    await super().__call__(scope, receive, send)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/applications.py", line 122, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/errors.py", line 184, in __call__
+    raise exc
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/errors.py", line 162, in __call__
+    await self.app(scope, receive, _send)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/base.py", line 108, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "/Users/jalm/Dropbox/Apps/SIPET/fastapi_modulo/main.py", line 1942, in enforce_backend_login
+    return await call_next(request)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/base.py", line 84, in call_next
+    raise app_exc
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/base.py", line 70, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/exceptions.py", line 79, in __call__
+    raise exc
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/exceptions.py", line 68, in __call__
+    await self.app(scope, receive, sender)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/fastapi/middleware/asyncexitstack.py", line 20, in __call__
+    raise e
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/fastapi/middleware/asyncexitstack.py", line 17, in __call__
+    await self.app(scope, receive, send)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/routing.py", line 718, in __call__
+    await route.handle(scope, receive, send)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/routing.py", line 276, in handle
+    await self.app(scope, receive, send)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/routing.py", line 66, in app
+    response = await func(request)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/fastapi/routing.py", line 274, in app
+    raw_response = await run_endpoint_function(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/fastapi/routing.py", line 193, in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/concurrency.py", line 41, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func, *args)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/anyio/to_thread.py", line 33, in run_sync
+    return await get_asynclib().run_sync_in_worker_thread(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/anyio/_backends/_asyncio.py", line 877, in run_sync_in_worker_thread
+    return await future
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/anyio/_backends/_asyncio.py", line 807, in run
+    result = context.run(func, *args)
+  File "/Users/jalm/Dropbox/Apps/SIPET/fastapi_modulo/modulos/planificacion/ejes_poa.py", line 9823, in notifications_summary
+    .all()
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/orm/query.py", line 2693, in all
+    return self._iter().all()  # type: ignore
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/orm/query.py", line 2847, in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/orm/session.py", line 2308, in execute
+    return self._execute_internal(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/orm/session.py", line 2190, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/orm/context.py", line 293, in orm_execute_statement
+    result = conn.execute(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1416, in execute
+    return meth(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/sql/elements.py", line 516, in _execute_on_connection
+    return connection._execute_clauseelement(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1639, in _execute_clauseelement
+    ret = self._execute_context(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1848, in _execute_context
+    return self._exec_single_context(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1988, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 2343, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1969, in _exec_single_context
+    self.dialect.do_execute(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/default.py", line 922, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such column: poa_subactivities.recurrente
+[SQL: SELECT poa_subactivities.id AS poa_subactivities_id, poa_subactivities.activity_id AS poa_subactivities_activity_id, poa_subactivities.parent_subactivity_id AS poa_subactivities_parent_subactivity_id, poa_subactivities.nivel AS poa_subactivities_nivel, poa_subactivities.nombre AS poa_subactivities_nombre, poa_subactivities.codigo AS poa_subactivities_codigo, poa_subactivities.responsable AS poa_subactivities_responsable, poa_subactivities.entregable AS poa_subactivities_entregable, poa_subactivities.fecha_inicial AS poa_subactivities_fecha_inicial, poa_subactivities.fecha_final AS poa_subactivities_fecha_final, poa_subactivities.descripcion AS poa_subactivities_descripcion, poa_subactivities.recurrente AS poa_subactivities_recurrente, poa_subactivities.periodicidad AS poa_subactivities_periodicidad, poa_subactivities.cada_xx_dias AS poa_subactivities_cada_xx_dias, poa_subactivities.assigned_by AS poa_subactivities_assigned_by, poa_subactivities.created_at AS poa_subactivities_created_at, poa_subactivities.updated_at AS poa_subactivities_updated_at, poa_activities.id AS poa_activities_id, poa_activities.objective_id AS poa_activities_objective_id, poa_activities.nombre AS poa_activities_nombre, poa_activities.codigo AS poa_activities_codigo, poa_activities.responsable AS poa_activities_responsable, poa_activities.entregable AS poa_activities_entregable, poa_activities.fecha_inicial AS poa_activities_fecha_inicial, poa_activities.fecha_final AS poa_activities_fecha_final, poa_activities.inicio_forzado AS poa_activities_inicio_forzado, poa_activities.descripcion AS poa_activities_descripcion, poa_activities.recurrente AS poa_activities_recurrente, poa_activities.periodicidad AS poa_activities_periodicidad, poa_activities.cada_xx_dias AS poa_activities_cada_xx_dias, poa_activities.entrega_estado AS poa_activities_entrega_estado, poa_activities.entrega_solicitada_por AS poa_activities_entrega_solicitada_por, poa_activities.entrega_solicitada_at AS poa_activities_entrega_solicitada_at, poa_activities.entrega_aprobada_por AS poa_activities_entrega_aprobada_por, poa_activities.entrega_aprobada_at AS poa_activities_entrega_aprobada_at, poa_activities.created_by AS poa_activities_created_by, poa_activities.created_at AS poa_activities_created_at, poa_activities.updated_at AS poa_activities_updated_at 
+FROM poa_subactivities JOIN poa_activities ON poa_activities.id = poa_subactivities.activity_id 
+WHERE lower(poa_subactivities.responsable) IN (?, ?, ?) ORDER BY poa_subactivities.fecha_final ASC, poa_subactivities.id ASC]
+[parameters: ('alopez@avancoop.org', 'okonomiyaki', 'super administrador')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+INFO:     127.0.0.1:50294 - "GET /api/notificaciones/resumen HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1969, in _exec_single_context
+    self.dialect.do_execute(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/default.py", line 922, in do_execute
+    cursor.execute(statement, parameters)
+sqlite3.OperationalError: no such column: poa_subactivities.recurrente
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/uvicorn/protocols/http/httptools_impl.py", line 426, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/uvicorn/middleware/proxy_headers.py", line 84, in __call__
+    return await self.app(scope, receive, send)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/fastapi/applications.py", line 1106, in __call__
+    await super().__call__(scope, receive, send)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/applications.py", line 122, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/errors.py", line 184, in __call__
+    raise exc
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/errors.py", line 162, in __call__
+    await self.app(scope, receive, _send)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/base.py", line 108, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "/Users/jalm/Dropbox/Apps/SIPET/fastapi_modulo/main.py", line 1942, in enforce_backend_login
+    return await call_next(request)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/base.py", line 84, in call_next
+    raise app_exc
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/base.py", line 70, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/exceptions.py", line 79, in __call__
+    raise exc
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/exceptions.py", line 68, in __call__
+    await self.app(scope, receive, sender)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/fastapi/middleware/asyncexitstack.py", line 20, in __call__
+    raise e
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/fastapi/middleware/asyncexitstack.py", line 17, in __call__
+    await self.app(scope, receive, send)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/routing.py", line 718, in __call__
+    await route.handle(scope, receive, send)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/routing.py", line 276, in handle
+    await self.app(scope, receive, send)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/routing.py", line 66, in app
+    response = await func(request)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/fastapi/routing.py", line 274, in app
+    raw_response = await run_endpoint_function(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/fastapi/routing.py", line 193, in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/concurrency.py", line 41, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func, *args)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/anyio/to_thread.py", line 33, in run_sync
+    return await get_asynclib().run_sync_in_worker_thread(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/anyio/_backends/_asyncio.py", line 877, in run_sync_in_worker_thread
+    return await future
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/anyio/_backends/_asyncio.py", line 807, in run
+    result = context.run(func, *args)
+  File "/Users/jalm/Dropbox/Apps/SIPET/fastapi_modulo/modulos/planificacion/ejes_poa.py", line 9823, in notifications_summary
+    .all()
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/orm/query.py", line 2693, in all
+    return self._iter().all()  # type: ignore
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/orm/query.py", line 2847, in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/orm/session.py", line 2308, in execute
+    return self._execute_internal(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/orm/session.py", line 2190, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/orm/context.py", line 293, in orm_execute_statement
+    result = conn.execute(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1416, in execute
+    return meth(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/sql/elements.py", line 516, in _execute_on_connection
+    return connection._execute_clauseelement(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1639, in _execute_clauseelement
+    ret = self._execute_context(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1848, in _execute_context
+    return self._exec_single_context(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1988, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 2343, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1969, in _exec_single_context
+    self.dialect.do_execute(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/default.py", line 922, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such column: poa_subactivities.recurrente
+[SQL: SELECT poa_subactivities.id AS poa_subactivities_id, poa_subactivities.activity_id AS poa_subactivities_activity_id, poa_subactivities.parent_subactivity_id AS poa_subactivities_parent_subactivity_id, poa_subactivities.nivel AS poa_subactivities_nivel, poa_subactivities.nombre AS poa_subactivities_nombre, poa_subactivities.codigo AS poa_subactivities_codigo, poa_subactivities.responsable AS poa_subactivities_responsable, poa_subactivities.entregable AS poa_subactivities_entregable, poa_subactivities.fecha_inicial AS poa_subactivities_fecha_inicial, poa_subactivities.fecha_final AS poa_subactivities_fecha_final, poa_subactivities.descripcion AS poa_subactivities_descripcion, poa_subactivities.recurrente AS poa_subactivities_recurrente, poa_subactivities.periodicidad AS poa_subactivities_periodicidad, poa_subactivities.cada_xx_dias AS poa_subactivities_cada_xx_dias, poa_subactivities.assigned_by AS poa_subactivities_assigned_by, poa_subactivities.created_at AS poa_subactivities_created_at, poa_subactivities.updated_at AS poa_subactivities_updated_at, poa_activities.id AS poa_activities_id, poa_activities.objective_id AS poa_activities_objective_id, poa_activities.nombre AS poa_activities_nombre, poa_activities.codigo AS poa_activities_codigo, poa_activities.responsable AS poa_activities_responsable, poa_activities.entregable AS poa_activities_entregable, poa_activities.fecha_inicial AS poa_activities_fecha_inicial, poa_activities.fecha_final AS poa_activities_fecha_final, poa_activities.inicio_forzado AS poa_activities_inicio_forzado, poa_activities.descripcion AS poa_activities_descripcion, poa_activities.recurrente AS poa_activities_recurrente, poa_activities.periodicidad AS poa_activities_periodicidad, poa_activities.cada_xx_dias AS poa_activities_cada_xx_dias, poa_activities.entrega_estado AS poa_activities_entrega_estado, poa_activities.entrega_solicitada_por AS poa_activities_entrega_solicitada_por, poa_activities.entrega_solicitada_at AS poa_activities_entrega_solicitada_at, poa_activities.entrega_aprobada_por AS poa_activities_entrega_aprobada_por, poa_activities.entrega_aprobada_at AS poa_activities_entrega_aprobada_at, poa_activities.created_by AS poa_activities_created_by, poa_activities.created_at AS poa_activities_created_at, poa_activities.updated_at AS poa_activities_updated_at 
+FROM poa_subactivities JOIN poa_activities ON poa_activities.id = poa_subactivities.activity_id 
+WHERE lower(poa_subactivities.responsable) IN (?, ?, ?) ORDER BY poa_subactivities.fecha_final ASC, poa_subactivities.id ASC]
+[parameters: ('alopez@avancoop.org', 'okonomiyaki', 'super administrador')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+INFO:     127.0.0.1:50760 - "GET /api/notificaciones/resumen HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1969, in _exec_single_context
+    self.dialect.do_execute(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/default.py", line 922, in do_execute
+    cursor.execute(statement, parameters)
+sqlite3.OperationalError: no such column: poa_subactivities.recurrente
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/uvicorn/protocols/http/httptools_impl.py", line 426, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/uvicorn/middleware/proxy_headers.py", line 84, in __call__
+    return await self.app(scope, receive, send)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/fastapi/applications.py", line 1106, in __call__
+    await super().__call__(scope, receive, send)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/applications.py", line 122, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/errors.py", line 184, in __call__
+    raise exc
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/errors.py", line 162, in __call__
+    await self.app(scope, receive, _send)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/base.py", line 108, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "/Users/jalm/Dropbox/Apps/SIPET/fastapi_modulo/main.py", line 1942, in enforce_backend_login
+    return await call_next(request)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/base.py", line 84, in call_next
+    raise app_exc
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/base.py", line 70, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/exceptions.py", line 79, in __call__
+    raise exc
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/exceptions.py", line 68, in __call__
+    await self.app(scope, receive, sender)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/fastapi/middleware/asyncexitstack.py", line 20, in __call__
+    raise e
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/fastapi/middleware/asyncexitstack.py", line 17, in __call__
+    await self.app(scope, receive, send)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/routing.py", line 718, in __call__
+    await route.handle(scope, receive, send)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/routing.py", line 276, in handle
+    await self.app(scope, receive, send)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/routing.py", line 66, in app
+    response = await func(request)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/fastapi/routing.py", line 274, in app
+    raw_response = await run_endpoint_function(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/fastapi/routing.py", line 193, in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/concurrency.py", line 41, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func, *args)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/anyio/to_thread.py", line 33, in run_sync
+    return await get_asynclib().run_sync_in_worker_thread(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/anyio/_backends/_asyncio.py", line 877, in run_sync_in_worker_thread
+    return await future
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/anyio/_backends/_asyncio.py", line 807, in run
+    result = context.run(func, *args)
+  File "/Users/jalm/Dropbox/Apps/SIPET/fastapi_modulo/modulos/planificacion/ejes_poa.py", line 9823, in notifications_summary
+    .all()
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/orm/query.py", line 2693, in all
+    return self._iter().all()  # type: ignore
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/orm/query.py", line 2847, in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/orm/session.py", line 2308, in execute
+    return self._execute_internal(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/orm/session.py", line 2190, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/orm/context.py", line 293, in orm_execute_statement
+    result = conn.execute(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1416, in execute
+    return meth(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/sql/elements.py", line 516, in _execute_on_connection
+    return connection._execute_clauseelement(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1639, in _execute_clauseelement
+    ret = self._execute_context(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1848, in _execute_context
+    return self._exec_single_context(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1988, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 2343, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1969, in _exec_single_context
+    self.dialect.do_execute(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/engine/default.py", line 922, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such column: poa_subactivities.recurrente
+[SQL: SELECT poa_subactivities.id AS poa_subactivities_id, poa_subactivities.activity_id AS poa_subactivities_activity_id, poa_subactivities.parent_subactivity_id AS poa_subactivities_parent_subactivity_id, poa_subactivities.nivel AS poa_subactivities_nivel, poa_subactivities.nombre AS poa_subactivities_nombre, poa_subactivities.codigo AS poa_subactivities_codigo, poa_subactivities.responsable AS poa_subactivities_responsable, poa_subactivities.entregable AS poa_subactivities_entregable, poa_subactivities.fecha_inicial AS poa_subactivities_fecha_inicial, poa_subactivities.fecha_final AS poa_subactivities_fecha_final, poa_subactivities.descripcion AS poa_subactivities_descripcion, poa_subactivities.recurrente AS poa_subactivities_recurrente, poa_subactivities.periodicidad AS poa_subactivities_periodicidad, poa_subactivities.cada_xx_dias AS poa_subactivities_cada_xx_dias, poa_subactivities.assigned_by AS poa_subactivities_assigned_by, poa_subactivities.created_at AS poa_subactivities_created_at, poa_subactivities.updated_at AS poa_subactivities_updated_at, poa_activities.id AS poa_activities_id, poa_activities.objective_id AS poa_activities_objective_id, poa_activities.nombre AS poa_activities_nombre, poa_activities.codigo AS poa_activities_codigo, poa_activities.responsable AS poa_activities_responsable, poa_activities.entregable AS poa_activities_entregable, poa_activities.fecha_inicial AS poa_activities_fecha_inicial, poa_activities.fecha_final AS poa_activities_fecha_final, poa_activities.inicio_forzado AS poa_activities_inicio_forzado, poa_activities.descripcion AS poa_activities_descripcion, poa_activities.recurrente AS poa_activities_recurrente, poa_activities.periodicidad AS poa_activities_periodicidad, poa_activities.cada_xx_dias AS poa_activities_cada_xx_dias, poa_activities.entrega_estado AS poa_activities_entrega_estado, poa_activities.entrega_solicitada_por AS poa_activities_entrega_solicitada_por, poa_activities.entrega_solicitada_at AS poa_activities_entrega_solicitada_at, poa_activities.entrega_aprobada_por AS poa_activities_entrega_aprobada_por, poa_activities.entrega_aprobada_at AS poa_activities_entrega_aprobada_at, poa_activities.created_by AS poa_activities_created_by, poa_activities.created_at AS poa_activities_created_at, poa_activities.updated_at AS poa_activities_updated_at 
+FROM poa_subactivities JOIN poa_activities ON poa_activities.id = poa_subactivities.activity_id 
+WHERE lower(poa_subactivities.responsable) IN (?, ?, ?) ORDER BY poa_subactivities.fecha_final ASC, poa_subactivities.id ASC]
+[parameters: ('alopez@avancoop.org', 'okonomiyaki', 'super administrador')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)

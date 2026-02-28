@@ -265,7 +265,7 @@ def normalize_role_name(role_name: Optional[str]) -> str:
     normalized = re.sub(r"[^a-z0-9]+", "_", normalized).strip("_")
     if not normalized:
         return "usuario"
-    if normalized in {"superadmin", "super_admin", "super_administrador", "superadministrador"}:
+    if normalized in {"superadmin", "super_admin", "super_administrador", "superadministrador", "superadministrdor"}:
         return "superadministrador"
     if normalized in {"admin", "administrador", "administador", "administrdor", "admnistrador"}:
         return "administrador"
@@ -1006,6 +1006,9 @@ class POASubactivity(Base):
     fecha_inicial = Column(Date)
     fecha_final = Column(Date)
     descripcion = Column(String, default="")
+    recurrente = Column(Boolean, default=False)
+    periodicidad = Column(String, default="")
+    cada_xx_dias = Column(Integer)
     assigned_by = Column(String, default="")
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

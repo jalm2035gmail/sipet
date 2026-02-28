@@ -38,9 +38,9 @@
             <div class="sidebar-user">
                 <img
                     id="sidebar-user-img"
-                    src="{{ sidebar_logo_url | default('/templates/icon/icon.png', true) }}"
-                    data-default="{{ sidebar_logo_url | default('/templates/icon/icon.png', true) }}"
-                    alt="Logo empresa"
+                    src="{{ login_logo_url | default('/templates/icon/usuario.png', true) }}"
+                    data-default="{{ login_logo_url | default('/templates/icon/usuario.png', true) }}"
+                    alt="Usuario"
                 />
             </div>
         </div>
@@ -119,12 +119,7 @@
                             <a href="/proyectando/tasa-referencia">9. Tasa de referencia</a>
                         </div>
                     </details>
-                    <details class="sidebar-submenu-group">
-                        <summary>Presupuesto</summary>
-                        <div class="sidebar-submenu-level3">
-                            <a href="/proyectando/presupuesto">Vista general</a>
-                        </div>
-                    </details>
+                    <a href="/proyectando/presupuesto">Presupuesto</a>
                 </div>
             </details>
             <details class="sidebar-block">
@@ -357,28 +352,74 @@
             const logoutLink = document.getElementById('logout-link');
             const sidebarUserImg = document.getElementById('sidebar-user-img');
             const USER_LOGO_CACHE_KEY = 'sipet_logo_usuario_url';
+            const CURRENT_USERNAME = String({{ (request.state.user_name | default('', true) | tojson) | safe }} || '').trim().toLowerCase();
+            let hasUserAvatarFromColaborador = false;
             try {
-                if (sidebarUserImg instanceof HTMLImageElement) {
-                    // El logo del sidebar siempre proviene de Identidad institucional (valor por defecto del template).
-                    sidebarUserImg.src = sidebarUserImg.dataset.default || sidebarUserImg.src;
-                    window.localStorage.removeItem('sipet_logo_empresa_url');
-                }
+                const cachedUserLogo = String(window.localStorage.getItem(USER_LOGO_CACHE_KEY) || '').trim();
                 if (navbarAvatarImgEl instanceof HTMLImageElement) {
-                    const cachedUserLogo = String(window.localStorage.getItem(USER_LOGO_CACHE_KEY) || '').trim();
                     if (cachedUserLogo) {
                         navbarAvatarImgEl.src = cachedUserLogo;
+                    } else if (navbarAvatarImgEl.dataset.default) {
+                        navbarAvatarImgEl.src = navbarAvatarImgEl.dataset.default;
+                    }
+                }
+                if (sidebarUserImg instanceof HTMLImageElement) {
+                    if (cachedUserLogo) {
+                        sidebarUserImg.src = cachedUserLogo;
+                    } else if (sidebarUserImg.dataset.default) {
+                        sidebarUserImg.src = sidebarUserImg.dataset.default;
                     }
                 }
             } catch (e) {
                 // Ignorar acceso a localStorage cuando no esté disponible.
             }
+            const syncCurrentUserAvatarFromColaborador = async () => {
+                if (!(sidebarUserImg instanceof HTMLImageElement) && !(navbarAvatarImgEl instanceof HTMLImageElement)) return;
+                try {
+                    const res = await fetch('/api/colaboradores', { headers: { Accept: 'application/json' } });
+                    if (!res.ok) return;
+                    const json = await res.json();
+                    const rows = Array.isArray(json?.data) ? json.data : [];
+                    let me = null;
+                    if (CURRENT_USERNAME) {
+                        me = rows.find((row) => String(row?.usuario || '').trim().toLowerCase() === CURRENT_USERNAME) || null;
+                    }
+                    if (!me && rows.length === 1) {
+                        me = rows[0];
+                    }
+                    const avatarUrl = String(me?.imagen || '').trim();
+                    if (!avatarUrl) return;
+                    hasUserAvatarFromColaborador = true;
+                    if (navbarAvatarImgEl instanceof HTMLImageElement) {
+                        navbarAvatarImgEl.src = avatarUrl;
+                    }
+                    if (sidebarUserImg instanceof HTMLImageElement) {
+                        sidebarUserImg.src = avatarUrl;
+                    }
+                    try {
+                        window.localStorage.setItem(USER_LOGO_CACHE_KEY, avatarUrl);
+                    } catch (e) {
+                        // Ignorar acceso a localStorage cuando no esté disponible.
+                    }
+                } catch (e) {
+                    // Ignorar errores para no bloquear carga del layout.
+                }
+            };
             const syncSidebarCompanyLogo = async () => {
                 if (!(sidebarUserImg instanceof HTMLImageElement) && !(navbarAvatarImgEl instanceof HTMLImageElement)) return;
+                if (hasUserAvatarFromColaborador) return;
                 try {
                     const res = await fetch('/personalizar/estado', { headers: { Accept: 'application/json' } });
                     if (!res.ok) return;
                     const json = await res.json();
                     const userLogoUrl = String(json?.assets?.logo_usuario?.url || '').trim();
+                    if (sidebarUserImg instanceof HTMLImageElement) {
+                        if (userLogoUrl) {
+                            sidebarUserImg.src = userLogoUrl;
+                        } else if (sidebarUserImg.dataset.default) {
+                            sidebarUserImg.src = sidebarUserImg.dataset.default;
+                        }
+                    }
                     if (navbarAvatarImgEl instanceof HTMLImageElement) {
                         if (userLogoUrl) {
                             navbarAvatarImgEl.src = userLogoUrl;
@@ -397,7 +438,7 @@
                         }
                     }
                 } catch (e) {
-                    if (sidebarUserImg.dataset.default) {
+                    if (sidebarUserImg instanceof HTMLImageElement && sidebarUserImg.dataset.default) {
                         sidebarUserImg.src = sidebarUserImg.dataset.default;
                     }
                     if (navbarAvatarImgEl instanceof HTMLImageElement && navbarAvatarImgEl.dataset.default) {
@@ -908,6 +949,8 @@
                 if (!sidebarNotificationsList || !sidebarNotificationsCount || !sidebarNotificationsEmpty) return;
                 const total = Number(payload?.total || 0);
                 const unread = Number(payload?.unread || 0);
+                const lateCount = Number(payload?.counts?.actividad_atrasada || 0);
+                const dueCount = Number(payload?.counts?.actividad_por_vencer || 0);
                 const items = Array.isArray(payload?.items) ? payload.items : [];
                 if (sidebarNotificationsBadge) {
                     sidebarNotificationsBadge.textContent = unread > 99 ? '99+' : String(unread);
@@ -917,7 +960,14 @@
                     navbarNotificationsBadge.textContent = unread > 99 ? '99+' : String(unread);
                     navbarNotificationsBadge.classList.toggle('visible', unread > 0);
                 }
-                sidebarNotificationsCount.textContent = unread > 0 ? `${unread} pendiente${unread === 1 ? '' : 's'}` : 'Sin pendientes';
+                if (unread > 0) {
+                    const parts = [`${unread} pendiente${unread === 1 ? '' : 's'}`];
+                    if (lateCount > 0) parts.push(`${lateCount} atrasada${lateCount === 1 ? '' : 's'}`);
+                    if (dueCount > 0) parts.push(`${dueCount} por vencer`);
+                    sidebarNotificationsCount.textContent = parts.join(' · ');
+                } else {
+                    sidebarNotificationsCount.textContent = 'Sin pendientes';
+                }
                 if (!items.length) {
                     sidebarNotificationsList.innerHTML = '';
                     sidebarNotificationsEmpty.style.display = 'block';
@@ -2312,6 +2362,7 @@
             };
             applyFallback(navbarAvatarImg);
             applyFallback(sidebarUserImg);
+            await syncCurrentUserAvatarFromColaborador();
             syncSidebarCompanyLogo();
             syncNavbarNotificationIconColor(
                 (navbar ? getComputedStyle(navbar).color : '')

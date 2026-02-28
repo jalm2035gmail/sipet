@@ -19,6 +19,12 @@
             font-size: 1.02rem; 
             color: #0f172a; 
         }
+        .emp-table-wrap {
+            width: 100%;
+            max-height: 62vh;
+            overflow: auto;
+            border-radius: 12px;
+        }
         .emp-table { 
             width: 100%; 
             border-collapse: collapse; 
@@ -622,23 +628,25 @@
         
         <article class="emp-card">
             <h3 class="emp-head">Colaboradores</h3>
-            <table class="emp-table">
-                <thead>
-                    <tr>
-                        <th>Nombre</th>
-                        <th>Usuario</th>
-                        <th>Correo</th>
-                        <th>Rol</th>
-                        <th>Departamento</th>
-                        <th>Org</th>
-                        <th>Estado</th>
-                        <th>Acciones</th>
-                    </tr>
-                </thead>
-                <tbody id="empleados-tbody">
-                    <tr><td colspan="8" class="emp-empty">Cargando...</td></tr>
-                </tbody>
-            </table>
+            <div class="emp-table-wrap">
+                <table class="emp-table">
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Usuario</th>
+                            <th>Correo</th>
+                            <th>Rol</th>
+                            <th>Departamento</th>
+                            <th>Org</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="empleados-tbody">
+                        <tr><td colspan="8" class="emp-empty">Cargando...</td></tr>
+                    </tbody>
+                </table>
+            </div>
         </article>
     </section>
 
@@ -657,7 +665,7 @@
         var viewerCanViewAll = false;
         var viewerCanManageAccess = false;
         var viewerAssignableRoles = [];
-        var currentAccessState = { rol: 'usuario', menu_blocks: [] };
+        var currentAccessState = { rol: 'usuario', menu_blocks: [], poa_access_level: 'mis_tareas' };
         
         // Función para escapar caracteres HTML
         function esc(v) {
@@ -741,6 +749,19 @@
                         '<div style="display:flex;flex-wrap:wrap;gap:12px;">' + roleChoices.join('') + '</div>' +
                     '</div>' +
                     '<div style="display:grid;gap:8px;">' +
+                        '<strong>POA</strong>' +
+                        '<div style="display:grid;gap:6px;">' +
+                            '<label style="display:inline-flex;align-items:center;gap:8px;font-weight:500;">' +
+                                '<input type="radio" name="colab-poa-access" value="mis_tareas">' +
+                                'Mis tareas (sin vista Gantt)' +
+                            '</label>' +
+                            '<label style="display:inline-flex;align-items:center;gap:8px;font-weight:500;">' +
+                                '<input type="radio" name="colab-poa-access" value="todas_tareas">' +
+                                'Todas las tareas (todas las vistas)' +
+                            '</label>' +
+                        '</div>' +
+                    '</div>' +
+                    '<div style="display:grid;gap:8px;">' +
                         '<strong>Bloques del menú</strong>' +
                         '<div style="display:grid;gap:6px;">' +
                             menuBlocks.map(function(block) {
@@ -775,6 +796,15 @@
                     currentAccessState.menu_blocks = list;
                 });
             }
+            var poaInputs = panel.querySelectorAll('input[name="colab-poa-access"]');
+            var currentPoaAccess = String(currentAccessState.poa_access_level || 'mis_tareas').trim().toLowerCase();
+            if (currentPoaAccess !== 'todas_tareas') currentPoaAccess = 'mis_tareas';
+            for (var p = 0; p < poaInputs.length; p++) {
+                if (poaInputs[p].value === currentPoaAccess) poaInputs[p].checked = true;
+                poaInputs[p].addEventListener('change', function() {
+                    if (this.checked) currentAccessState.poa_access_level = this.value === 'todas_tareas' ? 'todas_tareas' : 'mis_tareas';
+                });
+            }
         }
         function fillFormWithColaborador(user) {
             if (!user) return;
@@ -807,6 +837,7 @@
             currentAccessState = {
                 rol: String(user.rol || 'usuario').trim().toLowerCase() || 'usuario',
                 menu_blocks: Array.isArray(user.menu_blocks) ? user.menu_blocks.slice() : [],
+                poa_access_level: (String(user.poa_access_level || 'mis_tareas').trim().toLowerCase() === 'todas_tareas' ? 'todas_tareas' : 'mis_tareas'),
             };
             if (dept) {
                 var deptValue = user.departamento || '';
@@ -1155,7 +1186,7 @@
             var imagenInput = document.getElementById('colab-imagen-url');
             var notebookTabs = empCard.querySelectorAll('.emp-notebook-tab');
             var notebookPanel = document.getElementById('colaborador-notebook-panel');
-            currentAccessState = { rol: 'usuario', menu_blocks: [] };
+            currentAccessState = { rol: 'usuario', menu_blocks: [], poa_access_level: 'mis_tareas' };
             if (notebookTabs.length && notebookPanel) {
                 for (var t = 0; t < notebookTabs.length; t++) {
                     notebookTabs[t].addEventListener('click', function() {
@@ -1235,7 +1266,8 @@
                         imagen: (document.getElementById('colab-imagen-url')?.value || '').trim(),
                         colaborador: !!document.getElementById('colab-colaborador-check')?.checked,
                         rol: (currentAccessState.rol || 'usuario'),
-                        menu_blocks: Array.isArray(currentAccessState.menu_blocks) ? currentAccessState.menu_blocks : []
+                        menu_blocks: Array.isArray(currentAccessState.menu_blocks) ? currentAccessState.menu_blocks : [],
+                        poa_access_level: (currentAccessState.poa_access_level === 'todas_tareas' ? 'todas_tareas' : 'mis_tareas')
                     };
                     if (!payload.nombre || !payload.usuario) {
                         if (formMsg) formMsg.textContent = 'Nombre y usuario son obligatorios.';
@@ -1454,21 +1486,23 @@
             if (view === 'list') {
                 empCard.innerHTML = 
                     '<h3 class="emp-head">Colaboradores</h3>' +
-                    '<table class="emp-table">' +
-                        '<thead>' +
-                            '<tr>' +
-                                '<th>Nombre</th>' +
-                                '<th>Usuario</th>' +
-                                '<th>Correo</th>' +
-                                '<th>Rol</th>' +
-                                '<th>Departamento</th>' +
-                                '<th>Org</th>' +
-                                '<th>Estado</th>' +
-                                '<th>Acciones</th>' +
-                            '</tr>' +
-                        '</thead>' +
-                        '<tbody id="empleados-tbody"></tbody>' +
-                    '</table>';
+                    '<div class="emp-table-wrap">' +
+                        '<table class="emp-table">' +
+                            '<thead>' +
+                                '<tr>' +
+                                    '<th>Nombre</th>' +
+                                    '<th>Usuario</th>' +
+                                    '<th>Correo</th>' +
+                                    '<th>Rol</th>' +
+                                    '<th>Departamento</th>' +
+                                    '<th>Org</th>' +
+                                    '<th>Estado</th>' +
+                                    '<th>Acciones</th>' +
+                                '</tr>' +
+                            '</thead>' +
+                            '<tbody id="empleados-tbody"></tbody>' +
+                        '</table>' +
+                    '</div>';
                 tbody = document.getElementById('empleados-tbody');
                 renderList(empleadosData);
             } else if (view === 'form') {
@@ -1503,7 +1537,7 @@
             if (jefeInmediato) renderJefeOptions(jefeInmediato, '', '');
             if (fotoUrl) fotoUrl.value = '';
             if (foto) foto.src = '/icon/usuario.png';
-            currentAccessState = { rol: 'usuario', menu_blocks: [] };
+            currentAccessState = { rol: 'usuario', menu_blocks: [], poa_access_level: 'mis_tareas' };
             var panel = document.getElementById('colaborador-notebook-panel');
             var activeTab = document.querySelector('.emp-notebook-tab.active');
             renderNotebookPanel(activeTab ? activeTab.getAttribute('data-tab') : 'cv', panel);

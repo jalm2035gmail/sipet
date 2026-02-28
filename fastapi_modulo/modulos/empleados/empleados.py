@@ -40,11 +40,18 @@ def _save_colab_meta(meta: Dict[str, Dict[str, Any]]) -> None:
     COLAB_META_PATH.write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
+def _normalize_poa_access_level(value: Any) -> str:
+    raw = str(value or "").strip().lower()
+    return "todas_tareas" if raw == "todas_tareas" else "mis_tareas"
+
+
 def _is_admin_role(role_name: str) -> bool:
     role = (role_name or "").strip().lower()
     if role == "admin":
         role = "administrador"
     if role == "super_admin":
+        role = "superadministrador"
+    if role == "superadministrdor":
         role = "superadministrador"
     return role in {"superadministrador", "administrador"}
 
@@ -54,6 +61,8 @@ def _allowed_role_assignments(viewer_role: str) -> set[str]:
     if role == "admin":
         role = "administrador"
     if role == "super_admin":
+        role = "superadministrador"
+    if role == "superadministrdor":
         role = "superadministrador"
     if role == "superadministrador":
         return {"superadministrador", "usuario", "autoridades", "departamento"}
@@ -105,6 +114,7 @@ def api_listar_colaboradores(request: Request):
                 ),
                 "colaborador": bool(meta.get(str(u.id), {}).get("colaborador", False)),
                 "menu_blocks": meta.get(str(u.id), {}).get("menu_blocks", []),
+                "poa_access_level": _normalize_poa_access_level(meta.get(str(u.id), {}).get("poa_access_level", "mis_tareas")),
                 "estado": "Activo" if getattr(u, "is_active", True) else "Inactivo",
             }
             for u in rows
@@ -255,6 +265,7 @@ def api_guardar_colaborador(request: Request, data: dict = Body(...)):
     elif isinstance(raw_menu_blocks, str) and raw_menu_blocks.strip():
         menu_blocks = [raw_menu_blocks.strip()]
     menu_blocks = sorted(set(menu_blocks))
+    poa_access_level = _normalize_poa_access_level(data.get("poa_access_level"))
 
     if not nombre or not usuario_login:
         return JSONResponse(
@@ -341,6 +352,7 @@ def api_guardar_colaborador(request: Request, data: dict = Body(...)):
             meta[str(existing.id)] = {
                 "colaborador": colaborador,
                 "menu_blocks": menu_blocks,
+                "poa_access_level": poa_access_level,
             }
             _save_colab_meta(meta)
             return {
@@ -360,6 +372,7 @@ def api_guardar_colaborador(request: Request, data: dict = Body(...)):
                     "rol": requested_role,
                     "colaborador": colaborador,
                     "menu_blocks": menu_blocks,
+                    "poa_access_level": poa_access_level,
                     "estado": "Activo" if bool(getattr(existing, "is_active", True)) else "Inactivo",
                 },
             }
@@ -389,6 +402,7 @@ def api_guardar_colaborador(request: Request, data: dict = Body(...)):
         meta[str(nuevo.id)] = {
             "colaborador": colaborador,
             "menu_blocks": menu_blocks,
+            "poa_access_level": poa_access_level,
         }
         _save_colab_meta(meta)
         return {
@@ -408,6 +422,7 @@ def api_guardar_colaborador(request: Request, data: dict = Body(...)):
                 "rol": requested_role,
                 "colaborador": colaborador,
                 "menu_blocks": menu_blocks,
+                "poa_access_level": poa_access_level,
                 "estado": "Activo",
             },
         }
