@@ -64,6 +64,7 @@ def _bind_core_symbols() -> None:
             # '_can_authorize_documents',  # commented out: not present in fastapi_modulo.main
         'get_current_tenant',
         'is_superadmin',
+        'normalize_role_name',
     ]
     for name in names:
         globals()[name] = getattr(core, name)
@@ -6004,6 +6005,92 @@ POA_LIMPIO_HTML = dedent("""
           font-style:italic;
           padding-left:2px;
         }
+        .poa-tree-wrap{
+          display:grid;
+          gap:10px;
+        }
+        .poa-tree-help{
+          margin:0;
+          color:#64748b;
+          font-size:12px;
+          font-style:italic;
+        }
+        .poa-tree-grid{
+          display:grid;
+          grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+          gap:10px;
+        }
+        .poa-tree-axis{
+          border:1px solid rgba(148,163,184,.30);
+          border-radius:12px;
+          background:#fff;
+          padding:10px;
+          box-shadow:0 8px 18px rgba(15,23,42,.06);
+        }
+        .poa-tree-axis-head{
+          display:flex;
+          align-items:center;
+          justify-content:space-between;
+          gap:8px;
+          margin-bottom:8px;
+        }
+        .poa-tree-axis h4{
+          margin:0;
+          font-size:15px;
+          color:#0f172a;
+        }
+        .poa-tree-toggle{
+          border:1px solid rgba(15,61,46,.28);
+          background:#0f3d2e;
+          color:#fff;
+          border-radius:999px;
+          font-size:11px;
+          font-weight:700;
+          padding:4px 10px;
+          cursor:pointer;
+        }
+        .poa-tree-objectives{
+          display:grid;
+          gap:8px;
+        }
+        .poa-tree-item{
+          border:1px solid rgba(148,163,184,.26);
+          border-radius:10px;
+          background:#f8fafc;
+          padding:8px;
+        }
+        .poa-tree-item-head{
+          display:flex;
+          align-items:flex-start;
+          justify-content:space-between;
+          gap:8px;
+        }
+        .poa-tree-item-title{
+          margin:0;
+          font-size:13px;
+          color:#0f172a;
+        }
+        .poa-tree-item-meta{
+          margin:4px 0 0;
+          font-size:11px;
+          color:#64748b;
+          font-style:italic;
+        }
+        .poa-tree-click{
+          cursor:pointer;
+          text-decoration:underline;
+          text-decoration-style:dotted;
+        }
+        .poa-tree-children{
+          display:grid;
+          gap:6px;
+          margin-top:8px;
+          padding-left:8px;
+          border-left:2px solid rgba(148,163,184,.28);
+        }
+        .poa-tree-children .poa-tree-item{
+          background:#fff;
+        }
         @media (max-width: 860px){
           .poa-row{ grid-template-columns: 1fr; }
         }
@@ -6026,6 +6113,18 @@ POA_LIMPIO_HTML = dedent("""
       <div class="poa-board-msg" id="poa-no-owner-msg" aria-live="polite" style="display:none;color:#92400e;background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:8px 10px;margin-top:8px;"></div>
       <div class="poa-board-msg" id="poa-no-subowner-msg" aria-live="polite" style="display:none;color:#92400e;background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:8px 10px;margin-top:8px;"></div>
       <div class="poa-board-grid" id="poa-board-grid"></div>
+      <div class="poa-modal" id="poa-tree-modal" role="dialog" aria-modal="true" aria-labelledby="poa-tree-title">
+        <section class="poa-modal-dialog">
+          <div class="poa-modal-head">
+            <h3 id="poa-tree-title" style="margin:0;font-size:18px;">Árbol de avance</h3>
+            <button class="poa-modal-close" id="poa-tree-close" type="button" aria-label="Cerrar">×</button>
+          </div>
+          <div class="poa-tree-wrap">
+            <p class="poa-tree-help">Vista compactada por defecto. Usa "Mostrar" para abrir solo el bloque siguiente.</p>
+            <div class="poa-tree-grid" id="poa-tree-host"></div>
+          </div>
+        </section>
+      </div>
       <div class="poa-modal" id="poa-gantt-modal" role="dialog" aria-modal="true" aria-labelledby="poa-gantt-title">
         <section class="poa-modal-dialog">
           <div class="poa-modal-head">
@@ -6360,10 +6459,15 @@ POA_LIMPIO_HTML = dedent("""
       <script>
         (() => {
           const gridEl = document.getElementById("poa-board-grid");
+          const openTreeBtn = document.querySelector('.view-pill[data-view="arbol"]');
           const openGanttBtn = document.querySelector('.view-pill[data-view="gantt"]');
+          const openCalendarBtn = document.querySelector('.view-pill[data-view="calendar"]');
           const msgEl = document.getElementById("poa-board-msg");
           const noOwnerMsgEl = document.getElementById("poa-no-owner-msg");
           const noSubOwnerMsgEl = document.getElementById("poa-no-subowner-msg");
+          const treeModalEl = document.getElementById("poa-tree-modal");
+          const treeCloseBtn = document.getElementById("poa-tree-close");
+          const treeHostEl = document.getElementById("poa-tree-host");
           const ganttModalEl = document.getElementById("poa-gantt-modal");
           const ganttCloseBtn = document.getElementById("poa-gantt-close");
           const ganttHostEl = document.getElementById("poa-gantt-host");
@@ -6517,6 +6621,7 @@ POA_LIMPIO_HTML = dedent("""
           let poaGanttVisibility = {};
           let poaGanttObjectives = [];
           let poaGanttActivities = [];
+          let poaTreeVisibility = {};
           let poaCalendarCursor = new Date();
           let poaD3Promise = null;
           let poaPermissions = {
@@ -6640,10 +6745,135 @@ POA_LIMPIO_HTML = dedent("""
             ganttModalEl.classList.remove("open");
             document.body.style.overflow = "";
           };
+          const closeTreeModal = () => {
+            if (!treeModalEl) return;
+            treeModalEl.classList.remove("open");
+            document.body.style.overflow = "";
+          };
           const closeCalendarModal = () => {
             if (!calendarModalEl) return;
             calendarModalEl.classList.remove("open");
             document.body.style.overflow = "";
+          };
+          const treeKey = (kind, id) => `${kind}:${Number(id || 0)}`;
+          const isTreeOpen = (kind, id) => !!poaTreeVisibility[treeKey(kind, id)];
+          const setTreeOpen = (kind, id, value) => {
+            poaTreeVisibility[treeKey(kind, id)] = !!value;
+          };
+          const getActivityById = (activityId) => (
+            (Array.isArray(poaGanttActivities) ? poaGanttActivities : [])
+              .find((item) => Number(item.id || 0) === Number(activityId)) || null
+          );
+          const renderPoaAdvanceTree = () => {
+            if (!treeHostEl) return;
+            const objectives = Array.isArray(poaGanttObjectives) ? poaGanttObjectives : [];
+            const activities = Array.isArray(poaGanttActivities) ? poaGanttActivities : [];
+            if (!objectives.length) {
+              treeHostEl.innerHTML = '<div class="poa-tree-axis"><p class="poa-tree-help">Sin datos para mostrar.</p></div>';
+              return;
+            }
+            const grouped = {};
+            objectives.forEach((obj) => {
+              const axisName = String(obj.axis_name || "Sin eje").trim() || "Sin eje";
+              if (!grouped[axisName]) grouped[axisName] = [];
+              grouped[axisName].push(obj);
+            });
+            const axisNames = Object.keys(grouped).sort((a, b) => a.localeCompare(b, "es"));
+            treeHostEl.innerHTML = axisNames.map((axisName) => {
+              const axisIdKey = `axis:${axisName}`;
+              const axisOpen = !!poaTreeVisibility[axisIdKey];
+              const objCards = axisOpen ? (grouped[axisName] || []).map((obj) => {
+                const objId = Number(obj.id || 0);
+                const objOpen = isTreeOpen("obj", objId);
+                const objActs = activities.filter((act) => Number(act.objective_id || 0) === objId);
+                const actHtml = objOpen ? objActs.map((act) => {
+                  const actId = Number(act.id || 0);
+                  const actOpen = isTreeOpen("act", actId);
+                  const subList = Array.isArray(act.subactivities) ? act.subactivities : [];
+                  const subHtml = actOpen ? subList.map((sub) => `
+                    <div class="poa-tree-item">
+                      <div class="poa-tree-item-head">
+                        <h6 class="poa-tree-item-title poa-tree-click" data-tree-sub="${Number(sub.id || 0)}" data-tree-sub-parent="${actId}" style="margin:0;">${escapeHtml(sub.nombre || "Subtarea")}</h6>
+                      </div>
+                    </div>
+                  `).join("") : "";
+                  return `
+                    <div class="poa-tree-item">
+                      <div class="poa-tree-item-head">
+                        <h6 class="poa-tree-item-title poa-tree-click" data-tree-activity="${actId}" data-tree-objective="${objId}" style="margin:0;">${escapeHtml(act.nombre || "Actividad")}</h6>
+                        ${subList.length ? `<button type="button" class="poa-tree-toggle" data-tree-toggle="act" data-tree-id="${actId}">${actOpen ? "Ocultar" : "Mostrar"}</button>` : ""}
+                      </div>
+                      ${subList.length ? `<p class="poa-tree-item-meta">Subactividades: ${subList.length}</p>` : ""}
+                      ${subHtml ? `<div class="poa-tree-children">${subHtml}</div>` : ""}
+                    </div>
+                  `;
+                }).join("") : "";
+                return `
+                  <div class="poa-tree-item">
+                    <div class="poa-tree-item-head">
+                      <h5 class="poa-tree-item-title poa-tree-click" data-tree-objective="${objId}">${escapeHtml(obj.codigo || "xx-yy-zz")} - ${escapeHtml(obj.nombre || "Objetivo")}</h5>
+                      ${objActs.length ? `<button type="button" class="poa-tree-toggle" data-tree-toggle="obj" data-tree-id="${objId}">${objOpen ? "Ocultar" : "Mostrar"}</button>` : ""}
+                    </div>
+                    <p class="poa-tree-item-meta">Actividades: ${objActs.length}</p>
+                    ${actHtml ? `<div class="poa-tree-children">${actHtml}</div>` : ""}
+                  </div>
+                `;
+              }).join("") : "";
+              return `
+                <section class="poa-tree-axis">
+                  <div class="poa-tree-axis-head">
+                    <h4>${escapeHtml(axisName)}</h4>
+                    <button type="button" class="poa-tree-toggle" data-tree-toggle="axis" data-tree-axis="${escapeHtml(axisName)}">${axisOpen ? "Ocultar" : "Mostrar"}</button>
+                  </div>
+                  ${objCards ? `<div class="poa-tree-objectives">${objCards}</div>` : ""}
+                </section>
+              `;
+            }).join("");
+            treeHostEl.querySelectorAll("[data-tree-toggle='axis']").forEach((btn) => {
+              btn.addEventListener("click", () => {
+                const key = `axis:${String(btn.getAttribute("data-tree-axis") || "")}`;
+                poaTreeVisibility[key] = !poaTreeVisibility[key];
+                renderPoaAdvanceTree();
+              });
+            });
+            treeHostEl.querySelectorAll("[data-tree-toggle='obj']").forEach((btn) => {
+              btn.addEventListener("click", () => {
+                setTreeOpen("obj", btn.getAttribute("data-tree-id"), !isTreeOpen("obj", btn.getAttribute("data-tree-id")));
+                renderPoaAdvanceTree();
+              });
+            });
+            treeHostEl.querySelectorAll("[data-tree-toggle='act']").forEach((btn) => {
+              btn.addEventListener("click", () => {
+                setTreeOpen("act", btn.getAttribute("data-tree-id"), !isTreeOpen("act", btn.getAttribute("data-tree-id")));
+                renderPoaAdvanceTree();
+              });
+            });
+            treeHostEl.querySelectorAll("[data-tree-objective]").forEach((node) => {
+              node.addEventListener("click", async () => {
+                const objectiveId = Number(node.getAttribute("data-tree-objective") || 0);
+                if (objectiveId > 0) await openActivityForm(objectiveId);
+              });
+            });
+            treeHostEl.querySelectorAll("[data-tree-activity]").forEach((node) => {
+              node.addEventListener("click", async () => {
+                const objectiveId = Number(node.getAttribute("data-tree-objective") || 0);
+                const activityId = Number(node.getAttribute("data-tree-activity") || 0);
+                if (objectiveId > 0) {
+                  await openActivityForm(objectiveId, { activityId, focusSubId: 0 });
+                }
+              });
+            });
+            treeHostEl.querySelectorAll("[data-tree-sub]").forEach((node) => {
+              node.addEventListener("click", async () => {
+                const subId = Number(node.getAttribute("data-tree-sub") || 0);
+                const parentActId = Number(node.getAttribute("data-tree-sub-parent") || 0);
+                const act = getActivityById(parentActId);
+                const objectiveId = Number(act?.objective_id || 0);
+                if (objectiveId > 0) {
+                  await openActivityForm(objectiveId, { activityId: parentActId, focusSubId: subId });
+                }
+              });
+            });
           };
           const axisGanttKey = (objective) => String(objective?.axis_name || "Sin eje").trim() || "Sin eje";
           const syncPoaGanttVisibility = () => {
@@ -7958,14 +8188,24 @@ POA_LIMPIO_HTML = dedent("""
             document.body.style.overflow = "hidden";
             await renderPoaGantt();
           });
+          openTreeBtn && openTreeBtn.addEventListener("click", () => {
+            if (!treeModalEl) return;
+            treeModalEl.classList.add("open");
+            document.body.style.overflow = "hidden";
+            renderPoaAdvanceTree();
+          });
           openCalendarBtn && openCalendarBtn.addEventListener("click", () => {
             if (!calendarModalEl) return;
             calendarModalEl.classList.add("open");
             document.body.style.overflow = "hidden";
             renderPoaCalendar();
           });
+          treeCloseBtn && treeCloseBtn.addEventListener("click", closeTreeModal);
           ganttCloseBtn && ganttCloseBtn.addEventListener("click", closeGanttModal);
           calendarCloseBtn && calendarCloseBtn.addEventListener("click", closeCalendarModal);
+          treeModalEl && treeModalEl.addEventListener("click", (event) => {
+            if (event.target === treeModalEl) closeTreeModal();
+          });
           ganttModalEl && ganttModalEl.addEventListener("click", (event) => {
             if (event.target === ganttModalEl) closeGanttModal();
           });
@@ -8005,6 +8245,7 @@ POA_LIMPIO_HTML = dedent("""
           document.addEventListener("keydown", (event) => {
             if (event.key === "Escape" && modalEl && modalEl.classList.contains("open")) closeModal();
             if (event.key === "Escape" && subModalEl && subModalEl.classList.contains("open")) closeSubModal();
+            if (event.key === "Escape" && treeModalEl && treeModalEl.classList.contains("open")) closeTreeModal();
             if (event.key === "Escape" && ganttModalEl && ganttModalEl.classList.contains("open")) closeGanttModal();
             if (event.key === "Escape" && calendarModalEl && calendarModalEl.classList.contains("open")) closeCalendarModal();
           });
@@ -8056,6 +8297,9 @@ POA_LIMPIO_HTML = dedent("""
             const activities = Array.isArray(payload.activities) ? payload.activities : [];
             poaGanttObjectives = objectives;
             poaGanttActivities = activities;
+            if (treeModalEl && treeModalEl.classList.contains("open")) {
+              renderPoaAdvanceTree();
+            }
             if (calendarModalEl && calendarModalEl.classList.contains("open")) {
               renderPoaCalendar();
             }
@@ -8304,6 +8548,7 @@ def poa_page(request: Request):
         show_page_header=True,
         view_buttons=[
             {"label": "Form", "icon": "/templates/icon/formulario.svg", "view": "form", "active": True},
+            {"label": "Árbol de avance", "icon": "/templates/icon/mapa.svg", "view": "arbol"},
             {"label": "Gantt", "icon": "/templates/icon/grafica.svg", "view": "gantt"},
             {"label": "Calendario", "icon": "/icon/calendario.svg", "view": "calendar"},
         ],
@@ -9577,6 +9822,8 @@ def poa_board_data(request: Request):
         aliases = _user_aliases(user, session_username)
         alias_set = {str(item or "").strip().lower() for item in aliases if str(item or "").strip()}
         poa_access_level = _poa_access_level_for_request(request, db)
+        session_role_raw = str(getattr(request.state, "user_role", None) or request.cookies.get("user_role") or "")
+        session_role_normalized = normalize_role_name(session_role_raw)
         objective_can_validate: Dict[int, bool] = {}
         for obj in objectives:
             leader = (obj.lider or "").strip().lower()
@@ -9643,6 +9890,15 @@ def poa_board_data(request: Request):
                     "poa_access_level": poa_access_level,
                     "can_manage_content": bool(is_admin_or_superadmin(request)),
                     "can_view_gantt": bool(poa_access_level == "todas_tareas"),
+                },
+                "diagnostics": {
+                    "user_name": session_username,
+                    "role_raw": session_role_raw,
+                    "role_normalized": session_role_normalized,
+                    "is_admin_or_superadmin": bool(is_admin_or_superadmin(request)),
+                    "poa_access_level": poa_access_level,
+                    "objectives_count": len(objectives),
+                    "activities_count": len(activities),
                 },
             }
         )
