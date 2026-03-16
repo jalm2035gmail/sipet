@@ -317,7 +317,7 @@ def personalizar_page(request: Request):
     section_title = ""
     from fastapi_modulo.main import get_colores_context
     return templates.TemplateResponse(
-        "MAIN.html",
+        "base.html",
         {
             "request": request,
             "title": "Personalización visual",

@@ -1,0 +1,20 @@
+MANIFEST = {'name': 'mesa_control',
+ 'label': 'Mesa de control',
+ 'summary': 'Control ejecutivo consolidado.',
+ 'description': 'Control ejecutivo consolidado.',
+ 'version': '1.0.0',
+ 'category': 'Operaciones',
+ 'author': 'SIPET',
+ 'sequence': '',
+ 'website': 'https://avancoop.org',
+ 'route': '/mesa-de-control',
+ 'icon': 'fa-solid fa-gauge-high',
+ 'depends': ['main'],
+ 'data': [],
+ 'assets': {'css': [], 'js': [], 'description': [], 'img': []},
+ 'structure': {'router': ['controladores/__init__.py', 'controladores/mesa_control.py']},
+ 'installable': True,
+ 'application': True,
+ 'auto_install': False}
+
+__all__ = ["MANIFEST"]

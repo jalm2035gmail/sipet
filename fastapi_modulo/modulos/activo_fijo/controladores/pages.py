@@ -4,6 +4,13 @@ from pathlib import Path
 
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, Response
+from fastapi_modulo.modulos.web.servicios.module_tools import (
+    read_text_file,
+    render_backend_page_html,
+    render_no_access_page,
+    scoped_text_asset_response,
+    text_asset_response,
+)
 
 router = APIRouter()
 
@@ -21,63 +28,56 @@ def _render_legacy_template_page(
     title: str,
     description: str,
 ) -> HTMLResponse:
-    from fastapi_modulo.main import _render_no_access_module_page, render_backend_page
-
     template_path = LEGACY_TEMPLATES_DIR / filename
-    try:
-        with open(template_path, encoding="utf-8") as file:
-            content = file.read()
-    except OSError:
-        return _render_no_access_module_page(
+    content = read_text_file(template_path, "")
+    if not content:
+        return render_no_access_page(
             request,
             title=title,
             description=description,
         )
-    return render_backend_page(
+    return render_backend_page_html(
         request,
         title=title,
         description=description,
         content=content,
-        hide_floating_actions=True,
         show_page_header=True,
     )
 
 
 @router.get("/activo-fijo", response_class=HTMLResponse)
 def activo_fijo_page(request: Request):
-    from fastapi_modulo.main import render_backend_page
-
     html_path = VIEWS_DIR / "activo_fijo.html"
     menus_path = VIEWS_DIR / "activo_fijo_menus.html"
-    with open(html_path, encoding="utf-8") as file:
-        content = file.read()
-    with open(menus_path, encoding="utf-8") as file:
-        menus_content = file.read()
+    content = read_text_file(html_path, "<p>No se pudo cargar Activo Fijo.</p>")
+    menus_content = read_text_file(menus_path, "")
     content = content.replace("<!-- AF_MODULE_MENUS -->", menus_content)
-    return render_backend_page(
+    return render_backend_page_html(
         request,
         title="Gestión de Activo Fijo",
         description="Depreciaciones, asignaciones, mantenimiento y bajas de activos.",
         content=content,
-        hide_floating_actions=True,
         show_page_header=False,
     )
 
 
 @router.get("/api/activo-fijo/assets/activo_fijo.css")
 def activo_fijo_css():
-    css_path = STATIC_CSS_DIR / "activo_fijo.css"
-    with open(css_path, encoding="utf-8") as file:
-        content = file.read()
-    return Response(content=content, media_type="text/css")
+    return text_asset_response(
+        STATIC_CSS_DIR / "activo_fijo.css",
+        media_type="text/css",
+        fallback="/* activo fijo css no disponible */",
+    )
 
 
 @router.get("/api/activo-fijo/assets/activo_fijo/{asset_name}.js")
 def activo_fijo_js_asset(asset_name: str):
-    js_path = STATIC_JS_DIR / "activo_fijo" / f"{asset_name}.js"
-    with open(js_path, encoding="utf-8") as file:
-        content = file.read()
-    return Response(content=content, media_type="application/javascript")
+    return scoped_text_asset_response(
+        STATIC_JS_DIR / "activo_fijo",
+        f"{asset_name}.js",
+        media_type="application/javascript",
+        fallback="console.error('Activo fijo JS no disponible');",
+    )
 
 
 @router.get("/api/activo-fijo/assets/activo_fijo.js")

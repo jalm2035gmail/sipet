@@ -20,7 +20,7 @@ def proyectando_page(request: Request):
     except OSError:
         content = "<p>No se pudo cargar la vista de Proyectando.</p>"
     return request.app.state.templates.TemplateResponse(
-        "MAIN.html",
+        "base.html",
         {
             "request": request,
             "title": "Proyectando",

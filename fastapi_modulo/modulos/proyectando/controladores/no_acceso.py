@@ -22,7 +22,7 @@ def _render_simple_no_access(request: Request, title: str):
         '</section>'
     )
     return request.app.state.templates.TemplateResponse(
-        "MAIN.html",
+        "base.html",
         {
             "request": request,
             "title": title,
@@ -46,7 +46,7 @@ def proyectando_no_acceso_page(request: Request):
     except OSError:
         content = "<p>No hay acceso a esta sección.</p>"
     return request.app.state.templates.TemplateResponse(
-        "MAIN.html",
+        "base.html",
         {
             "request": request,
             "title": "No hay acceso",

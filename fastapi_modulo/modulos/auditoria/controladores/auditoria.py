@@ -7,6 +7,13 @@ from typing import Dict
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.exc import IntegrityError
 from fastapi.responses import HTMLResponse, JSONResponse, Response
+from fastapi_modulo.modulos.web.servicios.module_tools import (
+    read_text_file,
+    render_backend_page_html,
+    render_no_access_page,
+    require_app_access,
+    text_asset_response,
+)
 
 from fastapi_modulo.modulos.auditoria.modelos.aud_models import (
     AuditoriaCreate,
@@ -48,25 +55,30 @@ _AUDITORIA_APP_NAME = "Auditoria"
 
 
 def _require_auditoria_access(request: Request) -> None:
-    from fastapi_modulo.main import is_admin_or_superadmin, _get_user_app_access
-    if is_admin_or_superadmin(request):
-        return
-    if "Auditoria" in _get_user_app_access(request):
-        return
-    raise HTTPException(status_code=403, detail="Acceso restringido al módulo Auditoría")
+    require_app_access(request, "Auditoria", "Acceso restringido al módulo Auditoría")
 
 
 router = APIRouter(dependencies=[Depends(_require_auditoria_access)])
 
 
 def _get_auditoria_access_level(request: Request) -> str:
-    from fastapi_modulo.main import (
-        SessionLocal,
-        Usuario,
-        _sensitive_lookup_hash,
-        is_admin_or_superadmin,
-        is_app_access_enabled,
-    )
+    try:
+        from fastapi_modulo.main import (
+            SessionLocal,
+            Usuario,
+            _get_user_app_access,
+            _sensitive_lookup_hash,
+            is_admin_or_superadmin,
+            is_app_access_enabled,
+        )
+    except ImportError:
+        from fastapi_modulo.main import _get_user_app_access, is_admin_or_superadmin
+
+        if is_admin_or_superadmin(request):
+            return "full_access"
+        if "Auditoria" in _get_user_app_access(request):
+            return "full_access"
+        return ""
     import json as _json
 
     if is_admin_or_superadmin(request):
@@ -153,13 +165,10 @@ def _render_no_access_auditoria_page(
     title: str,
     description: str,
 ) -> HTMLResponse:
-    from fastapi_modulo.main import _render_no_access_module_page
-
-    return _render_no_access_module_page(
+    return render_no_access_page(
         request,
         title=title,
         description=description,
-        message="Sin acceso, consulte con el administrador",
     )
 
 
@@ -167,20 +176,16 @@ def _render_no_access_auditoria_page(
 
 @router.get("/auditoria", response_class=HTMLResponse)
 def auditoria_page(request: Request):
-    from fastapi_modulo.main import render_backend_page
     html_path = _VIEWS_DIR / "auditoria.html"
     menus_path = _VIEWS_DIR / "auditoria_menus.html"
-    with open(html_path, encoding="utf-8") as fh:
-        content = fh.read()
-    with open(menus_path, encoding="utf-8") as fh:
-        menus_content = fh.read()
+    content = read_text_file(html_path, "<p>No se pudo cargar la vista de auditoria.</p>")
+    menus_content = read_text_file(menus_path, "")
     content = content.replace("<!-- AUDITORIA_MODULE_MENUS -->", menus_content)
-    return render_backend_page(
+    return render_backend_page_html(
         request,
         title="Auditoría",
         description="Gestión de auditorías, hallazgos, recomendaciones y seguimiento.",
         content=content,
-        hide_floating_actions=True,
         show_page_header=False,
     )
 
@@ -189,23 +194,29 @@ def auditoria_page(request: Request):
 
 @router.get("/api/auditoria/assets/auditoria.css")
 def auditoria_css():
-    css_path = _STATIC_CSS_DIR / "auditoria.css"
-    with open(css_path, encoding="utf-8") as fh:
-        return Response(content=fh.read(), media_type="text/css")
+    return text_asset_response(
+        _STATIC_CSS_DIR / "auditoria.css",
+        media_type="text/css",
+        fallback="/* auditoria css no disponible */",
+    )
 
 
 @router.get("/api/auditoria/assets/auditoria.js")
 def auditoria_js():
-    js_path = _STATIC_JS_DIR / "auditoria.js"
-    with open(js_path, encoding="utf-8") as fh:
-        return Response(content=fh.read(), media_type="application/javascript")
+    return text_asset_response(
+        _STATIC_JS_DIR / "auditoria.js",
+        media_type="application/javascript",
+        fallback="console.error('Auditoria JS no disponible');",
+    )
 
 
 @router.get("/api/auditoria/assets/auditoria.svg")
 def auditoria_svg():
-    svg_path = _STATIC_DESCRIPTION_DIR / "auditoria.svg"
-    with open(svg_path, encoding="utf-8") as fh:
-        return Response(content=fh.read(), media_type="image/svg+xml")
+    return text_asset_response(
+        _STATIC_DESCRIPTION_DIR / "auditoria.svg",
+        media_type="image/svg+xml",
+        fallback="<svg xmlns='http://www.w3.org/2000/svg'></svg>",
+    )
 
 
 @router.get("/auditoria/auditorias", response_class=HTMLResponse)

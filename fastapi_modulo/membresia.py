@@ -136,7 +136,7 @@ def _seed_membresias(db) -> None:
 
 def _render_MAIN(request: Request, title: str, description: str, content: str):
     return templates.TemplateResponse(
-        "MAIN.html",
+        "base.html",
         {
             "request": request,
             "title": title,

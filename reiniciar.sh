@@ -91,9 +91,12 @@ if [ -z "${AUTH_COOKIE_SECRET:-}" ]; then
     echo "Aviso: AUTH_COOKIE_SECRET no estaba definida. Se generó y guardó en .env."
 fi
 
-# Instalar dependencias
-if [ -f "requirements.txt" ]; then
+# Instalar dependencias solo si se solicita
+INSTALL_DEPS_ON_RESTART="${INSTALL_DEPS_ON_RESTART:-0}"
+if [ "$INSTALL_DEPS_ON_RESTART" = "1" ] && [ -f "requirements.txt" ]; then
     pip install -r requirements.txt
+else
+    echo "Omitiendo instalacion de dependencias. Usa INSTALL_DEPS_ON_RESTART=1 para forzarla."
 fi
 
 # Migrar MAIN de datos (Alembic — usa 'heads' para soportar múltiples cabezas)
@@ -121,8 +124,10 @@ fi
 PORT="${PORT:-8000}"
 HOST="${HOST:-0.0.0.0}"
 LOG_FILE="${LOG_FILE:-uvicorn.log}"
-STARTUP_TIMEOUT_SECONDS="${STARTUP_TIMEOUT_SECONDS:-45}"
+STARTUP_TIMEOUT_SECONDS="${STARTUP_TIMEOUT_SECONDS:-180}"
 PYTHON_BIN="${PYTHON_BIN:-python3}"
+UVICORN_LOG_LEVEL="${UVICORN_LOG_LEVEL:-debug}"
+WAIT_FOR_SERVER_ON_RESTART="${WAIT_FOR_SERVER_ON_RESTART:-0}"
 
 if [ -x ".venv/bin/python" ]; then
     PYTHON_BIN="${PWD}/.venv/bin/python"
@@ -158,16 +163,22 @@ fi
 echo "Iniciando servidor FastAPI en ${HOST}:${PORT}..."
 mkdir -p "$(dirname "$LOG_FILE")" 2>/dev/null || true
 : > "$LOG_FILE"
+export PYTHONUNBUFFERED=1
 if command -v setsid >/dev/null 2>&1; then
-    nohup setsid "$PYTHON_BIN" -m uvicorn fastapi_modulo.main:app --host "$HOST" --port "$PORT" > "$LOG_FILE" 2>&1 < /dev/null &
+    nohup setsid "$PYTHON_BIN" main.py > "$LOG_FILE" 2>&1 < /dev/null &
 else
-    nohup "$PYTHON_BIN" -m uvicorn fastapi_modulo.main:app --host "$HOST" --port "$PORT" > "$LOG_FILE" 2>&1 < /dev/null &
+    nohup "$PYTHON_BIN" main.py > "$LOG_FILE" 2>&1 < /dev/null &
 fi
 UVICORN_PID=$!
 disown "$UVICORN_PID" 2>/dev/null || true
+if [ "$WAIT_FOR_SERVER_ON_RESTART" != "1" ]; then
+    echo "Servidor lanzado en background. Revisa ${LOG_FILE}."
+    echo "Sistema actualizado y reiniciado."
+    exit 0
+fi
 SERVER_READY=0
 for _ in $(seq 1 "$STARTUP_TIMEOUT_SECONDS"); do
-    if kill -0 "$UVICORN_PID" 2>/dev/null && lsof -ti:"$PORT" 2>/dev/null | grep -qx "$UVICORN_PID"; then
+    if lsof -ti:"$PORT" 2>/dev/null | grep -q .; then
         SERVER_READY=1
         break
     fi

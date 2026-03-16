@@ -1,0 +1,40 @@
+<link rel="stylesheet" href="/api/modulo-base/assets/modulo_base.css">
+<section class="modulo-base-shell">
+  {{MODULO_BASE_NAVBAR}}
+  <div class="modulo-base-layout">
+    {{MODULO_BASE_SIDEBAR}}
+    <div class="modulo-base-content">
+      <section class="modulo-base-grid">
+        <article class="modulo-base-card">
+          <div class="modulo-base-muted">Estado</div>
+          <strong id="modulo-base-status">cargando</strong>
+        </article>
+        <article class="modulo-base-card">
+          <div class="modulo-base-muted">Registros ejemplo</div>
+          <strong id="modulo-base-total">0</strong>
+        </article>
+        <article class="modulo-base-card">
+          <div class="modulo-base-muted">Propósito</div>
+          <strong>Framework interno</strong>
+        </article>
+      </section>
+      <article class="modulo-base-card" id="core">
+        <h2>Core reusable</h2>
+        <p class="modulo-base-muted">ModuleConfig, ModuleRouterBuilder, BaseModuleService, SQLAlchemyRepository, permisos, assets y respuestas.</p>
+      </article>
+      <article class="modulo-base-card" id="controladores">
+        <h2>Controladores desacoplados</h2>
+        <p class="modulo-base-muted">Las rutas solo coordinan dependencias, vistas y payloads del módulo.</p>
+      </article>
+      <article class="modulo-base-card" id="repositorios">
+        <h2>Repositorio base</h2>
+        <p class="modulo-base-muted">El acceso a datos parte de un repositorio SQLAlchemy reusable por tenant o dominio.</p>
+      </article>
+      <article class="modulo-base-card" id="servicios">
+        <h2>Servicio base</h2>
+        <p class="modulo-base-muted">Los servicios exponen contratos de health y resumen listos para extender.</p>
+      </article>
+    </div>
+  </div>
+</section>
+<script type="module" src="/api/modulo-base/assets/modulo_base.js"></script>

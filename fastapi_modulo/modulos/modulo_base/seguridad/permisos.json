@@ -1,0 +1,60 @@
+{
+  "module": "modulo_base",
+  "label": "Modulo base",
+  "permissions": [
+    {
+      "code": "modulo_base.ver",
+      "action": "ver",
+      "name": "Ver Modulo base",
+      "description": "Permite ver en el modulo Modulo base."
+    },
+    {
+      "code": "modulo_base.crear",
+      "action": "crear",
+      "name": "Crear Modulo base",
+      "description": "Permite crear en el modulo Modulo base."
+    },
+    {
+      "code": "modulo_base.editar",
+      "action": "editar",
+      "name": "Editar Modulo base",
+      "description": "Permite editar en el modulo Modulo base."
+    },
+    {
+      "code": "modulo_base.eliminar",
+      "action": "eliminar",
+      "name": "Eliminar Modulo base",
+      "description": "Permite eliminar en el modulo Modulo base."
+    },
+    {
+      "code": "modulo_base.exportar",
+      "action": "exportar",
+      "name": "Exportar Modulo base",
+      "description": "Permite exportar en el modulo Modulo base."
+    },
+    {
+      "code": "modulo_base.aprobar",
+      "action": "aprobar",
+      "name": "Aprobar Modulo base",
+      "description": "Permite aprobar en el modulo Modulo base."
+    },
+    {
+      "code": "modulo_base.configurar",
+      "action": "configurar",
+      "name": "Configurar Modulo base",
+      "description": "Permite configurar en el modulo Modulo base."
+    },
+    {
+      "code": "modulo_base.administrar",
+      "action": "administrar",
+      "name": "Administrar Modulo base",
+      "description": "Permite administrar en el modulo Modulo base."
+    },
+    {
+      "code": "modulo_base.auditoria",
+      "action": "auditoria",
+      "name": "Auditoria Modulo base",
+      "description": "Permite auditoria en el modulo Modulo base."
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{% if not hide_floating_actions and floating_actions_html %}
+<div class="floating-actions-wrapper"
+     aria-label="Acciones rápidas de pantalla"
+     data-default-screen="{{ floating_actions_screen | default('personalization') }}">
+    <aside class="floating-actions">
+        {{ floating_actions_html | safe }}
+    </aside>
+    <button class="floating-toggle" type="button" id="floating-toggle" aria-label="Ocultar barra flotante">−</button>
+</div>
+{% endif %}

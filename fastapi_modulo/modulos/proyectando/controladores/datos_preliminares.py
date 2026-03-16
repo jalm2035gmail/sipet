@@ -236,7 +236,7 @@ def proyectando_datos_preliminares_page(request: Request):
         content = "<p>No se pudo cargar la vista de datos preliminares.</p>"
 
     return request.app.state.templates.TemplateResponse(
-        "MAIN.html",
+        "base.html",
         {
             "request": request,
             "title": "Datos preliminares",
@@ -263,7 +263,7 @@ def proyectando_activo_fijo_page(request: Request):
         content = "<p>No se pudo cargar la vista de activo fijo.</p>"
 
     return request.app.state.templates.TemplateResponse(
-        "MAIN.html",
+        "base.html",
         {
             "request": request,
             "title": "Activo fijo",
@@ -290,7 +290,7 @@ def proyectando_otras_cuentas_activo_page(request: Request):
         content = "<p>No se pudo cargar la vista de otras cuentas de activo.</p>"
 
     return request.app.state.templates.TemplateResponse(
-        "MAIN.html",
+        "base.html",
         {
             "request": request,
             "title": "Otras cuentas de activo",
@@ -317,7 +317,7 @@ def proyectando_cartera_prestamos_page(request: Request):
         content = "<p>No se pudo cargar la vista de cartera de préstamos.</p>"
 
     return request.app.state.templates.TemplateResponse(
-        "MAIN.html",
+        "base.html",
         {
             "request": request,
             "title": "Cartera de préstamos",
@@ -344,7 +344,7 @@ def proyectando_recursos_liquidos_page(request: Request):
         content = "<p>No se pudo cargar la vista de liquidez.</p>"
 
     return request.app.state.templates.TemplateResponse(
-        "MAIN.html",
+        "base.html",
         {
             "request": request,
             "title": "Liquidez",
@@ -371,7 +371,7 @@ def proyectando_gastos_page(request: Request):
         content = "<p>No se pudo cargar la vista de gastos.</p>"
 
     return request.app.state.templates.TemplateResponse(
-        "MAIN.html",
+        "base.html",
         {
             "request": request,
             "title": "Gastos",
@@ -398,7 +398,7 @@ def proyectando_tasa_referencia_page(request: Request):
         content = "<p>No se pudo cargar la vista de tasa de referencia.</p>"
 
     return request.app.state.templates.TemplateResponse(
-        "MAIN.html",
+        "base.html",
         {
             "request": request,
             "title": "Tasa de referencia",

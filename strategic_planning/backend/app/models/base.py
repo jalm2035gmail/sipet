@@ -2,10 +2,10 @@ from datetime import datetime
 from typing import Any
 
 from sqlalchemy import Boolean, Column, DateTime, Integer
-from sqlalchemy.ext.declarative import declarative_MAIN
+from sqlalchemy.orm import declarative_base
 from sqlalchemy.sql import func
 
-MAIN = declarative_MAIN()
+MAIN = declarative_base()
 
 
 class MAINModel(MAIN):

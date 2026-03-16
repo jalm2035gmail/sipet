@@ -1,18 +1,20 @@
-fastapi==0.104.1
-uvicorn[standard]==0.24.0
-sqlalchemy==2.0.23
-alembic==1.12.1
-psycopg2-binary==2.9.9
-pydantic==2.5.0
-python-jose[cryptography]==3.3.0
+fastapi==0.128.7
+uvicorn[standard]==0.40.0
+sqlalchemy==2.0.46
+alembic==1.18.4
+psycopg2-binary==2.9.11
+pydantic==2.12.5
+python-jose[cryptography]==3.5.0
 passlib[bcrypt]==1.7.4
-python-multipart==0.0.6
-openpyxl==3.1.2  # Para exportar a Excel
+python-multipart==0.0.22
+openpyxl==3.1.5  # Para exportar a Excel
 pandas==2.2.3
 numpy>=1.26.0         # Cómputo numérico (Fase 2: modelos ML)
 scikit-learn>=1.4.0   # Clasificadores y scoring (Fase 2: churn/morosidad)
 joblib>=1.3.0         # Serialización de modelos entrenados
-reportlab==4.0.4  # Para generar PDFs
+reportlab==4.4.9  # Para generar PDFs
 httpx==0.27.2  # Cliente HTTP asíncrono
 jinja2==3.1.4
 Pillow>=10.0.0  # Optimización y redimensionado de imágenes
+celery==5.6.2
+redis==7.1.1

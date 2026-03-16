@@ -1,157 +1,4 @@
-<style>
-  .crm-shell {
-    display: grid;
-    gap: 18px;
-  }
-  .crm-hero {
-    padding: 20px;
-    border: 1px solid rgba(15,23,42,.08);
-    border-radius: 18px;
-    background: linear-gradient(135deg, #f0f9ff, #eff6ff);
-    display: grid;
-    gap: 14px;
-  }
-  .crm-hero-head {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-  }
-  .crm-hero-logo {
-    width: 54px;
-    height: 54px;
-    object-fit: contain;
-    flex: 0 0 auto;
-    padding: 0;
-    background: transparent;
-    box-shadow: none;
-  }
-  .crm-hero-copy h1 {
-    margin: 0;
-    font-size: 28px;
-    line-height: 1.05;
-    letter-spacing: -0.03em;
-    color: #0f172a;
-  }
-  .crm-hero-copy p {
-    margin: 6px 0 0;
-    color: #334155;
-  }
-  .crm-kpi-grid {
-    display: grid;
-    gap: 14px;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  }
-  .crm-kpi-card {
-    background: #fff;
-    border: 1px solid rgba(15,23,42,.08);
-    border-radius: 16px;
-    padding: 16px;
-  }
-  .crm-kpi-label {
-    display: block;
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: .08em;
-    color: #475569;
-    margin-bottom: 6px;
-  }
-  .crm-kpi-value {
-    font-size: 28px;
-    font-weight: 700;
-    color: #0f172a;
-  }
-  .crm-layout {
-    display: block;
-  }
-  .crm-panel { display: none; }
-  .crm-panel.is-active { display: block; }
-  .crm-card {
-    background: #fff;
-    border: 1px solid rgba(15,23,42,.08);
-    border-radius: 16px;
-    padding: 20px;
-  }
-  .crm-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 14px;
-  }
-  .crm-table th,
-  .crm-table td {
-    padding: 9px 12px;
-    border-bottom: 1px solid rgba(15,23,42,.07);
-    text-align: left;
-    vertical-align: top;
-  }
-  .crm-table th {
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: .06em;
-    color: #475569;
-    background: #f8fafc;
-  }
-  .crm-table tbody tr:hover { background: #f1f5f9; }
-  .crm-status {
-    color: #64748b;
-    font-size: 14px;
-  }
-  .crm-form {
-    display: grid;
-    gap: 10px;
-    margin-top: 14px;
-  }
-  .crm-form-grid {
-    display: grid;
-    gap: 10px;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  }
-  .crm-form input,
-  .crm-form select,
-  .crm-form textarea {
-    width: 100%;
-    border: 1px solid #cbd5e1;
-    border-radius: 10px;
-    padding: 9px 12px;
-    background: #fff;
-    font-size: 14px;
-  }
-  .crm-form textarea { resize: vertical; min-height: 72px; }
-  .crm-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
-  .crm-actions button {
-    border: 0;
-    border-radius: 10px;
-    padding: 9px 16px;
-    background: #1d4ed8;
-    color: #fff;
-    cursor: pointer;
-    font-size: 14px;
-  }
-  .crm-actions button.is-danger { background: #dc2626; }
-  .crm-actions button.is-secondary { background: #475569; }
-  .crm-badge {
-    display: inline-block;
-    padding: 2px 9px;
-    border-radius: 999px;
-    font-size: 11px;
-    font-weight: 600;
-  }
-  .crm-badge.prospecto   { background:#dbeafe; color:#1d4ed8; }
-  .crm-badge.cliente     { background:#dcfce7; color:#15803d; }
-  .crm-badge.inactivo    { background:#f1f5f9; color:#64748b; }
-  .crm-badge.negociacion { background:#fef9c3; color:#a16207; }
-  .crm-badge.propuesta   { background:#ede9fe; color:#6d28d9; }
-  .crm-badge.cerrado_ganado  { background:#dcfce7; color:#15803d; }
-  .crm-badge.cerrado_perdido { background:#fee2e2; color:#dc2626; }
-  .crm-badge.borrador   { background:#f1f5f9; color:#64748b; }
-  .crm-badge.activa     { background:#dcfce7; color:#15803d; }
-  .crm-badge.finalizada { background:#e0e7ff; color:#3730a3; }
-  .crm-section-title {
-    font-size: 15px;
-    font-weight: 600;
-    color: #334155;
-    margin: 18px 0 10px;
-  }
-</style>
+<link rel="stylesheet" href="/api/crm/assets/crm.css">
 
 <div class="crm-shell" id="crm-root" data-js-url="/api/crm/assets/crm.js">
 
@@ -184,13 +31,83 @@
     </div>
   </section>
 
+  <section class="crm-dashboard-grid" id="crm-dashboard-insights">
+    <article class="crm-dashboard-card">
+      <h3>Pipeline total</h3>
+      <div class="crm-dashboard-stat" id="crm-insight-pipeline">—</div>
+      <div class="crm-dashboard-substat" id="crm-insight-forecast">—</div>
+      <div class="crm-dashboard-list" id="crm-insight-monto-etapa"></div>
+    </article>
+    <article class="crm-dashboard-card">
+      <h3>Conversión y cierres</h3>
+      <div class="crm-dashboard-list" id="crm-insight-conversion"></div>
+    </article>
+    <article class="crm-dashboard-card">
+      <h3>Embudo comercial</h3>
+      <div class="crm-dashboard-list" id="crm-insight-embudo"></div>
+    </article>
+    <article class="crm-dashboard-card">
+      <h3>Actividades</h3>
+      <div class="crm-dashboard-list" id="crm-insight-actividades"></div>
+    </article>
+    <article class="crm-dashboard-card">
+      <h3>Comercial</h3>
+      <div class="crm-dashboard-list" id="crm-insight-comercial"></div>
+    </article>
+    <article class="crm-dashboard-card">
+      <h3>Fuentes</h3>
+      <div class="crm-dashboard-list" id="crm-insight-fuentes"></div>
+    </article>
+    <article class="crm-dashboard-card">
+      <h3>Campañas</h3>
+      <div class="crm-dashboard-list" id="crm-insight-campanias"></div>
+    </article>
+    <article class="crm-dashboard-card">
+      <h3>Pipeline por sucursal</h3>
+      <div class="crm-dashboard-list" id="crm-insight-sucursales"></div>
+    </article>
+    <article class="crm-dashboard-card">
+      <h3>Pipeline por ejecutivo</h3>
+      <div class="crm-dashboard-list" id="crm-insight-ejecutivos"></div>
+    </article>
+    <article class="crm-dashboard-card">
+      <h3>Semáforo sin movimiento</h3>
+      <div class="crm-dashboard-list" id="crm-insight-semaforo"></div>
+    </article>
+    <article class="crm-dashboard-card">
+      <h3>Lead scoring</h3>
+      <div class="crm-dashboard-list" id="crm-insight-scoring"></div>
+    </article>
+    <article class="crm-dashboard-card">
+      <h3>Próximos vencimientos</h3>
+      <div class="crm-dashboard-list" id="crm-insight-vencimientos"></div>
+    </article>
+    <article class="crm-dashboard-card">
+      <h3>Historial reciente</h3>
+      <div class="crm-dashboard-list" id="crm-insight-historial"></div>
+    </article>
+    <article class="crm-dashboard-card">
+      <h3>Dashboard por asesor</h3>
+      <div class="crm-dashboard-list" id="crm-insight-asesor"></div>
+    </article>
+    <article class="crm-dashboard-card">
+      <h3>Dashboard por sucursal</h3>
+      <div class="crm-dashboard-list" id="crm-insight-dashboard-sucursal"></div>
+    </article>
+    <article class="crm-dashboard-card">
+      <h3>Dashboard por campaña</h3>
+      <div class="crm-dashboard-list" id="crm-insight-dashboard-campania"></div>
+    </article>
+  </section>
+
   <!-- Layout principal -->
   <section class="crm-layout">
     <div>
+      {{CRM_MENU}}
 
       <!-- ── Contactos ────────────────────────────────────── -->
       <section class="crm-panel is-active crm-card" data-panel-id="contactos">
-        <h2 style="margin-top:0;">Contactos</h2>
+        <h2 class="crm-panel-title">Contactos</h2>
 
         <form class="crm-form" id="crm-form-contacto">
           <div class="crm-form-grid">
@@ -199,6 +116,7 @@
             <input name="telefono" placeholder="Teléfono" />
             <input name="empresa"  placeholder="Empresa" />
             <input name="puesto"   placeholder="Puesto" />
+            <input name="sucursal" placeholder="Sucursal" />
             <select name="tipo">
               <option value="prospecto">Prospecto</option>
               <option value="cliente">Cliente</option>
@@ -210,6 +128,7 @@
               <option value="referido">Referido</option>
               <option value="campania">Campaña</option>
             </select>
+            <input name="fuente_detalle" placeholder="Origen detallado" />
           </div>
           <textarea name="notas" placeholder="Notas (opcional)"></textarea>
           <div class="crm-actions">
@@ -225,7 +144,7 @@
 
       <!-- ── Oportunidades ────────────────────────────────── -->
       <section class="crm-panel crm-card" data-panel-id="oportunidades">
-        <h2 style="margin-top:0;">Oportunidades</h2>
+        <h2 class="crm-panel-title">Oportunidades</h2>
 
         <form class="crm-form" id="crm-form-oportunidad">
           <div class="crm-form-grid">
@@ -244,6 +163,7 @@
             <input name="probabilidad"  placeholder="Probabilidad %" type="number" min="0" max="100" />
             <input name="fecha_cierre_est" type="date" />
             <input name="responsable" placeholder="Responsable" />
+            <input name="sucursal" placeholder="Sucursal" />
           </div>
           <textarea name="descripcion" placeholder="Descripción (opcional)"></textarea>
           <div class="crm-actions">
@@ -254,12 +174,13 @@
 
         <p class="crm-section-title">Pipeline</p>
         <p class="crm-status" id="crm-oportunidades-status">Cargando...</p>
+        <div id="crm-oportunidades-kanban"></div>
         <div id="crm-oportunidades-table"></div>
       </section>
 
       <!-- ── Actividades ──────────────────────────────────── -->
       <section class="crm-panel crm-card" data-panel-id="actividades">
-        <h2 style="margin-top:0;">Actividades</h2>
+        <h2 class="crm-panel-title">Actividades</h2>
 
         <form class="crm-form" id="crm-form-actividad">
           <div class="crm-form-grid">
@@ -294,7 +215,7 @@
 
       <!-- ── Notas ────────────────────────────────────────── -->
       <section class="crm-panel crm-card" data-panel-id="notas">
-        <h2 style="margin-top:0;">Notas</h2>
+        <h2 class="crm-panel-title">Notas</h2>
 
         <form class="crm-form" id="crm-form-nota">
           <div class="crm-form-grid">
@@ -319,7 +240,7 @@
 
       <!-- ── Campañas ─────────────────────────────────────── -->
       <section class="crm-panel crm-card" data-panel-id="campanias">
-        <h2 style="margin-top:0;">Campañas</h2>
+        <h2 class="crm-panel-title">Campañas</h2>
 
         <form class="crm-form" id="crm-form-campania">
           <div class="crm-form-grid">
@@ -360,6 +281,7 @@
     var jsUrl = root.getAttribute('data-js-url');
     if (!jsUrl) return;
     var s = document.createElement('script');
+    s.type = 'module';
     s.src = jsUrl;
     s.defer = true;
     document.body.appendChild(s);

@@ -144,7 +144,7 @@ def roles_page(request: Request):
     finally:
         db.close()
     return templates.TemplateResponse(
-        "MAIN.html",
+        "base.html",
         {
             "request": request,
             "title": "Roles",
@@ -194,7 +194,7 @@ def roles_permisos_page(request: Request):
     finally:
         db.close()
     return templates.TemplateResponse(
-        "MAIN.html",
+        "base.html",
         {
             "request": request,
             "title": "Roles y permisos",

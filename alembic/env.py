@@ -39,13 +39,25 @@ if config.config_file_name is not None:
 BACKEND_DIR = os.path.join(PROJECT_DIR, "strategic_planning", "backend")
 sys.path.insert(0, BACKEND_DIR)
 
-import app.models  # noqa: F401
-from app.models.MAIN import MAIN
+try:
+    import app.models  # noqa: F401
+    from app.models.base import MAIN
+except Exception:
+    sys.path.insert(0, PROJECT_DIR)
+    from fastapi_modulo.db import MAIN
 
 # Registrar modelos del módulo de capacitación para soporte de autogenerate
 sys.path.insert(0, PROJECT_DIR)
 try:
     import fastapi_modulo.modulos.capacitacion.modelos.cap_db_models  # noqa: F401
+except Exception:
+    pass
+try:
+    import fastapi_modulo.modulos.mi_tablero.modelos.db_models  # noqa: F401
+except Exception:
+    pass
+try:
+    import fastapi_modulo.modulos.aplicaciones.modelos.db_models  # noqa: F401
 except Exception:
     pass
 

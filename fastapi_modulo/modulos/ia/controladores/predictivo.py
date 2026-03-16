@@ -17,8 +17,6 @@ from datetime import datetime, timedelta
 from html import escape
 from typing import Any, Dict, List, Optional
 
-import numpy as np
-import pandas as pd
 from fastapi import APIRouter, Body, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from sqlalchemy import text
@@ -44,6 +42,18 @@ CREATE TABLE IF NOT EXISTS ia_scoring_results (
     run_by      TEXT
 );
 """
+
+
+def _pd():
+    import pandas as pd
+
+    return pd
+
+
+def _np():
+    import numpy as np
+
+    return np
 
 
 def _ensure_scoring_table(db) -> None:
@@ -174,7 +184,7 @@ def _compute_user_scores(db) -> List[Dict]:
 
     # Percentil de engagement: qué fracción de usuarios tiene score menor
     if results:
-        scores_series = pd.Series([r["score"] for r in results])
+        scores_series = _pd().Series([r["score"] for r in results])
         pcts = scores_series.rank(pct=True, method="min")
         for r, pct in zip(results, pcts):
             r["percentil"] = round(float(pct) * 100, 1)
@@ -234,6 +244,8 @@ def _compute_kpi_risk_summary(db) -> Dict:
                     ORDER BY kpi_id, created_at ASC
                 """), params).fetchall()
                 if med_rows:
+                    pd = _pd()
+                    np = _np()
                     mdf = pd.DataFrame(med_rows, columns=["kpi_id", "valor"])
                     mdf["valor"] = pd.to_numeric(mdf["valor"], errors="coerce")
                     trend_map: Dict[int, Dict] = {}

@@ -710,7 +710,7 @@ def proyectando_presupuesto_page(request: Request):
     )
 
     return request.app.state.templates.TemplateResponse(
-        "MAIN.html",
+        "base.html",
         {
             "request": request,
             "title": "Fase 9: Presupuesto",

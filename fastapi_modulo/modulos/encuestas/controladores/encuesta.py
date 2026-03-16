@@ -528,7 +528,7 @@ def _render_module_shell(
             f"<script src=\"{js_url}\"></script>"
         )
         return request.app.state.templates.TemplateResponse(
-            "MAIN.html",
+            "base.html",
             {
                 "request": request,
                 "title": title,

@@ -51,7 +51,7 @@ MODULE_DEFINITIONS: List[ModuleDefinition] = [
         manageable=True,
         registration_phase="late",
         router_specs=[
-            RouterSpec("fastapi_modulo.modulos.backend.controladores.backend_auth"),
+            RouterSpec("fastapi_modulo.modulos.web.controladores.backend_auth"),
             RouterSpec("fastapi_modulo.modulos.frontend.controladores.frontend"),
         ],
     ),
@@ -60,15 +60,13 @@ MODULE_DEFINITIONS: List[ModuleDefinition] = [
         label="Mi tablero",
         description="Vista personal y accesos rápidos del usuario.",
         route="/mi-tablero",
-        icon="fa-regular fa-rectangle-list",
+        icon="fa-solid fa-rectangle-list",
+        manifest_file="fastapi_modulo/modulos/mi_tablero/__manifest__.py",
         app_access_name="Mi tablero",
         sidebar_visible=True,
         manageable=True,
-        boot_strategy="builtin",
         router_specs=[
-            RouterSpec("fastapi_modulo.modulos.main.controladores.inicio"),
-            RouterSpec("fastapi_modulo.modulos.main.controladores.usuarios"),
-            RouterSpec("fastapi_modulo.modulos.main.controladores.ajustes"),
+            RouterSpec("fastapi_modulo.modulos.mi_tablero.controladores.mi_tablero"),
         ],
     ),
     ModuleDefinition(
@@ -259,10 +257,12 @@ MODULE_DEFINITIONS: List[ModuleDefinition] = [
         description="Tablero principal institucional.",
         route="/inicio",
         icon="fa-regular fa-circle-dot",
+        manifest_file="fastapi_modulo/modulos/main/__manifest__.py",
         app_access_name="BSC",
         sidebar_visible=True,
         manageable=True,
         boot_strategy="builtin",
+        router_specs=[RouterSpec("fastapi_modulo.modulos.main.controladores.inicio")],
     ),
     ModuleDefinition(
         key="control_seguimiento",
@@ -344,14 +344,15 @@ MODULE_DEFINITIONS: List[ModuleDefinition] = [
     ),
     ModuleDefinition(
         key="system_admin",
-        label="Módulos",
-        description="Activación y desactivación global de módulos.",
-        route="/modulos",
+        label="Aplicaciones",
+        description="Gestión centralizada de módulos y protocolo.",
+        route="/aplicaciones",
         icon="fa-solid fa-cubes",
+        manifest_file="fastapi_modulo/modulos/aplicaciones/__manifest__.py",
         sidebar_visible=False,
         manageable=False,
         always_enabled=True,
-        router_specs=[RouterSpec("fastapi_modulo.modulos.sistema.modulos_admin")],
+        router_specs=[RouterSpec("fastapi_modulo.modulos.aplicaciones.controladores.aplicaciones")],
     ),
     ModuleDefinition(
         key="personalizacion_core",
@@ -406,6 +407,15 @@ MODULE_DEFINITIONS: List[ModuleDefinition] = [
         manageable=False,
         always_enabled=True,
         router_specs=[RouterSpec("fastapi_modulo.ajustes_ia")],
+    ),
+    ModuleDefinition(
+        key="ajustes_core",
+        label="Ajustes",
+        description="Configuración general del sistema.",
+        sidebar_visible=False,
+        manageable=False,
+        always_enabled=True,
+        router_specs=[RouterSpec("fastapi_modulo.modulos.main.controladores.ajustes")],
     ),
     ModuleDefinition(
         key="ia_core",
@@ -518,6 +528,20 @@ def _load_module_metadata(module: ModuleDefinition) -> Dict[str, Any]:
                 pass
 
     manifest_file = str(module.manifest_file or "").strip()
+    if not manifest_file:
+        guessed_dirs: list[str] = []
+        for spec in module.router_specs:
+            parts = spec.module_path.split(".")
+            if "modulos" not in parts:
+                continue
+            idx = parts.index("modulos")
+            if idx + 1 < len(parts):
+                guessed_dirs.append(parts[idx + 1])
+        if guessed_dirs:
+            candidate = os.path.join("fastapi_modulo", "modulos", guessed_dirs[0], "__manifest__.py")
+            candidate_abs = os.path.abspath(os.path.join(_PROJECT_ROOT, candidate))
+            if os.path.exists(candidate_abs):
+                manifest_file = candidate
     if manifest_file:
         file_path = os.path.abspath(os.path.join(_PROJECT_ROOT, manifest_file))
         if os.path.exists(file_path):
@@ -559,19 +583,37 @@ def _resolve_manifest_icon_url(metadata: Dict[str, Any]) -> str:
     return ""
 
 
+def _normalize_manifest_sequence(raw_value: Any, fallback_index: int) -> tuple[int, str]:
+    value = str(raw_value or "").strip()
+    if not value:
+        return (fallback_index + 1000, "")
+    try:
+        return (int(value), value)
+    except ValueError:
+        digits = "".join(ch for ch in value if ch.isdigit())
+        if digits:
+            return (int(digits), value)
+        return (fallback_index + 1000, value)
+
+
 def list_modules_payload() -> List[Dict[str, Any]]:
     states = _read_module_state_map()
     payload: List[Dict[str, Any]] = []
-    for module in MODULE_DEFINITIONS:
+    for index, module in enumerate(MODULE_DEFINITIONS):
         metadata = _load_module_metadata(module)
+        manifest = metadata.get("manifest", {}) if isinstance(metadata.get("manifest"), dict) else {}
+        sequence_value = manifest.get("sequence", "")
+        sequence_sort, sequence_label = _normalize_manifest_sequence(sequence_value, index)
         payload.append(
             {
                 "key": module.key,
-                "label": str(metadata.get("label") or metadata.get("manifest", {}).get("label") or module.label),
-                "description": str(metadata.get("description") or metadata.get("manifest", {}).get("description") or module.description),
-                "route": str(metadata.get("route") or metadata.get("manifest", {}).get("route") or module.route),
+                "label": str(metadata.get("label") or manifest.get("label") or module.label),
+                "description": str(metadata.get("description") or manifest.get("description") or module.description),
+                "route": str(metadata.get("route") or manifest.get("route") or module.route),
                 "icon": str(metadata.get("icon") or module.icon),
                 "icon_url": _resolve_manifest_icon_url(metadata),
+                "sequence": sequence_label,
+                "sequence_sort": sequence_sort,
                 "app_access_name": module.app_access_name,
                 "sidebar_visible": module.sidebar_visible,
                 "manageable": module.manageable,
@@ -582,6 +624,7 @@ def list_modules_payload() -> List[Dict[str, Any]]:
                 "router_count": len(module.router_specs),
             }
         )
+    payload.sort(key=lambda item: (int(item.get("sequence_sort", 10_000)), str(item.get("label") or "").lower(), str(item.get("key") or "")))
     return payload
 
 
@@ -621,11 +664,15 @@ def register_enabled_routers(app: FastAPI, phase: str = "startup") -> List[str]:
             continue
         if not module.router_specs or not is_module_enabled(module.key):
             continue
+        print(f"[startup] module {phase} {module.key} begin", flush=True)
         for spec in module.router_specs:
+            print(f"[startup] import {spec.module_path}", flush=True)
             imported = import_module(spec.module_path)
             router = getattr(imported, spec.attr_name)
             app.include_router(router, **(spec.include_kwargs or {}))
+            print(f"[startup] import {spec.module_path} done", flush=True)
         registered.append(module.key)
+        print(f"[startup] module {phase} {module.key} done", flush=True)
     return registered
 
 

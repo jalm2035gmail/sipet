@@ -186,6 +186,10 @@ def get_current_dataMAIN_info(host: Optional[str] = None) -> Dict[str, str]:
     return info
 
 
+def get_current_database_info(host: Optional[str] = None) -> Dict[str, str]:
+    return get_current_dataMAIN_info(host)
+
+
 def dispose_engine_for_host(host: Optional[str] = None) -> None:
     db_url = get_dataMAIN_url_for_host(host)
     engine_instance = _ENGINE_CACHE.pop(db_url, None)

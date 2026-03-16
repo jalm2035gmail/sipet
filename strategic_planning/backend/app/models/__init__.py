@@ -1,4 +1,4 @@
-from .MAIN import MAIN, MAINModel
+from .base import MAIN, MAINModel
 from . import kpis, operational, users
 from . import notification
 from . import permission

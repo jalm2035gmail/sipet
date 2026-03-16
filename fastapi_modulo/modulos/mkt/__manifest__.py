@@ -1,0 +1,23 @@
+MANIFEST = {'name': 'mkt',
+ 'label': 'MKT',
+ 'summary': 'Marketing y comunicación.',
+ 'description': 'Marketing y comunicación.',
+ 'version': '1.0.0',
+ 'category': 'Operaciones',
+ 'author': 'SIPET',
+ 'sequence': '',
+ 'website': 'https://avancoop.org',
+ 'route': '/mkt/digital',
+ 'icon': 'fa-solid fa-bullhorn',
+ 'depends': ['main'],
+ 'data': ['vistas/mkt_digital.html', 'vistas/redes_sociales.html', 'vistas/whatsapp_business.html'],
+ 'assets': {'css': [], 'js': [], 'description': ['static/description/mkt.svg'], 'img': []},
+ 'structure': {'router': ['controladores/mkt.py'],
+               'views': ['vistas/mkt_digital.html',
+                         'vistas/redes_sociales.html',
+                         'vistas/whatsapp_business.html']},
+ 'installable': True,
+ 'application': True,
+ 'auto_install': False}
+
+__all__ = ["MANIFEST"]

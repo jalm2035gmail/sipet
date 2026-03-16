@@ -1,6 +1,6 @@
 # Estructura estandar de pantallas backend
 
-Todas las pantallas backend renderizadas con `MAIN.html` siguen este formato:
+Todas las pantallas backend renderizadas con `base.html` siguen este formato:
 
 1. Titulo
 2. Descripcion
@@ -33,7 +33,7 @@ return render_backend_page(
 
 ## Clases CSS de contenido
 
-La MAIN ya incluye estas clases para mantener formato uniforme:
+La base oficial ya incluye estas clases para mantener formato uniforme:
 
 - `.content-section`
 - `.content-section-head`
@@ -109,3 +109,51 @@ Estas clases usan variables ya configurables por usuario:
 - Fondo general del contenedor: `--navbar-bg`
 
 Los valores se ajustan desde la pantalla de configuracion sin tocar CSS.
+
+## Permisos por modulo
+
+Cada app debe declarar sus permisos dentro de su propio directorio.
+
+Estructura:
+
+- `Seguridad/`
+- `Seguridad/permisos.json`
+
+Ejemplo:
+
+```json
+{
+  "app": "mi_modulo",
+  "groups": [
+    {
+      "key": "mi_modulo_usuario",
+      "name": "Mi modulo usuario",
+      "permissions": [
+        "mi_modulo.ver"
+      ]
+    },
+    {
+      "key": "mi_modulo_admin",
+      "name": "Mi modulo administrador",
+      "permissions": [
+        "mi_modulo.*"
+      ]
+    }
+  ]
+}
+```
+
+Y registrarlo en `__manifest__.py`:
+
+```python
+"data": [
+    "Seguridad/permisos.json",
+]
+```
+
+Reglas:
+
+- usar siempre el prefijo del módulo en cada permiso
+- cada módulo administra solo sus permisos
+- la app puede agregar CSS propio, pero debe conservar el CSS oficial del backend
+- los estilos propios deben vivir en `static/css/<modulo>.css`

@@ -39,7 +39,7 @@ from fastapi_modulo.module_registry import (
 )
 from fastapi_modulo import db as core_db
 from fastapi_modulo.db import DepartamentoOrganizacional
-from fastapi_modulo.modulos.backend.controladores.backend_shell import (
+from fastapi_modulo.modulos.web.controladores.backend_shell import (
     _render_backend_MAIN,
     backend_screen,
     enforce_backend_login,
@@ -315,12 +315,16 @@ def get_current_tenant(request: Request) -> str:
     return _normalize_tenant_id(os.environ.get("DEFAULT_TENANT_ID", "default"))
 
 
-def _get_request_dataMAIN_info(request: Optional[Request] = None) -> Dict[str, str]:
+def _get_request_database_info(request: Optional[Request] = None) -> Dict[str, str]:
     host = ""
     if request is not None:
         forwarded_host = request.headers.get("x-forwarded-host")
         host = (forwarded_host or request.headers.get("host") or request.url.hostname or "").strip()
-    return core_db.get_current_dataMAIN_info(host)
+    return core_db.get_current_database_info(host)
+
+
+def _get_request_dataMAIN_info(request: Optional[Request] = None) -> Dict[str, str]:
+    return _get_request_database_info(request)
 
 
 def _normalize_host_identifier(value: Optional[str]) -> str:
@@ -947,7 +951,7 @@ def build_view_buttons_html(view_buttons: Optional[List[Dict]]) -> str:
 
 DATAMAIN_URL = core_db.DATAMAIN_URL
 IS_SQLITE_DATAMAIN = DATAMAIN_URL.startswith("sqlite:///")
-PRIMARY_DB_PATH = core_db.get_current_dataMAIN_info().get("path") or None
+PRIMARY_DB_PATH = core_db.get_current_database_info().get("path") or None
 APP_ENV = APP_ENV_DEFAULT
 SESSION_MAX_AGE_SECONDS = int((os.environ.get("SESSION_MAX_AGE_SECONDS") or "28800").strip() or "28800")
 COOKIE_SECURE = (os.environ.get("COOKIE_SECURE") or "").strip().lower() in {"1", "true", "yes", "on"} or APP_ENV in {
@@ -1897,18 +1901,6 @@ def unify_users_table() -> None:
         conn.commit()
 
 
-MAIN.metadata.create_all(bind=engine)
-ensure_documentos_schema()
-ensure_forms_schema()
-unify_users_table()
-ensure_default_roles()
-ensure_passkey_user_schema()
-ensure_strategic_axes_schema()
-protect_sensitive_user_fields()
-ensure_system_superadmin_user()
-ensure_demo_admin_user_seed()
-ensure_default_strategic_axes_data()
-
 app = FastAPI(
     title="Módulo de Planificación Estratégica y POA",
     docs_url="/docs" if ENABLE_API_DOCS else None,
@@ -1926,7 +1918,45 @@ app.mount(
     StaticFiles(directory="fastapi_modulo/modulos/activo_fijo/static"),
     name="activo_fijo_static",
 )
-register_enabled_routers(app, phase="startup")
+@app.on_event("startup")
+def _initialize_core_schema() -> None:
+    if getattr(app.state, "core_schema_initialized", False):
+        return
+    print("[startup] core_schema begin", flush=True)
+    MAIN.metadata.create_all(bind=engine)
+    print("[startup] create_all ok", flush=True)
+    ensure_documentos_schema()
+    print("[startup] documentos ok", flush=True)
+    ensure_forms_schema()
+    print("[startup] forms ok", flush=True)
+    unify_users_table()
+    print("[startup] unify_users ok", flush=True)
+    ensure_default_roles()
+    print("[startup] roles ok", flush=True)
+    ensure_passkey_user_schema()
+    print("[startup] passkey ok", flush=True)
+    ensure_strategic_axes_schema()
+    print("[startup] strategic_axes ok", flush=True)
+    protect_sensitive_user_fields()
+    print("[startup] sensitive_fields ok", flush=True)
+    ensure_system_superadmin_user()
+    print("[startup] superadmin ok", flush=True)
+    ensure_demo_admin_user_seed()
+    print("[startup] demo_admin ok", flush=True)
+    ensure_default_strategic_axes_data()
+    print("[startup] strategic_axes_data ok", flush=True)
+    app.state.core_schema_initialized = True
+    print("[startup] core_schema done", flush=True)
+
+
+@app.on_event("startup")
+def _register_startup_routers() -> None:
+    if getattr(app.state, "startup_routers_registered", False):
+        return
+    print("[startup] register startup routers begin", flush=True)
+    register_enabled_routers(app, phase="startup")
+    app.state.startup_routers_registered = True
+    print("[startup] register startup routers done", flush=True)
 
 
 def _ensure_ia_config_columns():
@@ -1969,7 +1999,7 @@ async def seed_default_users_on_startup():
 def healthcheck(request: Request):
     payload = {"status": "ok"}
     if HEALTH_INCLUDE_DETAILS:
-        db_info = _get_request_dataMAIN_info(request)
+        db_info = _get_request_database_info(request)
         payload.update(
             {
                 "environment": APP_ENV,
@@ -2871,9 +2901,16 @@ def public_quiz_discount(request: Request, data: dict = Body(default={})):
         db.close()
 
 
-# Frontend builder registrado DESPUÉS de /backend/login, /backend/404 y /backend/passkey/*
-# para que el catch-all /backend/{slug} no intercepte rutas fijas del sistema.
-register_enabled_routers(app, phase="late")
+@app.on_event("startup")
+def _register_late_routers() -> None:
+    if getattr(app.state, "late_routers_registered", False):
+        return
+    print("[startup] register late routers begin", flush=True)
+    # Frontend builder registrado DESPUÉS de /backend/login, /backend/404 y /backend/passkey/*
+    # para que el catch-all /backend/{slug} no intercepte rutas fijas del sistema.
+    register_enabled_routers(app, phase="late")
+    app.state.late_routers_registered = True
+    print("[startup] register late routers done", flush=True)
 
 
 def get_colores_context() -> Dict[str, str]:

@@ -1,0 +1,21 @@
+MANIFEST = {'name': 'ia',
+ 'label': 'IA',
+ 'summary': 'Router agregado de IA.',
+ 'description': 'Router agregado de IA.',
+ 'version': '1.0.0',
+ 'category': 'Operaciones',
+ 'author': 'SIPET',
+ 'sequence': '',
+ 'website': 'https://avancoop.org',
+ 'route': '/ia',
+ 'icon': '',
+ 'depends': ['main'],
+ 'data': ['vistas/predictivo.html'],
+ 'assets': {'css': [], 'js': [], 'description': ['static/description/ia.svg'], 'img': []},
+ 'structure': {'router': ['controladores/ia_router.py', 'controladores/predictivo.py'],
+               'views': ['vistas/predictivo.html']},
+ 'installable': True,
+ 'application': True,
+ 'auto_install': False}
+
+__all__ = ["MANIFEST"]

@@ -5,6 +5,12 @@ import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
+from fastapi_modulo.modulos.web.servicios.module_tools import (
+    read_text_file,
+    render_backend_page_html,
+    require_app_access,
+    text_asset_response,
+)
 
 from fastapi_modulo.modulos.intelicoop.modelos.intelicoop_models import (
     CampaniaCreate,
@@ -48,28 +54,12 @@ from fastapi_modulo.modulos.intelicoop.modelos.intelicoop_store import (
 )
 
 def require_intelicoop_access(request: Request) -> None:
-    from fastapi_modulo.main import _get_user_app_access, is_admin_or_superadmin
-
-    if is_admin_or_superadmin(request):
-        return
-    app_access = _get_user_app_access(request)
-    if "Intelicoop" not in app_access:
-        raise HTTPException(status_code=403, detail="Acceso restringido a Intelicoop")
+    require_app_access(request, "Intelicoop", "Acceso restringido a Intelicoop")
 
 
 router = APIRouter(dependencies=[Depends(require_intelicoop_access)])
 INTELICOOP_TEMPLATE_PATH = os.path.join("fastapi_modulo", "modulos", "intelicoop", "vistas", "intelicoop.html")
 INTELICOOP_JS_PATH = os.path.join("fastapi_modulo", "modulos", "intelicoop", "static", "js", "intelicoop.js")
-
-
-def _load_file(path: str, fallback: str) -> str:
-    try:
-        with open(path, "r", encoding="utf-8") as fh:
-            return fh.read()
-    except OSError:
-        return fallback
-
-
 @router.get("/intelicoop", response_class=HTMLResponse)
 def intelicoop_redirect() -> RedirectResponse:
     return RedirectResponse(url="/inicio/intelicoop", status_code=307)
@@ -77,23 +67,23 @@ def intelicoop_redirect() -> RedirectResponse:
 
 @router.get("/inicio/intelicoop", response_class=HTMLResponse)
 def intelicoop_page(request: Request):
-    from fastapi_modulo.main import render_backend_page
-
-    content = _load_file(INTELICOOP_TEMPLATE_PATH, "<p>No se pudo cargar la vista de Intelicoop.</p>")
-    return render_backend_page(
+    content = read_text_file(INTELICOOP_TEMPLATE_PATH, "<p>No se pudo cargar la vista de Intelicoop.</p>")
+    return render_backend_page_html(
         request,
         title="Intelicoop",
         description="Modulo SIPET para socios, creditos, ahorros, campanas y scoring.",
         content=content,
-        hide_floating_actions=True,
         show_page_header=False,
     )
 
 
 @router.get("/api/intelicoop/assets/intelicoop.js")
 def intelicoop_js_asset() -> Response:
-    body = _load_file(INTELICOOP_JS_PATH, "console.error('Intelicoop JS no disponible');")
-    return Response(body, media_type="application/javascript")
+    return text_asset_response(
+        INTELICOOP_JS_PATH,
+        media_type="application/javascript",
+        fallback="console.error('Intelicoop JS no disponible');",
+    )
 
 
 @router.get("/api/intelicoop/socios")
