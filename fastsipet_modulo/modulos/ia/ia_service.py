@@ -17,7 +17,7 @@ import time
 from typing import Any, Dict, List
 from urllib.parse import urlparse, urlunparse
 
-from fastapi_modulo.db import IAConfig, SessionLocal
+from fastapi_modulo.db import IAConfig, SessionLocal, ensure_ia_config_schema
 from .providers.base import IAProviderError
 from .providers.deepseek_provider import DeepSeekProvider
 from .providers.ollama_provider import OllamaProvider
@@ -57,6 +57,7 @@ def _normalize_ollama_generate_url(raw_url: str) -> str:
 def get_ia_config():
     db = SessionLocal()
     try:
+        ensure_ia_config_schema(db.get_bind())
         return db.query(IAConfig).order_by(IAConfig.updated_at.desc()).first()
     finally:
         db.close()

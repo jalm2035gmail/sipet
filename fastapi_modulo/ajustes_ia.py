@@ -6,7 +6,7 @@ from urllib.parse import urlparse, urlunparse
 from fastapi import APIRouter, Request, Form
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 
-from fastapi_modulo.db import SessionLocal, IAConfig
+from fastapi_modulo.db import SessionLocal, IAConfig, ensure_ia_config_schema
 
 router = APIRouter()
 
@@ -795,7 +795,7 @@ def ajustes_ia_get(request: Request):
 
     db = SessionLocal()
     try:
-        IAConfig.__table__.create(bind=db.get_bind(), checkfirst=True)
+        ensure_ia_config_schema(db.get_bind())
         config = db.query(IAConfig).order_by(IAConfig.updated_at.desc()).first()
     finally:
         db.close()
@@ -868,7 +868,7 @@ async def ajustes_ia_post(request: Request):
 
     db = SessionLocal()
     try:
-        IAConfig.__table__.create(bind=db.get_bind(), checkfirst=True)
+        ensure_ia_config_schema(db.get_bind())
         prev = db.query(IAConfig).order_by(IAConfig.updated_at.desc()).first()
         if not ai_provider and prev:
             ai_provider = str(getattr(prev, "ai_provider", "") or "")
@@ -899,7 +899,7 @@ async def ajustes_ia_post(request: Request):
 def ia_status_api(request: Request):
     db = SessionLocal()
     try:
-        IAConfig.__table__.create(bind=db.get_bind(), checkfirst=True)
+        ensure_ia_config_schema(db.get_bind())
         config = db.query(IAConfig).order_by(IAConfig.updated_at.desc()).first()
     finally:
         db.close()

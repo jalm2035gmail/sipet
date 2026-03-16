@@ -1,12 +1,13 @@
 import json
 import os
+from contextlib import nullcontext
 from contextvars import ContextVar
 from datetime import datetime
 from typing import Dict, Optional
 
 from dotenv import load_dotenv
-from sqlalchemy import Column, DateTime, Float, Integer, String, Text, create_engine
-from sqlalchemy.engine import Engine
+from sqlalchemy import Column, DateTime, Float, Integer, String, Text, create_engine, inspect, text
+from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -230,13 +231,44 @@ class IAConfig(MAIN):
     id = Column(Integer, primary_key=True, index=True)
     ai_provider = Column(String, nullable=False)
     ai_api_key = Column(String, nullable=False)
-    ai_MAIN_url = Column(String, default="")
+    ai_MAIN_url = Column("ai_base_url", String, default="")
     ai_model = Column(String, default="")
     ai_timeout = Column(Integer, default=30)
     ai_temperature = Column(Float, default=0.7)
     ai_top_p = Column(Float, default=0.9)
     ai_num_predict = Column(Integer, default=700)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+def ensure_ia_config_schema(bind: Optional[Engine | Connection] = None) -> None:
+    target = bind or get_current_engine()
+    IAConfig.__table__.create(bind=target, checkfirst=True)
+
+    context = target.begin() if isinstance(target, Engine) else nullcontext(target)
+    with context as connection:
+        existing = {column["name"] for column in inspect(connection).get_columns("ia_config")}
+        migrations = [
+            ("ai_base_url", "ALTER TABLE ia_config ADD COLUMN ai_base_url VARCHAR"),
+            ("ai_system_prompt", "ALTER TABLE ia_config ADD COLUMN ai_system_prompt VARCHAR"),
+            ("ai_temperature", "ALTER TABLE ia_config ADD COLUMN ai_temperature REAL DEFAULT 0.7"),
+            ("ai_top_p", "ALTER TABLE ia_config ADD COLUMN ai_top_p REAL DEFAULT 0.9"),
+            ("ai_num_predict", "ALTER TABLE ia_config ADD COLUMN ai_num_predict INTEGER DEFAULT 700"),
+        ]
+        for column_name, statement in migrations:
+            if column_name not in existing:
+                connection.execute(text(statement))
+                existing.add(column_name)
+        if "ai_base_url" in existing and "ai_MAIN_url" in existing:
+            connection.execute(
+                text(
+                    """
+                    UPDATE ia_config
+                    SET ai_base_url = ai_MAIN_url
+                    WHERE (ai_base_url IS NULL OR ai_base_url = '')
+                      AND ai_MAIN_url IS NOT NULL
+                    """
+                )
+            )
 
 
 class IAFeatureFlag(MAIN):

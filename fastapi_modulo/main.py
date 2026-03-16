@@ -1962,24 +1962,9 @@ def _register_startup_routers() -> None:
 def _ensure_ia_config_columns():
     """Agrega columnas faltantes a ia_config de forma idempotente."""
     try:
-        from fastapi_modulo.db import engine
-        import sqlalchemy as _sa
-        with engine.connect() as _conn:
-            existing = {
-                row[1]
-                for row in _conn.execute(_sa.text("PRAGMA table_info(ia_config)")).fetchall()
-            }
-            migrations = [
-                ("ai_system_prompt", "ALTER TABLE ia_config ADD COLUMN ai_system_prompt VARCHAR"),
-                ("ai_temperature",   "ALTER TABLE ia_config ADD COLUMN ai_temperature REAL DEFAULT 0.7"),
-                ("ai_top_p",         "ALTER TABLE ia_config ADD COLUMN ai_top_p REAL DEFAULT 0.9"),
-                ("ai_num_predict",   "ALTER TABLE ia_config ADD COLUMN ai_num_predict INTEGER DEFAULT 700"),
-            ]
-            for col, stmt in migrations:
-                if col not in existing:
-                    _conn.execute(_sa.text(stmt))
-                    print(f"[migration] ia_config: columna '{col}' agregada")
-            _conn.commit()
+        from fastapi_modulo.db import ensure_ia_config_schema
+
+        ensure_ia_config_schema()
     except Exception as exc:
         print(f"[migration] Error aplicando columnas ia_config: {exc}")
 
