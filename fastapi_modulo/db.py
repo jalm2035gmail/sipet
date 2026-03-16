@@ -59,6 +59,46 @@ def _coerce_dataMAIN_target_to_url(target: str) -> str:
     return f"sqlite:///{sqlite_path}"
 
 
+def _is_writable_directory(path: str) -> bool:
+    directory = (path or "").strip()
+    if not directory:
+        return False
+    return os.path.isdir(directory) and os.access(directory, os.W_OK | os.X_OK)
+
+
+def _build_sqlite_fallback_path(original_path: str) -> str:
+    fallback_dir = os.path.join("/tmp", "sipet_data")
+    try:
+        os.makedirs(fallback_dir, exist_ok=True)
+    except OSError:
+        pass
+    return os.path.join(fallback_dir, os.path.basename(original_path))
+
+
+def _prepare_sqlite_directory(sqlite_path: str) -> str:
+    normalized_path = os.path.abspath((sqlite_path or "").strip())
+    directory = os.path.dirname(normalized_path) or "."
+    try:
+        os.makedirs(directory, exist_ok=True)
+    except OSError as exc:
+        fallback_path = _build_sqlite_fallback_path(normalized_path)
+        print(
+            f"[db] No se pudo preparar directorio SQLite '{directory}': {exc}. "
+            f"Usando fallback '{fallback_path}'."
+        )
+        return fallback_path
+
+    if not _is_writable_directory(directory):
+        fallback_path = _build_sqlite_fallback_path(normalized_path)
+        print(
+            f"[db] Directorio SQLite sin permisos de escritura '{directory}'. "
+            f"Usando fallback '{fallback_path}'."
+        )
+        return fallback_path
+
+    return normalized_path
+
+
 def _resolve_default_dataMAIN_url() -> str:
     raw_url = (
         os.environ.get("DATAMAIN_URL")
@@ -126,6 +166,16 @@ def _extract_sqlite_path(db_url: str) -> Optional[str]:
     return db_url.replace("sqlite:///", "", 1).split("?", 1)[0]
 
 
+def _normalize_sqlite_url_for_runtime(db_url: str) -> str:
+    sqlite_path = _extract_sqlite_path(db_url)
+    if not sqlite_path:
+        return db_url
+    prepared_path = _prepare_sqlite_directory(sqlite_path)
+    if prepared_path == sqlite_path:
+        return db_url
+    return f"sqlite:///{prepared_path}"
+
+
 def set_request_host(host: Optional[str]):
     return _REQUEST_HOST.set(_normalize_host(host))
 
@@ -146,7 +196,7 @@ def get_dataMAIN_url_for_host(host: Optional[str] = None) -> str:
 
 
 def get_engine_for_host(host: Optional[str] = None) -> Engine:
-    db_url = get_dataMAIN_url_for_host(host)
+    db_url = _normalize_sqlite_url_for_runtime(get_dataMAIN_url_for_host(host))
     engine_instance = _ENGINE_CACHE.get(db_url)
     if engine_instance is not None:
         return engine_instance
@@ -175,7 +225,7 @@ def get_current_engine() -> Engine:
 
 
 def get_current_dataMAIN_info(host: Optional[str] = None) -> Dict[str, str]:
-    db_url = get_dataMAIN_url_for_host(host)
+    db_url = _normalize_sqlite_url_for_runtime(get_dataMAIN_url_for_host(host))
     sqlite_path = _extract_sqlite_path(db_url)
     info = {
         "host": _normalize_host(host) or get_request_host() or "",
