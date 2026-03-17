@@ -13,7 +13,7 @@ MANIFEST = {
     "website": "https://avancoop.org",
     "route": "/resumen_ejecutivo",
     "icon": "",
-    "depends": ["main"],
+    "depends": ["web"],
     "data": [
         "vistas/base.html",
         "vistas/sidebar.html",

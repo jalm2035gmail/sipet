@@ -18,7 +18,7 @@ fi
 # Prioridad:
 # 1) SQLITE_DB_PATH ya definida en entorno/.env
 # 2) Ruta persistente por defecto /var/lib/sipet/data/avandbcoop.db
-# 3) Fallback local ./avandbcoop.db si no hay permisos
+# 3) Fallback local ./base_datos/avandbcoop.db si no hay permisos
 DEFAULT_DB_DIR="/var/lib/sipet/data"
 DEFAULT_DB_PATH="${DEFAULT_DB_DIR}/avandbcoop.db"
 LEGACY_DB_PATH="/opt/sipet/avandbcoop.db"
@@ -30,7 +30,7 @@ fi
 DB_DIR="$(dirname "$SQLITE_DB_PATH")"
 if ! mkdir -p "$DB_DIR" 2>/dev/null; then
     echo "Aviso: No se pudo crear ${DB_DIR}. Se usará fallback local."
-    SQLITE_DB_PATH="${PWD}/avandbcoop.db"
+    SQLITE_DB_PATH="${PWD}/base_datos/avandbcoop.db"
     DB_DIR="$(dirname "$SQLITE_DB_PATH")"
     mkdir -p "$DB_DIR"
 fi
@@ -56,7 +56,7 @@ fi
 echo "Usando SQLITE_DB_PATH=${SQLITE_DB_PATH}"
 
 # En producción, forzar DATAMAIN_URL hacia ruta persistente para evitar
-# que quede apuntando a sqlite:///./avandbcoop.db dentro de /opt/sipet.
+# que quede apuntando a sqlite:///./base_datos/avandbcoop.db dentro de /opt/sipet.
 APP_ENV_EFFECTIVE="${APP_ENV:-development}"
 if [ "$APP_ENV_EFFECTIVE" = "production" ] || [ "$APP_ENV_EFFECTIVE" = "prod" ]; then
     DATAMAIN_URL="sqlite:///${SQLITE_DB_PATH}"

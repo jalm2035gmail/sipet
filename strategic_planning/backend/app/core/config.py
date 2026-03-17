@@ -36,7 +36,7 @@ class Settings(MAINSettings):
         raise ValueError(v)
 
     # DataMAIN
-    DATAMAIN_URL: str = "sqlite:///./strategic_planning.db"
+    DATAMAIN_URL: str = "sqlite:///./base_datos/strategic_planning.db"
     DATAMAIN_POOL_SIZE: int = 20
     DATAMAIN_MAX_OVERFLOW: int = 40
 

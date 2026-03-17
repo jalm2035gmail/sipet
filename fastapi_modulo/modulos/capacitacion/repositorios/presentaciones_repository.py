@@ -1,12 +1,9 @@
-from fastapi_modulo.db import SessionLocal, engine
+from fastapi_modulo.modulos.capacitacion.repositorios.common import get_db, get_engine
 from fastapi_modulo.modulos.capacitacion.modelos.db_models import MAIN, CapAssetBiblioteca, CapCategoria, CapCurso, CapDiapositiva, CapElemento, CapPresentacion, CapPresentacionVersion
 
 
-def get_db():
-    return SessionLocal()
-
-
 def ensure_schema():
+    engine = get_engine()
     MAIN.metadata.create_all(
         bind=engine,
         tables=[CapCategoria.__table__, CapCurso.__table__, CapPresentacion.__table__, CapDiapositiva.__table__, CapElemento.__table__, CapPresentacionVersion.__table__, CapAssetBiblioteca.__table__],

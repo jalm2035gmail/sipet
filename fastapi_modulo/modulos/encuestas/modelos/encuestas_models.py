@@ -16,7 +16,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import relationship
 
-from fastapi_modulo.db import MAIN
+from fastapi_modulo.core.db import MAIN
 
 
 class SurveyTemplate(MAIN):

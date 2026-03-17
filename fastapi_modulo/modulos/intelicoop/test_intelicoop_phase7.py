@@ -49,7 +49,7 @@ fake_main.is_admin_or_superadmin = _fake_is_admin_or_superadmin
 sys.modules["fastapi_modulo.main"] = fake_main
 
 
-from fastapi_modulo.db import MAIN, engine
+from fastapi_modulo.core.db import MAIN, engine
 from fastapi_modulo.modulos.intelicoop.controladores.intelicoop import router
 from fastapi_modulo.modulos.intelicoop.modelos.intelicoop_db_models import (
     IntelicoopCampania,

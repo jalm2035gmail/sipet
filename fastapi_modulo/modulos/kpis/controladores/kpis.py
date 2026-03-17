@@ -2,6 +2,7 @@ import os
 
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
+from fastapi_modulo.modulos_sipet.web.controladores.backend_shell import render_backend_page
 
 router = APIRouter()
 _KPIS_LOCKED_CONTENT = """
@@ -38,8 +39,6 @@ def _load_kpis_indicadores_template() -> str:
 
 @router.get("/kpis", response_class=HTMLResponse)
 def kpis_page(request: Request):
-    from fastapi_modulo.main import render_backend_page
-
     return render_backend_page(
         request,
         title="KPIs",
@@ -52,8 +51,6 @@ def kpis_page(request: Request):
 
 @router.get("/kpis/indicadores", response_class=HTMLResponse)
 def kpis_indicadores_page(request: Request):
-    from fastapi_modulo.main import render_backend_page
-
     return render_backend_page(
         request,
         title="Indicadores",

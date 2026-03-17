@@ -5,8 +5,10 @@ from typing import Any, Dict, List, Set
 
 from fastapi import HTTPException
 
-from fastapi_modulo.db import SessionLocal, DepartamentoOrganizacional, MAIN, engine
+from fastapi_modulo.core import db as core_db
+from fastapi_modulo.core.db import DepartamentoOrganizacional, MAIN
 from fastapi_modulo.modulos.empleados.modelos.puestos_laborales_store import load_puestos
+from fastapi_modulo.modulos_sipet.web.modelos.core_models import Usuario
 
 
 _DEP_FUNCIONES_PATH = os.path.join(
@@ -21,6 +23,7 @@ _DEP_FUNCIONES_PATH = os.path.join(
 
 
 def ensure_departamentos_schema() -> None:
+    engine = core_db.get_engine_for_host(core_db.get_request_host())
     MAIN.metadata.create_all(bind=engine, tables=[DepartamentoOrganizacional.__table__], checkfirst=True)
 
 
@@ -76,9 +79,7 @@ def save_departamentos_funciones_map(data: Dict[str, Dict[str, List[str]]]) -> N
 
 
 def build_empleados_count_map(rows: List[DepartamentoOrganizacional]) -> Dict[str, int]:
-    from fastapi_modulo.main import Usuario
-
-    db = SessionLocal()
+    db = core_db.get_session_factory_for_host(core_db.get_request_host())()
     try:
         all_users = db.query(Usuario).all()
     finally:
@@ -129,7 +130,7 @@ def serialize_departamentos(
 
 
 def list_departamentos_payload() -> Dict[str, Any]:
-    db = SessionLocal()
+    db = core_db.get_session_factory_for_host(core_db.get_request_host())()
     try:
         rows = (
             db.query(DepartamentoOrganizacional)
@@ -143,7 +144,7 @@ def list_departamentos_payload() -> Dict[str, Any]:
 
 
 def get_departamentos_catalog() -> List[str]:
-    db = SessionLocal()
+    db = core_db.get_session_factory_for_host(core_db.get_request_host())()
     try:
         rows = (
             db.query(DepartamentoOrganizacional)
@@ -209,7 +210,7 @@ def save_departamentos_payload(incoming: Any) -> Dict[str, Any]:
     if not cleaned_rows:
         raise HTTPException(status_code=400, detail="No hay departamentos válidos para guardar")
 
-    db = SessionLocal()
+    db = core_db.get_session_factory_for_host(core_db.get_request_host())()
     try:
         for idx, item in enumerate(cleaned_rows, start=1):
             existing = (
@@ -258,7 +259,7 @@ def delete_departamento_payload(code: str) -> Dict[str, Any]:
     if not target_code:
         raise HTTPException(status_code=400, detail="Código inválido")
 
-    db = SessionLocal()
+    db = core_db.get_session_factory_for_host(core_db.get_request_host())()
     try:
         row = (
             db.query(DepartamentoOrganizacional)

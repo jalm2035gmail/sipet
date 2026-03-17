@@ -8,13 +8,24 @@ from typing import Any, Dict, List
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
 
+from fastapi_modulo.modulos_sipet.modulo_base.runtime_app import (
+    POAActivity,
+    POASubactivity,
+    SessionLocal,
+    StrategicAxisConfig,
+    StrategicObjectiveConfig,
+    _activity_status,
+    _normalize_tenant_id,
+    get_current_tenant,
+)
+from fastapi_modulo.modulos_sipet.web.controladores.backend_shell import render_backend_page
+
 
 router = APIRouter()
 
 
 @router.get("/inicio", response_class=HTMLResponse)
 def inicio_page(request: Request):
-    from fastapi_modulo import main as core
     from fastapi_modulo.modulos.planificacion.controladores.annual_cycle_service import get_active_operational_year
     from fastapi_modulo.modulos.presupuesto.modelos.presupuesto_dashboard_service import load_budget_summary
     from fastapi_modulo.modulos.proyectando.modelos.proyectando_dashboard_service import (
@@ -83,37 +94,37 @@ def inicio_page(request: Request):
     risk_objective_rows: List[Dict[str, Any]] = []
     critical_activity_rows: List[Dict[str, Any]] = []
     objective_name_by_id: Dict[int, str] = {}
-    tenant_id = core._normalize_tenant_id(core.get_current_tenant(request))
+    tenant_id = _normalize_tenant_id(get_current_tenant(request))
 
-    db = core.SessionLocal()
+    db = SessionLocal()
     try:
         active_year = get_active_operational_year(db, tenant_id)
         axes = (
-            db.query(core.StrategicAxisConfig)
+            db.query(StrategicAxisConfig)
             .filter(
-                core.StrategicAxisConfig.tenant_id == tenant_id,
-                core.StrategicAxisConfig.fiscal_year == active_year,
-                core.StrategicAxisConfig.is_active == True,
+                StrategicAxisConfig.tenant_id == tenant_id,
+                StrategicAxisConfig.fiscal_year == active_year,
+                StrategicAxisConfig.is_active == True,
             )
             .all()
         )
         axis_by_id = {int(axis.id): axis for axis in axes}
         objectives = (
-            db.query(core.StrategicObjectiveConfig)
+            db.query(StrategicObjectiveConfig)
             .filter(
-                core.StrategicObjectiveConfig.tenant_id == tenant_id,
-                core.StrategicObjectiveConfig.fiscal_year == active_year,
-                core.StrategicObjectiveConfig.is_active == True,
+                StrategicObjectiveConfig.tenant_id == tenant_id,
+                StrategicObjectiveConfig.fiscal_year == active_year,
+                StrategicObjectiveConfig.is_active == True,
             )
             .all()
         )
         objective_ids = [int(obj.id) for obj in objectives]
         activities = (
-            db.query(core.POAActivity)
+            db.query(POAActivity)
             .filter(
-                core.POAActivity.tenant_id == tenant_id,
-                core.POAActivity.fiscal_year == active_year,
-                core.POAActivity.objective_id.in_(objective_ids),
+                POAActivity.tenant_id == tenant_id,
+                POAActivity.fiscal_year == active_year,
+                POAActivity.objective_id.in_(objective_ids),
             )
             .all()
             if objective_ids
@@ -121,11 +132,11 @@ def inicio_page(request: Request):
         )
         activity_ids = [int(activity.id) for activity in activities]
         subactivities = (
-            db.query(core.POASubactivity)
+            db.query(POASubactivity)
             .filter(
-                core.POASubactivity.tenant_id == tenant_id,
-                core.POASubactivity.fiscal_year == active_year,
-                core.POASubactivity.activity_id.in_(activity_ids),
+                POASubactivity.tenant_id == tenant_id,
+                POASubactivity.fiscal_year == active_year,
+                POASubactivity.activity_id.in_(activity_ids),
             )
             .all()
             if activity_ids
@@ -142,7 +153,7 @@ def inicio_page(request: Request):
 
         for activity in activities:
             subs = sub_by_activity.get(int(activity.id), [])
-            status = core._activity_status(activity, now)
+            status = _activity_status(activity, now)
             if subs:
                 done_subs = sum(1 for sub in subs if sub.fecha_final and sub.fecha_final <= now)
                 progress = int(round((done_subs / len(subs)) * 100))
@@ -314,16 +325,16 @@ def inicio_page(request: Request):
     trend_real: List[int] = []
 
     if total_activities > 0:
-        db = core.SessionLocal()
+        db = SessionLocal()
         try:
             objective_ids = [
                 int(item.id)
-                for item in db.query(core.StrategicObjectiveConfig)
-                .filter(core.StrategicObjectiveConfig.is_active == True)
+                for item in db.query(StrategicObjectiveConfig)
+                .filter(StrategicObjectiveConfig.is_active == True)
                 .all()
             ]
             activities = (
-                db.query(core.POAActivity).filter(core.POAActivity.objective_id.in_(objective_ids)).all()
+                db.query(POAActivity).filter(POAActivity.objective_id.in_(objective_ids)).all()
                 if objective_ids
                 else []
             )
@@ -335,7 +346,7 @@ def inicio_page(request: Request):
                 real_done = sum(
                     1
                     for activity in activities
-                    if activity.fecha_final and activity.fecha_final <= ref_end and core._activity_status(activity, now) == "Terminada"
+                    if activity.fecha_final and activity.fecha_final <= ref_end and _activity_status(activity, now) == "Terminada"
                 )
                 trend_expected.append(int(round((expected_due / len(activities)) * 100)) if activities else 0)
                 trend_real.append(int(round((real_done / len(activities)) * 100)) if activities else 0)
@@ -490,7 +501,7 @@ def inicio_page(request: Request):
       </script>
     </section>
     """
-    return core.render_backend_page(
+    return render_backend_page(
         request,
         title="Inicio",
         description="Balanced Scorecard",
@@ -498,4 +509,3 @@ def inicio_page(request: Request):
         hide_floating_actions=True,
         show_page_header=True,
     )
-

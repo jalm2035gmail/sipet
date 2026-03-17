@@ -6,7 +6,11 @@ import shutil
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
+from fastapi_modulo.core.db import SessionLocal
 from fastapi_modulo.modulos.personalizacion.modelos.theme_system import MAIN_THEME_KEYS, build_institutional_theme
+from fastapi_modulo.modulos_sipet.web.modelos.core_models import Colores
+from fastapi_modulo.modulos_sipet.web.servicios.access_service import require_superadmin
+from fastapi_modulo.modulos_sipet.web.servicios.ui_shell_service import get_colores_context
 
 router = APIRouter()
 templates = Jinja2Templates(directory=["fastapi_modulo/templates", "fastapi_modulo"])
@@ -101,7 +105,7 @@ async def _store_asset(field: str, file_obj: UploadFile) -> tuple:
     contents = await file_obj.read()
     # Optimizar imagen antes de guardar
     try:
-        from fastapi_modulo.image_utils import optimize_image, profile_for_prefix, image_info
+        from fastapi_modulo.core.image_utils import optimize_image, profile_for_prefix, image_info
         contents, ext = optimize_image(contents, ext, profile=profile_for_prefix(field))
         info = image_info(contents)
     except Exception:
@@ -127,8 +131,6 @@ def resolve_logo_empresa_url() -> str:
 
 @router.post("/guardar-colores")
 async def guardar_colores(request: Request, data: dict):
-    from fastapi_modulo.main import Colores, SessionLocal
-
     db = SessionLocal()
     try:
         allowed = set(MAIN_THEME_KEYS)
@@ -159,8 +161,6 @@ async def guardar_colores(request: Request, data: dict):
 
 @router.get("/guardar-colores")
 async def obtener_colores():
-    from fastapi_modulo.main import Colores, SessionLocal
-
     db = SessionLocal()
     try:
         colores = db.query(Colores).all()
@@ -208,7 +208,6 @@ def personalizar_upload(filename: str):
 
 @router.post("/personalizar/restablecer-assets")
 def restablecer_assets(request: Request) -> JSONResponse:
-    from fastapi_modulo.main import require_superadmin
     require_superadmin(request)
     restored = []
     for field in ASSET_FIELDS:
@@ -236,8 +235,6 @@ async def guardar_personalizacion(
     remove_svg_fondo: str = Form("0"),
     remove_svg_defecto: str = Form("0"),
 ):
-    from fastapi_modulo.main import require_superadmin
-    from fastapi_modulo.main import Colores, SessionLocal
     require_superadmin(request)
 
     color_payload = {
@@ -309,13 +306,11 @@ async def guardar_personalizacion(
 
 @router.get("/personalizar", response_class=HTMLResponse)
 def personalizar_page(request: Request):
-    from fastapi_modulo.main import require_superadmin
     require_superadmin(request)
     with open(MODULE_DIR / "vistas" / "personalizar.html", encoding="utf-8") as f:
         panel_html = f.read()
     section_label = ""
     section_title = ""
-    from fastapi_modulo.main import get_colores_context
     return templates.TemplateResponse(
         "base.html",
         {

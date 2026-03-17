@@ -4,6 +4,7 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse
 
 from fastapi_modulo.modulos.notificaciones.controladores.conversaciones import router as conversaciones_router
+from fastapi_modulo.modulos_sipet.web.controladores.backend_shell import render_backend_page
 
 router = APIRouter()
 router.include_router(conversaciones_router)
@@ -33,8 +34,6 @@ def notificaciones_asset(filename: str, request: Request):
 
 @router.get('/notificaciones', response_class=HTMLResponse)
 def notificaciones_page(request: Request):
-    from fastapi_modulo.main import render_backend_page
-
     return render_backend_page(
         request,
         title='Conversaciones',

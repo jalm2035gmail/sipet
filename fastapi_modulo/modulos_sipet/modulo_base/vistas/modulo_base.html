@@ -1,0 +1,44 @@
+{% extends "layouts/base_backend.html" %}
+{% from "_macros.html" import action_button, base_form, base_modal, base_table, section_card, stat_card %}
+
+{% block module_content %}
+<section class="modulo-base-grid">
+  {{ stat_card("Estado", "cargando", "modulo-base-status", "fa-solid fa-signal", "success") }}
+  {{ stat_card("Registros ejemplo", "0", "modulo-base-total", "fa-solid fa-database", "info") }}
+  {{ stat_card("Propósito", "Framework interno", "", "fa-solid fa-compass-drafting", "warning") }}
+</section>
+
+<section class="card modulo-base-card shadow-sm" id="overview">
+  <div class="card-body">
+    <div class="modulo-base-section-head">
+      <h2><i class="fa-solid fa-layer-group"></i> Design System base</h2>
+      <div class="modulo-base-actions">
+        {{ action_button("Nuevo módulo", "fa-solid fa-plus") }}
+        {{ action_button("Documentación", "fa-solid fa-book", "accent") }}
+      </div>
+    </div>
+    <p class="modulo-base-muted">El contrato frontend del módulo base prioriza utilidades tipo Tailwind, componentes estilo DaisyUI, iconografía Font Awesome y GrapesJS solo para edición visual cuando el caso lo exige.</p>
+    <div class="modulo-base-pill-row">
+      <span class="badge badge-primary">Layout backend base</span>
+      <span class="badge badge-secondary">Navbar / Sidebar</span>
+      <span class="badge badge-accent">Cards / Tablas / Formularios</span>
+      <span class="badge badge-neutral">Modales / Estados / Acciones</span>
+    </div>
+  </div>
+</section>
+
+{{ section_card("core", "Core reusable", "ModuleConfig, ModuleRouterBuilder, BaseModuleService, SQLAlchemyRepository, permisos, assets y respuestas.", "fa-solid fa-cubes") }}
+{{ section_card("controladores", "Controladores desacoplados", "Las rutas solo coordinan dependencias, vistas y payloads del modulo.", "fa-solid fa-code-branch") }}
+{{ section_card("repositorios", "Repositorio base", "El acceso a datos parte de un repositorio SQLAlchemy reusable por tenant o dominio.", "fa-solid fa-table-cells-large") }}
+{{ section_card("servicios", "Servicio base", "Los servicios exponen contratos de health, seguridad, Redis, tareas, media y HTTP listos para extender.", "fa-solid fa-gear") }}
+{{ base_table() }}
+{{ base_form() }}
+{{ section_card("tests", "Pruebas base", "El modulo incluye pruebas del contrato para respuestas, seguridad, Redis, tareas, media, ML y modelos.", "fa-solid fa-vial-circle-check") }}
+{{ base_modal() }}
+
+{% if fallback %}
+<article class="modulo-base-card">
+  <div class="modulo-base-muted">{{ fallback|safe }}</div>
+</article>
+{% endif %}
+{% endblock %}

@@ -506,7 +506,7 @@ def _render_module_shell(
         nav_html = '<a class="enc-app-link" href="/encuestas">Volver a Encuestas</a>'
 
     if not is_response:
-        from fastapi_modulo.main import get_colores_context
+        from fastapi_modulo.modulos_sipet.web.servicios.ui_shell_service import get_colores_context
 
         module_nav = f"""
         <div class="enc-sidebar-card">

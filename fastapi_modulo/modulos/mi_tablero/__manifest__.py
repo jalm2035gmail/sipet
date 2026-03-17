@@ -11,7 +11,7 @@ MANIFEST = {
     "website": "https://avancoop.org",
     "route": "/mi-tablero",
     "icon": "fa-solid fa-rectangle-list",
-    "depends": ["main", "web"],
+    "depends": ["web"],
     "data": [
         "vistas/mi_tablero.html",
     ],

@@ -5,7 +5,7 @@ from copy import deepcopy
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
-from fastapi_modulo.db import SessionLocal, get_current_engine
+from fastapi_modulo.core import db as core_db
 from fastapi_modulo.modulos.mi_tablero.modelos.db_models import DashboardPreference
 
 _FALLBACK_STORE: dict[tuple[int, int], dict] = {}
@@ -26,7 +26,11 @@ def _default_preferences() -> dict:
 
 
 def _ensure_table() -> None:
-    DashboardPreference.__table__.create(bind=get_current_engine(), checkfirst=True)
+    DashboardPreference.__table__.create(bind=core_db.get_engine_for_host(core_db.get_request_host()), checkfirst=True)
+
+
+def _session() -> Session:
+    return core_db.get_session_factory_for_host(core_db.get_request_host())()
 
 
 def _coerce_int(value, default: int = 0) -> int:
@@ -94,7 +98,7 @@ def _get_settings_row(db: Session, request) -> DashboardPreference | None:
 def get_user_preferences(request) -> dict:
     try:
         _ensure_table()
-        with SessionLocal() as db:
+        with _session() as db:
             rows = _base_query(db, request).order_by(DashboardPreference.priority_order.asc(), DashboardPreference.id.asc()).all()
             settings_row = _get_settings_row(db, request)
             if not rows and _scope_key(request) in _FALLBACK_STORE:
@@ -115,7 +119,7 @@ def get_user_preferences(request) -> dict:
 def save_user_preferences(request, preferences: dict) -> dict:
     try:
         _ensure_table()
-        with SessionLocal() as db:
+        with _session() as db:
             settings_row = _get_settings_row(db, request)
             if settings_row is None:
                 settings_row = DashboardPreference(
@@ -145,7 +149,7 @@ def save_user_preferences(request, preferences: dict) -> dict:
 def reorder_user_widgets(request, ordered_widget_keys: list[str]) -> dict:
     try:
         _ensure_table()
-        with SessionLocal() as db:
+        with _session() as db:
             rows = (
                 _base_query(db, request)
                 .filter(DashboardPreference.item_key != "__settings__")
@@ -184,7 +188,7 @@ def reorder_user_widgets(request, ordered_widget_keys: list[str]) -> dict:
 def add_user_widget(request, widget: dict) -> dict:
     try:
         _ensure_table()
-        with SessionLocal() as db:
+        with _session() as db:
             existing = (
                 _base_query(db, request)
                 .filter(DashboardPreference.item_key == str(widget.get("key") or ""))
@@ -233,7 +237,7 @@ def add_user_widget(request, widget: dict) -> dict:
 def remove_user_widget(request, widget_key: str) -> dict:
     try:
         _ensure_table()
-        with SessionLocal() as db:
+        with _session() as db:
             _base_query(db, request).filter(DashboardPreference.item_key == str(widget_key or "")).delete()
             db.commit()
         current = get_user_preferences(request)
@@ -249,7 +253,7 @@ def remove_user_widget(request, widget_key: str) -> dict:
 def update_user_widget_preferences(request, item_key: str, updates: dict) -> dict:
     try:
         _ensure_table()
-        with SessionLocal() as db:
+        with _session() as db:
             existing = (
                 _base_query(db, request)
                 .filter(DashboardPreference.item_key == str(item_key or ""))
@@ -300,7 +304,7 @@ def update_user_widget_preferences(request, item_key: str, updates: dict) -> dic
 def clear_user_preferences(request) -> None:
     try:
         _ensure_table()
-        with SessionLocal() as db:
+        with _session() as db:
             _base_query(db, request).delete()
             db.commit()
     except OperationalError:

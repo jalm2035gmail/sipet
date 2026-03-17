@@ -54,8 +54,8 @@ def merge_indicator_definitions_with_overrides(db=None, tenant_id: str | None = 
 
 
 def get_indicator_notebook_response(request):
-    SessionLocal = get_session_local()
-    db = SessionLocal()
+    session_factory = get_session_local()
+    db = session_factory() if callable(session_factory) else session_factory
     try:
         tenant_id = require_tenant_id(resolve_current_tenant_id(request))
         periods = get_projection_periods()
@@ -83,8 +83,8 @@ def get_indicator_notebook_response(request):
 
 
 def save_indicator_notebook_response(request, data: IndicatorNotebookUpdate):
-    SessionLocal = get_session_local()
-    db = SessionLocal()
+    session_factory = get_session_local()
+    db = session_factory() if callable(session_factory) else session_factory
     try:
         tenant_id = require_tenant_id(resolve_current_tenant_id(request))
         periods = get_projection_periods()
@@ -118,8 +118,8 @@ def save_indicator_notebook_response(request, data: IndicatorNotebookUpdate):
 
 
 def list_indicator_definitions_response(request):
-    SessionLocal = get_session_local()
-    db = SessionLocal()
+    session_factory = get_session_local()
+    db = session_factory() if callable(session_factory) else session_factory
     try:
         tenant_id = require_tenant_id(resolve_current_tenant_id(request))
         return JSONResponse({"success": True, "data": merge_indicator_definitions_with_overrides(db, tenant_id)})
@@ -128,8 +128,8 @@ def list_indicator_definitions_response(request):
 
 
 def get_indicator_scenarios_response(request):
-    SessionLocal = get_session_local()
-    db = SessionLocal()
+    session_factory = get_session_local()
+    db = session_factory() if callable(session_factory) else session_factory
     try:
         tenant_id = require_tenant_id(resolve_current_tenant_id(request))
         periods = get_projection_periods()
@@ -141,8 +141,8 @@ def get_indicator_scenarios_response(request):
 
 
 def save_indicator_definition_response(request, data: IndicatorDefinitionOverrideUpdate):
-    SessionLocal = get_session_local()
-    db = SessionLocal()
+    session_factory = get_session_local()
+    db = session_factory() if callable(session_factory) else session_factory
     try:
         tenant_id = require_tenant_id(resolve_current_tenant_id(request))
         allowed_names = {str(item.get("nombre") or "").strip().lower(): str(item.get("nombre") or "").strip() for item in fixed_indicator_definitions()}
@@ -190,8 +190,8 @@ def initialize_indicator_storage_on_startup() -> None:
         ensure_override_table_schema,
     )
 
-    SessionLocal = get_session_local()
-    db = SessionLocal()
+    session_factory = get_session_local()
+    db = session_factory() if callable(session_factory) else session_factory
     try:
         ensure_indicator_table_schema(db)
         ensure_override_table_schema(db)

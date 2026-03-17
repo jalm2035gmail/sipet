@@ -41,7 +41,7 @@ sys.modules["fastapi_modulo.main"] = fake_main
 
 # ── Imports del módulo ───────────────────────────────────────────────────────
 
-from fastapi_modulo.db import MAIN, engine  # noqa: E402
+from fastapi_modulo.core.db import MAIN, engine  # noqa: E402
 from fastapi_modulo.modulos.auditoria.controladores.auditoria import router  # noqa: E402
 from fastapi_modulo.modulos.auditoria.modelos.aud_db_models import (  # noqa: E402
     AudAuditoria,

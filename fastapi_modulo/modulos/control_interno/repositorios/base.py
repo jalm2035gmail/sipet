@@ -4,7 +4,7 @@ from contextlib import contextmanager
 from contextvars import ContextVar
 from sqlalchemy import text
 
-from fastapi_modulo.db import SessionLocal
+from fastapi_modulo.core import db as core_db
 
 _CURRENT_TENANT: ContextVar[str] = ContextVar("control_interno_tenant", default="default")
 
@@ -19,7 +19,7 @@ def get_current_tenant() -> str:
 
 @contextmanager
 def session_scope():
-    db = SessionLocal()
+    db = core_db.get_session_factory_for_host()()
     db.expire_on_commit = False
     try:
         bind = db.get_bind()

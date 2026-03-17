@@ -1,6 +1,6 @@
 import sys, os, json
 sys.path.insert(0, '.')
-os.environ.setdefault('SQLITE_DB_PATH', 'strategic_planning_development.db')
+os.environ.setdefault('SQLITE_DB_PATH', 'base_datos/strategic_planning_development.db')
 
 src = open('fastapi_modulo/modulos/empleados/controladores/departamentos.py', encoding='utf-8').read()
 marker_start = '\n    content = """\n'

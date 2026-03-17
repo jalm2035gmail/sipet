@@ -8,8 +8,8 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-import fastapi_modulo.main as main_module
-from fastapi_modulo.main import AUTH_COOKIE_NAME, _build_session_cookie, app
+import fastapi_modulo.modulos_sipet.modulo_base.runtime as main_module
+from fastapi_modulo.modulos_sipet.modulo_base.runtime import AUTH_COOKIE_NAME, _build_session_cookie, app
 
 
 client = TestClient(app)

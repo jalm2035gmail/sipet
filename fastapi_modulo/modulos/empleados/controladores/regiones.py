@@ -3,13 +3,16 @@ from typing import List, Dict
 
 from fastapi import APIRouter, Body, HTTPException, Request
 from fastapi.responses import HTMLResponse
-from fastapi_modulo.db import SessionLocal, RegionOrganizacional, MAIN, engine
+from fastapi_modulo.core import db as core_db
+from fastapi_modulo.core.db import MAIN, RegionOrganizacional
+from fastapi_modulo.modulos_sipet.web.controladores.backend_shell import render_backend_page
 
 router = APIRouter()
 REGIONES_TEMPLATE_PATH = os.path.join("fastapi_modulo", "modulos", "empleados", "vistas", "regiones.html")
 
 
 def _ensure_regiones_schema() -> None:
+    engine = core_db.get_engine_for_host(core_db.get_request_host())
     MAIN.metadata.create_all(bind=engine, tables=[RegionOrganizacional.__table__], checkfirst=True)
 
 
@@ -37,8 +40,6 @@ def _load_regiones_template() -> str:
 
 @router.get("/inicio/regiones", response_class=HTMLResponse)
 def inicio_regiones_page(request: Request):
-    from fastapi_modulo.main import render_backend_page
-
     return render_backend_page(
         request,
         title="Regiones",
@@ -56,7 +57,7 @@ def inicio_regiones_page(request: Request):
 
 @router.get("/api/inicio/regiones")
 def listar_regiones():
-    db = SessionLocal()
+    db = core_db.get_session_factory_for_host(core_db.get_request_host())()
     try:
         rows = (
             db.query(RegionOrganizacional)
@@ -92,7 +93,7 @@ async def guardar_regiones(data: dict = Body(...)):
     if not cleaned_rows:
         raise HTTPException(status_code=400, detail="No hay regiones válidas para guardar")
 
-    db = SessionLocal()
+    db = core_db.get_session_factory_for_host(core_db.get_request_host())()
     try:
         for idx, item in enumerate(cleaned_rows, start=1):
             existing = (

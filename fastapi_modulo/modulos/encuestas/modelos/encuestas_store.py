@@ -18,7 +18,8 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session, object_session
 from openpyxl.utils import get_column_letter
 
-from fastapi_modulo.db import MAIN, SessionLocal, engine
+from fastapi_modulo.core import db as core_db
+from fastapi_modulo.core.db import MAIN
 from fastapi_modulo.modulos.encuestas.modelos.encuestas_question_catalog import (
     QUESTION_TYPE_CATALOG,
     get_question_type_definition,
@@ -257,12 +258,14 @@ def ensure_survey_schema() -> None:
     global _SURVEY_SCHEMA_READY
     if _SURVEY_SCHEMA_READY:
         return
+    engine = core_db.get_engine_for_host(core_db.get_request_host())
     MAIN.metadata.create_all(bind=engine, tables=_SURVEY_TABLES, checkfirst=True)
     _SURVEY_SCHEMA_READY = True
 
 
 def get_db() -> Session:
-    return SessionLocal()
+    session_factory = core_db.get_session_factory_for_host(core_db.get_request_host())
+    return session_factory()
 
 
 ensure_survey_schema()

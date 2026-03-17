@@ -4,6 +4,8 @@ import os
 
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
+from fastapi_modulo.modulos_sipet.web.controladores.backend_shell import render_backend_page
+from fastapi_modulo.modulos_sipet.web.servicios.template_service import render_no_access_module_page
 
 router = APIRouter()
 
@@ -40,11 +42,9 @@ def _load_template(path: str) -> str | None:
 
 @router.get("/mkt/digital", response_class=HTMLResponse)
 def mkt_digital_page(request: Request):
-    from fastapi_modulo.main import _render_no_access_module_page, render_backend_page
-
     content = _load_template(_MKT_DIGITAL_TEMPLATE_PATH)
     if content is None:
-        return _render_no_access_module_page(
+        return render_no_access_module_page(
             request,
             title="Mkt digital",
             description="Emailing y automatización de campañas digitales.",
@@ -61,11 +61,9 @@ def mkt_digital_page(request: Request):
 
 @router.get("/mkt/whatsapp-business", response_class=HTMLResponse)
 def mkt_whatsapp_business_page(request: Request):
-    from fastapi_modulo.main import _render_no_access_module_page, render_backend_page
-
     content = _load_template(_MKT_WHATSAPP_TEMPLATE_PATH)
     if content is None:
-        return _render_no_access_module_page(
+        return render_no_access_module_page(
             request,
             title="WhatsApp Business",
             description="Gestión de atención y campañas conversacionales.",
@@ -82,11 +80,9 @@ def mkt_whatsapp_business_page(request: Request):
 
 @router.get("/mkt/redes-sociales", response_class=HTMLResponse)
 def mkt_redes_sociales_page(request: Request):
-    from fastapi_modulo.main import _render_no_access_module_page, render_backend_page
-
     content = _load_template(_MKT_REDES_TEMPLATE_PATH)
     if content is None:
-        return _render_no_access_module_page(
+        return render_no_access_module_page(
             request,
             title="Gestión de redes sociales",
             description="Contenido, comunidad y campañas de redes sociales.",

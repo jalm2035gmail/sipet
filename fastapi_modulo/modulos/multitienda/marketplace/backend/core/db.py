@@ -3,7 +3,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 import os
 
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./multitienda.db")
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./base_datos/multitienda.db")
 IS_SQLITE = DATABASE_URL.startswith("sqlite")
 
 engine = create_engine(

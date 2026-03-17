@@ -5,6 +5,7 @@ from pathlib import Path
 
 from fastapi import APIRouter, Body, File, Request, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, Response
+from fastapi_modulo.modulos_sipet.web.servicios.ui_shell_service import get_colores_context
 from fastapi_modulo.modulos.proyectando.modelos.data_store import (
     DEFAULT_DATOS_GENERALES,
     load_activo_fijo_compras_editor,
@@ -39,7 +40,6 @@ TASA_REFERENCIA_TEMPLATE_PATH = MODULE_DIR / "vistas" / "tasa_referencia.html"
 
 
 def _get_colores_context() -> dict:
-    from fastapi_modulo.main import get_colores_context
     return get_colores_context()
 
 

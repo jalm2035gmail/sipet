@@ -1,9 +1,5 @@
-from fastapi_modulo.db import SessionLocal
+from fastapi_modulo.modulos.capacitacion.repositorios.common import get_db
 from fastapi_modulo.modulos.capacitacion.modelos.db_models import CapArchivo
-
-
-def get_db():
-    return SessionLocal()
 
 
 def create_archivo(db, data):

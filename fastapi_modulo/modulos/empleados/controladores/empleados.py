@@ -10,7 +10,22 @@ from fastapi import APIRouter, Request, Body, UploadFile, File, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import text
-from fastapi_modulo.db import SessionLocal
+from fastapi_modulo.core import db as core_db
+from fastapi_modulo.modulos.personalizacion.controladores.roles import ensure_default_roles
+from fastapi_modulo.modulos_sipet.modulo_base.runtime_app import POAActivity
+from fastapi_modulo.modulos_sipet.web.controladores.backend_shell import render_backend_page
+from fastapi_modulo.modulos_sipet.web.modelos.core_models import Rol, Usuario
+from fastapi_modulo.modulos_sipet.web.servicios.access_service import (
+    is_superadmin,
+    normalize_role_name,
+    require_admin_or_superadmin,
+    sensitive_lookup_hash,
+)
+from fastapi_modulo.modulos_sipet.web.servicios.auth_service import (
+    decrypt_sensitive,
+    encrypt_sensitive,
+    hash_password,
+)
 
 router = APIRouter()
 COLAB_UPLOAD_DIR = Path("fastapi_modulo/uploads/colaboradores")
@@ -70,6 +85,10 @@ STRATEGY_SUBMENU_OPTIONS = (
     "IA estrategia",
 )
 CONVERSATION_MODULE_ROLE_OPTIONS = ("", "usuario", "administrador")
+
+
+def _db_session():
+    return core_db.get_session_factory_for_host(core_db.get_request_host())()
 
 
 def _load_puestos_laborales_catalog() -> List[str]:
@@ -306,8 +325,6 @@ def _normalize_colaborador_kpis(raw: Any, allowed_ids: Optional[set[int]] = None
 
 
 def _build_colaborador_kpi_maps(db) -> Dict[str, List[Dict[str, Any]]]:
-    from fastapi_modulo.main import POAActivity
-
     _ensure_poa_activity_kpi_table(db)
     activities = db.query(POAActivity).order_by(POAActivity.id.asc()).all()
     activity_map = {int(item.id): item for item in activities if getattr(item, "id", None)}
@@ -493,10 +510,7 @@ EMPLEADOS_PLACEHOLDER_TEMPLATE_PATH = os.path.join(
 
 
 def _build_colaboradores_payload(request: Request) -> Dict[str, Any]:
-    # Import diferido para evitar importación circular con fastapi_modulo.main.
-    from fastapi_modulo.main import Usuario, Rol, _decrypt_sensitive, normalize_role_name
-
-    db = SessionLocal()
+    db = _db_session()
     try:
         meta = _load_colab_meta()
         rows = db.query(Usuario).all()
@@ -519,8 +533,8 @@ def _build_colaboradores_payload(request: Request) -> Dict[str, Any]:
                         "id": u.id,
                         "nombre": u.full_name or "",
                         "full_name": u.full_name or "",
-                        "usuario": _safe_sensitive_text(u.usuario, _decrypt_sensitive),
-                        "correo": _safe_sensitive_text(u.correo, _decrypt_sensitive),
+                        "usuario": _safe_sensitive_text(u.usuario, decrypt_sensitive),
+                        "correo": _safe_sensitive_text(u.correo, decrypt_sensitive),
                         "departamento": u.departamento or "",
                         "imagen": u.imagen or "",
                         "jefe_inmediato_id": getattr(u, "jefe_inmediato_id", None),
@@ -602,10 +616,7 @@ def api_listar_colaboradores(request: Request):
 
 @router.get("/api/colaboradores/organigrama", response_class=JSONResponse)
 def api_organigrama_colaboradores(request: Request):
-    # Import diferido para evitar importación circular con fastapi_modulo.main.
-    from fastapi_modulo.main import Usuario, Rol, _decrypt_sensitive, normalize_role_name
-
-    db = SessionLocal()
+    db = _db_session()
     try:
         meta = _load_colab_meta()
         rows = db.query(Usuario).all()
@@ -614,8 +625,8 @@ def api_organigrama_colaboradores(request: Request):
         all_rows: List[Dict[str, Any]] = [
             {
                 "id": u.id,
-                "usuario": (_decrypt_sensitive(u.usuario) or "").strip(),
-                "correo": (_decrypt_sensitive(u.correo) or "").strip(),
+                "usuario": (decrypt_sensitive(u.usuario) or "").strip(),
+                "correo": (decrypt_sensitive(u.correo) or "").strip(),
                 "departamento": u.departamento or "",
                 "imagen": u.imagen or "",
                 "jefe_inmediato_id": getattr(u, "jefe_inmediato_id", None),
@@ -678,16 +689,6 @@ def api_organigrama_colaboradores(request: Request):
 
 @router.post("/api/colaboradores", response_class=JSONResponse)
 def api_guardar_colaborador(request: Request, data: dict = Body(...)):
-    # Import diferido para evitar importación circular con fastapi_modulo.main.
-    from fastapi_modulo.main import (
-        Usuario,
-        Rol,
-        _decrypt_sensitive,
-        _encrypt_sensitive,
-        _sensitive_lookup_hash,
-        hash_password,
-        normalize_role_name,
-    )
     viewer_role = normalize_role_name((getattr(request.state, "user_role", None) or "").strip().lower())
     viewer_username = (getattr(request.state, "user_name", None) or "").strip().lower()
     can_admin_manage = _is_admin_role(viewer_role)
@@ -856,10 +857,9 @@ def api_guardar_colaborador(request: Request, data: dict = Body(...)):
             status_code=400,
         )
 
-    db = SessionLocal()
+    db = _db_session()
     try:
         from sqlalchemy import func
-        from fastapi_modulo.main import Usuario, ensure_default_roles
         ensure_default_roles()
         target_role = db.query(Rol).filter(Rol.nombre == requested_role).first()
         if not target_role:
@@ -896,14 +896,14 @@ def api_guardar_colaborador(request: Request, data: dict = Body(...)):
         if incoming_id:
             existing = db.query(Usuario).filter(Usuario.id == incoming_id).first()
             if existing and not usuario_login:
-                usuario_login = str(_decrypt_sensitive(existing.usuario) or "").strip()
+                usuario_login = str(decrypt_sensitive(existing.usuario) or "").strip()
             if existing and not correo:
-                correo = str(_decrypt_sensitive(existing.correo) or "").strip()
+                correo = str(decrypt_sensitive(existing.correo) or "").strip()
         is_self_service_update = bool(
             existing
             and not can_admin_manage
             and viewer_username
-            and str(_decrypt_sensitive(existing.usuario) or "").strip().lower() == viewer_username
+            and str(decrypt_sensitive(existing.usuario) or "").strip().lower() == viewer_username
         )
         if not can_admin_manage and incoming_id is None:
             return JSONResponse(
@@ -917,8 +917,8 @@ def api_guardar_colaborador(request: Request, data: dict = Body(...)):
             )
         if is_self_service_update and existing:
             full_name = str(existing.full_name or "").strip()
-            usuario_login = str(_decrypt_sensitive(existing.usuario) or "").strip()
-            correo = str(_decrypt_sensitive(existing.correo) or "").strip()
+            usuario_login = str(decrypt_sensitive(existing.usuario) or "").strip()
+            correo = str(decrypt_sensitive(existing.correo) or "").strip()
             departamento = str(existing.departamento or "").strip()
             puesto = str(existing.puesto or "").strip()
             jefe_inmediato_id = getattr(existing, "jefe_inmediato_id", None)
@@ -932,8 +932,8 @@ def api_guardar_colaborador(request: Request, data: dict = Body(...)):
                 {"success": False, "error": "Nombre y usuario son obligatorios"},
                 status_code=400,
             )
-        user_hash = _sensitive_lookup_hash(usuario_login)
-        email_hash = _sensitive_lookup_hash(correo) if correo else None
+        user_hash = sensitive_lookup_hash(usuario_login)
+        email_hash = sensitive_lookup_hash(correo) if correo else None
         puestos_catalog = _load_puestos_laborales_catalog()
         if puesto and puestos_catalog:
             puestos_map = {str(name).strip().lower(): str(name).strip() for name in puestos_catalog if str(name).strip()}
@@ -951,7 +951,7 @@ def api_guardar_colaborador(request: Request, data: dict = Body(...)):
             candidate = db.query(Usuario).filter(Usuario.id == incoming_id).first()
             if candidate:
                 resolved_nombre = str(candidate.full_name or full_name).strip() or full_name
-                resolved_usuario = str(_decrypt_sensitive(candidate.usuario) or usuario_login).strip() or usuario_login
+                resolved_usuario = str(decrypt_sensitive(candidate.usuario) or usuario_login).strip() or usuario_login
         allowed_aliases = {resolved_nombre.lower(), resolved_usuario.lower()}
         allowed_aliases.discard("")
         allowed_kpi_rows: List[Dict[str, Any]] = []
@@ -985,9 +985,9 @@ def api_guardar_colaborador(request: Request, data: dict = Body(...)):
             if not has_totp_flag:
                 totp_enabled = bool(getattr(existing, "totp_enabled", False))
             existing.full_name = full_name
-            existing.usuario = _encrypt_sensitive(usuario_login)
+            existing.usuario = encrypt_sensitive(usuario_login)
             existing.usuario_hash = user_hash
-            existing.correo = _encrypt_sensitive(correo) if correo else None
+            existing.correo = encrypt_sensitive(correo) if correo else None
             existing.correo_hash = email_hash
             existing.departamento = departamento
             existing.puesto = puesto
@@ -1052,8 +1052,8 @@ def api_guardar_colaborador(request: Request, data: dict = Body(...)):
                     "id": existing.id,
                     "nombre": existing.full_name or "",
                     "full_name": existing.full_name or "",
-                    "usuario": _decrypt_sensitive(existing.usuario) or "",
-                    "correo": _decrypt_sensitive(existing.correo) or "",
+                    "usuario": decrypt_sensitive(existing.usuario) or "",
+                    "correo": decrypt_sensitive(existing.correo) or "",
                     "departamento": existing.departamento or "",
                     "puesto": existing.puesto or "",
                     "jefe_inmediato_id": existing.jefe_inmediato_id,
@@ -1093,9 +1093,9 @@ def api_guardar_colaborador(request: Request, data: dict = Body(...)):
 
         nuevo = Usuario(
             full_name=full_name,
-            usuario=_encrypt_sensitive(usuario_login),
+            usuario=encrypt_sensitive(usuario_login),
             usuario_hash=user_hash,
-            correo=_encrypt_sensitive(correo) if correo else None,
+            correo=encrypt_sensitive(correo) if correo else None,
             correo_hash=email_hash,
             contrasena=hash_password(password),
             departamento=departamento,
@@ -1149,8 +1149,8 @@ def api_guardar_colaborador(request: Request, data: dict = Body(...)):
                 "id": nuevo.id,
                 "nombre": nuevo.full_name or "",
                 "full_name": nuevo.full_name or "",
-                "usuario": _decrypt_sensitive(nuevo.usuario) or "",
-                "correo": _decrypt_sensitive(nuevo.correo) or "",
+                "usuario": decrypt_sensitive(nuevo.usuario) or "",
+                "correo": decrypt_sensitive(nuevo.correo) or "",
                 "departamento": nuevo.departamento or "",
                 "puesto": nuevo.puesto or "",
                 "jefe_inmediato_id": nuevo.jefe_inmediato_id,
@@ -1211,16 +1211,8 @@ def api_guardar_colaborador(request: Request, data: dict = Body(...)):
 
 @router.delete("/api/colaboradores/{colaborador_id}", response_class=JSONResponse)
 def api_eliminar_colaborador(request: Request, colaborador_id: int):
-    from fastapi_modulo.main import (
-        Usuario,
-        Rol,
-        normalize_role_name,
-        require_admin_or_superadmin,
-        is_superadmin,
-    )
-
     require_admin_or_superadmin(request)
-    db = SessionLocal()
+    db = _db_session()
     try:
         user = db.query(Usuario).filter(Usuario.id == colaborador_id).first()
         if not user:
@@ -1250,8 +1242,7 @@ def api_eliminar_colaborador(request: Request, colaborador_id: int):
 
 @router.post("/api/colaboradores/foto", response_class=JSONResponse)
 async def api_subir_foto_colaborador(request: Request, file: UploadFile = File(...)):
-    from fastapi_modulo.main import normalize_role_name
-    from fastapi_modulo.image_utils import generate_thumbnails, image_info
+    from fastapi_modulo.core.image_utils import generate_thumbnails, image_info
 
     allowed_roles = {"superadministrador", "administrador", "usuario"}
     viewer_role = normalize_role_name((getattr(request.state, "user_role", None) or "").strip().lower())
@@ -1334,8 +1325,6 @@ def _render_empleados_placeholder(
     description: str,
     message: str = "Sin acceso",
 ) -> HTMLResponse:
-    from fastapi_modulo.main import render_backend_page
-
     try:
         with open(EMPLEADOS_PLACEHOLDER_TEMPLATE_PATH, "r", encoding="utf-8") as fh:
             content = fh.read()
@@ -1360,8 +1349,6 @@ def _render_empleados_page(
     title: str = "Usuarios",
     description: str = "Gestiona usuarios, roles y permisos desde la misma pantalla",
 ) -> HTMLResponse:
-    from fastapi_modulo.main import render_backend_page, normalize_role_name
-
     viewer_username = (getattr(request.state, "user_name", None) or "").strip()
     viewer_role = normalize_role_name((getattr(request.state, "user_role", None) or "").strip().lower())
     frontend_context = {
@@ -1390,8 +1377,6 @@ def _render_empleados_page(
 
 
 def _render_empresa_usuarios_page(request: Request) -> HTMLResponse:
-    from fastapi_modulo.main import render_backend_page, normalize_role_name
-
     viewer_role = normalize_role_name((getattr(request.state, "user_role", None) or "").strip().lower())
     if not _is_admin_role(viewer_role):
         return render_backend_page(
@@ -1451,8 +1436,6 @@ def _render_empresa_usuarios_notebook(active_tab: str) -> str:
 
 
 def _render_empresa_usuarios_roles_page(request: Request) -> HTMLResponse:
-    from fastapi_modulo.main import render_backend_page, normalize_role_name
-
     viewer_role = normalize_role_name((getattr(request.state, "user_role", None) or "").strip().lower())
     if not _is_admin_role(viewer_role):
         return _render_empleados_placeholder(
@@ -1732,8 +1715,6 @@ async def habilidades_catalog_save(request: Request):
 
 @router.get("/inicio/colaboradores/habilidades", response_class=HTMLResponse)
 def colaboradores_habilidades_page(request: Request):
-    from fastapi_modulo.main import render_backend_page
-
     content = """
 <div class="grid gap-4 max-w-5xl">
     <div class="titulo bg-MAIN-200 rounded-box border border-MAIN-300 p-4 sm:p-6">

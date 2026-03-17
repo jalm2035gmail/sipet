@@ -11,6 +11,7 @@ from zipfile import ZIP_DEFLATED, ZipFile
 from fastapi import APIRouter, Body, Request
 from fastapi.responses import FileResponse, JSONResponse
 from sqlalchemy import text
+from fastapi_modulo.modulos_sipet.modulo_base.runtime_app import SessionLocal, _normalize_tenant_id, get_current_tenant
 
 
 router = APIRouter()
@@ -21,22 +22,13 @@ ARCHIVE_ROOT = RUNTIME_ROOT / "archives"
 STORAGE_ROOT = RUNTIME_ROOT / "storage"
 MODULE_KEY = "poa_presupuesto"
 
-LEGACY_PRESUPUESTO_TXT_PATH = PROJECT_ROOT / "presupuesto.txt"
+LEGACY_PRESUPUESTO_TXT_PATH = PROJECT_ROOT / "docs" / "analisis" / "presupuesto.txt"
 LEGACY_CONTROL_MENSUAL_STORE_PATH = (
     PROJECT_ROOT / "fastapi_modulo" / "modulos" / "proyectando" / "control_mensual_store.json"
 )
 LEGACY_CONTROL_MENSUAL_ALT_PATH = (
     PROJECT_ROOT / "fastapi_modulo" / "modulos" / "presupuesto" / "control_mensual_store.json"
 )
-
-
-def _bind_core_symbols() -> None:
-    from fastapi_modulo import main as core
-
-    globals()["SessionLocal"] = getattr(core, "SessionLocal")
-    globals()["_normalize_tenant_id"] = getattr(core, "_normalize_tenant_id")
-    globals()["get_current_tenant"] = getattr(core, "get_current_tenant")
-
 
 def _sanitize_tenant_slug(tenant_id: str) -> str:
     raw = str(tenant_id or "default").strip().lower()

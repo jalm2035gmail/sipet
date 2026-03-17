@@ -3,10 +3,11 @@ from __future__ import annotations
 from pathlib import Path
 import re
 
+from fastapi_modulo.modulos_sipet.web.controladores.backend_shell import render_backend_page
+
 _MODULE_DIR = Path(__file__).resolve().parents[1]
 _VISTAS_DIR = _MODULE_DIR / "vistas"
 _STATIC_DIR = _MODULE_DIR / "static"
-_CORE_BOUND = False
 
 
 def module_dir() -> Path:
@@ -43,17 +44,7 @@ def _render_template_file(path: Path) -> str:
     return pattern.sub(replace, content)
 
 
-def bind_core_symbols() -> None:
-    global _CORE_BOUND
-    if _CORE_BOUND:
-        return
-    from fastapi_modulo import main as core
-    globals()["render_backend_page"] = getattr(core, "render_backend_page")
-    _CORE_BOUND = True
-
-
 def render_module_page(request, *, title: str, description: str, template_name: str):
-    bind_core_symbols()
     return render_backend_page(
         request,
         title=title,
@@ -65,7 +56,6 @@ def render_module_page(request, *, title: str, description: str, template_name: 
 
 
 __all__ = [
-    "bind_core_symbols",
     "load_template",
     "main_template_path",
     "module_dir",

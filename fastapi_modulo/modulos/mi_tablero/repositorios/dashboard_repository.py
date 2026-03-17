@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+from fastapi_modulo.core.module_registry import list_modules_payload
+
 
 def list_available_modules() -> list[dict]:
-    from fastapi_modulo import main as core
-
-    return list(core.list_modules_payload())
+    return list(list_modules_payload())

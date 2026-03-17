@@ -2,6 +2,7 @@ from pathlib import Path
 
 from fastapi import APIRouter, Body, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi_modulo.modulos_sipet.web.servicios.ui_shell_service import get_colores_context
 from fastapi_modulo.modulos.proyectando.modelos.data_store import (
     load_crecimiento_general_activo_total_editor,
     load_crecimiento_general_resumen,
@@ -16,7 +17,6 @@ CRECIMIENTO_GENERAL_JS_PATH = MODULE_DIR / "static" / "js" / "crecimiento_genera
 
 
 def _get_colores_context() -> dict:
-    from fastapi_modulo.main import get_colores_context
     return get_colores_context()
 
 

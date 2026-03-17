@@ -1,0 +1,115 @@
+{% macro stat_card(label, value, element_id="", icon="fa-solid fa-chart-line", tone="primary") -%}
+<article class="card modulo-base-card shadow-sm">
+  <div class="card-body">
+    <div class="modulo-base-card-head">
+      <span class="badge badge-outline modulo-base-badge">{{ label }}</span>
+      <i class="{{ icon }} text-{{ tone }}"></i>
+    </div>
+    <strong class="modulo-base-stat"{% if element_id %} id="{{ element_id }}"{% endif %}>{{ value }}</strong>
+  </div>
+</article>
+{%- endmacro %}
+
+{% macro section_card(anchor, title, description, icon="fa-regular fa-layer-group") -%}
+<article class="card modulo-base-card shadow-sm" id="{{ anchor }}">
+  <div class="card-body">
+    <div class="modulo-base-section-head">
+      <h2><i class="{{ icon }}"></i> {{ title }}</h2>
+    </div>
+    <p class="modulo-base-muted">{{ description }}</p>
+  </div>
+</article>
+{%- endmacro %}
+
+{% macro action_button(label, icon, tone="primary", button_id="", kind="button") -%}
+<button class="btn btn-{{ tone }} modulo-base-btn"{% if button_id %} id="{{ button_id }}"{% endif %} type="{{ kind }}">
+  <i class="{{ icon }}"></i>
+  <span>{{ label }}</span>
+</button>
+{%- endmacro %}
+
+{% macro base_table() -%}
+<div class="card modulo-base-card shadow-sm">
+  <div class="card-body">
+    <div class="modulo-base-section-head">
+      <h2><i class="fa-solid fa-table"></i> Tabla base</h2>
+      <span class="badge badge-outline modulo-base-badge">DaisyUI + utilidades</span>
+    </div>
+    <div class="table-responsive">
+      <table class="table modulo-base-table">
+        <thead>
+          <tr>
+            <th>Modulo</th>
+            <th>Contrato</th>
+            <th>Estado</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Base</td>
+            <td>Layout, servicios, componentes</td>
+            <td><span class="badge badge-success">Activo</span></td>
+          </tr>
+          <tr>
+            <td>API</td>
+            <td>Responses, errors, Depends</td>
+            <td><span class="badge badge-info">Listo</span></td>
+          </tr>
+          <tr>
+            <td>Infra</td>
+            <td>Redis, Celery, media, HTTP</td>
+            <td><span class="badge badge-warning">Extensible</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{%- endmacro %}
+
+{% macro base_form() -%}
+<div class="card modulo-base-card shadow-sm">
+  <div class="card-body">
+    <div class="modulo-base-section-head">
+      <h2><i class="fa-solid fa-pen-ruler"></i> Formulario base</h2>
+      <span class="badge badge-outline modulo-base-badge">Inputs y acciones</span>
+    </div>
+    <form class="modulo-base-form">
+      <label class="form-control">
+        <span class="label-text">Nombre del módulo</span>
+        <input class="input input-bordered" type="text" value="Modulo base" readonly>
+      </label>
+      <label class="form-control">
+        <span class="label-text">Tipo de interfaz</span>
+        <select class="select select-bordered">
+          <option selected>Backend estándar</option>
+          <option>Editor visual</option>
+          <option>Dashboard analítico</option>
+        </select>
+      </label>
+      <label class="form-control">
+        <span class="label-text">Descripción</span>
+        <textarea class="textarea textarea-bordered" rows="3">Todos los módulos comparten apariencia, semántica visual y UX base.</textarea>
+      </label>
+      <div class="modulo-base-actions">
+        {{ action_button("Guardar", "fa-solid fa-floppy-disk") }}
+        {{ action_button("Abrir modal", "fa-regular fa-window-maximize", "secondary", "modulo-base-open-modal") }}
+      </div>
+    </form>
+  </div>
+</div>
+{%- endmacro %}
+
+{% macro base_modal() -%}
+<dialog class="modal" id="modulo-base-modal">
+  <div class="modal-box modulo-base-modal-box">
+    <h3 class="font-bold text-lg"><i class="fa-solid fa-wand-magic-sparkles"></i> Modal base</h3>
+    <p class="py-4">Usa este patrón para confirmaciones, acciones sensibles y flujos guiados.</p>
+    <div class="modal-action">
+      <form method="dialog">
+        <button class="btn btn-ghost">Cerrar</button>
+      </form>
+    </div>
+  </div>
+</dialog>
+{%- endmacro %}

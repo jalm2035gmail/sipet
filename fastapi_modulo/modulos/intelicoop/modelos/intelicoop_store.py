@@ -6,7 +6,8 @@ from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from fastapi_modulo.db import MAIN, SessionLocal, engine
+from fastapi_modulo.core import db as core_db
+from fastapi_modulo.core.db import MAIN
 from fastapi_modulo.modulos.intelicoop.modelos.intelicoop_db_models import (
     IntelicoopCampania,
     IntelicoopContactoCampania,
@@ -22,6 +23,7 @@ from fastapi_modulo.modulos.intelicoop.modelos.intelicoop_db_models import (
 
 
 def ensure_intelicoop_schema() -> None:
+    engine = core_db.get_engine_for_host(core_db.get_request_host())
     MAIN.metadata.create_all(
         bind=engine,
         tables=[
@@ -41,7 +43,8 @@ def ensure_intelicoop_schema() -> None:
 
 
 def _db() -> Session:
-    return SessionLocal()
+    session_factory = core_db.get_session_factory_for_host(core_db.get_request_host())
+    return session_factory()
 
 
 ensure_intelicoop_schema()

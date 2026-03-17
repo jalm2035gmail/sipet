@@ -10,7 +10,7 @@ MANIFEST = {
     "author": "SIPET",
     "sequence": "",
     "website": "https://avancoop.org",
-    "depends": ["main", "web"],
+    "depends": ["web"],
     "data": [
         "vistas/auditoria.html",
         "vistas/auditoria_menus.html",

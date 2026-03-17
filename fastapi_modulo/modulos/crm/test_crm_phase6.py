@@ -49,7 +49,7 @@ sys.modules["fastapi_modulo.main"] = fake_main
 
 # ── Imports del módulo bajo prueba ────────────────────────────────────────────
 
-from fastapi_modulo.db import MAIN, engine  # noqa: E402
+from fastapi_modulo.core.db import MAIN, engine  # noqa: E402
 from fastapi_modulo.modulos.crm.controladores.crm import router  # noqa: E402
 from fastapi_modulo.modulos.crm.modelos.crm_db_models import (  # noqa: E402
     CrmActividad,

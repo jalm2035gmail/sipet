@@ -1,0 +1,20 @@
+MANIFEST = {'name': 'identidad_institucional',
+ 'label': 'Empresa',
+ 'summary': 'Configuración institucional y estructura MAIN.',
+ 'description': 'Configuración institucional y estructura MAIN.',
+ 'version': '1.0.0',
+ 'category': 'Operaciones',
+ 'author': 'SIPET',
+ 'sequence': '',
+ 'website': 'https://avancoop.org',
+ 'route': '/identidad-institucional',
+ 'icon': 'fa-solid fa-building',
+ 'depends': ['web'],
+ 'data': [],
+ 'assets': {'css': [], 'js': [], 'description': ['static/description/identidad.svg'], 'img': []},
+ 'structure': {'router': ['controladores/__init__.py', 'controladores/identidad_institucional.py']},
+ 'installable': True,
+ 'application': True,
+ 'auto_install': False}
+
+__all__ = ["MANIFEST"]

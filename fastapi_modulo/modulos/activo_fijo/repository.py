@@ -4,7 +4,8 @@ from typing import Any, Dict, List, Optional
 
 from sqlalchemy import func
 
-from fastapi_modulo.db import MAIN, SessionLocal, engine
+from fastapi_modulo.core import db as core_db
+from fastapi_modulo.core.db import MAIN
 from fastapi_modulo.modulos.activo_fijo.enums import EstadoActivo
 from fastapi_modulo.modulos.activo_fijo.models import (
     AfActivo,
@@ -23,12 +24,18 @@ AF_TABLES = [
 ]
 
 
-def ensure_schema() -> None:
-    MAIN.metadata.create_all(bind=engine, tables=AF_TABLES, checkfirst=True)
+def _active_host(host: Optional[str] = None) -> str:
+    return (host or core_db.get_request_host() or "").strip()
 
 
-def get_db():
-    return SessionLocal()
+def ensure_schema(host: Optional[str] = None) -> None:
+    bind = core_db.get_engine_for_host(_active_host(host))
+    MAIN.metadata.create_all(bind=bind, tables=AF_TABLES, checkfirst=True)
+
+
+def get_db(host: Optional[str] = None):
+    ensure_schema(host=host)
+    return core_db.get_session_factory_for_host(_active_host(host))()
 
 def list_activos(db, estado: Optional[str] = None, categoria: Optional[str] = None) -> List[AfActivo]:
     query = db.query(AfActivo)

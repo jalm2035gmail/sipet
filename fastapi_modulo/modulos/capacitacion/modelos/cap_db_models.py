@@ -9,7 +9,8 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import relationship
 
-from fastapi_modulo.db import MAIN, engine
+from fastapi_modulo.core.db import MAIN
+from fastapi_modulo.modulos.capacitacion.repositorios.common import get_engine
 from fastapi_modulo.modulos.capacitacion.modelos.enums import (
     EstadoCurso,
     EstadoInscripcion,
@@ -494,7 +495,8 @@ class CapEventoEntidad(MAIN):
     )
 
 
-def ensure_capacitacion_tenant_schema() -> None:
+def ensure_capacitacion_tenant_schema(host: str | None = None) -> None:
+    engine = get_engine(host)
     MAIN.metadata.create_all(bind=engine, checkfirst=True)
     statements = [
         "ALTER TABLE cap_categoria ADD COLUMN tenant_id VARCHAR(100) NOT NULL DEFAULT 'default'",

@@ -8,6 +8,7 @@ from datetime import datetime
 from fastapi import APIRouter, Request, UploadFile, File, Form
 from fastapi.responses import HTMLResponse, JSONResponse
 
+from fastapi_modulo.core import db as core_db
 from fastapi_modulo.modulos.frontend.modelos.frontend_store import (
     delete_page as store_delete_page,
     get_page as store_get_page,
@@ -18,6 +19,13 @@ from fastapi_modulo.modulos.frontend.modelos.frontend_store import (
     restore_version as store_restore_version,
     upsert_page as store_upsert_page,
 )
+from fastapi_modulo.modulos_sipet.web.repositorios.core_repository import find_user_by_login
+from fastapi_modulo.modulos_sipet.web.servicios.access_service import normalize_role_name, sensitive_lookup_hash
+from fastapi_modulo.modulos_sipet.web.servicios.login_identity_service import _load_login_identity
+from fastapi_modulo.modulos_sipet.web.servicios.session_service import AUTH_COOKIE_NAME, read_session_cookie
+from fastapi_modulo.modulos_sipet.web.servicios.template_context_service import get_login_identity_context
+from fastapi_modulo.modulos_sipet.web.servicios.template_service import get_templates
+from fastapi_modulo.modulos_sipet.web.servicios.ui_shell_service import get_colores_context
 
 router = APIRouter()
 
@@ -41,33 +49,11 @@ _RESERVED_backend_SLUGS = {
 
 # Simple in-memory page render cache: {slug: rendered_html}
 _page_cache: dict = {}
-_CORE_BOUND = False
 
 
 def clear_all_page_cache() -> None:
     """Flush the full page render cache (e.g. after brand color changes)."""
     _page_cache.clear()
-
-
-def _bind_core_symbols() -> None:
-    global _CORE_BOUND
-    if _CORE_BOUND:
-        return
-    from fastapi_modulo import main as core
-
-    names = [
-        "AUTH_COOKIE_NAME",
-        "Colores",
-        "SessionLocal",
-        "_get_login_identity_context",
-        "_get_user_backend_roles",
-        "_read_session_cookie",
-        "normalize_role_name",
-        "templates",
-    ]
-    for name in names:
-        globals()[name] = getattr(core, name)
-    _CORE_BOUND = True
 
 _TASAS_DEFAULT = [
     {"id": "ahorro_vista",  "label": "Ahorro a la vista",   "rate": "3.50",  "color": "#3b82f6", "unit": "% anual"},
@@ -81,6 +67,40 @@ _TASAS_DEFAULT = [
 
 def _load_pages() -> list:
     return store_list_pages()
+
+
+def _get_user_backend_roles(request: Request, username: str) -> list[str]:
+    normalized_username = str(username or "").strip().lower()
+    if not normalized_username:
+        return []
+    db = core_db.get_session_factory_for_host(core_db.get_request_host())()
+    try:
+        user = find_user_by_login(
+            db,
+            login_value=normalized_username,
+            login_hash=sensitive_lookup_hash(normalized_username),
+        )
+    finally:
+        db.close()
+    if not user:
+        return []
+    app_env = (os.environ.get("APP_ENV") or os.environ.get("ENVIRONMENT") or "development").strip().lower()
+    sipet_data_dir = (os.environ.get("SIPET_DATA_DIR") or os.path.expanduser("~/.sipet/data")).strip()
+    runtime_dir = (os.environ.get("RUNTIME_STORE_DIR") or os.path.join(sipet_data_dir, "runtime_store", app_env)).strip()
+    meta_path = os.environ.get("COLAB_META_PATH") or os.path.join(runtime_dir, "colaboradores_meta.json")
+    try:
+        raw = json.loads(open(meta_path, encoding="utf-8").read())
+    except Exception:
+        return []
+    if not isinstance(raw, dict):
+        return []
+    entry = raw.get(str(getattr(user, "id", "") or ""), {})
+    if not isinstance(entry, dict):
+        return []
+    values = entry.get("backend_roles", [])
+    if not isinstance(values, list):
+        return []
+    return [str(item).strip() for item in values if str(item).strip()]
 
 
 def _is_public_frontend_page_path(path: str) -> bool:
@@ -111,9 +131,8 @@ def frontend_builder(request: Request):
 
 @router.get("/api/backend/me")
 def api_backend_me(request: Request):
-    _bind_core_symbols()
     session_token = request.cookies.get(AUTH_COOKIE_NAME, "")
-    session_data = _read_session_cookie(session_token) if session_token else None
+    session_data = read_session_cookie(session_token) if session_token else None
     if not session_data:
         return {"authenticated": False, "is_superadmin": False, "backend_roles": [], "role": "", "username": ""}
     role = normalize_role_name(session_data.get("role") or "")
@@ -122,17 +141,15 @@ def api_backend_me(request: Request):
     if not superadmin:
         request.state.user_name = username
         request.state.user_role = role
-        backend_roles = _get_user_backend_roles(request)
+        backend_roles = _get_user_backend_roles(request, username)
     else:
         backend_roles = ["editor", "designer"]
     can_use_bar = superadmin or bool(backend_roles)
     bar_color = "#0f172a"
     try:
-        _cdb = SessionLocal()
-        _col = _cdb.query(Colores).filter(Colores.key == "sidebar-bottom").first()
-        if _col and _col.value:
-            bar_color = _col.value.strip()
-        _cdb.close()
+        colors = get_colores_context()
+        if colors.get("sidebar-bottom"):
+            bar_color = str(colors["sidebar-bottom"]).strip()
     except Exception:
         pass
     return {
@@ -148,9 +165,8 @@ def api_backend_me(request: Request):
 
 @router.get("/backend", response_class=HTMLResponse)
 def backend(request: Request):
-    _bind_core_symbols()
-    login_identity = _get_login_identity_context()
-    return templates.TemplateResponse(
+    login_identity = get_login_identity_context(request)
+    return get_templates(request).TemplateResponse(
         "frontend/web_blank.html",
         {
             "request": request,
@@ -165,9 +181,8 @@ def backend(request: Request):
 
 @router.get("/backend/descripcion", response_class=HTMLResponse)
 def backend_descripcion(request: Request):
-    _bind_core_symbols()
-    login_identity = _get_login_identity_context()
-    return templates.TemplateResponse(
+    login_identity = get_login_identity_context(request)
+    return get_templates(request).TemplateResponse(
         "frontend/web.html",
         {
             "request": request,
@@ -181,9 +196,8 @@ def backend_descripcion(request: Request):
 
 @router.get("/backend/funcionalidades", response_class=HTMLResponse)
 def backend_funcionalidades(request: Request):
-    _bind_core_symbols()
-    login_identity = _get_login_identity_context()
-    return templates.TemplateResponse(
+    login_identity = get_login_identity_context(request)
+    return get_templates(request).TemplateResponse(
         "frontend/modulo_funcionalidades.html",
         {
             "request": request,
@@ -332,11 +346,9 @@ def api_version_restore(page_id: str, version_idx: int):
 def api_list_forms():
     """List active form definitions so the builder can populate the sipet-form trait select."""
     try:
-        import fastapi_modulo.main as _core  # lazy import to avoid circular deps
         from fastapi_modulo.modulos.plantillas.modelos.plantillas_db_models import FormDefinition
 
-        db_gen = _core.get_db()
-        db = next(db_gen)
+        db = core_db.get_session_factory_for_host(core_db.get_request_host())()
         try:
             forms = (
                 db.query(FormDefinition)
@@ -349,10 +361,7 @@ def api_list_forms():
                 "data": [{"id": f.id, "name": f.name, "slug": f.slug} for f in forms],
             }
         finally:
-            try:
-                next(db_gen)
-            except StopIteration:
-                pass
+            db.close()
     except Exception as exc:
         return JSONResponse({"success": False, "data": [], "error": str(exc)}, status_code=500)
 
@@ -455,7 +464,6 @@ _FORM_WIDGET_SCRIPT = """
 def _brand_css_vars() -> str:
     """Return a <style>:root{...}</style> block with brand color CSS variables."""
     try:
-        from fastapi_modulo.main import get_colores_context
         data = get_colores_context()
         if not data:
             return ""
@@ -467,8 +475,7 @@ def _brand_css_vars() -> str:
 
 def _frontend_menu_position() -> str:
     try:
-        import fastapi_modulo.main as _core
-        data = _core._load_login_identity()
+        data = _load_login_identity()
         value = str(data.get("menu_position") or "arriba").strip().lower()
         return value if value in {"arriba", "abajo"} else "arriba"
     except Exception:
@@ -781,7 +788,7 @@ def _resolve_identidad_logo_url() -> str:
     Prioridad: 1) logo subido en Identidad institucional, 2) logo en Personalización.
     """
     import glob as _glob
-    _CONFIG = (os.environ.get("IDENTIDAD_LOGIN_CONFIG_PATH") or "fastapi_modulo/identidad_login.json").strip()
+    _CONFIG = (os.environ.get("IDENTIDAD_LOGIN_CONFIG_PATH") or "fastapi_modulo/modulos_sipet/web/identidad_login.json").strip()
     _IMG_DIR = "fastapi_modulo/templates/imagenes"
     _DEFAULT_LOGO = "icon.png"
     # Priority 1: identidad institucional
@@ -851,7 +858,7 @@ async def api_gallery_upload(file: UploadFile = File(...)):
         )
     # Optimizar: redimensionar a máx 1200×1200 y convertir a backendP (excepto SVG)
     try:
-        from fastapi_modulo.image_utils import optimize_image
+        from fastapi_modulo.core.image_utils import optimize_image
         data, ext = optimize_image(data, ext, profile="asset")
     except Exception:
         pass  # Si falla, guarda el original

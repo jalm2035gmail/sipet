@@ -5,7 +5,7 @@ from datetime import datetime
 from sqlalchemy import JSON, Boolean, Column, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 
-from fastapi_modulo.db import MAIN
+from fastapi_modulo.core.db import MAIN
 
 
 class FormDefinition(MAIN):

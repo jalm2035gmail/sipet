@@ -5,16 +5,10 @@ import unicodedata
 from fastapi import APIRouter, Form, HTTPException, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import Column, Integer, String
 
-from fastapi_modulo.db import MAIN, SessionLocal, engine
-
-
-class Rol(MAIN):
-    __tablename__ = "roles"
-    id = Column(Integer, primary_key=True, index=True)
-    nombre = Column(String, unique=True, index=True)
-    descripcion = Column(String)
+from fastapi_modulo.core.db import SessionLocal, engine
+from fastapi_modulo.modulos_sipet.web.modelos.core_models import Rol
+from fastapi_modulo.modulos_sipet.web.servicios.ui_shell_service import get_colores_context
 
 
 DEFAULT_SYSTEM_ROLES = [
@@ -75,7 +69,6 @@ templates = Jinja2Templates(directory=["fastapi_modulo/templates", "fastapi_modu
 
 
 def _get_colores_context() -> dict:
-    from fastapi_modulo.main import get_colores_context
     return get_colores_context()
 
 

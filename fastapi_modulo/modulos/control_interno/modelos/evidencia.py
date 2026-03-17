@@ -4,7 +4,7 @@ from datetime import datetime, date
 from sqlalchemy import BigInteger, Column, Date, DateTime, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.orm import relationship
 
-from fastapi_modulo.db import MAIN
+from fastapi_modulo.core.db import MAIN
 
 
 class Evidencia(MAIN):

@@ -18,7 +18,14 @@ from fastapi.responses import HTMLResponse, Response, JSONResponse, RedirectResp
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
-from fastapi_modulo.login_utils import get_login_identity_context
+from fastapi_modulo.core import db as core_db
+from fastapi_modulo.modulos_sipet.web.servicios.login_utils import get_login_identity_context
+from fastapi_modulo.modulos_sipet.web.controladores.backend_shell import render_backend_page
+from fastapi_modulo.modulos_sipet.web.modelos.core_models import Usuario
+from fastapi_modulo.modulos_sipet.web.servicios.access_service import is_superadmin
+from fastapi_modulo.modulos_sipet.web.servicios.auth_service import decrypt_sensitive
+from fastapi_modulo.modulos_sipet.web.servicios.session_service import normalize_tenant_id
+from fastapi_modulo.modulos_sipet.web.servicios.ui_shell_service import get_colores_context
 from fastapi_modulo.modulos.planificacion.controladores.annual_cycle_service import (
     _ensure_cycle_tables,
     get_active_operational_year,
@@ -31,6 +38,10 @@ router = APIRouter()
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 MODULE_DIR = Path(__file__).resolve().parent
 MODULE_ROOT = MODULE_DIR.parent
+
+
+def _core_session():
+    return core_db.get_session_factory_for_host(core_db.get_request_host())()
 
 
 def _normalize_rubro_key(value: str) -> str:
@@ -94,15 +105,14 @@ def _resolve_tipo(rubro: str) -> str:
 
 
 def _get_colores_context() -> dict:
-    from fastapi_modulo.main import get_colores_context
     return get_colores_context()
 
 
 def _current_budget_context(request: Request | None = None) -> tuple[str, int]:
-    from fastapi_modulo.main import SessionLocal as CoreSessionLocal, _normalize_tenant_id, get_current_tenant
-
-    tenant_id = _normalize_tenant_id(get_current_tenant(request) if request is not None else "default")
-    db = CoreSessionLocal()
+    tenant_id = normalize_tenant_id(
+        getattr(getattr(request, "state", None), "tenant_id", None) if request is not None else "default"
+    )
+    db = _core_session()
     try:
         _ensure_cycle_tables(db)
         year = get_active_operational_year(db, tenant_id)
@@ -306,11 +316,9 @@ def _save_control_mensual_store(payload: dict, tenant_id: str = "default", year:
 
 
 def _load_report_filter_catalog() -> dict:
-    # Import diferido para evitar ciclos de importación con main.py.
-    from fastapi_modulo.main import SessionLocal as CoreSessionLocal, Usuario, _decrypt_sensitive
-    from fastapi_modulo.db import DepartamentoOrganizacional, RegionOrganizacional
+    from fastapi_modulo.core.db import DepartamentoOrganizacional, RegionOrganizacional
 
-    db = CoreSessionLocal()
+    db = _core_session()
     try:
         departamentos = []
         for dep in db.query(DepartamentoOrganizacional).all():
@@ -338,7 +346,7 @@ def _load_report_filter_catalog() -> dict:
         colaboradores = []
         for user in db.query(Usuario).all():
             nombre = str(getattr(user, "nombre", "") or "").strip()
-            username = str(_decrypt_sensitive(getattr(user, "usuario", "")) or "").strip()
+            username = str(decrypt_sensitive(getattr(user, "usuario", "")) or "").strip()
             departamento = str(getattr(user, "departamento", "") or "").strip()
             label = nombre or username
             if not label:
@@ -743,13 +751,6 @@ MESES_NOMBRES = {
 }
 
 
-def _get_core_imports():
-    """Importaciones diferidas para evitar ciclos."""
-    from fastapi_modulo.main import SessionLocal as CoreSessionLocal, is_superadmin, render_backend_page
-    from fastapi_modulo.modulos.planificacion.modelos.plan_estrategico_service import _ensure_strategic_identity_table
-    return CoreSessionLocal, is_superadmin, render_backend_page, _ensure_strategic_identity_table
-
-
 def _upsert_presupuesto_ia_block(db, bloque: str, payload: Any) -> None:
     encoded = json.dumps(payload, ensure_ascii=False) if not isinstance(payload, str) else payload
     db.execute(
@@ -764,9 +765,9 @@ def _upsert_presupuesto_ia_block(db, bloque: str, payload: Any) -> None:
 
 def _build_presupuesto_ia_payload() -> Dict[str, Any]:
     """Consolida datos de presupuesto anual + control mensual para la IA."""
-    _, _, _, _ensure_strategic_identity_table = _get_core_imports()
-    from fastapi_modulo.main import SessionLocal as CoreSessionLocal
-    db = CoreSessionLocal()
+    from fastapi_modulo.modulos.planificacion.modelos.plan_estrategico_service import _ensure_strategic_identity_table
+
+    db = _core_session()
     try:
         _ensure_strategic_identity_table(db)
         db.commit()
@@ -1019,10 +1020,10 @@ def _build_presupuesto_ia_html(payload: Dict[str, Any]) -> str:
 
 def _refresh_weekly_presupuesto_MAIN_ia_if_due(force: bool = False) -> dict:
     """Actualiza el resumen semanal del presupuesto, reemplazando el contenido anterior."""
-    _, _, _, _ensure_strategic_identity_table = _get_core_imports()
-    from fastapi_modulo.main import SessionLocal as CoreSessionLocal
+    from fastapi_modulo.modulos.planificacion.modelos.plan_estrategico_service import _ensure_strategic_identity_table
+
     with _presupuesto_MAIN_ia_cron_lock:
-        db = CoreSessionLocal()
+        db = _core_session()
         try:
             _ensure_strategic_identity_table(db)
             meta_row = db.execute(
@@ -1155,7 +1156,6 @@ def _refresh_weekly_presupuesto_MAIN_ia_if_due(force: bool = False) -> dict:
 
 @router.get("/presupuesto/MAIN-ia", response_class=HTMLResponse)
 def presupuesto_MAIN_ia_page(request: Request):
-    _, is_superadmin, render_backend_page, _ = _get_core_imports()
     if not is_superadmin(request):
         return RedirectResponse(url="/no-acceso", status_code=302)
     try:
@@ -1175,7 +1175,6 @@ def presupuesto_MAIN_ia_page(request: Request):
 
 @router.get("/presupuesto/MAIN-ia/datos", response_class=JSONResponse)
 def presupuesto_MAIN_ia_api(request: Request):
-    _, is_superadmin, _, _ = _get_core_imports()
     if not is_superadmin(request):
         return JSONResponse({"success": False, "error": "Acceso denegado"}, status_code=403)
     try:
@@ -1188,11 +1187,11 @@ def presupuesto_MAIN_ia_api(request: Request):
 
 @router.get("/presupuesto/MAIN-ia/contenido", response_class=JSONResponse)
 def presupuesto_MAIN_ia_contenido_get(request: Request):
-    _, is_superadmin, _, _ensure_strategic_identity_table = _get_core_imports()
-    from fastapi_modulo.main import SessionLocal as CoreSessionLocal
+    from fastapi_modulo.modulos.planificacion.modelos.plan_estrategico_service import _ensure_strategic_identity_table
+
     if not is_superadmin(request):
         return JSONResponse({"success": False, "error": "Acceso denegado"}, status_code=403)
-    db = CoreSessionLocal()
+    db = _core_session()
     try:
         _ensure_strategic_identity_table(db)
         db.commit()
@@ -1212,12 +1211,12 @@ def presupuesto_MAIN_ia_contenido_get(request: Request):
 
 @router.put("/presupuesto/MAIN-ia/contenido", response_class=JSONResponse)
 def presupuesto_MAIN_ia_contenido_put(request: Request, data: dict = Body(...)):
-    _, is_superadmin, _, _ensure_strategic_identity_table = _get_core_imports()
-    from fastapi_modulo.main import SessionLocal as CoreSessionLocal
+    from fastapi_modulo.modulos.planificacion.modelos.plan_estrategico_service import _ensure_strategic_identity_table
+
     if not is_superadmin(request):
         return JSONResponse({"success": False, "error": "Acceso denegado"}, status_code=403)
     texto = str(data.get("texto") or "").strip()
-    db = CoreSessionLocal()
+    db = _core_session()
     try:
         _ensure_strategic_identity_table(db)
         _upsert_presupuesto_ia_block(db, _PRESUPUESTO_MAIN_IA_EXTRA_BLOCK, {"texto": texto})
@@ -1232,7 +1231,6 @@ def presupuesto_MAIN_ia_contenido_put(request: Request, data: dict = Body(...)):
 
 @router.post("/presupuesto/MAIN-ia/refresh", response_class=JSONResponse)
 def presupuesto_MAIN_ia_refresh(request: Request, data: dict = Body(default={})):
-    _, is_superadmin, _, _ = _get_core_imports()
     if not is_superadmin(request):
         return JSONResponse({"success": False, "error": "Acceso denegado"}, status_code=403)
     force = bool((data or {}).get("force", True))

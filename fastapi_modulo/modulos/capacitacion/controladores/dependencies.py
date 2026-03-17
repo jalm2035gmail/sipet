@@ -7,9 +7,13 @@ from typing import Any, Dict, Optional
 
 from fastapi import HTTPException, Request
 from fastapi.responses import HTMLResponse
-from sqlalchemy import func
-
-from fastapi_modulo.db import SessionLocal
+from fastapi_modulo.core import db as core_db
+from fastapi_modulo.modulos_sipet.web.controladores.backend_shell import render_backend_page
+from fastapi_modulo.modulos_sipet.web.repositorios.core_repository import find_user_by_login
+from fastapi_modulo.modulos_sipet.web.servicios.access_service import get_user_app_access, is_admin_or_superadmin as web_is_admin_or_superadmin, sensitive_lookup_hash
+from fastapi_modulo.modulos_sipet.web.servicios.auth_service import decrypt_sensitive, find_user_by_id
+from fastapi_modulo.modulos_sipet.web.servicios.module_tools import require_app_access
+from fastapi_modulo.modulos_sipet.web.servicios.session_service import AUTH_COOKIE_NAME, normalize_tenant_id, read_session_cookie
 
 CAP_ADMIN_ROLES = {"superadministrador", "superadmin", "administrador", "administrador_multiempresa"}
 
@@ -37,7 +41,7 @@ def current_role(request: Request) -> str:
 
 
 def is_admin_or_superadmin(request: Request) -> bool:
-    return current_role(request) in CAP_ADMIN_ROLES
+    return current_role(request) in CAP_ADMIN_ROLES or web_is_admin_or_superadmin(request)
 
 
 def get_current_tenant(request: Request) -> str:
@@ -70,26 +74,14 @@ def find_user_row_by_session_name(session_name: str) -> Optional[Dict[str, Any]]
     value = str(session_name or "").strip().lower()
     if not value:
         return None
+    db = core_db.SessionLocal()
     try:
-        from fastapi_modulo.main import Usuario, _decrypt_sensitive, _sensitive_lookup_hash
-    except Exception:
-        return None
-
-    db = SessionLocal()
-    try:
-        lookup_hash = _sensitive_lookup_hash(value)
-        user = (
-            db.query(Usuario)
-            .filter((Usuario.usuario_hash == lookup_hash) | (Usuario.correo_hash == lookup_hash))
-            .first()
-        )
-        if not user:
-            user = db.query(Usuario).filter(func.lower(Usuario.full_name) == value).first()
+        user = find_user_by_login(db, login_value=value, login_hash=sensitive_lookup_hash(value))
         if not user:
             return None
         return {
             "id": user.id,
-            "username": _decrypt_sensitive(user.usuario) or "",
+            "username": decrypt_sensitive(user.usuario) or "",
             "full_name": user.full_name or "",
             "role": user.role or "",
         }
@@ -108,60 +100,45 @@ def current_session_name(request: Request) -> str:
     ).strip()
     if session_name:
         return session_name
-    try:
-        from fastapi_modulo.main import AUTH_COOKIE_NAME, _read_session_cookie
-
-        session_token = request.cookies.get(AUTH_COOKIE_NAME, "")
-        session_data = _read_session_cookie(session_token) if session_token else None
-        if isinstance(session_data, dict):
-            return str(session_data.get("username") or "").strip()
-    except Exception:
-        pass
+    session_token = request.cookies.get(AUTH_COOKIE_NAME, "")
+    session_data = read_session_cookie(session_token) if session_token else None
+    if isinstance(session_data, dict):
+        return str(session_data.get("username") or "").strip()
     return ""
 
 
 def current_user_key(request: Request) -> str:
+    session_name = current_session_name(request)
+    db = core_db.SessionLocal()
     try:
-        from fastapi_modulo.main import _current_user_record
-    except Exception:
-        fallback = current_session_name(request)
-        if fallback:
-            return fallback
-        raise HTTPException(status_code=401, detail="No autenticado")
-
-    db = SessionLocal()
-    try:
-        user = _current_user_record(request, db)
+        session_data = read_session_cookie(request.cookies.get(AUTH_COOKIE_NAME, ""))
+        user = None
+        user_id = (session_data or {}).get("user_id")
+        if user_id:
+            try:
+                user = find_user_by_id(db, int(user_id))
+            except Exception:
+                user = None
+        if not user and session_name:
+            user = find_user_by_login(db, login_value=session_name, login_hash=sensitive_lookup_hash(session_name))
         if user:
             return str(user.id)
     finally:
         db.close()
 
-    fallback = current_session_name(request)
-    if fallback:
-        return fallback
+    if session_name:
+        return session_name
     raise HTTPException(status_code=401, detail="No autenticado")
 
 
 def user_has_capacitacion_access(request: Request) -> bool:
     if is_admin_or_superadmin(request):
         return True
-    session_name = current_session_name(request)
-    if not session_name:
-        return False
-    row = find_user_row_by_session_name(session_name)
-    if row:
-        meta = load_colab_meta()
-        entry = meta.get(str(row.get("id")), {}) if isinstance(meta, dict) else {}
-        app_access = entry.get("app_access", []) if isinstance(entry, dict) else []
-        return isinstance(app_access, list) and "Capacitacion" in [str(item).strip() for item in app_access]
-    return True
+    return "Capacitacion" in get_user_app_access(request)
 
 
 def require_access(request: Request) -> None:
-    if user_has_capacitacion_access(request):
-        return
-    raise HTTPException(status_code=403, detail="Acceso restringido al módulo Capacitación")
+    require_app_access(request, "Capacitacion", "Acceso restringido al módulo Capacitación")
 
 
 def render_backend_page_safe(
@@ -174,20 +151,15 @@ def render_backend_page_safe(
     show_page_header: bool = False,
     section_label: str = "Capacitación",
 ) -> HTMLResponse:
-    try:
-        from fastapi_modulo.main import render_backend_page
-
-        return render_backend_page(
-            request,
-            title=title,
-            description=description,
-            content=content,
-            hide_floating_actions=hide_floating_actions,
-            show_page_header=show_page_header,
-            section_label=section_label,
-        )
-    except Exception:
-        return HTMLResponse(content=content)
+    return render_backend_page(
+        request,
+        title=title,
+        description=description,
+        content=content,
+        hide_floating_actions=hide_floating_actions,
+        show_page_header=show_page_header,
+        section_label=section_label,
+    )
 
 
 def list_live_course_surveys_safe(curso_id: int, tenant_id: str) -> list[dict[str, Any]]:

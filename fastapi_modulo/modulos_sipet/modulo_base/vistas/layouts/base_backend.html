@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ module_name }}</title>
+  <meta name="description" content="{{ module_description }}">
+  <link rel="preconnect" href="https://cdnjs.cloudflare.com">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <link rel="stylesheet" href="{{ asset_urls.css }}">
+</head>
+<body class="modulo-base-theme">
+  <section class="modulo-base-shell">
+    {% include "partials/navbar.html" %}
+    <div class="modulo-base-layout">
+      {% include "partials/sidebar.html" %}
+      <div class="modulo-base-content">
+        {% block module_content %}{% endblock %}
+      </div>
+    </div>
+  </section>
+  <script type="module" src="{{ asset_urls.js }}"></script>
+</body>
+</html>

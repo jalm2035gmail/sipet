@@ -374,17 +374,17 @@ def _bind_core_symbols() -> None:
     global _CORE_BOUND
     if _CORE_BOUND:
         return
-    from fastapi_modulo import main as core
+    from fastapi_modulo.modulos_sipet.modulo_base.runtime_app import SessionLocal, _normalize_tenant_id, get_current_tenant
 
-    globals()["SessionLocal"] = getattr(core, "SessionLocal")
-    globals()["_normalize_tenant_id"] = getattr(core, "_normalize_tenant_id")
-    globals()["get_current_tenant"] = getattr(core, "get_current_tenant")
+    globals()["SessionLocal"] = SessionLocal
+    globals()["_normalize_tenant_id"] = _normalize_tenant_id
+    globals()["get_current_tenant"] = get_current_tenant
     try:
-        globals()["_ensure_objective_kpi_table"] = getattr(core, "_ensure_objective_kpi_table")
-    except AttributeError:
         from fastapi_modulo.modulos.planificacion.modelos.plan_estrategico_service import _ensure_objective_kpi_table as ensure_objective_kpi_table
 
         globals()["_ensure_objective_kpi_table"] = ensure_objective_kpi_table
+    except Exception:
+        pass
     _CORE_BOUND = True
 
 

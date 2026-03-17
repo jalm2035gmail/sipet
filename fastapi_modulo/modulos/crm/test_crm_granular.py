@@ -42,7 +42,7 @@ fake_main._get_user_app_access = _fake_get_user_app_access
 fake_main.is_admin_or_superadmin = _fake_is_admin_or_superadmin
 sys.modules["fastapi_modulo.main"] = fake_main
 
-from fastapi_modulo.db import MAIN, engine  # noqa: E402
+from fastapi_modulo.core.db import MAIN, engine  # noqa: E402
 from fastapi_modulo.modulos.crm.controladores.crm import router  # noqa: E402
 from fastapi_modulo.modulos.crm.modelos.crm_db_models import (  # noqa: E402
     CrmActividad,

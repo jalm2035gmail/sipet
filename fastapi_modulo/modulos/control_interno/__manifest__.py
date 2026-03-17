@@ -14,7 +14,7 @@ MANIFEST = {
     "website": "https://avancoop.org",
     "route": "/control-seguimiento",
     "icon": "",
-    "depends": [],
+    "depends": ["web"],
     "data": [
         "vistas/control.html",
         "vistas/tablero.html",

@@ -1,0 +1,39 @@
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
+from fastapi_modulo.core.db import MAIN, TenantInstalledApp, ensure_tenant_admin_schema
+import fastapi_modulo.core.module_registry as module_registry
+
+
+def test_manageable_module_requires_tenant_installation(monkeypatch) -> None:
+    engine = create_engine("sqlite:///:memory:")
+    ensure_tenant_admin_schema(engine)
+    Session = sessionmaker(bind=engine, autocommit=False, autoflush=False)
+    session = Session()
+    session.add(
+        TenantInstalledApp(
+            tenant_key="tenant_demo",
+            app_key="crm",
+            app_version="0.0.0",
+            install_status="installed",
+            is_enabled=1,
+        )
+    )
+    session.commit()
+    session.close()
+
+    monkeypatch.setattr(module_registry, "SessionLocal", lambda: Session())
+    monkeypatch.setattr(module_registry, "_read_module_state_map", lambda: {"crm": True, "system_admin": True})
+
+    assert module_registry.is_module_enabled("crm", tenant_key="tenant_demo") is True
+    assert module_registry.is_module_enabled("mkt", tenant_key="tenant_demo") is False
+
+
+def test_always_enabled_module_stays_available_without_install(monkeypatch) -> None:
+    engine = create_engine("sqlite:///:memory:")
+    ensure_tenant_admin_schema(engine)
+    Session = sessionmaker(bind=engine, autocommit=False, autoflush=False)
+    monkeypatch.setattr(module_registry, "SessionLocal", lambda: Session())
+    monkeypatch.setattr(module_registry, "_read_module_state_map", lambda: {"system_admin": True})
+
+    assert module_registry.is_module_enabled("system_admin", tenant_key="tenant_demo") is True

@@ -5,6 +5,8 @@ import json
 from fastapi import APIRouter, Request, Body
 from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse
 from typing import List, Dict, Any
+from fastapi_modulo.modulos_sipet.web.controladores.backend_shell import render_backend_page
+from fastapi_modulo.modulos_sipet.web.servicios.access_service import require_admin_or_superadmin
 from fastapi_modulo.modulos.empleados.modelos.puestos_laborales_store import (
     delete_puesto,
     load_puestos,
@@ -38,14 +40,10 @@ def _enforce_departamentos_write_permission(request: Request) -> None:
     # Temporal: permitir operación abierta del módulo de departamentos.
     if DEPARTAMENTOS_PUBLIC_ACCESS:
         return
-    from fastapi_modulo.main import require_admin_or_superadmin
-
     require_admin_or_superadmin(request)
 
 
 def _render_departamentos_page(request: Request) -> HTMLResponse:
-    from fastapi_modulo.main import render_backend_page
-
     try:
         with open(DEPARTAMENTOS_TEMPLATE_PATH, "r", encoding="utf-8") as fh:
             areas_content = fh.read()
@@ -68,8 +66,6 @@ def _render_empleados_placeholder(
     description: str,
     message: str = "No tiene acceso, comuníquese con el administrador.",
 ) -> HTMLResponse:
-    from fastapi_modulo.main import render_backend_page
-
     try:
         with open(EMPLEADOS_PLACEHOLDER_TEMPLATE_PATH, "r", encoding="utf-8") as fh:
             content = fh.read()
@@ -141,7 +137,6 @@ async def api_puestos_laborales_save(request: Request):
 
 @router.get("/inicio/departamentos/puestos-laborales", response_class=HTMLResponse)
 def puestos_laborales_page(request: Request):
-    from fastapi_modulo.main import render_backend_page
     initial_areas = get_departamentos_catalog()
     try:
         with open(PUESTOS_LABORALES_TEMPLATE_PATH, "r", encoding="utf-8") as fh:

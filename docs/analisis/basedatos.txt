@@ -1,0 +1,889 @@
+basedatos.txt 
+
+avance: 0%
+
+
+Fase 1: Diseño de la Arquitectura (Duración: 3-5 días)
+Actividades concretas:
+
+Definir stack tecnológico específico
+
+Seleccionar framework web: Flask (más flexible) vs Django (más estructurado)
+
+Elegir ORM: SQLAlchemy (independiente) vs ORM del framework
+
+Seleccionar base de datos: PostgreSQL (recomendado por aislamiento)
+
+Decidir sistema de caché: Redis para mapeo tenant-BD
+
+Diseñar esquema de naming de bases de datos
+
+Definir convención: {cliente_id}_{entorno} o dominio_sin_puntos
+
+Crear documento de estándares (ej: solo minúsculas, guiones bajos)
+
+Diseñar estructura de directorios del proyecto
+
+text
+tuapp/
+├── core/              # Núcleo multi-tenant
+├── modules/           # Módulos funcionales
+├── migrations/        # Migraciones centralizadas
+├── scripts/           # Scripts de administración
+└── config/            # Configuración por entorno
+Fase 2: Implementación del Núcleo Multi-Tenant (Duración: 7-10 días)
+Actividades concretas:
+
+Crear gestor de contexto de tenant
+
+Implementar contextvars o thread-local para almacenar tenant actual
+
+Crear función get_current_tenant() y set_current_tenant()
+
+Implementar limpieza de contexto al finalizar request
+
+Desarrollar gestor de conexiones multi-tenant
+
+Crear clase TenantConnectionPool
+
+Implementar función get_connection_for_tenant(tenant_id)
+
+Configurar pool de conexiones por tenant (límites configurables)
+
+Implementar lazy connections (conectar solo cuando se usa)
+
+python
+# Ejemplo concreto a implementar
+class TenantDatabaseManager:
+    def __init__(self):
+        self.engines = {}  # cache de engines por tenant
+        self.tenant_map = {}  # dominio -> tenant_id
+    
+    def get_engine(self, tenant_id):
+        if tenant_id not in self.engines:
+            self.engines[tenant_id] = create_engine(tenant_id)
+        return self.engines[tenant_id]
+Implementar middleware de enrutamiento
+
+Crear middleware TenantMiddleware
+
+Extraer host de la request (request.headers['Host'])
+
+Aplicar lógica de mapeo (exacto, regex, subdominio)
+
+Almacenar tenant en request.tenant o g.tenant
+
+Manejar casos de error (tenant no encontrado)
+
+Crear sistema de mapeo tenant-BD
+
+Opción 1: Archivo de configuración tenants.yml (para inicio)
+
+Opción 2: Tabla en BD central (para producción)
+
+Opción 3: Redis para caché del mapeo
+
+Implementar función resolve_tenant_from_domain(domain)
+
+Fase 3: Capa de Modelos y ORM (Duración: 5-7 días)
+Actividades concretas:
+
+Crear clase base para modelos multi-tenant
+
+Definir TenantBaseModel con método get_db_session()
+
+Implementar with_tenant() context manager para operaciones
+
+Asegurar que todas las queries usen la BD correcta
+
+python
+class BaseModel:
+    __abstract__ = True
+    
+    @classmethod
+    def get_session(cls):
+        tenant = get_current_tenant()
+        return tenant.get_session()
+    
+    @classmethod
+    def query(cls):
+        return cls.get_session().query(cls)
+Configurar migraciones multi-tenant
+
+Configurar Alembic (para SQLAlchemy) o Django migrations
+
+Crear script que ejecute migraciones en TODAS las BDs
+
+Implementar comando migrate --tenant=cliente1
+
+Crear sistema de versionado de esquema por tenant
+
+Implementar modelo de ejemplo
+
+Crear modelo Usuario multi-tenant
+
+Crear modelo Empresa (metadatos del tenant)
+
+Probar consultas básicas con cambio de tenant
+
+Fase 4: Autenticación y Usuarios (Duración: 5-7 días)
+Actividades concretas:
+
+Diseñar sistema de autenticación
+
+Decidir: usuarios por tenant vs usuarios globales
+
+Implementar modelo Usuario dentro de cada BD de tenant
+
+Crear sistema de login que respete el tenant actual
+
+Implementar login multi-tenant
+
+python
+@app.route('/login', methods=['POST'])
+def login():
+    tenant = get_current_tenant()
+    # Buscar usuario SOLO en BD del tenant actual
+    user = tenant.db.query(User).filter_by(email=request.json['email']).first()
+    # Verificar password y crear sesión
+Crear decoradores de autenticación
+
+@requires_auth: verifica usuario logueado
+
+@requires_tenant: verifica que hay tenant activo
+
+@public_route: rutas que no requieren tenant (login público)
+
+Implementar registro de nuevos usuarios por tenant
+
+Registro público en tenant específico
+
+Invitaciones por email
+
+Validación de dominio corporativo (opcional)
+
+Fase 5: Módulos Funcionales (Addons) (Duración: 10-14 días)
+Actividades concretas:
+
+Diseñar arquitectura de módulos
+
+Crear estructura base para módulos
+
+Implementar cargador dinámico de módulos
+
+Definir interfaz común para todos los módulos
+
+text
+modules/
+├── base/              # Módulo obligatorio
+│   ├── models.py
+│   ├── controllers.py
+│   └── templates/
+├── ventas/
+│   ├── models.py
+│   ├── controllers.py
+│   └── views.py
+└── inventario/
+Crear módulo base (core funcional)
+
+Modelos base (Usuario, Permisos, Configuración)
+
+Controladores de dashboard
+
+Plantillas base HTML
+
+Implementar primer módulo de ejemplo (Ventas)
+
+Modelo Producto (multi-tenant)
+
+Modelo Cliente
+
+Modelo Pedido
+
+CRUD básico con rutas
+
+Crear sistema de permisos por módulo
+
+Grupos de usuarios por módulo
+
+Permisos CRUD por modelo
+
+Middleware de verificación de permisos
+
+Fase 6: Scripts de Administración CLI (Duración: 3-4 días)
+Actividades concretas:
+
+Crear comando para crear nuevo tenant
+
+bash
+# Comando a implementar
+python manage.py create-tenant \
+    --domain=cliente2.tuapp.com \
+    --company="Empresa XYZ" \
+    --email=admin@xyz.com
+Validar dominio único
+
+Crear base de datos físicamente
+
+Ejecutar migraciones iniciales
+
+Crear usuario admin
+
+Registrar en tabla de mapeo
+
+Comandos de mantenimiento
+
+list-tenants: lista todos los tenants
+
+migrate --all: migrar todas las BDs
+
+migrate --tenant=X: migrar tenant específico
+
+backup --tenant=X: backup de BD específica
+
+restore --tenant=X --file=backup.sql
+
+Comandos de diagnóstico
+
+check-connections: verifica pools de conexión
+
+tenant-info --domain=X: info detallada del tenant
+
+Fase 7: API REST Multi-Tenant (Duración: 5-7 días)
+Actividades concretas:
+
+Diseñar estructura de endpoints
+
+API pública (no requiere tenant): api.tuapp.com/health
+
+API por tenant: cliente1.tuapp.com/api/v1/productos
+
+Autenticación vía JWT o tokens
+
+Implementar middleware API
+
+Extraer tenant del subdominio o header X-Tenant-ID
+
+Validar API keys por tenant
+
+Rate limiting por tenant
+
+Crear endpoints CRUD para módulos
+
+GET /api/{recurso} - listar
+
+POST /api/{recurso} - crear
+
+PUT /api/{recurso}/{id} - actualizar
+
+DELETE /api/{recurso}/{id} - eliminar
+
+Documentación automática
+
+Integrar Swagger/OpenAPI
+
+Documentar headers de tenant requeridos
+
+Fase 8: Seguridad y Aislamiento (Duración: 4-5 días)
+Actividades concretas:
+
+Auditoría de aislamiento
+
+Verificar que ninguna query cruce entre tenants
+
+Probar inyección de tenant ID en queries
+
+Validar que URLs directas no expongan datos
+
+Implementar pruebas de seguridad
+
+python
+def test_tenant_isolation():
+    # Usuario tenant A intenta acceder datos de tenant B
+    with tenant_context('cliente1'):
+        data = Product.query().all()
+    
+    with tenant_context('cliente2'):
+        # No debería ver datos de cliente1
+        assert Product.query().count() == 0
+Configurar SSL/TLS
+
+Certificados SSL para cada dominio (Let's Encrypt)
+
+Redirección automática HTTP → HTTPS
+
+HSTS headers
+
+Protecciones adicionales
+
+Rate limiting por IP y por tenant
+
+WAF básico (CSRF, XSS, SQL injection)
+
+Logs de seguridad centralizados
+
+Fase 9: Despliegue y DevOps (Duración: 5-7 días)
+Actividades concretas:
+
+Configurar entorno de desarrollo
+
+Docker Compose con app + PostgreSQL + Redis
+
+Scripts de inicialización con tenants de prueba
+
+Hot reload para desarrollo
+
+Configurar entorno de producción
+
+Servidor: Ubuntu 20.04+
+
+Nginx como proxy reverso
+
+Gunicorn/uWSGI para app
+
+PostgreSQL cluster
+
+Redis para caché y sesiones
+
+Configuración de Nginx multi-dominio
+
+nginx
+# Ejemplo a implementar
+server {
+    listen 80;
+    server_name ~^(?<tenant>.+)\.tuapp\.com$;
+    
+    location / {
+        proxy_pass http://localhost:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Tenant $tenant;
+    }
+}
+Automatización con scripts
+
+Script de deploy con zero downtime
+
+Rollback automático en caso de error
+
+Health checks por tenant
+
+Fase 10: Monitoreo y Backup (Duración: 3-4 días)
+Actividades concretas:
+
+Sistema de backups automáticos
+
+Backup diario de cada BD de tenant
+
+Retención: 7 días, 4 semanas, 3 meses
+
+Backups en storage externo (S3, Google Cloud)
+
+Pruebas de restauración mensuales
+
+Monitoreo por tenant
+
+Métricas: QPS, tiempo de respuesta, errores
+
+Uso de recursos por BD (tamaño, conexiones)
+
+Alertas: si un tenant supera límites
+
+Dashboard de administración
+
+Web simple para ver estado de tenants
+
+Gráficos de uso por tenant
+
+Botón para crear nuevo tenant (UI)
+
+Fase 11: Testing y QA (Duración: 5-7 días)
+Actividades concretas:
+
+Pruebas unitarias
+
+Test de middleware tenant
+
+Test de modelos multi-tenant
+
+Test de autenticación por tenant
+
+Pruebas de integración
+
+Flujo completo: login → crear dato → consultar
+
+Cambio entre tenants en misma sesión
+
+API con diferentes tenants
+
+Pruebas de carga
+
+Simular 10, 50, 100 tenants concurrentes
+
+Medir degradación con muchos tenants
+
+Identificar cuellos de botella
+
+Pruebas de aislamiento (crítico)
+
+Intentar acceder a datos de otro tenant
+
+Forzar errores de conexión
+
+Probar recuperación ante fallos
+
+Fase 12: Documentación y Entrega (Duración: 3-4 días)
+Actividades concretas:
+
+Documentación técnica
+
+Arquitectura del sistema (diagramas)
+
+API Reference
+
+Guía de despliegue
+
+Troubleshooting común
+
+Documentación para administradores
+
+Cómo crear nuevo tenant (UI y CLI)
+
+Cómo hacer backups manuales
+
+Cómo monitorear salud del sistema
+
+Documentación para desarrolladores
+
+Cómo crear un nuevo módulo
+
+Convenciones de código
+
+Guía de testing multi-tenant
+
+Entrega final
+
+Repositorio con código completo
+
+Scripts de instalación
+
+Demo funcional con 2-3 tenants de prueba
+
+
+
+
+
+✅ Fase 0: Levantamiento y decisiones de arquitectura.
+Definir si el modelo final será 1 app + N bases de datos como estándar.
+Cerrar decisiones de tenant key: host, subdominio, o dominio + ambiente.
+Definir BD por tenant: SQLite temporal solo para desarrollo o PostgreSQL como destino real de producción.
+Entregable: documento corto de decisiones técnicas y matriz de compatibilidad.
+
+✅ Fase 1: Núcleo de resolución de tenant.
+Objetivo
+Definir el componente central que identifique el tenant a partir de cada solicitud y determine de forma consistente qué base de datos debe usarse.
+
+Descripción
+Esta fase establece el corazón del modelo multi-tenant. La resolución de tenant no debe quedar distribuida en controladores o módulos, sino concentrada en un componente único, equivalente al papel que cumple el núcleo HTTP en Odoo. Este componente debe inspeccionar la solicitud entrante, normalizar el host, identificar el tenant, determinar si la ruta requiere o no base de datos y resolver la conexión correcta antes de que la lógica funcional se ejecute.
+
+Alcance
+Extraer la lógica de resolución de tenant a un componente claro tipo TenantResolver.
+Separar tres pasos: normalizar host, resolver tenant y resolver URL de BD.
+Agregar estrategia dual: convención (cliente1.midominio.com -> cliente1) y tabla central de mapeo.
+Definir comportamiento equivalente a auth='none': rutas sin tenant, rutas tenant-aware y rutas admin globales.
+Definir el contrato de salida del resolvedor: tenant_id, tenant_key, host, db_key, db_url y modo de acceso.
+
+Entregables
+Especificación del componente TenantResolver.
+Definición de reglas de resolución por host.
+Clasificación formal de rutas nodb, tenant-aware y admin global.
+Contrato técnico del contexto mínimo por request.
+
+Criterio de aceptación
+Cualquier request puede clasificarse en sin BD, BD por host o BD administrativa.
+La resolución del tenant ocurre en un solo punto del sistema.
+La salida del resolvedor es estable y reutilizable por middleware, auth y capa de datos.
+
+✅ Fase 2: Capa de conexión multi-BD.
+Objetivo
+Diseñar la capa responsable de administrar conexiones, sesiones y pools por tenant, garantizando aislamiento entre bases de datos y controlando el ciclo de vida de los recursos.
+
+Descripción
+Una vez definido cómo se resuelve el tenant, el siguiente paso es formalizar la capa que entrega la conexión correcta a la base de datos correspondiente. Esta capa debe concentrar toda la lógica de creación, reutilización, descarte y monitoreo de engines y sesiones. No debe existir acceso directo a conexiones globales fuera de este punto. El objetivo es que cada request use únicamente la base de datos del tenant resuelto, sin contaminar el contexto de otros tenants y sin degradar el rendimiento por creación excesiva de conexiones.
+
+Alcance
+Formalizar un componente DatabaseRouter sobre lo que hoy realiza fastapi_modulo/db.py.
+Controlar el ciclo de vida de engine, sessionmaker, pool y dispose.
+Definir política de reutilización de engines por tenant.
+Definir límites: máximo de pools activos, TTL de engines inactivos y estrategia de reconexión.
+Separar manejo de SQLite de desarrollo y PostgreSQL de producción bajo una interfaz común.
+Incluir protección ante rutas inválidas, directorios no accesibles y bases no disponibles.
+Agregar observabilidad mínima: logs con tenant, host, db_url redacted y tiempo de resolución.
+
+Responsabilidades del DatabaseRouter
+Recibir el contexto resuelto por TenantResolver.
+Traducir db_key o db_url en engine utilizable.
+Crear sessionmaker por tenant.
+Reusar engines existentes cuando corresponda.
+Liberar engines inactivos o inválidos.
+Reportar errores de conexión de forma consistente.
+
+Entregables
+Especificación del DatabaseRouter.
+Política de manejo de pools y sesiones.
+Contrato único para obtener sesión por tenant.
+Definición de estrategia de fallback y manejo de errores de conexión.
+Lineamientos de observabilidad para conexiones multi-BD.
+
+Criterio de aceptación
+Dos tenants concurrentes usan sesiones separadas sin fuga de contexto.
+No existe dependencia funcional de una sesión global única.
+La capa de conexión puede operar con múltiples bases de datos sin duplicar lógica en módulos.
+Los errores de acceso a base de datos quedan centralizados y diagnosticables.
+
+✅ Fase 3: Middleware / request context.
+Objetivo
+Introducir una capa de middleware que aplique la resolución de tenant al inicio de cada request y garantice que todo el ciclo de ejecución use un contexto consistente y aislado.
+
+Descripción
+La resolución de tenant y la selección de base de datos deben integrarse al flujo HTTP antes de la autenticación y antes de cualquier acceso al ORM. Esta fase define el middleware encargado de recibir la solicitud, invocar al TenantResolver, preparar el contexto de ejecución y dejar disponible esa información para el resto del sistema. El objetivo es que cada request transporte explícitamente su identidad de tenant y su conexión asociada, evitando inferencias informales, estado global compartido o acceso accidental a recursos de otro tenant.
+
+Alcance
+Crear middleware explícito de tenant antes de auth y antes de acceso a ORM.
+Guardar en request.state y ContextVar el tenant_id, tenant_key, db_key, db_url y modo de acceso.
+Definir inicialización y limpieza obligatoria del contexto por request.
+Prohibir acceso a sesión global fuera de ese contexto salvo rutas nodb.
+Revisar puntos de entrada en fastapi_modulo/main.py para asegurar orden correcto de middlewares.
+Definir cómo se comportan rutas públicas, rutas privadas y rutas administrativas globales dentro del contexto.
+
+Responsabilidades del middleware
+Recibir la solicitud entrante.
+Normalizar el host y obtener el contexto del tenant.
+Clasificar el tipo de acceso: nodb, tenant-aware o admin global.
+Publicar el contexto en request.state y ContextVar.
+Coordinar con la capa de autenticación y con la capa de conexión.
+Limpiar el contexto al finalizar la respuesta, incluso ante errores.
+
+Entregables
+Especificación del TenantContextMiddleware.
+Contrato del contexto por request.
+Orden oficial de middlewares del sistema.
+Reglas para acceso permitido a sesiones y recursos por tipo de ruta.
+Definición del mecanismo de limpieza del contexto.
+
+Criterio de aceptación
+Cualquier endpoint puede obtener el tenant actual sin inferencias ad hoc.
+El contexto del request no se filtra entre solicitudes concurrentes.
+La autenticación y el acceso a base de datos se ejecutan dentro del contexto correcto.
+No existe dependencia funcional de estado global para determinar el tenant activo.
+
+✅ Fase 4: Modelo administrativo central.
+Objetivo
+Definir una capa administrativa central que permita registrar, gobernar y consultar tenants de forma controlada, sin depender exclusivamente de convenciones de nombres o variables manuales.
+
+Descripción
+El sistema multi-tenant necesita una fuente de verdad central para conocer qué tenants existen, qué dominios les pertenecen, qué base de datos usan, cuál es su estado operativo y qué aplicaciones tienen habilitadas. Esta fase introduce una base administrativa o un esquema central con tablas de control que permitan registrar tenants, administrar dominios, activar o suspender servicios y preparar la instalación independiente de aplicaciones por dominio.
+
+Esta capa elimina la fragilidad de depender solo del host como convención implícita y permite que el sistema crezca con trazabilidad, soporte operativo y gobierno técnico.
+
+Alcance
+Crear una BD administrativa o un esquema central con tabla tenants.
+Definir campos mínimos: tenant_key, host, db_name/db_url, status, plan, created_at, is_active.
+Agregar soporte para múltiples dominios por tenant cuando sea necesario.
+Agregar tabla opcional de dominios alternos, certificados, branding y configuración general.
+Preparar estructura para registrar apps instaladas por tenant.
+Definir estados operativos: activo, suspendido, en provisión, error, archivado.
+Definir si el mapeo dominio -> tenant será único o si podrá haber alias controlados.
+
+Entidades mínimas sugeridas
+tenants
+tenant_domains
+tenant_apps
+tenant_settings
+tenant_audit_log
+
+Entregables
+Modelo lógico del esquema administrativo central.
+Definición de entidades, relaciones y restricciones.
+Catálogo de estados válidos para tenants.
+Definición del flujo de alta, baja, suspensión y reactivación.
+Base para registrar aplicaciones instaladas por tenant.
+
+Criterio de aceptación
+El alta de un tenant puede realizarse sin tocar código ni variables manuales.
+La relación entre dominio, tenant y base de datos queda registrada de forma explícita.
+El sistema puede consultar el estado de un tenant antes de procesar una solicitud.
+Existe soporte estructural para administrar apps y configuración por tenant.
+
+✅ Fase 5: Provisionamiento de tenants.
+Objetivo
+Definir el proceso técnico y operativo para crear, inicializar y dejar funcional un nuevo tenant, incluyendo su base de datos, configuración mínima, usuario administrador y registro administrativo.
+
+Descripción
+Una vez definido el modelo central de tenants, el sistema debe contar con un flujo estándar para provisionar nuevos dominios sin intervención manual en código o configuración interna. Esta fase establece el procedimiento de alta técnica de un tenant, desde la validación del dominio hasta la creación efectiva de la base de datos, la ejecución del esquema inicial, la instalación del núcleo base y el registro del tenant dentro del sistema administrativo.
+
+El provisionamiento debe ser repetible, trazable e idempotente. Si una fase falla, debe existir capacidad de reintento o recuperación sin dejar estado inconsistente.
+
+Alcance
+Implementar flujo create_tenant(): validar host, crear BD, correr migraciones, sembrar catálogo base, crear admin inicial y registrar tenant.
+Agregar CLI o script administrativo para alta, suspensión, reprovisión y migraciones por tenant.
+Definir precondiciones técnicas: dominio válido, tenant_key único, credenciales, tipo de motor y estado de la BD administrativa.
+Definir idempotencia: si una fase falla, debe poder reintentarse sin dejar estado roto.
+Preparar el flujo para instalar automáticamente el núcleo requerido por cada tenant.
+Registrar bitácora de provisión y estado final del proceso.
+
+Pasos mínimos del flujo de provisión
+Validar dominio y tenant_key.
+Verificar que no exista tenant o BD previa en conflicto.
+Crear base de datos física.
+Ejecutar esquema base y migraciones iniciales.
+Instalar núcleo mínimo: web, modulo_base y componentes obligatorios.
+Crear usuario administrador inicial.
+Registrar tenant y dominios asociados en la capa administrativa central.
+Marcar estado final: activo o error recuperable.
+
+Entregables
+Diseño formal del flujo create_tenant.
+CLI o interfaz administrativa para provisión de tenants.
+Política de reintento y rollback operativo.
+Registro de auditoría de provisión.
+Definición del núcleo mínimo a instalar en cada tenant.
+
+Criterio de aceptación
+El alta completa de un tenant nuevo puede realizarse en un solo comando o flujo administrativo.
+El proceso deja el tenant listo para autenticación y operación básica.
+Un fallo parcial no obliga a corrección manual de bajo nivel.
+El estado del tenant y de la provisión queda visible en la capa administrativa central.
+
+✅ Fase 6: Compatibilidad de módulos.
+Objetivo
+Garantizar que los módulos funcionales de SIPET puedan operar dentro del modelo multi-tenant sin asumir una base de datos única, sin compartir estado global y sin mezclar datos, archivos o configuración entre tenants.
+
+Descripción
+Una vez definido el núcleo multi-tenant, los módulos existentes deben adaptarse para trabajar sobre ese contexto. Esta fase se enfoca en revisar los módulos actuales, identificar dependencias que asumen una sola base de datos y establecer un contrato técnico obligatorio para que cualquier módulo funcional pueda instalarse, ejecutarse y mantenerse dentro de un tenant específico.
+
+El objetivo no es solo compatibilizar módulos existentes, sino dejar preparada la plataforma para que cada dominio instale únicamente las apps que necesite, con aislamiento real de datos, permisos, assets, jobs, seeds y configuraciones.
+
+Alcance
+Revisar módulos que hoy asumen una sola BD o usan rutas, assets o archivos globales.
+Buscar dependencias con estado global, cachés compartidos, jobs, seeds y tareas periódicas.
+Definir contrato para módulos: nunca leer engine global directo; siempre usar el router y el contexto del tenant.
+Aplicar este contrato especialmente a auth, configuraciones, jobs, storage, notificaciones y plantillas.
+Separar lógica estructural reutilizable de lógica funcional de negocio.
+Preparar cada módulo para instalación, activación, desactivación y actualización por tenant.
+
+Áreas críticas de revisión
+acceso a base de datos
+sesiones y autenticación
+cache y locks
+jobs y tareas programadas
+seed de datos iniciales
+archivos, uploads y almacenamiento
+assets, layouts y navegación
+configuración persistente por módulo
+
+Entregables
+Inventario de módulos incompatibles o parcialmente compatibles.
+Contrato técnico de compatibilidad multi-tenant para módulos.
+Lista de dependencias globales a eliminar o encapsular.
+Criterios de instalación, activación y actualización por tenant.
+Base para soporte de apps distintas por dominio.
+
+Criterio de aceptación
+Un módulo funcional puede correr en dos tenants distintos sin mezclar datos ni configuración.
+Los módulos no dependen de sesiones globales ni de rutas implícitas de base de datos.
+Las capacidades compartidas se consumen desde el núcleo y no desde implementaciones duplicadas.
+La plataforma queda preparada para que cada dominio instale únicamente las apps que requiera.
+
+✅ Fase 7: Autenticación y seguridad.
+Objetivo
+Definir un modelo de autenticación y seguridad compatible con la arquitectura multi-tenant, garantizando que cada tenant mantenga aislamiento de acceso, sesiones, permisos y contexto operativo.
+
+Descripción
+La arquitectura multi-tenant requiere que la autenticación deje de depender de supuestos globales y opere siempre dentro del contexto del tenant resuelto. Esta fase establece cómo se validarán usuarios, cómo se mantendrán las sesiones, cómo se separarán las rutas administrativas globales de las rutas del tenant y qué controles impedirán accesos cruzados o manipulación del contexto por dominio.
+
+La seguridad debe considerar no solo la validación del usuario, sino también la integridad del tenant activo, el estado operativo del dominio y la correspondencia estricta entre sesión, host y base de datos. El objetivo es que el sistema nunca permita que una credencial o cookie emitida para un tenant pueda reutilizarse en otro.
+
+Alcance
+Decidir si los usuarios viven por tenant o en un núcleo central con federación.
+Alinear cookies, tokens y sesiones con el dominio y el tenant resuelto.
+Agregar validaciones para impedir host spoofing, acceso cruzado y uso de un tenant inactivo.
+Definir rutas administrativas globales con autenticación separada del tenant app.
+Definir políticas de expiración, revocación y renovación de sesiones por tenant.
+Separar permisos estructurales del sistema de permisos funcionales por app instalada.
+Preparar soporte para auditoría de autenticación y eventos sensibles por tenant.
+
+Controles mínimos requeridos
+validación estricta de host contra tenant registrado
+asociación obligatoria entre sesión y tenant
+rechazo de sesiones emitidas para otro dominio
+bloqueo de tenants suspendidos o en error
+aislamiento de cookies por dominio y alcance
+auditoría de logins, logout, intentos fallidos y accesos administrativos
+
+Entregables
+Definición del modelo de autenticación multi-tenant.
+Política de sesiones y cookies por tenant.
+Reglas de seguridad para rutas tenant-aware y rutas admin globales.
+Controles de validación de dominio y estado del tenant.
+Base para auditoría de seguridad por tenant.
+
+Criterio de aceptación
+Una sesión emitida para clienteA no sirve en clienteB.
+El sistema bloquea acceso cuando el host no coincide con el tenant de la sesión.
+Las rutas administrativas globales están separadas del acceso funcional de cada tenant.
+Los eventos de autenticación y seguridad quedan registrados con contexto de tenant.
+
+✅ Fase 8: Migraciones y operación.
+Objetivo
+Definir el modelo operativo para evolucionar, mantener y recuperar el sistema multi-tenant, asegurando que cada tenant pueda migrarse, respaldarse y restaurarse de forma controlada.
+
+Descripción
+La arquitectura multi-tenant no queda completa solo con la provisión inicial. El sistema debe contar con un mecanismo formal para aplicar cambios de esquema, actualizar módulos, sembrar datos controlados y operar múltiples tenants sin perder trazabilidad ni capacidad de recuperación. Esta fase establece cómo se ejecutarán las migraciones por tenant, cómo se manejará la base administrativa central y qué procedimientos operativos mínimos deben existir para soporte, respaldo y restauración.
+
+La operación debe contemplar que distintos tenants pueden estar en diferentes estados, que una migración puede fallar parcialmente y que la plataforma debe contar con herramientas para identificar, corregir y recuperar esos casos sin afectar a los demás tenants.
+
+Alcance
+Crear runner de migraciones por tenant y por BD administrativa.
+Definir orden formal de ejecución: migración core, migración de módulos y seed opcional.
+Definir política de versionado de esquema por tenant.
+Agregar backups por tenant, restore aislado y smoke tests post-migración.
+Definir procedimiento de rollback operativo cuando una actualización falle.
+Registrar historial de migraciones ejecutadas y estado final por tenant.
+Preparar ejecución selectiva: migrar un tenant, un grupo de tenants o toda la plataforma.
+
+Capacidades mínimas requeridas
+migración individual por tenant
+migración global coordinada
+registro de versión de esquema por tenant
+backups independientes por base de datos
+restore aislado sin afectar otros tenants
+smoke tests posteriores a migración
+bitácora de errores y estado de recuperación
+
+Entregables
+Diseño del runner de migraciones multi-tenant.
+Política de versionado y orden de actualización.
+Procedimiento de backup y restore por tenant.
+Definición de rollback operativo.
+Base de trazabilidad para historial de migraciones y estado por tenant.
+
+Criterio de aceptación
+El sistema puede actualizar N tenants con trazabilidad y control de errores.
+Una falla de migración en un tenant no compromete a los demás.
+Existe respaldo y restauración aislada por tenant.
+Cada tenant conserva registro claro de versión, migraciones aplicadas y estado operativo.
+
+✅ Fase 9: Observabilidad y soporte.
+Objetivo
+Dotar a la plataforma multi-tenant de mecanismos de monitoreo, diagnóstico y soporte operativo que permitan identificar el estado de cada tenant, detectar errores con contexto suficiente y resolver incidentes sin depender de inspección manual del código.
+
+Descripción
+En una plataforma donde múltiples dominios operan sobre distintas bases de datos, la visibilidad operativa es obligatoria. Esta fase define la información que debe registrarse, medirse y exponerse para que soporte y operación puedan entender qué tenant resolvió una solicitud, qué base de datos utilizó, qué versión de esquema tiene, qué módulos están activos y qué errores o degradaciones se están presentando.
+
+La observabilidad no debe limitarse a logs. También debe incluir métricas, trazabilidad de migraciones, paneles administrativos, vistas de estado por tenant y herramientas de diagnóstico rápido que permitan aislar incidentes y validar la salud operativa de la plataforma.
+
+Alcance
+Añadir logs estructurados con tenant, host, tipo de acceso, errores por tenant y latencia por resolución.
+Registrar métricas de conexiones activas, tiempos de respuesta, fallos de autenticación, errores de migración y estado de provisión.
+Crear panel o endpoints administrativos para listar tenants, estado, versión de esquema, apps instaladas y última migración.
+Agregar diagnóstico rápido: qué tenant resolvió esta request, a qué BD fue y bajo qué contexto se ejecutó.
+Definir alertas mínimas para fallas críticas de tenant, base de datos, autenticación y provisión.
+Preparar base de soporte para auditoría operativa y análisis posterior de incidentes.
+
+Capacidades mínimas requeridas
+logs estructurados por tenant
+métricas operativas por dominio y por base de datos
+consulta del estado actual de cada tenant
+diagnóstico de resolución host -> tenant -> base de datos
+historial de migraciones y provisión
+alertas básicas ante errores críticos repetitivos
+
+Entregables
+Especificación de observabilidad multi-tenant.
+Esquema de logs y métricas por tenant.
+Panel o endpoints administrativos de estado.
+Herramientas de diagnóstico rápido para soporte.
+Base de eventos operativos y de auditoría técnica.
+
+Criterio de aceptación
+Soporte puede diagnosticar un tenant sin inspección manual del código.
+La plataforma puede informar qué tenant atendió una solicitud y qué base de datos utilizó.
+Los errores quedan trazados con suficiente contexto para análisis y recuperación.
+Existe visibilidad operativa de tenants, migraciones, provisión y estado general del sistema.
+
+✅ Fase Adicional: Consolidación del Núcleo del Sistema
+
+Objetivo
+Consolidar los módulos web y modulo_base como núcleo técnico de SIPET, de modo que el sistema pueda evolucionar hacia una arquitectura multi-tenant donde cada dominio opere con su propia base de datos y con un conjunto independiente de aplicaciones instaladas.
+
+Descripción
+Antes de habilitar la instalación de apps por tenant, es necesario estabilizar la base estructural del sistema. El módulo web debe quedar como la capa única de entrada HTTP, responsable de recibir solicitudes, identificar el dominio, resolver el tenant, seleccionar la base de datos correspondiente, aplicar middlewares, autenticar usuarios y despachar la ejecución hacia los módulos funcionales. El módulo modulo_base debe convertirse en la capa común sobre la que se construirán todas las apps instalables, reuniendo servicios transversales y contratos técnicos compartidos.
+
+Esta fase busca eliminar la dispersión de lógica estructural, evitar duplicidades entre módulos y establecer una separación clara entre el núcleo del sistema y las aplicaciones de negocio. A partir de esta consolidación, cualquier módulo funcional deberá integrarse siguiendo un estándar único de registro, instalación, dependencias, rutas, permisos, assets y tareas.
+
+Alcance
+
+Consolidar en web toda la lógica de entrada, contexto de request, autenticación, middleware, tenant resolution y dispatch.
+Consolidar en modulo_base los servicios reutilizables del sistema.
+Eliminar duplicidades entre módulos base y módulos funcionales.
+Definir el contrato técnico obligatorio para módulos instalables.
+Separar formalmente el core de la plataforma y las apps de negocio.
+Componentes a consolidar en web
+
+resolución de dominio y tenant
+selección dinámica de base de datos
+middlewares comunes
+autenticación y sesión
+backend shell y layout base
+despacho de rutas y registro central de módulos
+Componentes a consolidar en modulo_base
+
+respuestas estándar
+seguridad reutilizable
+auditoría base
+utilidades de repositorio
+servicios compartidos
+cache y locking
+tareas base
+layouts, plantillas y componentes comunes
+contratos de bootstrap e instalación de módulos
+Entregables
+
+definición clara de responsabilidades entre web y modulo_base
+refactor del código transversal hoy disperso
+interfaz estándar para módulos instalables
+inventario de dependencias compartidas y duplicidades eliminadas
+documentación técnica del núcleo consolidado
+Criterios de aceptación
+
+web funciona como punto único de entrada y resolución de contexto
+modulo_base concentra las capacidades transversales del sistema
+los módulos funcionales ya no implementan servicios estructurales repetidos
+existe un contrato uniforme para registrar e instalar módulos
+la arquitectura queda preparada para activar apps distintas por tenant sin mezclar lógica global
+Justificación
+Esta fase es obligatoria porque la arquitectura multi-tenant no será estable si el sistema mantiene lógica compartida dispersa, dependencias cruzadas o comportamiento global dentro de módulos funcionales. La consolidación del núcleo es la condición previa para permitir que cada dominio instale únicamente las apps que necesite, con aislamiento técnico, operativo y funcional.
+
+Orden recomendado
+
+Resolver arquitectura y contratos.
+Consolidar TenantResolver + DatabaseRouter.
+Meter middleware y contexto único.
+Crear BD administrativa de tenants.
+Implementar alta/migración de tenants.
+Adaptar módulos y auth.
+Cerrar operación, monitoreo y tooling.
+Riesgos
+
+Mezcla accidental de datos por uso de sesiones globales.
+Módulos que escriben archivos o cachés compartidos entre tenants.
+Crecimiento descontrolado de pools si cada host crea un engine sin política de descarte.
+Migraciones incompletas si no existe inventario por tenant y versión.
+Primer sprint sugerido
+
+Inventario de puntos que usan DB en forma global.
+Diseño de TenantResolver y DatabaseRouter.
+Middleware tenant-aware.
+Tabla central tenants.
+CLI create-tenant y migrate-tenant.
+Tests de aislamiento entre dos hosts.

@@ -4,7 +4,7 @@ from datetime import datetime
 
 from sqlalchemy import Boolean, Column, DateTime, Integer, String
 
-from fastapi_modulo.db import MAIN
+from fastapi_modulo.core.db import MAIN
 
 
 class DashboardPreference(MAIN):

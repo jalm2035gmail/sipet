@@ -1,0 +1,63 @@
+descripcion.txt
+
+1. Todo módulo debe ser autocontenido
+
+Cada módulo debe incluir:
+
+__manifest__.py
+
+bootstrap.py
+
+controladores
+
+modelos
+
+repositorios
+
+servicios
+
+seguridad
+
+vistas
+
+static
+
+tests
+
+2. Todo módulo debe poder instalarse sin tocar otro módulo
+
+Eso implica que el módulo se inicializa solo con:
+
+su manifest
+
+sus modelos
+
+sus migraciones
+
+sus permisos
+
+sus assets
+
+sus rutas
+
+3. El núcleo debe proveer contratos, no lógica específica
+
+El core debe dar:
+
+registry
+
+router loader
+
+db/session factory
+
+auth/session base
+
+template engine
+
+event bus/celery hooks
+
+storage hooks
+
+cache hooks
+
+Pero el módulo no debería depender de funciones privadas dispersas.

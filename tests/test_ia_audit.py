@@ -15,8 +15,8 @@ os.environ.setdefault("SIPET_DATA_DIR", "/tmp/sipet_test_data")
 os.environ.setdefault("SQLITE_DB_PATH", "/tmp/sipet_test_data/strategic_planning_test_ia_audit.db")
 os.makedirs("/tmp/sipet_test_data", exist_ok=True)
 
-from fastapi_modulo.main import AUTH_COOKIE_NAME, _build_session_cookie, app
-from fastapi_modulo.db import IAInteraction, SessionLocal
+from fastapi_modulo.modulos_sipet.modulo_base.runtime import AUTH_COOKIE_NAME, _build_session_cookie, app
+from fastapi_modulo.core.db import IAInteraction, SessionLocal
 
 
 client = TestClient(app)

@@ -44,7 +44,7 @@ try:
     from app.models.base import MAIN
 except Exception:
     sys.path.insert(0, PROJECT_DIR)
-    from fastapi_modulo.db import MAIN
+    from fastapi_modulo.core.db import MAIN
 
 # Registrar modelos del módulo de capacitación para soporte de autogenerate
 sys.path.insert(0, PROJECT_DIR)

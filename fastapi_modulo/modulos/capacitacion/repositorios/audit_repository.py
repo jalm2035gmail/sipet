@@ -1,15 +1,11 @@
 import json
 
-from fastapi_modulo.db import SessionLocal, engine
+from fastapi_modulo.modulos.capacitacion.repositorios.common import get_db, get_engine
 from fastapi_modulo.modulos.capacitacion.modelos.db_models import CapEventoEntidad
 
 
-def get_db():
-    return SessionLocal()
-
-
 def ensure_schema():
-    CapEventoEntidad.__table__.create(bind=engine, checkfirst=True)
+    CapEventoEntidad.__table__.create(bind=get_engine(), checkfirst=True)
 
 
 def create_evento(db, data):

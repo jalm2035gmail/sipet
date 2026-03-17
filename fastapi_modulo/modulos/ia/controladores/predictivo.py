@@ -21,6 +21,9 @@ from fastapi import APIRouter, Body, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from sqlalchemy import text
 
+from fastapi_modulo.core import db as core_db
+from fastapi_modulo.modulos_sipet.web.controladores.backend_shell import render_backend_page
+
 router = APIRouter()
 
 PREDICTIVO_TEMPLATE_PATH = os.path.join(
@@ -42,6 +45,10 @@ CREATE TABLE IF NOT EXISTS ia_scoring_results (
     run_by      TEXT
 );
 """
+
+
+def _db_session():
+    return core_db.get_session_factory_for_host(core_db.get_request_host())()
 
 
 def _pd():
@@ -309,8 +316,7 @@ def _compute_poa_risk_summary(db) -> Dict:
 
 @router.get("/api/ia/predictivo/dashboard")
 def ia_predictivo_dashboard(request: Request):
-    from fastapi_modulo.db import SessionLocal
-    db = SessionLocal()
+    db = _db_session()
     try:
         _ensure_scoring_table(db)
         user_scores = _compute_user_scores(db)
@@ -349,8 +355,7 @@ def ia_predictivo_dashboard(request: Request):
 
 @router.get("/api/ia/predictivo/usuarios")
 def ia_predictivo_usuarios(request: Request):
-    from fastapi_modulo.db import SessionLocal
-    db = SessionLocal()
+    db = _db_session()
     try:
         _ensure_scoring_table(db)
         scores = _compute_user_scores(db)
@@ -363,8 +368,7 @@ def ia_predictivo_usuarios(request: Request):
 
 @router.get("/api/ia/predictivo/kpis-riesgo")
 def ia_predictivo_kpis_riesgo(request: Request):
-    from fastapi_modulo.db import SessionLocal
-    db = SessionLocal()
+    db = _db_session()
     try:
         return JSONResponse({"success": True, **_compute_kpi_risk_summary(db)})
     finally:
@@ -375,8 +379,7 @@ def ia_predictivo_kpis_riesgo(request: Request):
 
 @router.post("/api/ia/predictivo/recalcular")
 def ia_predictivo_recalcular(request: Request):
-    from fastapi_modulo.db import SessionLocal
-    db = SessionLocal()
+    db = _db_session()
     try:
         _ensure_scoring_table(db)
         scores = _compute_user_scores(db)
@@ -437,8 +440,7 @@ def ia_predictivo_recalcular(request: Request):
 
 @router.get("/api/ia/predictivo/historial")
 def ia_predictivo_historial(request: Request):
-    from fastapi_modulo.db import SessionLocal
-    db = SessionLocal()
+    db = _db_session()
     try:
         _ensure_scoring_table(db)
         rows = db.execute(text(
@@ -465,7 +467,6 @@ def _load_predictivo_template() -> str:
 
 @router.get("/ia/predictivo", response_class=HTMLResponse)
 def ia_predictivo_page(request: Request):
-    from fastapi_modulo.main import render_backend_page
     return render_backend_page(
         request,
         title="Análisis Predictivo",

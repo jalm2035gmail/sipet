@@ -4,7 +4,7 @@ from datetime import datetime
 
 from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String
 
-from fastapi_modulo.db import MAIN
+from fastapi_modulo.core.db import MAIN
 
 
 class IntelicoopSocio(MAIN):

@@ -2,39 +2,32 @@ from __future__ import annotations
 
 from fastapi import Request
 
-
-_CORE_SYMBOLS_BOUND = False
-
-
-def bind_core_dependencies() -> None:
-    global _CORE_SYMBOLS_BOUND
-    if _CORE_SYMBOLS_BOUND:
-        return
-    from fastapi_modulo import main as core
-
-    for name in ("SessionLocal", "_normalize_tenant_id", "get_current_tenant", "render_backend_page"):
-        globals()[name] = getattr(core, name)
-    _CORE_SYMBOLS_BOUND = True
+from fastapi_modulo.core import db as core_db
+from fastapi_modulo.modulos_sipet.web.controladores.backend_shell import render_backend_page
+from fastapi_modulo.modulos_sipet.web.servicios.module_tools import require_app_access
+from fastapi_modulo.modulos_sipet.web.servicios.session_service import normalize_tenant_id
 
 
 def get_session_local():
-    bind_core_dependencies()
-    return globals()["SessionLocal"]
+    return core_db.get_session_factory_for_host()
 
 
 def resolve_current_tenant_id(request: Request | None = None) -> str:
-    bind_core_dependencies()
-    normalize = globals()["_normalize_tenant_id"]
     if request is None:
-        tenant_id = normalize("default")
-    else:
-        tenant_id = normalize(globals()["get_current_tenant"](request))
-    tenant_id = str(tenant_id or "").strip()
-    if not tenant_id:
-        return "default"
-    return tenant_id
+        return normalize_tenant_id("default")
+    tenant_id = (
+        getattr(request.state, "tenant_id", None)
+        or request.headers.get("x-tenant-id")
+        or request.headers.get("x-tenant")
+        or request.cookies.get("tenant_id")
+        or "default"
+    )
+    return normalize_tenant_id(tenant_id)
 
 
 def render_backend_screen(*args, **kwargs):
-    bind_core_dependencies()
-    return globals()["render_backend_page"](*args, **kwargs)
+    return render_backend_page(*args, **kwargs)
+
+
+def require_brujula_access(request: Request) -> None:
+    require_app_access(request, "Brújula", "Acceso restringido al módulo Brújula")

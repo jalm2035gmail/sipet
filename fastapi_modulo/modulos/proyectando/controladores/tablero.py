@@ -2,6 +2,7 @@ from pathlib import Path
 
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
+from fastapi_modulo.modulos_sipet.web.servicios.ui_shell_service import get_colores_context
 
 router = APIRouter()
 MODULE_DIR = Path(__file__).resolve().parent.parent
@@ -9,7 +10,6 @@ TABLERO_TEMPLATE_PATH = MODULE_DIR / "vistas" / "tablero.html"
 
 
 def _get_colores_context() -> dict:
-    from fastapi_modulo.main import get_colores_context
     return get_colores_context()
 
 

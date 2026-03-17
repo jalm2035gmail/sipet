@@ -1,0 +1,8 @@
+<aside class="modulo-base-sidebar">
+  <div class="modulo-base-sidebar-title">Base UI</div>
+  <ul class="menu modulo-base-menu">
+    {% for section in module_sections %}
+    <li><a href="#{{ section }}"><i class="fa-solid fa-angle-right"></i> {{ section|replace("_", " ")|title }}</a></li>
+    {% endfor %}
+  </ul>
+</aside>

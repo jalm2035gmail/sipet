@@ -7,7 +7,7 @@ from fastapi import Request
 from fastapi.responses import HTMLResponse
 
 from fastapi_modulo.modulos.crm.crm_menu import render_crm_menu
-from fastapi_modulo.modulos.web.servicios.module_tools import read_text_file, render_no_access_page
+from fastapi_modulo.modulos_sipet.web.servicios.module_tools import read_text_file, render_no_access_page
 
 MODULE_DIR = Path(__file__).resolve().parents[1]
 CRM_TEMPLATE_PATH = MODULE_DIR / "vistas" / "crm.html"

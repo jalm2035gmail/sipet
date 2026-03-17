@@ -1,13 +1,13 @@
 from pathlib import Path
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
+from fastapi_modulo.modulos_sipet.web.servicios.ui_shell_service import get_colores_context
 
 router = APIRouter()
 NO_ACCESO_TEMPLATE_PATH = Path("fastapi_modulo/templates/no_acceso.html")
 
 
 def _get_colores_context() -> dict:
-    from fastapi_modulo.main import get_colores_context
     return get_colores_context()
 
 

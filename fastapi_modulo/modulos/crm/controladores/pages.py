@@ -11,7 +11,7 @@ from fastapi_modulo.modulos.crm.controladores.utils import (
     load_crm_page_content,
     render_no_access_crm_page,
 )
-from fastapi_modulo.modulos.web.servicios.module_tools import (
+from fastapi_modulo.modulos_sipet.web.servicios.module_tools import (
     render_backend_page_html,
     scoped_text_asset_response,
     text_asset_response,

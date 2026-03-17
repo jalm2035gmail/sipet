@@ -6,6 +6,7 @@ from typing import Any, Dict, List
 
 from fastapi import APIRouter, Body, HTTPException, Request
 from fastapi.responses import HTMLResponse
+from fastapi_modulo.modulos_sipet.web.controladores.backend_shell import render_backend_page
 
 from fastapi_modulo.modulos.proyectando.modelos.data_store import (
     load_datos_preliminares_store,
@@ -14,12 +15,6 @@ from fastapi_modulo.modulos.proyectando.modelos.data_store import (
 )
 
 router = APIRouter()
-
-
-def render_backend_page(*args, **kwargs):
-    from fastapi_modulo.main import render_backend_page as _impl
-    return _impl(*args, **kwargs)
-
 
 def _load_datos_preliminares_store():
     return load_datos_preliminares_store()

@@ -12,6 +12,7 @@ import pandas as pd
 from pydantic import ValidationError
 from sqlalchemy import func
 
+from fastapi_modulo.modulos.personalizacion.controladores.roles import Rol
 from fastapi_modulo.modulos.plantillas.modelos.plantillas_db_models import FormDefinition, FormField, FormSubmission
 from fastapi_modulo.modulos.plantillas.modelos.plantillas_renderer import FormRenderer
 from fastapi_modulo.modulos.plantillas.modelos.plantillas_schemas import FormDefinitionCreateSchema, FormDefinitionResponseSchema, slugify_value
@@ -24,6 +25,18 @@ from fastapi_modulo.modulos.plantillas.modelos.plantillas_submission_service imp
     send_form_submission_email_notification,
     send_form_submission_backendhooks,
 )
+from fastapi_modulo.modulos_sipet.modulo_base.runtime_app import _normalize_tenant_id, get_current_tenant
+from fastapi_modulo.modulos_sipet.web.controladores.backend_shell import render_backend_page
+from fastapi_modulo.modulos_sipet.web.servicios.access_service import (
+    get_current_role,
+    is_admin,
+    is_superadmin,
+    normalize_role_name,
+    require_admin_or_superadmin,
+)
+from fastapi_modulo.modulos_sipet.web.servicios.template_context_service import (
+    get_login_identity_context as _get_login_identity_context,
+)
 
 router = APIRouter()
 
@@ -34,23 +47,19 @@ def _bind_core_symbols() -> None:
     global _CORE_BOUND
     if _CORE_BOUND:
         return
-    from fastapi_modulo import main as core
+    from fastapi_modulo.modulos_sipet.modulo_base.runtime_app import get_db
 
-    names = [
-        'render_backend_page',
-        '_normalize_tenant_id',
-        'get_current_tenant',
-        'is_superadmin',
-        'is_admin',
-        'get_current_role',
-        'normalize_role_name',
-        'require_admin_or_superadmin',
-        'Rol',
-        'get_db',
-        '_get_login_identity_context',
-    ]
-    for name in names:
-        globals()[name] = getattr(core, name)
+    globals()["render_backend_page"] = render_backend_page
+    globals()["_normalize_tenant_id"] = _normalize_tenant_id
+    globals()["get_current_tenant"] = get_current_tenant
+    globals()["is_superadmin"] = is_superadmin
+    globals()["is_admin"] = is_admin
+    globals()["get_current_role"] = get_current_role
+    globals()["normalize_role_name"] = normalize_role_name
+    globals()["require_admin_or_superadmin"] = require_admin_or_superadmin
+    globals()["Rol"] = Rol
+    globals()["get_db"] = get_db
+    globals()["_get_login_identity_context"] = _get_login_identity_context
     _CORE_BOUND = True
 
 

@@ -1,4 +1,4 @@
-from fastapi_modulo.main import app
+from fastapi_modulo.modulos_sipet.modulo_base.runtime import app
 
 if __name__ == "__main__":
     import os

@@ -7,12 +7,16 @@ from typing import Dict
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.exc import IntegrityError
 from fastapi.responses import HTMLResponse, JSONResponse, Response
-from fastapi_modulo.modulos.web.servicios.module_tools import (
+from fastapi_modulo.modulos_sipet.web.servicios.module_tools import (
     read_text_file,
     render_backend_page_html,
     render_no_access_page,
     require_app_access,
     text_asset_response,
+)
+from fastapi_modulo.modulos_sipet.web.servicios.access_service import (
+    get_user_app_access_level,
+    is_admin_or_superadmin,
 )
 
 from fastapi_modulo.modulos.auditoria.modelos.aud_models import (
@@ -62,70 +66,9 @@ router = APIRouter(dependencies=[Depends(_require_auditoria_access)])
 
 
 def _get_auditoria_access_level(request: Request) -> str:
-    try:
-        from fastapi_modulo.main import (
-            SessionLocal,
-            Usuario,
-            _get_user_app_access,
-            _sensitive_lookup_hash,
-            is_admin_or_superadmin,
-            is_app_access_enabled,
-        )
-    except ImportError:
-        from fastapi_modulo.main import _get_user_app_access, is_admin_or_superadmin
-
-        if is_admin_or_superadmin(request):
-            return "full_access"
-        if "Auditoria" in _get_user_app_access(request):
-            return "full_access"
-        return ""
-    import json as _json
-
     if is_admin_or_superadmin(request):
         return "full_access"
-    if not is_app_access_enabled(_AUDITORIA_APP_NAME):
-        return ""
-    try:
-        username = getattr(request.state, "user_name", None) or ""
-        if not username:
-            return ""
-        lookup_hash = _sensitive_lookup_hash(username)
-        db = SessionLocal()
-        try:
-            user = db.query(Usuario).filter(Usuario.usuario_hash == lookup_hash).first()
-            if not user:
-                return ""
-            user_id = str(user.id)
-        finally:
-            db.close()
-
-        app_env = (os.environ.get("APP_ENV") or os.environ.get("ENVIRONMENT") or "development").strip().lower()
-        sipet_data_dir = (os.environ.get("SIPET_DATA_DIR") or os.path.expanduser("~/.sipet/data")).strip()
-        runtime_dir = (os.environ.get("RUNTIME_STORE_DIR") or os.path.join(sipet_data_dir, "runtime_store", app_env)).strip()
-        meta_path = os.environ.get("COLAB_META_PATH") or os.path.join(runtime_dir, "colaboradores_meta.json")
-        if not os.path.exists(meta_path):
-            return ""
-        raw = _json.loads(Path(meta_path).read_text(encoding="utf-8"))
-        if not isinstance(raw, dict):
-            return ""
-        entry = raw.get(user_id, {})
-        if not isinstance(entry, dict):
-            return ""
-        app_access_levels = entry.get("app_access_levels", {})
-        if isinstance(app_access_levels, dict):
-            levels = app_access_levels.get(_AUDITORIA_APP_NAME, {})
-            if isinstance(levels, dict):
-                for level_key in ("full_access", "read_only", "department_only", "user_only", "special_permissions"):
-                    if bool(levels.get(level_key, False)):
-                        return level_key
-        direct_access = entry.get("app_access", [])
-        if isinstance(direct_access, list):
-            for item in direct_access:
-                if str(item).strip().lower() == _AUDITORIA_APP_NAME.lower():
-                    return "full_access"
-        return ""
-    except Exception:
-        return ""
+    return get_user_app_access_level(request, _AUDITORIA_APP_NAME)
 
 
 def _auditoria_permissions(request: Request) -> Dict[str, bool]:

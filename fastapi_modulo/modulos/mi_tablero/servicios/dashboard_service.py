@@ -24,12 +24,6 @@ _TEMPLATE_ENV = Environment(
 )
 
 
-def _get_core():
-    from fastapi_modulo import main as core
-
-    return core
-
-
 def _serialize_module(module: dict) -> dict:
     return DashboardModuleSchema(
         key=str(module.get("key") or module.get("route") or "").strip(),

@@ -2,6 +2,8 @@ from pathlib import Path
 
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
+from fastapi_modulo.modulos_sipet.web.controladores.backend_shell import render_backend_page
+from fastapi_modulo.modulos_sipet.web.servicios.template_service import render_no_access_module_page
 
 
 router = APIRouter()
@@ -10,9 +12,7 @@ PLD_TEMPLATE_PATH = MODULE_DIR / "vistas" / "pld.html"
 
 
 def _render_no_access(request: Request, *, title: str, description: str) -> HTMLResponse:
-    from fastapi_modulo.main import _render_no_access_module_page
-
-    return _render_no_access_module_page(
+    return render_no_access_module_page(
         request,
         title=title,
         description=description,
@@ -22,8 +22,6 @@ def _render_no_access(request: Request, *, title: str, description: str) -> HTML
 
 @router.get("/pld", response_class=HTMLResponse)
 def pld_page(request: Request):
-    from fastapi_modulo.main import render_backend_page
-
     try:
         content = PLD_TEMPLATE_PATH.read_text(encoding="utf-8")
     except OSError:

@@ -8,9 +8,9 @@ Es la referencia funcional para diseno, frontend y personalizacion institucional
 La fuente tecnica de verdad del sistema es:
 
 - [fastapi_modulo/modulos/personalizacion/theme_system.py](/Users/jalm/Dropbox/Apps/SIPET/fastapi_modulo/modulos/personalizacion/theme_system.py)
-- [fastapi_modulo/colores.json](/Users/jalm/Dropbox/Apps/SIPET/fastapi_modulo/colores.json)
+- [colores.json](/Users/jalm/Dropbox/Apps/SIPET/fastapi_modulo/modulos/personalizacion/data/colores.json)
 - [static/css/global.css](/Users/jalm/Dropbox/Apps/SIPET/static/css/global.css)
-- [estilos_globales.md](/Users/jalm/Dropbox/Apps/SIPET/estilos_globales.md)
+- [estilos_globales.md](/Users/jalm/Dropbox/Apps/SIPET/docs/diseno/estilos_globales.md)
 
 Regla institucional: los modulos no deben introducir colores hexadecimales fijos para layout, botones, campos o navegacion. Deben consumir variables CSS del sistema.
 
@@ -32,7 +32,7 @@ Estos son los unicos colores que se configuran de forma directa:
 
 Notas:
 
-- `--button-bg` y `--field-color` no aparecen guardados hoy en [fastapi_modulo/colores.json](/Users/jalm/Dropbox/Apps/SIPET/fastapi_modulo/colores.json), por lo que el sistema usa sus valores por defecto definidos en [fastapi_modulo/modulos/personalizacion/theme_system.py](/Users/jalm/Dropbox/Apps/SIPET/fastapi_modulo/modulos/personalizacion/theme_system.py#L15).
+- `--button-bg` y `--field-color` no aparecen guardados hoy en [colores.json](/Users/jalm/Dropbox/Apps/SIPET/fastapi_modulo/modulos/personalizacion/data/colores.json), por lo que el sistema usa sus valores por defecto definidos en [fastapi_modulo/modulos/personalizacion/theme_system.py](/Users/jalm/Dropbox/Apps/SIPET/fastapi_modulo/modulos/personalizacion/theme_system.py#L15).
 - `--sidebar-bottom` es el color institucional dominante de la interfaz.
 
 ### 2. Colores derivados oficiales

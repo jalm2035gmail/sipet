@@ -5,7 +5,8 @@ from typing import Any, Dict, List, Optional
 
 from sqlalchemy.exc import SQLAlchemyError
 
-from fastapi_modulo.db import MAIN, SessionLocal, engine
+from fastapi_modulo.core import db as core_db
+from fastapi_modulo.core.db import MAIN
 from fastapi_modulo.modulos.auditoria.modelos.aud_db_models import (
     AudAuditoria,
     AudHallazgo,
@@ -21,15 +22,18 @@ _AUD_TABLES = [
 ]
 
 
-def ensure_aud_schema() -> None:
-    MAIN.metadata.create_all(bind=engine, tables=_AUD_TABLES, checkfirst=True)
+def _active_host(host: Optional[str] = None) -> str:
+    return (host or core_db.get_request_host() or "").strip()
 
 
-def _db():
-    return SessionLocal()
+def ensure_aud_schema(host: Optional[str] = None) -> None:
+    bind = core_db.get_engine_for_host(_active_host(host))
+    MAIN.metadata.create_all(bind=bind, tables=_AUD_TABLES, checkfirst=True)
 
 
-ensure_aud_schema()
+def _db(host: Optional[str] = None):
+    ensure_aud_schema(host=host)
+    return core_db.get_session_factory_for_host(_active_host(host))()
 
 
 def _date_str(v) -> Optional[str]:

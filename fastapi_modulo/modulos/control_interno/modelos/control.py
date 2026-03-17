@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from sqlalchemy import Column, DateTime, Index, Integer, String, Text, UniqueConstraint
-from fastapi_modulo.db import MAIN
+from fastapi_modulo.core.db import MAIN
 
 
 class ControlInterno(MAIN):

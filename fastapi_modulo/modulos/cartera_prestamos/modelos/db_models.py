@@ -5,7 +5,7 @@ from datetime import date, datetime
 from sqlalchemy import Boolean, Column, Date, DateTime, ForeignKey, Integer, Numeric, String, Text, UniqueConstraint
 from sqlalchemy.orm import relationship
 
-from fastapi_modulo.db import MAIN
+from fastapi_modulo.core.db import MAIN
 from fastapi_modulo.modulos.cartera_prestamos.modelos.enums import (
     BucketMora,
     EstadoCredito,

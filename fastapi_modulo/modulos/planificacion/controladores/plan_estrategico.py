@@ -8,6 +8,9 @@ from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 
 from fastapi_modulo.modulos.planificacion.modelos import plan_estrategico_service as strategic_api
 from fastapi_modulo.modulos.planificacion.modelos import poa_service
+from fastapi_modulo.modulos_sipet.web.controladores.backend_shell import render_backend_page
+from fastapi_modulo.modulos_sipet.web.servicios.access_service import has_strategy_submenu_access
+from fastapi_modulo.modulos_sipet.web.servicios.template_service import render_no_access_module_page
 
 router = APIRouter()
 _CORE_BOUND = False
@@ -462,11 +465,9 @@ def _bind_core_symbols() -> None:
     global _CORE_BOUND
     if _CORE_BOUND:
         return
-    from fastapi_modulo import main as core
-
-    globals()["_render_no_access_module_page"] = getattr(core, "_render_no_access_module_page", None)
-    globals()["_has_strategy_submenu_access"] = getattr(core, "_has_strategy_submenu_access", None)
-    globals()["_render_blank_management_screen"] = getattr(core, "_render_blank_management_screen", None)
+    globals()["_render_no_access_module_page"] = render_no_access_module_page
+    globals()["_has_strategy_submenu_access"] = has_strategy_submenu_access
+    globals()["_render_blank_management_screen"] = None
     _CORE_BOUND = True
 
 
@@ -936,8 +937,6 @@ def ejes_estrategicos_page(request: Request):
             title="Plan estratégico",
             description="Acceso restringido al plan estratégico.",
         )
-    from fastapi_modulo.main import render_backend_page
-
     try:
         MAIN_content = _PLAN_ESTRATEGICO_TEMPLATE_PATH.read_text(encoding="utf-8")
     except OSError:
@@ -961,8 +960,6 @@ def plan_estrategico_tablero_page(request: Request):
             title="Tablero de control",
             description="Acceso restringido al tablero de control estratégico.",
         )
-    from fastapi_modulo.main import render_backend_page
-
     try:
         tablero_css = _PLAN_ESTRATEGICO_CSS_PATH.read_text(encoding="utf-8")
     except OSError:
@@ -1016,8 +1013,6 @@ def estrategia_ia_page(request: Request):
         )
     if callable(globals().get("_render_blank_management_screen")):
         return _render_blank_management_screen(request, "IA estrategia")
-    from fastapi_modulo.main import render_backend_page
-
     return render_backend_page(
         request,
         title="IA estrategia",

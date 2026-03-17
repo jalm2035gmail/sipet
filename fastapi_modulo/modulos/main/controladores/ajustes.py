@@ -6,37 +6,45 @@ import sqlite3
 from fastapi import APIRouter, File, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse, FileResponse, JSONResponse, RedirectResponse
 
+from fastapi_modulo.modulos_sipet.modulo_base.runtime_app import (
+    _append_update_history,
+    _fetch_update_manifest,
+    _get_request_database_info,
+    _get_update_context,
+    _render_ajustes_configuracion_page,
+    _render_database_tools_page,
+    _snapshot_update_state,
+    _start_update_job,
+    _validate_update_manifest,
+    _write_json_file,
+)
+from fastapi_modulo.modulos_sipet.web.servicios.access_service import require_admin_or_superadmin
+
 router = APIRouter()
 
 
 @router.get("/ajustes/configuracion", response_class=HTMLResponse)
 def ajustes_configuracion_page(request: Request):
-    from fastapi_modulo import main as core
-
-    core.require_admin_or_superadmin(request)
-    return core._render_ajustes_configuracion_page(request)
+    require_admin_or_superadmin(request)
+    return _render_ajustes_configuracion_page(request)
 
 
 @router.get("/api/ajustes/actualizacion")
 def ajustes_actualizacion_estado(request: Request):
-    from fastapi_modulo import main as core
-
-    core.require_admin_or_superadmin(request)
-    context = core._get_update_context(request)
-    return {"success": True, **core._snapshot_update_state(context)}
+    require_admin_or_superadmin(request)
+    context = _get_update_context(request)
+    return {"success": True, **_snapshot_update_state(context)}
 
 
 @router.post("/api/ajustes/actualizacion/verificar")
 def ajustes_actualizacion_verificar(request: Request):
     from datetime import datetime
 
-    from fastapi_modulo import main as core
-
-    core.require_admin_or_superadmin(request)
-    context = core._get_update_context(request)
+    require_admin_or_superadmin(request)
+    context = _get_update_context(request)
     try:
-        manifest = core._fetch_update_manifest(context["manifest_url"])
-        manifest_info = core._validate_update_manifest(context, manifest)
+        manifest = _fetch_update_manifest(context["manifest_url"])
+        manifest_info = _validate_update_manifest(context, manifest)
         snapshot = {
             "checked_at": datetime.utcnow().isoformat(),
             "version": manifest_info["version"],
@@ -46,8 +54,8 @@ def ajustes_actualizacion_verificar(request: Request):
             "notes": manifest_info["notes"],
             "manifest_url": context["manifest_url"],
         }
-        core._write_json_file(context["files"]["manifest"], snapshot)
-        core._append_update_history(
+        _write_json_file(context["files"]["manifest"], snapshot)
+        _append_update_history(
             context["host"],
             {
                 "timestamp": datetime.utcnow().isoformat(),
@@ -55,10 +63,10 @@ def ajustes_actualizacion_verificar(request: Request):
                 "target_version": manifest_info["version"],
             },
         )
-        context = core._get_update_context(request)
-        return {"success": True, **core._snapshot_update_state(context, manifest_info)}
+        context = _get_update_context(request)
+        return {"success": True, **_snapshot_update_state(context, manifest_info)}
     except Exception as exc:
-        core._append_update_history(
+        _append_update_history(
             context["host"],
             {
                 "timestamp": datetime.utcnow().isoformat(),
@@ -74,22 +82,20 @@ def ajustes_actualizacion_verificar(request: Request):
 def ajustes_actualizacion_aplicar(request: Request):
     from datetime import datetime
 
-    from fastapi_modulo import main as core
-
-    core.require_admin_or_superadmin(request)
-    context = core._get_update_context(request)
+    require_admin_or_superadmin(request)
+    context = _get_update_context(request)
     try:
-        manifest = core._fetch_update_manifest(context["manifest_url"])
-        manifest_info = core._validate_update_manifest(context, manifest)
+        manifest = _fetch_update_manifest(context["manifest_url"])
+        manifest_info = _validate_update_manifest(context, manifest)
         if not manifest_info["update_available"]:
-            return {"success": True, **core._snapshot_update_state(context, manifest_info)}
-        job_payload = core._start_update_job(context, manifest_info)
-        context = core._get_update_context(request)
-        state = core._snapshot_update_state(context, manifest_info)
+            return {"success": True, **_snapshot_update_state(context, manifest_info)}
+        job_payload = _start_update_job(context, manifest_info)
+        context = _get_update_context(request)
+        state = _snapshot_update_state(context, manifest_info)
         state["last_job"] = job_payload
         return {"success": True, **state}
     except Exception as exc:
-        core._append_update_history(
+        _append_update_history(
             context["host"],
             {
                 "timestamp": datetime.utcnow().isoformat(),
@@ -103,20 +109,16 @@ def ajustes_actualizacion_aplicar(request: Request):
 
 @router.get("/empresa/base-datos", response_class=HTMLResponse)
 def empresa_base_datos_page(request: Request):
-    from fastapi_modulo import main as core
-
-    core.require_admin_or_superadmin(request)
-    return core._render_database_tools_page(request)
+    require_admin_or_superadmin(request)
+    return _render_database_tools_page(request)
 
 
 @router.get("/empresa/base-datos/exportar")
 def empresa_base_datos_exportar(request: Request):
     from datetime import datetime
 
-    from fastapi_modulo import main as core
-
-    core.require_admin_or_superadmin(request)
-    db_info = core._get_request_database_info(request)
+    require_admin_or_superadmin(request)
+    db_info = _get_request_database_info(request)
     if db_info["engine"] != "sqlite" or not db_info["path"]:
         raise HTTPException(status_code=400, detail="Exportación por archivo disponible solo en SQLite")
     db_path = os.path.abspath(db_info["path"])
@@ -130,11 +132,10 @@ def empresa_base_datos_exportar(request: Request):
 async def empresa_base_datos_importar(request: Request, db_file: UploadFile = File(...)):
     from urllib.parse import quote_plus
 
-    from fastapi_modulo import main as core
-    from fastapi_modulo import db as core_db
+    from fastapi_modulo.core import db as core_db
 
-    core.require_admin_or_superadmin(request)
-    db_info = core._get_request_database_info(request)
+    require_admin_or_superadmin(request)
+    db_info = _get_request_database_info(request)
     if db_info["engine"] != "sqlite" or not db_info["path"]:
         return RedirectResponse(
             url="/empresa/base-datos?status=error&msg=Importación%20por%20archivo%20solo%20disponible%20en%20SQLite",

@@ -13,7 +13,7 @@ os.environ.setdefault("SIPET_DATA_DIR", "/tmp/sipet_test_data")
 os.environ.setdefault("SQLITE_DB_PATH", "/tmp/sipet_test_data/strategic_planning_test_root_redirect.db")
 os.makedirs("/tmp/sipet_test_data", exist_ok=True)
 
-from fastapi_modulo.main import app
+from fastapi_modulo.modulos_sipet.modulo_base.runtime import app
 
 
 client = TestClient(app)

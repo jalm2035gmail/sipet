@@ -25,33 +25,34 @@ def _bind_core_symbols() -> None:
     global _CORE_BOUND
     if _CORE_BOUND:
         return
-    from fastapi_modulo import main as core
+    from fastapi_modulo.modulos_sipet.modulo_base import runtime_app
+    from fastapi_modulo.modulos_sipet.web.servicios import access_service
 
-    names = [
-        'SessionLocal',
-        'StrategicAxisConfig',
-        'StrategicObjectiveConfig',
-        'POAActivity',
-        'POASubactivity',
-        'POADeliverableApproval',
-        'Usuario',
-        '_date_to_iso',
-        '_activity_status',
-        'is_admin_or_superadmin',
-        '_parse_date_field',
-        '_validate_date_range',
-        '_validate_child_date_range',
-        '_current_user_record',
-        '_user_aliases',
-        '_resolve_process_owner_for_objective',
-        '_is_user_process_owner',
-        '_get_user_strategy_submenu_access_level',
-        'normalize_role_name',
-        'get_current_role',
-        '_resolve_user_role_name',
-    ]
-    for name in names:
-        globals()[name] = getattr(core, name)
+    names = {
+        "SessionLocal": runtime_app.SessionLocal,
+        "StrategicAxisConfig": runtime_app.StrategicAxisConfig,
+        "StrategicObjectiveConfig": runtime_app.StrategicObjectiveConfig,
+        "POAActivity": runtime_app.POAActivity,
+        "POASubactivity": runtime_app.POASubactivity,
+        "POADeliverableApproval": runtime_app.POADeliverableApproval,
+        "Usuario": runtime_app.Usuario,
+        "_date_to_iso": runtime_app._date_to_iso,
+        "_activity_status": runtime_app._activity_status,
+        "is_admin_or_superadmin": access_service.is_admin_or_superadmin,
+        "_parse_date_field": runtime_app._parse_date_field,
+        "_validate_date_range": runtime_app._validate_date_range,
+        "_validate_child_date_range": runtime_app._validate_child_date_range,
+        "_current_user_record": runtime_app._current_user_record,
+        "_user_aliases": runtime_app._user_aliases,
+        "_resolve_process_owner_for_objective": runtime_app._resolve_process_owner_for_objective,
+        "_is_user_process_owner": runtime_app._is_user_process_owner,
+        "_get_user_strategy_submenu_access_level": access_service.get_user_strategy_submenu_access_level,
+        "normalize_role_name": access_service.normalize_role_name,
+        "get_current_role": access_service.get_current_role,
+        "_resolve_user_role_name": runtime_app._resolve_user_role_name,
+    }
+    for name, value in names.items():
+        globals()[name] = value
     _CORE_BOUND = True
 
 

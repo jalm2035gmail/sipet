@@ -14,7 +14,7 @@ from fastapi import APIRouter, Body, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
 
-from fastapi_modulo.db import SessionLocal
+from fastapi_modulo.core.db import SessionLocal
 
 router = APIRouter()
 _MODULE_ROOT = os.path.dirname(os.path.dirname(__file__))

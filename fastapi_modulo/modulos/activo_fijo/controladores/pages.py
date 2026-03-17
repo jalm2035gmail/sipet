@@ -4,7 +4,7 @@ from pathlib import Path
 
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, Response
-from fastapi_modulo.modulos.web.servicios.module_tools import (
+from fastapi_modulo.modulos_sipet.web.servicios.module_tools import (
     read_text_file,
     render_backend_page_html,
     render_no_access_page,

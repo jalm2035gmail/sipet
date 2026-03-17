@@ -8,6 +8,8 @@ from pathlib import Path
 
 from fastapi import HTTPException, Request, UploadFile
 
+from fastapi_modulo.modulos_sipet.web.servicios.module_tools import require_app_access
+from fastapi_modulo.modulos_sipet.web.servicios.session_service import normalize_tenant_id
 from fastapi_modulo.modulos.control_interno.repositorios.base import set_current_tenant
 from fastapi_modulo.modulos.control_interno.servicios.evidencia_service import UPLOAD_DIR
 
@@ -91,10 +93,17 @@ async def save_uploaded_evidence(upload: UploadFile) -> dict[str, object]:
 
 
 def bind_tenant_context(request: Request) -> None:
-    from fastapi_modulo import main as core
-
-    tenant_id = getattr(core, "get_current_tenant")(request)
+    tenant_id = (
+        getattr(request.state, "tenant_id", None)
+        or request.headers.get("x-tenant-id")
+        or request.cookies.get("tenant_id")
+        or "default"
+    )
+    tenant_id = normalize_tenant_id(tenant_id)
     set_current_tenant(tenant_id)
 
 
-__all__ = ["ALLOWED_FILE_TYPES", "MAX_FILE_SIZE", "bind_tenant_context", "sanitize_filename", "save_uploaded_evidence"]
+def require_control_interno_access(request: Request) -> None:
+    require_app_access(request, "Control y seguimiento", "Acceso restringido al módulo Control y seguimiento")
+
+__all__ = ["ALLOWED_FILE_TYPES", "MAX_FILE_SIZE", "bind_tenant_context", "require_control_interno_access", "sanitize_filename", "save_uploaded_evidence"]

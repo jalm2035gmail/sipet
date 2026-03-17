@@ -4,10 +4,12 @@ from fastapi import APIRouter, Request
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 
 from fastapi_modulo.modulos.planificacion.modelos import poa_service
+from fastapi_modulo.modulos_sipet.web.controladores.backend_shell import render_backend_page
+from fastapi_modulo.modulos_sipet.web.servicios.access_service import has_strategy_submenu_access
+from fastapi_modulo.modulos_sipet.web.servicios.template_service import render_no_access_module_page
 
 
 router = APIRouter()
-_CORE_BOUND = False
 
 MODULE_DIR = Path(__file__).resolve().parent.parent
 _POA_TEMPLATE_PATH = MODULE_DIR / "vistas" / "poa.html"
@@ -17,18 +19,6 @@ _POA_TREE_TEMPLATE_PATH = MODULE_DIR / "vistas" / "poa_tree.html"
 _POA_GANTT_TEMPLATE_PATH = MODULE_DIR / "vistas" / "poa_gantt.html"
 _POA_CAL_TEMPLATE_PATH = MODULE_DIR / "vistas" / "poa_cal.html"
 
-
-def _bind_core_symbols() -> None:
-    global _CORE_BOUND
-    if _CORE_BOUND:
-        return
-    from fastapi_modulo import main as core
-
-    globals()["_render_no_access_module_page"] = getattr(core, "_render_no_access_module_page", None)
-    globals()["_has_strategy_submenu_access"] = getattr(core, "_has_strategy_submenu_access", None)
-    _CORE_BOUND = True
-
-
 def _render_poa_page(
     request: Request,
     *,
@@ -37,8 +27,6 @@ def _render_poa_page(
     template_path: Path,
     fallback: str,
 ) -> HTMLResponse:
-    from fastapi_modulo.main import render_backend_page
-
     try:
         MAIN_content = template_path.read_text(encoding="utf-8")
     except OSError:
@@ -56,9 +44,8 @@ def _render_poa_page(
 @router.get("/poa", response_class=HTMLResponse)
 @router.get("/poa/crear", response_class=HTMLResponse)
 def poa_page(request: Request):
-    _bind_core_symbols()
-    if callable(globals().get("_has_strategy_submenu_access")) and not _has_strategy_submenu_access(request, "POA"):
-        return _render_no_access_module_page(
+    if not has_strategy_submenu_access(request, "POA"):
+        return render_no_access_module_page(
             request,
             title="POA",
             description="Acceso restringido al programa operativo anual.",
@@ -84,9 +71,8 @@ def poa_css():
 
 @router.get("/poa/actividades", response_class=HTMLResponse)
 def poa_activities_page(request: Request):
-    _bind_core_symbols()
-    if callable(globals().get("_has_strategy_submenu_access")) and not _has_strategy_submenu_access(request, "POA"):
-        return _render_no_access_module_page(
+    if not has_strategy_submenu_access(request, "POA"):
+        return render_no_access_module_page(
             request,
             title="POA",
             description="Acceso restringido al programa operativo anual.",
@@ -100,9 +86,8 @@ def poa_activities_page(request: Request):
 
 @router.get("/poa/arbol", response_class=HTMLResponse)
 def poa_tree_page(request: Request):
-    _bind_core_symbols()
-    if callable(globals().get("_has_strategy_submenu_access")) and not _has_strategy_submenu_access(request, "POA"):
-        return _render_no_access_module_page(
+    if not has_strategy_submenu_access(request, "POA"):
+        return render_no_access_module_page(
             request,
             title="Árbol POA",
             description="Acceso restringido al árbol de avance POA.",
@@ -118,9 +103,8 @@ def poa_tree_page(request: Request):
 
 @router.get("/poa/gantt", response_class=HTMLResponse)
 def poa_gantt_page(request: Request):
-    _bind_core_symbols()
-    if callable(globals().get("_has_strategy_submenu_access")) and not _has_strategy_submenu_access(request, "POA"):
-        return _render_no_access_module_page(
+    if not has_strategy_submenu_access(request, "POA"):
+        return render_no_access_module_page(
             request,
             title="Gantt POA",
             description="Acceso restringido al cronograma Gantt POA.",
@@ -136,9 +120,8 @@ def poa_gantt_page(request: Request):
 
 @router.get("/poa/calendario", response_class=HTMLResponse)
 def poa_calendar_page(request: Request):
-    _bind_core_symbols()
-    if callable(globals().get("_has_strategy_submenu_access")) and not _has_strategy_submenu_access(request, "POA"):
-        return _render_no_access_module_page(
+    if not has_strategy_submenu_access(request, "POA"):
+        return render_no_access_module_page(
             request,
             title="Calendario POA",
             description="Acceso restringido al calendario POA.",

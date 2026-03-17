@@ -5,7 +5,7 @@ import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
-from fastapi_modulo.modulos.web.servicios.module_tools import (
+from fastapi_modulo.modulos_sipet.web.servicios.module_tools import (
     read_text_file,
     render_backend_page_html,
     require_app_access,

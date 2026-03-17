@@ -7,7 +7,8 @@ from typing import Any, Dict, List, Optional
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from fastapi_modulo.db import MAIN, SessionLocal, engine
+from fastapi_modulo.core import db as core_db
+from fastapi_modulo.core.db import MAIN
 from fastapi_modulo.modulos.frontend.modelos.frontend_db_models import FrontendPage, FrontendPageVersion
 
 _STORE_PATH = os.path.join("fastapi_modulo", "modulos", "frontend", "pages_store.json")
@@ -16,6 +17,7 @@ _MAX_VERSIONS = 5
 
 
 def ensure_frontend_schema() -> None:
+    engine = core_db.get_engine_for_host(core_db.get_request_host())
     MAIN.metadata.create_all(
         bind=engine,
         tables=[FrontendPage.__table__, FrontendPageVersion.__table__],
@@ -24,7 +26,7 @@ def ensure_frontend_schema() -> None:
 
 
 def _db() -> Session:
-    db = SessionLocal()
+    db = core_db.get_session_factory_for_host(core_db.get_request_host())()
     _migrate_legacy_files_if_needed(db)
     return db
 

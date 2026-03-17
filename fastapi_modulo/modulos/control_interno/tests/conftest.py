@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[4]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-import fastapi_modulo.db as core_db
+import fastapi_modulo.core.db as core_db
 from fastapi_modulo.modulos.control_interno.controladores import dependencies
 from fastapi_modulo.modulos.control_interno.modelos.control import ControlInterno
 from fastapi_modulo.modulos.control_interno.modelos.evidencia import Evidencia

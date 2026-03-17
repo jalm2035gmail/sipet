@@ -8,46 +8,30 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import func, text
 
 from fastapi_modulo.modulos.planificacion.modelos.kpis_service import _ensure_kpi_mediciones_table, _kpi_evaluate_status
-
-_CORE_BOUND = False
-
-
-def _bind_core_symbols() -> None:
-    global _CORE_BOUND
-    if _CORE_BOUND:
-        return
-    from fastapi_modulo import main as core
-
-    names = [
-        "SessionLocal",
-        "POADeliverableApproval",
-        "POAActivity",
-        "POASubactivity",
-        "StrategicObjectiveConfig",
-        "DocumentoEvidencia",
-        "PublicQuizSubmission",
-        "UserNotificationRead",
-        "_notification_user_key",
-        "_normalize_tenant_id",
-        "get_current_tenant",
-        "_is_user_process_owner",
-        "is_superadmin",
-        "_current_user_record",
-        "_user_aliases",
-        "_activity_status",
-    ]
-    for name in names:
-        globals()[name] = getattr(core, name)
-    _CORE_BOUND = True
-
+from fastapi_modulo.modulos_sipet.modulo_base.runtime_app import (
+    DocumentoEvidencia,
+    POAActivity,
+    POADeliverableApproval,
+    POASubactivity,
+    PublicQuizSubmission,
+    SessionLocal,
+    StrategicObjectiveConfig,
+    UserNotificationRead,
+    _activity_status,
+    _current_user_record,
+    _is_user_process_owner,
+    _normalize_tenant_id,
+    _notification_user_key,
+    _user_aliases,
+    get_current_tenant,
+)
+from fastapi_modulo.modulos_sipet.web.servicios.access_service import is_superadmin
 
 def _get_document_tenant(request: Request) -> str:
-    _bind_core_symbols()
     return _normalize_tenant_id(get_current_tenant(request))
 
 
 def notifications_summary(request: Request):
-    _bind_core_symbols()
     db = SessionLocal()
     try:
         now = datetime.utcnow()

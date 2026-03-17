@@ -3,7 +3,8 @@ from __future__ import annotations
 from sqlalchemy import inspect, text
 from sqlalchemy.orm import Session
 
-from fastapi_modulo.db import MAIN, SessionLocal, engine
+from fastapi_modulo.core import db as core_db
+from fastapi_modulo.core.db import MAIN
 from fastapi_modulo.modulos.crm.modelos.db_models import (
     CrmActividad,
     CrmCampania,
@@ -15,7 +16,13 @@ from fastapi_modulo.modulos.crm.modelos.db_models import (
 )
 
 
-def ensure_crm_schema() -> None:
+def _active_host(host: str | None = None) -> str:
+    return host if host is not None else core_db.get_request_host()
+
+
+def ensure_crm_schema(host: str | None = None) -> None:
+    active_host = _active_host(host)
+    engine = core_db.get_engine_for_host(active_host)
     MAIN.metadata.create_all(
         bind=engine,
         tables=[
@@ -29,10 +36,10 @@ def ensure_crm_schema() -> None:
         ],
         checkfirst=True,
     )
-    _ensure_crm_columns()
+    _ensure_crm_columns(engine)
 
 
-def _ensure_crm_columns() -> None:
+def _ensure_crm_columns(engine) -> None:
     inspector = inspect(engine)
     column_specs = {
         "crm_contactos": {
@@ -102,5 +109,6 @@ def _ensure_crm_columns() -> None:
                 conn.execute(text(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {ddl}"))
 
 
-def get_db() -> Session:
-    return SessionLocal()
+def get_db(host: str | None = None) -> Session:
+    session_factory = core_db.get_session_factory_for_host(_active_host(host))
+    return session_factory()

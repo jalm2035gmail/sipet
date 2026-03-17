@@ -1,9 +1,5 @@
-from fastapi_modulo.db import SessionLocal
+from fastapi_modulo.modulos.capacitacion.repositorios.common import get_db
 from fastapi_modulo.modulos.capacitacion.modelos.db_models import CapCertificado, CapCurso, CapEncuestaSatisfaccion, CapInscripcion, CapLeccion, CapProgresoLeccion
-
-
-def get_db():
-    return SessionLocal()
 
 
 def list_inscripciones(db, curso_id=None, colaborador_key=None, estado=None, departamento=None, fecha_desde=None, fecha_hasta=None):
