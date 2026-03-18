@@ -32,7 +32,7 @@ router = APIRouter()
 SETUP_AUTH_COOKIE_NAME = "sipet_setup_auth"
 DEFAULT_SETUP_USERNAME_B64 = "MGtvbm9taXlha2k="
 DEFAULT_SETUP_PASSWORD_B64 = "WFgsJCwyNixzaXBldCwyNiwkLFhY"
-BRAND_LOGO_URL = "/modulos_sipet/web/static/imagenes/avancoop.png"
+BRAND_LOGO_URL = "/modulos_sipet/avancoop.png"
 
 
 def _decode_b64(value: str) -> str:
@@ -81,7 +81,7 @@ def _manager_content() -> str:
 <section class="w-full space-y-4">
   <div class="titulo bg-MAIN-200 rounded-box border border-MAIN-300 p-4 sm:p-6">
     <div class="w-full flex flex-col md:flex-row items-center gap-10">
-      <img src="{BRAND_LOGO_URL}" alt="AVANCOOP" width="132" height="132" class="shrink-0 rounded-box border border-MAIN-300 bg-MAIN-100 p-3 object-contain" />
+      <img src="{BRAND_LOGO_URL}" alt="AVANCOOP" width="132" height="132" class="shrink-0 rounded-box shadow-lg object-contain" />
       <div class="w-full grid gap-2 content-center">
         <div class="block w-full text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight text-[color:var(--sidebar-bottom)]">Gestión de bases de datos</div>
         <div class="block w-full text-MAIN sm:text-lg text-MAIN-content/70">Alta, edición, baja, exportación e importación de dominios y bases.</div>
@@ -103,9 +103,10 @@ def _manager_content() -> str:
         <label class="label cursor-pointer justify-start gap-3"><input id="sipet-show-db-path" type="checkbox" class="checkbox" {"checked" if settings.get("show_db_path") else ""}><span class="label-text">Mostrar ruta</span></label>
         <div class="flex gap-2 flex-wrap">
           <button id="save-sipet-conf" class="btn btn-primary btn-sm" type="button">Guardar</button>
-          <button id="initialize-database" class="btn btn-secondary btn-sm" type="button">Inicializar BD</button>
+          <button id="initialize-database" class="btn btn-success btn-sm" type="button" onclick="sipetCrearBD(this)">Crear BD</button>
           <a class="btn btn-outline btn-sm" href="/api/base_datos/gestion/export/sipet-conf">Exportar conf</a>
         </div>
+        <p id="init-db-message" class="text-sm mt-1 hidden"></p>
         <p class="text-xs text-MAIN-content/60 break-all">{escape(str(settings.get("path") or ""))}</p>
       </div>
     </aside>
@@ -147,6 +148,39 @@ def _manager_content() -> str:
   </div>
 </section>
 <script>
+window.sipetCrearBD = async function(btn) {{
+  const msgEl = document.getElementById('init-db-message');
+  const showM = (txt, err) => {{
+    if (msgEl) {{ msgEl.textContent = txt; msgEl.className = 'text-sm mt-1 ' + (err ? 'text-red-600' : 'text-green-600'); msgEl.classList.remove('hidden'); }}
+    else {{ alert(txt); }}
+  }};
+  btn.disabled = true;
+  const orig = btn.textContent;
+  btn.textContent = 'Procesando…';
+  try {{
+    const g = (id) => (document.getElementById(id) || {{}}).value || '';
+    const payload = {{
+      domain: g('sipet-domain').trim(),
+      db_host: g('sipet-db-host').trim(),
+      db_port: g('sipet-db-port').trim(),
+      db_user: g('sipet-db-user').trim(),
+      db_password: g('sipet-db-password').trim(),
+      db_name: g('sipet-db-name').trim(),
+      dbfilter: g('sipet-dbfilter').trim(),
+    }};
+    const res = await fetch('/api/base_datos/inicializar', {{ method: 'POST', headers: {{'Content-Type':'application/json'}}, body: JSON.stringify(payload) }});
+    let data;
+    try {{ data = await res.json(); }} catch(_) {{ throw new Error('Respuesta no válida (HTTP ' + res.status + ')'); }}
+    if (!res.ok || !data.success) throw new Error(data.error || data.detail || 'Error al crear la base');
+    showM(data.result?.connected ? '✓ Base de datos creada exitosamente.' : (data.result?.error || 'No se pudo conectar.'), !data.result?.connected);
+    if (data.result?.connected) setTimeout(() => location.href = '/backend/login', 1200);
+  }} catch(e) {{
+    showM(e.message || String(e), true);
+  }} finally {{
+    btn.disabled = false;
+    btn.textContent = orig;
+  }}
+}};
 (() => {{
   const state = {{ settings: {settings_json}, entries: [] }};
   const byId = (id) => document.getElementById(id);
@@ -264,35 +298,6 @@ def _manager_content() -> str:
     }}
   }});
 
-  byId('initialize-database')?.addEventListener('click', async () => {{
-    try {{
-      const payload = {{
-        domain: text(byId('sipet-domain')?.value).trim(),
-        db_host: text(byId('sipet-db-host')?.value).trim(),
-        db_port: text(byId('sipet-db-port')?.value).trim(),
-        db_user: text(byId('sipet-db-user')?.value).trim(),
-        db_password: text(byId('sipet-db-password')?.value).trim(),
-        db_name: text(byId('sipet-db-name')?.value).trim(),
-        dbfilter: text(byId('sipet-dbfilter')?.value).trim(),
-        show_db_path: Boolean(byId('sipet-show-db-path')?.checked),
-      }};
-      const res = await fetch('/api/base_datos/inicializar', {{
-        method: 'POST',
-        headers: {{ 'Content-Type': 'application/json' }},
-        body: JSON.stringify(payload),
-      }});
-      const data = await res.json();
-      if (!res.ok || !data.success) throw new Error(data.error || 'No se pudo inicializar la base');
-      state.settings = data.settings || state.settings;
-      render();
-      showMsg(data.result?.connected ? 'Base de datos inicializada.' : (data.result?.error || 'No se pudo conectar.'), !data.result?.connected);
-      if (data.result?.connected) {{
-        window.setTimeout(() => window.location.href = '/backend/login', 800);
-      }}
-    }} catch (err) {{
-      showMsg(String(err.message || err), true);
-    }}
-  }});
 
   byId('import-conf-input')?.addEventListener('change', async (event) => {{
     const file = event.target.files?.[0];
@@ -349,7 +354,7 @@ def _setup_login_content() -> str:
   <article class="card border border-MAIN-300 bg-MAIN-100 shadow-sm">
     <div class="card-body gap-4">
       <div class="flex" style="justify-content:center;">
-        <img src="{BRAND_LOGO_URL}" alt="AVANCOOP" width="144" height="144" style="border:1px solid var(--line); border-radius:18px; background:#fff; padding:14px; object-fit:contain;">
+        <img src="{BRAND_LOGO_URL}" alt="AVANCOOP" width="144" height="144" style="border-radius:18px; box-shadow:0 8px 32px rgba(15,23,42,.18); object-fit:contain;">
       </div>
       <h2 class="card-title">Inicializar base de datos</h2>
       <p>Se requieren las credenciales maestras para crear o modificar la base de datos.</p>

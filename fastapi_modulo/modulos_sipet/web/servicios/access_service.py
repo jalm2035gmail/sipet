@@ -8,7 +8,8 @@ import unicodedata
 from fastapi import HTTPException, Request
 
 from fastapi_modulo.core.module_registry import list_system_app_access_options
-from fastapi_modulo.modulos.personalizacion.controladores.roles import ROLE_ALIASES
+
+ROLE_ALIASES: dict[str, str] = {}
 
 
 def normalize_role_name(role_name: str | None) -> str:

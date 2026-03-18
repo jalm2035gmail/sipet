@@ -686,7 +686,7 @@ def ensure_default_roles() -> None:
     Rol.__table__.create(bind=engine, checkfirst=True)
     db = SessionLocal()
     try:
-        from fastapi_modulo.modulos.personalizacion.controladores.roles import DEFAULT_SYSTEM_ROLES
+        from fastapi_modulo.modulos_sipet.personalizacion.controladores.roles import DEFAULT_SYSTEM_ROLES
 
         for role_name, role_description in DEFAULT_SYSTEM_ROLES:
             existing = db.query(Rol).filter(Rol.nombre == role_name).first()
@@ -1391,6 +1391,18 @@ templates = Jinja2Templates(directory=["fastapi_modulo/templates", "fastapi_modu
 app.state.templates = templates
 app.mount("/templates", StaticFiles(directory="fastapi_modulo/templates"), name="templates")
 app.mount("/icon", StaticFiles(directory="fastapi_modulo/templates/icon"), name="icon")
+_mount_static_if_exists(
+    app,
+    "/modulo_base/static",
+    str(Path(__file__).resolve().parent / "static"),
+    name="modulo_base_static",
+)
+_mount_static_if_exists(
+    app,
+    "/modulos_sipet",
+    str(Path(__file__).resolve().parent.parent),
+    name="modulos_sipet_static",
+)
 _mount_static_if_exists(
     app,
     "/modulos/activo_fijo/static",
