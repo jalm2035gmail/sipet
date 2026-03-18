@@ -15,9 +15,9 @@ from fastapi_modulo.modulos_sipet.aplicaciones.servicios.catalog_service import 
 from fastapi_modulo.modulos_sipet.web.servicios.module_tools import render_backend_page_html, text_asset_response
 from fastapi_modulo.modulos_sipet.web.servicios.template_service import get_templates
 
-TEMPLATE_NAME = "modulos/aplicaciones/vistas/aplicaciones.html"
-CSS_PATH = "fastapi_modulo/modulos/aplicaciones/static/css/aplicaciones.css"
-JS_PATH = "fastapi_modulo/modulos/aplicaciones/static/js/aplicaciones.js"
+TEMPLATE_NAME = "modulos_sipet/aplicaciones/vistas/aplicaciones.html"
+CSS_PATH = "fastapi_modulo/modulos_sipet/aplicaciones/static/css/aplicaciones.css"
+JS_PATH = "fastapi_modulo/modulos_sipet/aplicaciones/static/js/aplicaciones.js"
 
 router = APIRouter()
 
@@ -29,6 +29,11 @@ def load_aplicaciones_page(modules: list[dict]) -> str:
         applications_css_url="/api/aplicaciones/assets/aplicaciones.css",
         applications_js_url="/api/aplicaciones/assets/aplicaciones.js",
     )
+
+
+@router.get("/inicio", response_class=HTMLResponse)
+def inicio_redirect() -> RedirectResponse:
+    return RedirectResponse(url="/aplicaciones", status_code=307)
 
 
 @router.get("/modulos", response_class=HTMLResponse)

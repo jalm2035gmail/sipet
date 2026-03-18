@@ -315,16 +315,18 @@ def verify_password_with_policy(password: str, stored_hash: str) -> tuple[bool, 
     stored = (stored_hash or "").strip()
     if not stored:
         return False, None
-    if stored.startswith("$2"):
+    # bcrypt or passlib pbkdf2 formats — delegate to passlib
+    if stored.startswith("$2") or stored.startswith("$pbkdf2-sha256$") or stored.startswith("$pbkdf2-sha512$"):
         try:
             verified, replacement = PASSWORD_CONTEXT.verify_and_update(password, stored)
             return bool(verified), replacement
         except Exception:
             return False, None
+    # custom pbkdf2_sha256 format — no rehash needed (already high-rounds PBKDF2)
     verified = verify_password(password, stored)
     if not verified:
         return False, None
-    return True, hash_password(password) if needs_password_rehash(stored) else None
+    return True, None
 
 
 def rehash_user_password_if_needed(db, user, plain_password: str) -> bool:
