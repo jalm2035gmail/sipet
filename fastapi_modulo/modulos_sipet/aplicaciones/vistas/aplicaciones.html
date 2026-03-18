@@ -1,208 +1,22 @@
-<section
-  id="applications-root"
-  data-bootstrap='{{ applications_bootstrap }}'
-  class="gov-apps-page mx-auto grid max-w-[1600px] gap-6 px-4 py-6 xl:grid-cols-[minmax(0,1fr)_22rem] 2xl:px-6"
->
+<section id="applications-root" class="mx-auto max-w-5xl px-4 py-10">
   <link rel="stylesheet" href="{{ applications_css_url }}">
 
-  <div class="space-y-6">
-    <section class="hero overflow-hidden rounded-[2rem] border border-base-300 bg-base-100 shadow-xl">
-      <div class="hero-content w-full max-w-none flex-col items-stretch gap-8 p-6 lg:p-10">
-        <div class="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-          <div class="max-w-3xl space-y-4">
-            <span class="badge badge-accent badge-lg gap-2">Gobierno de Apps</span>
-            <div class="space-y-3">
-              <h1 class="font-black leading-none text-base-content text-4xl md:text-5xl">Catalogo institucional de aplicaciones</h1>
-              <p class="max-w-2xl text-base leading-7 text-base-content/70 md:text-lg">
-                Estado operativo, protocolo, paquetes y trazabilidad administrativa en un solo panel.
-              </p>
-            </div>
-          </div>
-          <div class="flex flex-wrap items-center gap-3">
-            <button class="btn btn-primary gap-2" type="button" id="apps-sync-protocol">
-              <i class="fa-solid fa-arrows-rotate"></i>
-              Actualizar inventario
-            </button>
-            <button class="btn btn-outline gap-2" type="button" id="apps-bulk-enable">
-              <i class="fa-solid fa-toggle-on"></i>
-              Activar lote
-            </button>
-            <button class="btn btn-outline gap-2" type="button" id="apps-bulk-disable">
-              <i class="fa-solid fa-toggle-off"></i>
-              Desactivar lote
-            </button>
-            <button class="btn btn-outline gap-2" type="button" id="apps-export-excel">
-              <i class="fa-solid fa-file-excel"></i>
-              Exportar Excel
-            </button>
-          </div>
-        </div>
-        <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <div class="stats bg-primary text-primary-content shadow">
-            <div class="stat">
-              <div class="stat-title text-primary-content/80">Total</div>
-              <div class="stat-value" id="apps-total-count">0</div>
-              <div class="stat-desc text-primary-content/70">Módulos registrados</div>
-            </div>
-          </div>
-          <div class="stats bg-success text-success-content shadow">
-            <div class="stat">
-              <div class="stat-title text-success-content/80">Protocol OK</div>
-              <div class="stat-value" id="apps-ok-count">0</div>
-              <div class="stat-desc text-success-content/70">Cumplimiento completo</div>
-            </div>
-          </div>
-          <div class="stats bg-warning text-warning-content shadow">
-            <div class="stat">
-              <div class="stat-title text-warning-content/80">Pendientes</div>
-              <div class="stat-value" id="apps-missing-count">0</div>
-              <div class="stat-desc text-warning-content/70">Con hallazgos de protocolo</div>
-            </div>
-          </div>
-          <div class="stats bg-base-200 shadow">
-            <div class="stat">
-              <div class="stat-title">Seleccionados</div>
-              <div class="stat-value text-base-content" id="apps-selected-count">0</div>
-              <div class="stat-desc">Acciones por lote disponibles</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section class="grid gap-4 xl:grid-cols-[minmax(0,1fr)_18rem]">
-      <div class="card border border-base-300 bg-base-100 shadow-sm">
-        <div class="card-body gap-4 p-5">
-          <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div class="tabs tabs-boxed w-fit bg-base-200 p-1">
-              <button class="tab tab-active" type="button" data-filter="all">Todos</button>
-              <button class="tab" type="button" data-filter="ok">Con protocolo</button>
-              <button class="tab" type="button" data-filter="missing">Con hallazgos</button>
-            </div>
-            <label class="input input-bordered flex w-full max-w-xl items-center gap-2">
-              <i class="fa-solid fa-magnifying-glass text-base-content/50"></i>
-              <input id="apps-search-input" type="search" class="grow" placeholder="Buscar aplicación, ruta o clave">
-            </label>
-          </div>
-          <div class="alert border border-base-300 bg-base-200/70 text-sm">
-            <i class="fa-solid fa-circle-info"></i>
-            <span id="apps-selection-summary">Selecciona módulos para ejecutar acciones por lote o revisar auditoría.</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="card border border-base-300 bg-base-100 shadow-sm">
-        <div class="card-body p-5">
-          <div class="flex items-center justify-between">
-            <h2 class="card-title text-base">Lote</h2>
-            <label class="label cursor-pointer gap-3">
-              <span class="label-text">Todos</span>
-              <input id="apps-select-all" type="checkbox" class="checkbox checkbox-sm">
-            </label>
-          </div>
-          <div class="mt-2 flex flex-wrap gap-2">
-            <span class="badge badge-outline">Activa lote</span>
-            <span class="badge badge-outline">Desactiva lote</span>
-            <span class="badge badge-outline">Importa paquete</span>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section class="grid gap-5 md:grid-cols-2 2xl:grid-cols-3" id="apps-grid"></section>
+  <div class="mb-8">
+    <h1 class="text-3xl font-black text-base-content">Panel de aplicaciones</h1>
+    <p class="mt-2 text-base-content/60">
+      Los módulos instalados registrarán aquí sus permisos y accesos disponibles.
+    </p>
   </div>
 
-  <aside class="space-y-6">
-    <section class="card border border-base-300 bg-base-100 shadow-sm">
-      <div class="card-body p-5">
-        <div class="flex items-center justify-between gap-3">
-          <h2 class="card-title text-lg">Auditoría</h2>
-          <span class="badge badge-neutral" id="apps-audit-pill">Sin selección</span>
-        </div>
-        <div class="mt-2 space-y-4" id="apps-audit-panel">
-          <div class="alert border border-dashed border-base-300 bg-base-200/60 text-sm">
-            <i class="fa-regular fa-compass"></i>
-            <span>Selecciona un módulo para ver protocolo, ruta, dependencias y capacidad de importación.</span>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section class="card border border-base-300 bg-base-100 shadow-sm">
-      <div class="card-body p-5">
-        <h2 class="card-title text-lg">Estados</h2>
-        <div class="mt-3 space-y-3 text-sm">
-          <div class="flex items-center justify-between">
-            <span class="text-base-content/70">Activos</span>
-            <span class="badge badge-success" id="apps-enabled-count">0</span>
-          </div>
-          <div class="flex items-center justify-between">
-            <span class="text-base-content/70">Importables</span>
-            <span class="badge badge-info" id="apps-uploadable-count">0</span>
-          </div>
-          <div class="flex items-center justify-between">
-            <span class="text-base-content/70">Con ruta</span>
-            <span class="badge badge-outline" id="apps-routed-count">0</span>
-          </div>
-        </div>
-      </div>
-    </section>
-  </aside>
-
-  <dialog id="apps-upload-modal" class="modal">
-    <div class="modal-box max-w-lg">
-      <form method="dialog">
-        <button class="btn btn-circle btn-ghost btn-sm absolute right-3 top-3">✕</button>
-      </form>
-      <h3 class="text-2xl font-black">Importar paquete</h3>
-      <p class="mt-2 text-sm text-base-content/70" id="apps-upload-label">Selecciona un ZIP para actualizar el módulo.</p>
-      <div class="mt-5 space-y-4">
-        <label class="flex cursor-pointer flex-col items-center justify-center gap-3 rounded-3xl border border-dashed border-base-300 bg-base-200/60 px-6 py-10 text-center">
-          <i class="fa-solid fa-file-zipper text-3xl text-primary"></i>
-          <span class="font-semibold">Elegir archivo ZIP</span>
-          <span class="text-sm text-base-content/60">Primero se inspecciona y después se confirma la aplicación</span>
-          <input type="file" id="apps-upload-input" accept=".zip,application/zip" hidden>
-        </label>
-        <div class="alert bg-base-200 text-sm">
-          <i class="fa-solid fa-shield-halved"></i>
-          <span>Se valida tamaño, MIME, checksum, cantidad de archivos y contenido antes de aplicar.</span>
-        </div>
-        <div id="apps-upload-summary" class="hidden rounded-3xl border border-base-300 bg-base-100 p-4">
-          <div class="flex items-center justify-between gap-3">
-            <h4 class="text-sm font-black uppercase tracking-[0.18em] text-base-content/60">Inspección</h4>
-            <span class="badge badge-outline" id="apps-upload-checksum">-</span>
-          </div>
-          <div class="mt-3 grid gap-2 text-sm sm:grid-cols-2">
-            <div class="rounded-2xl bg-base-200 px-3 py-2">Archivos: <strong id="apps-upload-total-files">0</strong></div>
-            <div class="rounded-2xl bg-base-200 px-3 py-2">Tamaño ZIP: <strong id="apps-upload-file-size">0 B</strong></div>
-            <div class="rounded-2xl bg-base-200 px-3 py-2">Nuevos: <strong id="apps-upload-new-files">0</strong></div>
-            <div class="rounded-2xl bg-base-200 px-3 py-2">Cambios: <strong id="apps-upload-changed-files">0</strong></div>
-            <div class="rounded-2xl bg-base-200 px-3 py-2">Sin cambios: <strong id="apps-upload-unchanged-files">0</strong></div>
-            <div class="rounded-2xl bg-base-200 px-3 py-2">Expandido: <strong id="apps-upload-total-size">0 B</strong></div>
-          </div>
-          <div class="mt-3 hidden text-sm text-warning" id="apps-upload-warnings"></div>
-          <div class="mt-3">
-            <div class="mb-2 text-xs uppercase tracking-[0.18em] text-base-content/50">Vista previa</div>
-            <div class="max-h-56 overflow-auto rounded-2xl border border-base-300">
-              <ul class="divide-y divide-base-300 text-sm" id="apps-upload-preview"></ul>
-            </div>
-          </div>
-        </div>
-        <div class="flex justify-end gap-3">
-          <button class="btn btn-primary" type="button" id="apps-upload-apply" disabled>Confirmar y aplicar</button>
-        </div>
-      </div>
-    </div>
-    <form method="dialog" class="modal-backdrop">
-      <button>Cerrar</button>
-    </form>
-  </dialog>
-
-  <div class="toast toast-end toast-bottom z-[100]">
-    <div class="alert shadow-lg opacity-0 transition-opacity duration-200" id="apps-toast">
-      <span></span>
-    </div>
+  <div id="apps-modules-zone">
+    <!-- Los módulos instalados inyectan su contenido aquí -->
   </div>
 
-  <script src="{{ applications_js_url }}"></script>
+  <div id="apps-empty-state" class="rounded-2xl border border-dashed border-base-300 bg-base-200/50 px-8 py-16 text-center">
+    <i class="fa-solid fa-cubes-stacked text-4xl text-base-content/30"></i>
+    <p class="mt-4 text-base font-semibold text-base-content/50">Sin módulos instalados</p>
+    <p class="mt-1 text-sm text-base-content/40">
+      Cuando se instale un módulo aparecerá aquí con sus opciones de acceso.
+    </p>
+  </div>
 </section>
