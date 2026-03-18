@@ -21,16 +21,19 @@ def invalidate_module_catalog_cache() -> None:
 
 def build_sidebar_modules(request: Request) -> List[Dict[str, str]]:
     user_access = set(get_user_app_access(request))
+    superadmin = is_superadmin(request)
     sidebar_modules: List[Dict[str, str]] = []
     for item in _cached_modules_payload():
         key = str(item.get("key") or "").strip()
         route = str(item.get("route") or "").strip()
-        if not route or not bool(item.get("enabled")):
+        if not route:
             continue
-        if not bool(item.get("sidebar_visible")) and not (key == "system_admin" and is_superadmin(request)):
+        if not superadmin and not bool(item.get("enabled")):
+            continue
+        if not bool(item.get("sidebar_visible")) and not (key == "system_admin" and superadmin):
             continue
         app_access_name = str(item.get("app_access_name") or "").strip()
-        if app_access_name and not is_superadmin(request) and app_access_name not in user_access:
+        if app_access_name and not superadmin and app_access_name not in user_access:
             continue
         sidebar_modules.append(
             {
