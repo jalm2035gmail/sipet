@@ -44,16 +44,13 @@ class ModuleDefinition:
 MODULE_DEFINITIONS: List[ModuleDefinition] = [
     ModuleDefinition(
         key="backend",
-        label="backend",
-        description="Sitio backend y constructor frontend.",
-        route="/backend",
+        label="Web",
+        description="Módulo web principal — ajustes de sistema y configuración.",
+        route="/ajustes/configuracion",
         icon="fa-solid fa-globe",
         sidebar_visible=True,
-        manageable=True,
-        registration_phase="late",
-        router_specs=[
-            RouterSpec("fastapi_modulo.modulos.frontend.controladores.frontend"),
-        ],
+        manageable=False,
+        always_enabled=True,
     ),
     ModuleDefinition(
         key="modulo_base",

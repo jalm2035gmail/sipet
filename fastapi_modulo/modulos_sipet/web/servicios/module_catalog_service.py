@@ -22,6 +22,7 @@ def invalidate_module_catalog_cache() -> None:
 def build_sidebar_modules(request: Request) -> List[Dict[str, str]]:
     user_access = set(get_user_app_access(request))
     superadmin = is_superadmin(request)
+    print(f"[sidebar] role={getattr(request.state, 'user_role', '?')} superadmin={superadmin} payload_len={len(_cached_modules_payload())}", flush=True)
     sidebar_modules: List[Dict[str, str]] = []
     for item in _cached_modules_payload():
         key = str(item.get("key") or "").strip()

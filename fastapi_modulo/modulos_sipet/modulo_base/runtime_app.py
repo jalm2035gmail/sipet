@@ -2353,6 +2353,11 @@ def configura_imagen():
     return "<h2>Configuración de imagen (template)</h2>"
 
 
+@app.get("/ajustes/configuracion", response_class=HTMLResponse)
+def ajustes_configuracion(request: Request):
+    return _render_ajustes_configuracion_page(request)
+
+
 def _render_database_tools_page(request: Request) -> HTMLResponse:
     from urllib.parse import quote_plus
 

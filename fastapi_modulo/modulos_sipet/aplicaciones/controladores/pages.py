@@ -49,6 +49,17 @@ def aplicaciones_css_asset():
     )
 
 
+@router.get("/api/aplicaciones/sidebar-debug")
+def sidebar_debug(request: Request):
+    from fastapi_modulo.modulos_sipet.web.servicios.module_catalog_service import build_sidebar_modules
+    from fastapi_modulo.modulos_sipet.web.servicios.access_service import is_superadmin, get_current_role
+    return {
+        "role": get_current_role(request),
+        "is_superadmin": is_superadmin(request),
+        "sidebar_modules": build_sidebar_modules(request),
+    }
+
+
 @router.get("/api/aplicaciones/permisos")
 def aplicaciones_permissions(request: Request):
     from fastapi_modulo.modulos_sipet.aplicaciones.controladores.dependencies import get_applications_permissions
