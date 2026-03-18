@@ -9,7 +9,7 @@ MANIFEST = {
     "version": "1.3.0",
     "category": "Base",
     "author": "SIPET",
-    "sequence": "",
+    "sequence": "1999",
     "website": "https://avancoop.org",
     "route": "/aplicaciones",
     "icon": "fa-solid fa-cubes",

@@ -26,7 +26,7 @@
       <ul class="menu menu-sm gap-0.5 p-0">
         {% for mod in nav_modules %}
           <li>
-            
+            <a
               href="{{ mod.route }}"
               class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors
                      {% if current_module == mod.key %}bg-primary/10 text-primary font-medium{% else %}text-base-content/70 hover:bg-base-200 hover:text-base-content{% endif %}"
@@ -55,7 +55,7 @@
           {% set section_icon = section.icon if section is mapping else 'fa-solid fa-circle-dot' %}
           {% set section_route = section.route if section is mapping else ('#' ~ section_id) %}
           <li>
-            
+            <a
               href="{{ section_route }}"
               class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors
                      {% if current_section == section_id %}bg-base-200 text-base-content font-medium{% else %}text-base-content/60 hover:bg-base-200 hover:text-base-content{% endif %}"

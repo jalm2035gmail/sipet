@@ -5,7 +5,7 @@ from typing import Dict, List
 
 from fastapi import Request
 
-from fastapi_modulo.core.module_registry import get_active_app_access_names, get_active_module_keys, list_modules_payload
+from fastapi_modulo.core.module_registry import get_active_app_access_names, get_active_module_keys, is_module_enabled, list_modules_payload
 from fastapi_modulo.modulos_sipet.web.servicios.access_service import get_user_app_access, is_superadmin
 from fastapi_modulo.modulos_sipet.web.servicios.icon_catalog_service import resolve_module_icon
 
@@ -22,16 +22,18 @@ def invalidate_module_catalog_cache() -> None:
 def build_sidebar_modules(request: Request) -> List[Dict[str, str]]:
     user_access = set(get_user_app_access(request))
     superadmin = is_superadmin(request)
-    print(f"[sidebar] role={getattr(request.state, 'user_role', '?')} superadmin={superadmin} payload_len={len(_cached_modules_payload())}", flush=True)
+    tenant_key = str(getattr(request.state, "tenant_key", "") or "")
     sidebar_modules: List[Dict[str, str]] = []
     for item in _cached_modules_payload():
         key = str(item.get("key") or "").strip()
         route = str(item.get("route") or "").strip()
         if not route:
             continue
-        if not superadmin and not bool(item.get("enabled")):
+        if not is_module_enabled(key, tenant_key=tenant_key or None):
             continue
-        if not bool(item.get("sidebar_visible")) and not (key == "system_admin" and superadmin):
+        if not bool(item.get("sidebar_visible")) and not (key in ("system_admin", "backend") and superadmin):
+            continue
+        if key in ("system_admin", "backend") and not superadmin:
             continue
         app_access_name = str(item.get("app_access_name") or "").strip()
         if app_access_name and not superadmin and app_access_name not in user_access:
@@ -42,7 +44,7 @@ def build_sidebar_modules(request: Request) -> List[Dict[str, str]]:
                 "label": str(item.get("label") or key),
                 "route": route,
                 "icon": resolve_module_icon(key, str(item.get("icon") or "")),
-                "icon_url": str(item.get("icon_url") or ""),
+                "icon_url": "" if key in {"multiempresa", "empresa"} else str(item.get("icon_url") or ""),
                 "route_match": "exact" if key == "brujula" else "",
                 "sequence": str(item.get("sequence") or ""),
             }

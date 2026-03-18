@@ -44,10 +44,11 @@ class ModuleDefinition:
 MODULE_DEFINITIONS: List[ModuleDefinition] = [
     ModuleDefinition(
         key="backend",
-        label="Web",
+        label="Configuración",
         description="Módulo web principal — ajustes de sistema y configuración.",
         route="/ajustes/configuracion",
-        icon="fa-solid fa-globe",
+        icon="fa-solid fa-gear",
+        manifest_file="fastapi_modulo/modulos_sipet/web/__manifest__.py",
         sidebar_visible=True,
         manageable=False,
         always_enabled=True,
@@ -58,8 +59,8 @@ MODULE_DEFINITIONS: List[ModuleDefinition] = [
         description="Núcleo reusable interno para contratos, utilidades y servicios compartidos.",
         route="/modulo-base",
         icon="fa-solid fa-layer-group",
-        manifest_file="fastapi_modulo/modulos/modulo_base/__manifest__.py",
-        sidebar_visible=True,
+        manifest_file="fastapi_modulo/modulos_sipet/modulo_base/__manifest__.py",
+        sidebar_visible=False,
         manageable=False,
         always_enabled=True,
         boot_strategy="builtin",
@@ -320,6 +321,7 @@ MODULE_DEFINITIONS: List[ModuleDefinition] = [
         description="Configuración institucional y estructura MAIN.",
         route="/identidad-institucional",
         icon="fa-solid fa-building",
+        manifest_file="fastapi_modulo/modulos_sipet/identidad_institucional/__manifest__.py",
         app_access_name="Empresa",
         sidebar_visible=True,
         manageable=False,
@@ -346,7 +348,8 @@ MODULE_DEFINITIONS: List[ModuleDefinition] = [
         label="Multiempresa",
         description="Gestión y aislamiento por empresa.",
         route="/multiempresa",
-        icon="fa-solid fa-layer-group",
+        icon="fa-solid fa-building-user",
+        manifest_file="fastapi_modulo/modulos_sipet/multiempresa/__manifest__.py",
         app_access_name="Multiempresa",
         sidebar_visible=True,
         manageable=False,
@@ -367,11 +370,11 @@ MODULE_DEFINITIONS: List[ModuleDefinition] = [
     ),
     ModuleDefinition(
         key="personalizacion_core",
-        label="Personalización",
-        description="Core de personalización institucional.",
+        label="Colores",
+        description="Personalización de colores e identidad visual institucional.",
         route="/personalizar",
         icon="fa-solid fa-palette",
-        sidebar_visible=True,
+        sidebar_visible=False,
         manageable=False,
         always_enabled=True,
         router_specs=[RouterSpec("fastapi_modulo.modulos_sipet.personalizacion.controladores.personalizar")],
@@ -382,7 +385,7 @@ MODULE_DEFINITIONS: List[ModuleDefinition] = [
         description="Core de membresía.",
         route="/membresia",
         icon="fa-solid fa-id-card",
-        sidebar_visible=True,
+        sidebar_visible=False,
         manageable=False,
         always_enabled=True,
         router_specs=[RouterSpec("fastapi_modulo.modulos_sipet.aplicaciones.controladores.membresia", attr_name="membresia_router")],
@@ -391,6 +394,8 @@ MODULE_DEFINITIONS: List[ModuleDefinition] = [
         key="roles_core",
         label="Roles",
         description="Core de roles y permisos.",
+        route="/roles-permisos",
+        icon="fa-solid fa-user-shield",
         sidebar_visible=False,
         manageable=False,
         always_enabled=True,
@@ -416,14 +421,24 @@ MODULE_DEFINITIONS: List[ModuleDefinition] = [
     ),
     ModuleDefinition(
         key="ajustes_ia_core",
-        label="Ajustes IA",
-        description="Configuración de IA.",
+        label="IA",
+        description="Configuración e inteligencia artificial del sistema.",
         route="/ajustes/ia",
         icon="fa-solid fa-robot",
-        sidebar_visible=True,
+        sidebar_visible=False,
         manageable=False,
         always_enabled=True,
         router_specs=[RouterSpec("fastapi_modulo.modulos_sipet.web.controladores.ajustes_ia")],
+    ),
+    ModuleDefinition(
+        key="predictivo_core",
+        label="Análisis predictivo",
+        description="Análisis predictivo e inteligencia de datos.",
+        route="/ia/predictivo",
+        icon="fa-solid fa-chart-mixed",
+        sidebar_visible=False,
+        manageable=False,
+        always_enabled=True,
     ),
     ModuleDefinition(
         key="ajustes_core",
@@ -450,6 +465,25 @@ MODULE_DEFINITIONS: List[ModuleDefinition] = [
 
 MODULES_BY_KEY = {module.key: module for module in MODULE_DEFINITIONS}
 _PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+_REPO_ROOT = os.path.abspath(os.path.join(_PROJECT_ROOT, ".."))
+
+
+def _resolve_registry_path(path_value: str) -> str:
+    normalized = str(path_value or "").strip()
+    if not normalized:
+        return ""
+    candidates = [
+        os.path.abspath(os.path.join(_PROJECT_ROOT, normalized)),
+        os.path.abspath(os.path.join(_REPO_ROOT, normalized)),
+    ]
+    fastapi_prefix = "fastapi_modulo/"
+    if normalized.startswith(fastapi_prefix):
+        trimmed = normalized[len(fastapi_prefix) :]
+        candidates.append(os.path.abspath(os.path.join(_PROJECT_ROOT, trimmed)))
+    for candidate in candidates:
+        if os.path.exists(candidate):
+            return candidate
+    return candidates[0]
 APP_ACCESS_TO_MODULE = {
     module.app_access_name: module
     for module in MODULE_DEFINITIONS
@@ -576,7 +610,7 @@ def _load_module_metadata(module: ModuleDefinition) -> Dict[str, Any]:
 
     metadata_file = str(module.metadata_file or "").strip()
     if metadata_file:
-        file_path = os.path.abspath(os.path.join(_PROJECT_ROOT, metadata_file))
+        file_path = _resolve_registry_path(metadata_file)
         if os.path.exists(file_path):
             try:
                 with open(file_path, "r", encoding="utf-8") as fh:
@@ -598,11 +632,11 @@ def _load_module_metadata(module: ModuleDefinition) -> Dict[str, Any]:
                 guessed_dirs.append(parts[idx + 1])
         if guessed_dirs:
             candidate = os.path.join("fastapi_modulo", "modulos", guessed_dirs[0], "__manifest__.py")
-            candidate_abs = os.path.abspath(os.path.join(_PROJECT_ROOT, candidate))
+            candidate_abs = _resolve_registry_path(candidate)
             if os.path.exists(candidate_abs):
                 manifest_file = candidate
     if manifest_file:
-        file_path = os.path.abspath(os.path.join(_PROJECT_ROOT, manifest_file))
+        file_path = _resolve_registry_path(manifest_file)
         if os.path.exists(file_path):
             try:
                 spec = spec_from_file_location(f"{module.key}__manifest__", file_path)

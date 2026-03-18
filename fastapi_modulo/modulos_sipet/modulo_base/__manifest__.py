@@ -9,7 +9,7 @@ MANIFEST = {
     "version": "1.0.0",
     "category": "Base",
     "author": "SIPET",
-    "sequence": "200",
+    "sequence": "1200",
     "website": "https://avancoop.org",
     "route": "/modulo-base",
     "routes": [
@@ -21,16 +21,17 @@ MANIFEST = {
     ],
     "api_prefix": "/api/modulo-base",
     "icon": "fa-solid fa-layer-group",
-    "depends": ["main", "web"],
+    "depends": ["web"],
     "menu": {
         "label": "Modulo base",
         "icon": "fa-solid fa-layer-group",
-        "sequence": 200,
+        "sequence": 1200,
         "route": "/modulo-base",
     },
     "submenus": [
         {
             "label": "Resumen",
+            "icon": "fa-solid fa-layer-group",
             "route": "/modulo-base",
             "sequence": 1,
         }

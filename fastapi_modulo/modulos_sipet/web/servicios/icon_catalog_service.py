@@ -11,12 +11,16 @@ MODULE_ICON_MAP = {
     "control_interno": "fa-solid fa-list-check",
     "control_seguimiento": "fa-solid fa-shield-check",
     "capacitacion": "fa-solid fa-book-open",
+    "multiempresa": "fa-solid fa-building-user",
+    "empresa": "fa-solid fa-building",
     "brujula": "fa-solid fa-compass",
     "pld": "fa-solid fa-shield-halved",
     "intelicoop": "fa-solid fa-microchip",
     "mkt": "fa-solid fa-envelope-open-text",
     "encuestas": "fa-solid fa-square-poll-vertical",
     "system_admin": "fa-solid fa-cubes",
+    "aplicaciones": "fa-solid fa-cubes",
+    "modulos": "fa-solid fa-cubes",
 }
 ROLE_ICON_MAP = {
     "superadministrador": "fa-solid fa-user-shield",

@@ -492,6 +492,37 @@ textarea:focus {
     font-size: 0.92rem;
     color: color-mix(in srgb, var(--navbar-text, #1f2933) 84%, transparent);
 }
+.sidebar-main-icon.fa-solid,
+.sidebar-main-icon.fa-regular,
+.sidebar-main-icon.fa-brands,
+.navbar-section-link-icon.fa-solid,
+.navbar-section-link-icon.fa-regular,
+.navbar-section-link-icon.fa-brands,
+.navbar-ia-icon.fa-solid,
+.navbar-ia-icon.fa-regular,
+.navbar-ia-icon.fa-brands,
+.navbar-notifications-icon.fa-solid,
+.navbar-notifications-icon.fa-regular,
+.navbar-notifications-icon.fa-brands {
+    font-family: "Font Awesome 6 Free", "Font Awesome 6 Brands" !important;
+    font-style: normal;
+    font-variant: normal;
+    text-rendering: auto;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+.sidebar-main-icon.fa-solid,
+.navbar-section-link-icon.fa-solid,
+.navbar-ia-icon.fa-solid,
+.navbar-notifications-icon.fa-solid {
+    font-weight: 900 !important;
+}
+.sidebar-main-icon.fa-regular,
+.navbar-section-link-icon.fa-regular,
+.navbar-ia-icon.fa-regular,
+.navbar-notifications-icon.fa-regular {
+    font-weight: 400 !important;
+}
 .navbar-section-link:hover {
     background: color-mix(in srgb, var(--sidebar-hover, #16a34a) 10%, transparent);
     padding-left: 16px;
@@ -1582,9 +1613,9 @@ html.ui-sidebar-modern .navbar {
     min-height: 56px !important;
     height: 56px !important;
     padding: 0 16px 0 90px !important;
-    background: var(--navbar-bg, #ffffff) !important;
-    color: var(--navbar-text, #1f2933) !important;
-    border-bottom: 2px solid color-mix(in srgb, var(--navbar-text, #1f2933) 32%, transparent) !important;
+    background: #ffffff !important;
+    color: #374151 !important;
+    border-bottom: 2px solid rgba(55, 65, 81, 0.18) !important;
     box-shadow: none !important;
     backdrop-filter: none !important;
     -backendkit-backdrop-filter: none !important;
@@ -1621,20 +1652,20 @@ html.ui-sidebar-modern .sidebar-block > summary {
     min-height: 32px;
     padding: 0 12px;
     border-radius: 16px;
-    color: var(--navbar-text, #1f2933) !important;
+    color: #374151 !important;
     background: transparent;
     transition: background 0.22s ease, transform 0.22s ease, color 0.22s ease;
 }
 html.ui-sidebar-modern .sidebar nav > .sidebar-main-link:not(.is-active),
 html.ui-sidebar-modern .sidebar nav > .sidebar-block:not(.is-active) > summary {
-    color: var(--navbar-text, #1f2933) !important;
+    color: #374151 !important;
 }
 html.ui-sidebar-modern .sidebar-main-link:hover,
 html.ui-sidebar-modern .sidebar-main-link:focus-visible,
 html.ui-sidebar-modern .sidebar-block > summary:hover,
 html.ui-sidebar-modern .sidebar-block > summary:focus-visible {
-    background: rgba(11, 22, 57, 0.06);
-    color: #ffffff !important;
+    background: rgba(11, 22, 57, 0.1);
+    color: #09163a !important;
     transform: translateX(2px);
 }
 html.ui-sidebar-modern .sidebar-main-link.is-active,
@@ -1659,7 +1690,7 @@ html.ui-sidebar-modern .sidebar-block > summary:focus-visible .sidebar-main-icon
 html.ui-sidebar-modern .sidebar-block > summary:focus-visible .sidebar-main-label,
 html.ui-sidebar-modern .sidebar-main-link.is-active .sidebar-main-label,
 html.ui-sidebar-modern .sidebar-block.is-active > summary .sidebar-main-label {
-    color: #ffffff !important;
+    color: currentColor !important;
 }
 html.ui-sidebar-modern .sidebar-main-left {
     width: 100%;
@@ -1671,7 +1702,7 @@ html.ui-sidebar-modern .sidebar-main-icon {
     width: 15px;
     height: 15px;
     flex: 0 0 15px;
-    color: var(--navbar-text, #1f2933) !important;
+    color: #374151 !important;
     font-size: 0.95rem;
 }
 html.ui-sidebar-modern .sidebar-main-label {
@@ -1684,12 +1715,12 @@ html.ui-sidebar-modern .sidebar-main-label {
 }
 html.ui-sidebar-modern .sidebar nav > .sidebar-main-link:not(.is-active) .sidebar-main-icon,
 html.ui-sidebar-modern .sidebar nav > .sidebar-block:not(.is-active) > summary .sidebar-main-icon {
-    color: var(--navbar-text, #1f2933) !important;
+    color: #374151 !important;
     opacity: 0.92 !important;
 }
 html.ui-sidebar-modern .sidebar nav > .sidebar-main-link:not(.is-active) .sidebar-main-label,
 html.ui-sidebar-modern .sidebar nav > .sidebar-block:not(.is-active) > summary .sidebar-main-label {
-    color: var(--navbar-text, #1f2933) !important;
+    color: #374151 !important;
 }
 html.ui-sidebar-modern .sidebar-section-title {
     display: block;
@@ -1765,7 +1796,7 @@ html.ui-sidebar-modern .navbar-hamburger:focus-visible {
 html.ui-sidebar-modern .navbar-hamburger .bar {
     height: 2px;
     border-radius: 999px;
-    background: var(--navbar-text, #1f2933);
+    background: #374151;
 }
 html.ui-sidebar-modern .navbar-title,
 html.ui-sidebar-modern .navbar-section-menu,
@@ -1774,33 +1805,34 @@ html.ui-sidebar-modern .navbar-user-menu {
     pointer-events: auto;
 }
 html.ui-sidebar-modern .navbar-title {
-    color: var(--navbar-text, #1f2933);
+    color: #374151;
 }
 html.ui-sidebar-modern .navbar-menu-name,
 html.ui-sidebar-modern .navbar-route,
 html.ui-sidebar-modern .navbar-section-btn {
-    color: var(--navbar-text, #1f2933);
+    color: #374151;
 }
 html.ui-sidebar-modern .navbar-section-btn {
     min-height: 40px;
-    border-color: rgba(255, 255, 255, 0.14);
-    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(55, 65, 81, 0.2);
+    background: transparent;
 }
 html.ui-sidebar-modern .navbar-section-btn:hover,
 html.ui-sidebar-modern .navbar-section-btn:focus-visible {
-    background: rgba(255, 255, 255, 0.16);
+    background: rgba(55, 65, 81, 0.07);
+    border-color: rgba(55, 65, 81, 0.35);
 }
 html.ui-sidebar-modern .navbar-section-dropdown {
     background: #ffffff;
     z-index: 40 !important;
 }
 html.ui-sidebar-modern .navbar-section-link {
-    color: var(--navbar-text, #1f2933);
+    color: #374151;
 }
 html.ui-sidebar-modern .navbar-section-link-icon,
 html.ui-sidebar-modern .navbar-ia-icon,
 html.ui-sidebar-modern .navbar-notifications-icon {
-    color: var(--navbar-notifications-icon-color, var(--navbar-text, #1f2933));
+    color: #374151;
 }
 html.ui-sidebar-modern .navbar-org-dropdown,
 html.ui-sidebar-modern .user-dropdown {
