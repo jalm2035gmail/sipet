@@ -7,7 +7,7 @@ from fastapi import HTTPException
 
 try:
     import httpx
-except Exception:  # pragma: no cover
+except ImportError:  # pragma: no cover
     httpx = None  # type: ignore[assignment]
 
 logger = logging.getLogger(__name__)
@@ -31,6 +31,8 @@ class BaseHTTPService:
         self.auth = auth
         self.client = client
 
+    # ── Utilidades ────────────────────────────────────────────────────────────
+
     def build_headers(self, headers: dict[str, str] | None = None) -> dict[str, str]:
         merged = {
             "Accept": "application/json",
@@ -48,6 +50,8 @@ class BaseHTTPService:
         if not self.base_url:
             return normalized
         return f"{self.base_url}/{normalized.lstrip('/')}"
+
+    # ── Síncrono ──────────────────────────────────────────────────────────────
 
     def request(
         self,
@@ -76,7 +80,15 @@ class BaseHTTPService:
                 )
                 response.raise_for_status()
                 payload = self._parse_json(response)
-                logger.info("external_http_request", extra={"method": method, "url": url, "status_code": response.status_code, "attempt": attempt + 1})
+                logger.info(
+                    "external_http_request",
+                    extra={
+                        "method": method,
+                        "url": url,
+                        "status_code": response.status_code,
+                        "attempt": attempt + 1,
+                    },
+                )
                 return {
                     "ok": True,
                     "status_code": response.status_code,
@@ -85,12 +97,26 @@ class BaseHTTPService:
                 }
             except Exception as exc:
                 last_error = exc
-                logger.warning("external_http_request_failed", extra={"method": method, "url": url, "attempt": attempt + 1, "error": str(exc)})
+                logger.warning(
+                    "external_http_request_failed",
+                    extra={
+                        "method": method,
+                        "url": url,
+                        "attempt": attempt + 1,
+                        "error": str(exc),
+                    },
+                )
                 if attempt >= self.retries:
                     break
         raise self._map_error(last_error)
 
-    def get(self, path: str, *, params: dict[str, Any] | None = None, headers: dict[str, str] | None = None) -> dict[str, Any]:
+    def get(
+        self,
+        path: str,
+        *,
+        params: dict[str, Any] | None = None,
+        headers: dict[str, str] | None = None,
+    ) -> dict[str, Any]:
         return self.request("GET", path, params=params, headers=headers)
 
     def post(
@@ -103,11 +129,160 @@ class BaseHTTPService:
     ) -> dict[str, Any]:
         return self.request("POST", path, json=json, data=data, headers=headers)
 
+    def put(
+        self,
+        path: str,
+        *,
+        json: dict[str, Any] | list[Any] | None = None,
+        data: Any = None,
+        headers: dict[str, str] | None = None,
+    ) -> dict[str, Any]:
+        return self.request("PUT", path, json=json, data=data, headers=headers)
+
+    def patch(
+        self,
+        path: str,
+        *,
+        json: dict[str, Any] | list[Any] | None = None,
+        data: Any = None,
+        headers: dict[str, str] | None = None,
+    ) -> dict[str, Any]:
+        return self.request("PATCH", path, json=json, data=data, headers=headers)
+
+    def delete(
+        self,
+        path: str,
+        *,
+        params: dict[str, Any] | None = None,
+        headers: dict[str, str] | None = None,
+    ) -> dict[str, Any]:
+        return self.request("DELETE", path, params=params, headers=headers)
+
     def _send_request(self, **kwargs: Any) -> Any:
         if self.client is not None:
             return self.client.request(timeout=self.timeout, auth=self.auth, **kwargs)
-        with httpx.Client(timeout=self.timeout, headers=self.headers, auth=self.auth, follow_redirects=True) as client:
+        with httpx.Client(
+            timeout=self.timeout,
+            headers=self.headers,
+            auth=self.auth,
+            follow_redirects=True,
+        ) as client:
             return client.request(**kwargs)
+
+    # ── Asíncrono ─────────────────────────────────────────────────────────────
+
+    async def request_async(
+        self,
+        method: str,
+        path: str,
+        *,
+        params: dict[str, Any] | None = None,
+        json: dict[str, Any] | list[Any] | None = None,
+        data: Any = None,
+        headers: dict[str, str] | None = None,
+    ) -> dict[str, Any]:
+        if httpx is None:
+            raise HTTPException(status_code=500, detail="httpx no esta disponible.")
+        url = self.build_url(path)
+        request_headers = self.build_headers(headers)
+        last_error: Exception | None = None
+        for attempt in range(self.retries + 1):
+            try:
+                async with httpx.AsyncClient(
+                    timeout=self.timeout,
+                    headers=self.headers,
+                    auth=self.auth,
+                    follow_redirects=True,
+                ) as client:
+                    response = await client.request(
+                        method,
+                        url,
+                        params=params,
+                        json=json,
+                        data=data,
+                        headers=request_headers,
+                    )
+                response.raise_for_status()
+                payload = self._parse_json(response)
+                logger.info(
+                    "external_http_request_async",
+                    extra={
+                        "method": method,
+                        "url": url,
+                        "status_code": response.status_code,
+                        "attempt": attempt + 1,
+                    },
+                )
+                return {
+                    "ok": True,
+                    "status_code": response.status_code,
+                    "headers": dict(response.headers),
+                    "data": payload,
+                }
+            except Exception as exc:
+                last_error = exc
+                logger.warning(
+                    "external_http_request_async_failed",
+                    extra={
+                        "method": method,
+                        "url": url,
+                        "attempt": attempt + 1,
+                        "error": str(exc),
+                    },
+                )
+                if attempt >= self.retries:
+                    break
+        raise self._map_error(last_error)
+
+    async def get_async(
+        self,
+        path: str,
+        *,
+        params: dict[str, Any] | None = None,
+        headers: dict[str, str] | None = None,
+    ) -> dict[str, Any]:
+        return await self.request_async("GET", path, params=params, headers=headers)
+
+    async def post_async(
+        self,
+        path: str,
+        *,
+        json: dict[str, Any] | list[Any] | None = None,
+        data: Any = None,
+        headers: dict[str, str] | None = None,
+    ) -> dict[str, Any]:
+        return await self.request_async("POST", path, json=json, data=data, headers=headers)
+
+    async def put_async(
+        self,
+        path: str,
+        *,
+        json: dict[str, Any] | list[Any] | None = None,
+        data: Any = None,
+        headers: dict[str, str] | None = None,
+    ) -> dict[str, Any]:
+        return await self.request_async("PUT", path, json=json, data=data, headers=headers)
+
+    async def patch_async(
+        self,
+        path: str,
+        *,
+        json: dict[str, Any] | list[Any] | None = None,
+        data: Any = None,
+        headers: dict[str, str] | None = None,
+    ) -> dict[str, Any]:
+        return await self.request_async("PATCH", path, json=json, data=data, headers=headers)
+
+    async def delete_async(
+        self,
+        path: str,
+        *,
+        params: dict[str, Any] | None = None,
+        headers: dict[str, str] | None = None,
+    ) -> dict[str, Any]:
+        return await self.request_async("DELETE", path, params=params, headers=headers)
+
+    # ── Helpers internos ──────────────────────────────────────────────────────
 
     @staticmethod
     def _parse_json(response: Any) -> Any:

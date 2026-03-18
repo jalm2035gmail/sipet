@@ -9,6 +9,34 @@ from fastapi_modulo.modulos_sipet.modulo_base.modelos.enums import ModuloBaseEst
 ResponseDataT = TypeVar("ResponseDataT")
 
 
+# ── Funciones de validación reutilizables ─────────────────────────────────────
+
+def _normalize_nombre(value: str | None, *, required: bool = True) -> str | None:
+    if value is None:
+        return None if not required else value
+    normalized = " ".join(value.split())
+    if len(normalized) < 3:
+        raise ValueError("El nombre debe tener al menos 3 caracteres.")
+    return normalized
+
+
+def _normalize_slug(value: str | None) -> str | None:
+    if value is None:
+        return None
+    normalized = value.strip().lower().replace(" ", "-").replace("_", "-")
+    if not normalized.replace("-", "").isalnum():
+        raise ValueError("El slug solo puede contener letras, numeros y guiones.")
+    return normalized
+
+
+def _normalize_descripcion(value: str | None) -> str | None:
+    if value is None:
+        return None
+    return value.strip()
+
+
+# ── Modelos base ──────────────────────────────────────────────────────────────
+
 class APIErrorDetail(BaseModel):
     type: str
     message: str
@@ -30,6 +58,8 @@ class ModuloBaseSchemaModel(BaseModel):
     )
 
 
+# ── Categoría ─────────────────────────────────────────────────────────────────
+
 class ModuloBaseCategoriaBase(ModuloBaseSchemaModel):
     nombre: str = Field(min_length=3, max_length=120)
     slug: str = Field(min_length=3, max_length=120)
@@ -38,23 +68,17 @@ class ModuloBaseCategoriaBase(ModuloBaseSchemaModel):
     @field_validator("nombre")
     @classmethod
     def validate_nombre(cls, value: str) -> str:
-        normalized = " ".join(value.split())
-        if len(normalized) < 3:
-            raise ValueError("El nombre debe tener al menos 3 caracteres.")
-        return normalized
+        return _normalize_nombre(value)  # type: ignore[return-value]
 
     @field_validator("slug")
     @classmethod
     def validate_slug(cls, value: str) -> str:
-        normalized = value.strip().lower().replace(" ", "-").replace("_", "-")
-        if not normalized.replace("-", "").isalnum():
-            raise ValueError("El slug solo puede contener letras, numeros y guiones.")
-        return normalized
+        return _normalize_slug(value)  # type: ignore[return-value]
 
     @field_validator("descripcion")
     @classmethod
     def validate_descripcion(cls, value: str) -> str:
-        return value.strip()
+        return _normalize_descripcion(value) or ""
 
 
 class ModuloBaseCategoriaCreate(ModuloBaseCategoriaBase):
@@ -69,29 +93,23 @@ class ModuloBaseCategoriaUpdate(ModuloBaseSchemaModel):
     @field_validator("nombre")
     @classmethod
     def validate_nombre(cls, value: str | None) -> str | None:
-        if value is None:
-            return value
-        normalized = " ".join(value.split())
-        if len(normalized) < 3:
-            raise ValueError("El nombre debe tener al menos 3 caracteres.")
-        return normalized
+        return _normalize_nombre(value)
 
     @field_validator("slug")
     @classmethod
     def validate_slug(cls, value: str | None) -> str | None:
-        if value is None:
-            return value
-        normalized = value.strip().lower().replace(" ", "-").replace("_", "-")
-        if not normalized.replace("-", "").isalnum():
-            raise ValueError("El slug solo puede contener letras, numeros y guiones.")
-        return normalized
+        return _normalize_slug(value)
 
     @field_validator("descripcion")
     @classmethod
     def validate_descripcion(cls, value: str | None) -> str | None:
-        if value is None:
-            return value
-        return value.strip()
+        return _normalize_descripcion(value)
+
+    @model_validator(mode="after")
+    def validate_non_empty_update(self) -> "ModuloBaseCategoriaUpdate":
+        if not self.model_dump(exclude_none=True):
+            raise ValueError("Debes enviar al menos un campo para actualizar.")
+        return self
 
 
 class ModuloBaseCategoriaResponse(ModuloBaseSchemaModel):
@@ -102,6 +120,8 @@ class ModuloBaseCategoriaResponse(ModuloBaseSchemaModel):
     descripcion: str = ""
 
 
+# ── Registro ──────────────────────────────────────────────────────────────────
+
 class ModuloBaseBase(ModuloBaseSchemaModel):
     nombre: str = Field(min_length=3, max_length=150)
     descripcion: str = Field(default="", max_length=5000)
@@ -111,15 +131,12 @@ class ModuloBaseBase(ModuloBaseSchemaModel):
     @field_validator("nombre")
     @classmethod
     def validate_nombre(cls, value: str) -> str:
-        normalized = " ".join(value.split())
-        if len(normalized) < 3:
-            raise ValueError("El nombre debe tener al menos 3 caracteres.")
-        return normalized
+        return _normalize_nombre(value)  # type: ignore[return-value]
 
     @field_validator("descripcion")
     @classmethod
     def validate_descripcion(cls, value: str) -> str:
-        return value.strip()
+        return _normalize_descripcion(value) or ""
 
     @field_validator("categoria_id")
     @classmethod
@@ -142,19 +159,12 @@ class ModuloBaseUpdate(ModuloBaseSchemaModel):
     @field_validator("nombre")
     @classmethod
     def validate_nombre(cls, value: str | None) -> str | None:
-        if value is None:
-            return value
-        normalized = " ".join(value.split())
-        if len(normalized) < 3:
-            raise ValueError("El nombre debe tener al menos 3 caracteres.")
-        return normalized
+        return _normalize_nombre(value)
 
     @field_validator("descripcion")
     @classmethod
     def validate_descripcion(cls, value: str | None) -> str | None:
-        if value is None:
-            return value
-        return value.strip()
+        return _normalize_descripcion(value)
 
     @model_validator(mode="after")
     def validate_non_empty_update(self) -> "ModuloBaseUpdate":
@@ -162,6 +172,8 @@ class ModuloBaseUpdate(ModuloBaseSchemaModel):
             raise ValueError("Debes enviar al menos un campo para actualizar.")
         return self
 
+
+# ── Responses ─────────────────────────────────────────────────────────────────
 
 class ModuloBaseResponse(ModuloBaseSchemaModel):
     id: int
@@ -213,6 +225,23 @@ class ModuloBaseRequestContext(ModuloBaseSchemaModel):
     user_role: str = "usuario"
 
 
+# ── Paginación genérica ───────────────────────────────────────────────────────
+
+class PaginatedResponse(ModuloBaseSchemaModel, Generic[ResponseDataT]):
+    items: list[ResponseDataT] = Field(default_factory=list)
+    total: int = Field(ge=0, default=0)
+    skip: int = Field(ge=0, default=0)
+    limit: int = Field(ge=1, default=50)
+
+    @model_validator(mode="after")
+    def validate_total(self) -> "PaginatedResponse[ResponseDataT]":
+        if self.total < len(self.items):
+            raise ValueError("El total no puede ser menor que la cantidad de elementos.")
+        return self
+
+
+# ── API envelope responses ────────────────────────────────────────────────────
+
 class APIHealthResponse(APIResponse[ModuloBaseHealthResponse]):
     data: ModuloBaseHealthResponse | None = None
 
@@ -235,3 +264,29 @@ class APICategoriaItemResponse(APIResponse[ModuloBaseCategoriaResponse]):
 
 class APIErrorResponse(APIResponse[dict[str, Any] | list[Any] | None]):
     data: dict[str, Any] | list[Any] | None = None
+
+
+__all__ = [
+    "APIErrorDetail",
+    "APIErrorResponse",
+    "APIHealthResponse",
+    "APIModuloBaseItemResponse",
+    "APIModuloBaseListResponse",
+    "APIResumenResponse",
+    "APICategoriaItemResponse",
+    "APIResponse",
+    "ModuloBaseCategoriaBase",
+    "ModuloBaseCategoriaCreate",
+    "ModuloBaseCategoriaResponse",
+    "ModuloBaseCategoriaUpdate",
+    "ModuloBaseBase",
+    "ModuloBaseCreate",
+    "ModuloBaseHealthResponse",
+    "ModuloBaseListResponse",
+    "ModuloBaseRequestContext",
+    "ModuloBaseResumenResponse",
+    "ModuloBaseResponse",
+    "ModuloBaseSchemaModel",
+    "ModuloBaseUpdate",
+    "PaginatedResponse",
+]

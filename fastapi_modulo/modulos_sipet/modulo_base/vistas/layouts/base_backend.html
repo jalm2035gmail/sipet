@@ -1,24 +1,144 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-theme="light">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{{ module_name }}</title>
-  <meta name="description" content="{{ module_description }}">
+  <title>{% block page_title %}{{ module_name }}{% endblock %} — SIPET</title>
+  <meta name="description" content="{% block page_description %}{{ module_description }}{% endblock %}">
+  <meta name="robots" content="noindex, nofollow">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <!-- Icons -->
   <link rel="preconnect" href="https://cdnjs.cloudflare.com">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+  <!-- Tailwind + DaisyUI (compilado por el módulo) -->
   <link rel="stylesheet" href="{{ asset_urls.css }}">
+
+  {% block extra_head %}{% endblock %}
 </head>
-<body class="modulo-base-theme">
-  <section class="modulo-base-shell">
-    {% include "partials/navbar.html" %}
-    <div class="modulo-base-layout">
-      {% include "partials/sidebar.html" %}
-      <div class="modulo-base-content">
+
+<body class="bg-base-200 min-h-screen font-sans antialiased">
+
+  <!-- Flash messages -->
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div id="flash-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-sm">
+        {% for category, message in messages %}
+          <div class="alert alert-{{ 'success' if category == 'success' else 'error' if category == 'error' else 'warning' if category == 'warning' else 'info' }} shadow-lg">
+            <i class="fa-solid {{ 'fa-circle-check' if category == 'success' else 'fa-circle-xmark' if category == 'error' else 'fa-triangle-exclamation' if category == 'warning' else 'fa-circle-info' }}"></i>
+            <span>{{ message }}</span>
+            <button class="btn btn-ghost btn-xs" onclick="this.closest('.alert').remove()">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  <!-- Shell principal -->
+  <div class="drawer lg:drawer-open">
+    <input id="sidebar-toggle" type="checkbox" class="drawer-toggle">
+
+    <!-- Contenido principal -->
+    <div class="drawer-content flex flex-col min-h-screen">
+
+      <!-- Navbar -->
+      {% include "partials/navbar.html" %}
+
+      <!-- Breadcrumb -->
+      {% block breadcrumb %}
+        <div class="px-6 pt-4">
+          <div class="text-sm breadcrumbs text-base-content/60">
+            <ul>
+              <li><a href="/"><i class="fa-solid fa-house mr-1"></i>Inicio</a></li>
+              {% block breadcrumb_items %}
+                <li>{{ module_name }}</li>
+              {% endblock %}
+            </ul>
+          </div>
+        </div>
+      {% endblock %}
+
+      <!-- Área de contenido -->
+      <main class="flex-1 p-6">
+
+        <!-- Encabezado de página -->
+        {% block page_header %}
+          <div class="flex items-center justify-between mb-6">
+            <div>
+              <h1 class="text-2xl font-semibold text-base-content">
+                {% block page_heading %}{{ module_name }}{% endblock %}
+              </h1>
+              {% block page_subheading %}
+                {% if module_description %}
+                  <p class="text-sm text-base-content/60 mt-1">{{ module_description }}</p>
+                {% endif %}
+              {% endblock %}
+            </div>
+            <div class="flex items-center gap-2">
+              {% block page_actions %}{% endblock %}
+            </div>
+          </div>
+        {% endblock %}
+
+        <!-- Contenido del módulo -->
         {% block module_content %}{% endblock %}
+
+      </main>
+
+      <!-- Footer -->
+      <footer class="footer footer-center p-4 bg-base-100 text-base-content/40 text-xs border-t border-base-300">
+        <p>SIPET © {{ current_year }} — {{ module_name }} v{{ module_version | default('1.0.0') }}</p>
+      </footer>
+
+    </div>
+
+    <!-- Sidebar (drawer) -->
+    <div class="drawer-side z-40">
+      <label for="sidebar-toggle" aria-label="Cerrar menú" class="drawer-overlay"></label>
+      {% include "partials/sidebar.html" %}
+    </div>
+
+  </div>
+
+  <!-- Modal global reutilizable -->
+  <dialog id="modal-global" class="modal">
+    <div class="modal-box">
+      <h3 id="modal-title" class="font-semibold text-lg mb-2"></h3>
+      <div id="modal-body" class="text-sm text-base-content/80"></div>
+      <div class="modal-action">
+        {% block modal_actions %}
+          <form method="dialog">
+            <button class="btn btn-sm">Cerrar</button>
+          </form>
+        {% endblock %}
       </div>
     </div>
-  </section>
+    <form method="dialog" class="modal-backdrop">
+      <button>Cerrar</button>
+    </form>
+  </dialog>
+
+  <!-- Scripts -->
   <script type="module" src="{{ asset_urls.js }}"></script>
+
+  {% block extra_scripts %}{% endblock %}
+
+  <!-- Auto-dismiss flash messages -->
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const alerts = document.querySelectorAll("#flash-container .alert");
+      alerts.forEach(alert => {
+        setTimeout(() => alert.remove(), 5000);
+      });
+    });
+  </script>
+
 </body>
 </html>

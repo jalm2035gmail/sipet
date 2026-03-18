@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import secrets
+import time
 from contextlib import contextmanager
 from typing import Any, Iterator, Optional
 
@@ -21,16 +22,26 @@ REDIS_ENABLED = (os.environ.get("APPLICATIONS_REDIS_ENABLED") or "true").strip()
     "on",
 }
 REDIS_PREFIX = (os.environ.get("APPLICATIONS_REDIS_PREFIX") or "applications").strip() or "applications"
+REDIS_RETRY_INTERVAL = int((os.environ.get("APPLICATIONS_REDIS_RETRY_SECONDS") or "30").strip() or "30")
+
 _REDIS_CLIENT: Optional[Redis] = None
 _REDIS_UNAVAILABLE = False
+_REDIS_LAST_ATTEMPT: float = 0.0
 
 
 def get_redis_client() -> Optional[Redis]:
-    global _REDIS_CLIENT, _REDIS_UNAVAILABLE
-    if not REDIS_ENABLED or _REDIS_UNAVAILABLE:
+    global _REDIS_CLIENT, _REDIS_UNAVAILABLE, _REDIS_LAST_ATTEMPT
+    if not REDIS_ENABLED:
         return None
+    if _REDIS_UNAVAILABLE:
+        if time.monotonic() - _REDIS_LAST_ATTEMPT < REDIS_RETRY_INTERVAL:
+            return None
+        # Intervalo de reintento cumplido — resetear para intentar reconexión
+        _REDIS_UNAVAILABLE = False
+        _REDIS_CLIENT = None
     if _REDIS_CLIENT is not None:
         return _REDIS_CLIENT
+    _REDIS_LAST_ATTEMPT = time.monotonic()
     try:
         _REDIS_CLIENT = Redis.from_url(
             REDIS_URL,
@@ -55,14 +66,21 @@ def set_cached_payload(namespace: str, identifier: str, payload: Any, ttl_second
     client = get_redis_client()
     if client is None:
         return
-    client.setex(_key("cache", namespace, identifier), max(1, int(ttl_seconds)), json.dumps(payload, ensure_ascii=True))
+    try:
+        client.setex(_key("cache", namespace, identifier), max(1, int(ttl_seconds)), json.dumps(payload, ensure_ascii=True))
+    except Exception:
+        _mark_unavailable()
 
 
 def get_cached_payload(namespace: str, identifier: str) -> Any | None:
     client = get_redis_client()
     if client is None:
         return None
-    raw = client.get(_key("cache", namespace, identifier))
+    try:
+        raw = client.get(_key("cache", namespace, identifier))
+    except Exception:
+        _mark_unavailable()
+        return None
     if not raw:
         return None
     try:
@@ -75,7 +93,18 @@ def delete_cached_payload(namespace: str, identifier: str) -> None:
     client = get_redis_client()
     if client is None:
         return
-    client.delete(_key("cache", namespace, identifier))
+    try:
+        client.delete(_key("cache", namespace, identifier))
+    except Exception:
+        _mark_unavailable()
+
+
+def _mark_unavailable() -> None:
+    """Marca Redis como no disponible para forzar reintento en el próximo ciclo."""
+    global _REDIS_CLIENT, _REDIS_UNAVAILABLE, _REDIS_LAST_ATTEMPT
+    _REDIS_UNAVAILABLE = True
+    _REDIS_CLIENT = None
+    _REDIS_LAST_ATTEMPT = time.monotonic()
 
 
 def cache_catalog(payload: list[dict[str, Any]], ttl_seconds: int = 60) -> None:
@@ -122,7 +151,11 @@ def acquire_lock(lock_name: str, ttl_seconds: int = 120) -> str:
     if client is None:
         return ""
     token = secrets.token_hex(16)
-    locked = client.set(_key("lock", lock_name), token, nx=True, ex=max(1, int(ttl_seconds)))
+    try:
+        locked = client.set(_key("lock", lock_name), token, nx=True, ex=max(1, int(ttl_seconds)))
+    except Exception:
+        _mark_unavailable()
+        return ""
     return token if locked else ""
 
 
@@ -136,7 +169,7 @@ def release_lock(lock_name: str, token: str) -> None:
         if current == token:
             client.delete(redis_key)
     except Exception:
-        return
+        _mark_unavailable()
 
 
 @contextmanager
@@ -154,6 +187,7 @@ __all__ = [
     "acquire_lock",
     "cache_catalog",
     "cache_zip_inspection",
+    "delete_cached_payload",
     "get_cached_catalog",
     "get_cached_payload",
     "get_cached_zip_inspection",

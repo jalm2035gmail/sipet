@@ -1,8 +1,111 @@
-<aside class="modulo-base-sidebar">
-  <div class="modulo-base-sidebar-title">Base UI</div>
-  <ul class="menu modulo-base-menu">
-    {% for section in module_sections %}
-    <li><a href="#{{ section }}"><i class="fa-solid fa-angle-right"></i> {{ section|replace("_", " ")|title }}</a></li>
-    {% endfor %}
-  </ul>
+<aside class="drawer-side-content w-64 bg-base-100 border-r border-base-300 flex flex-col min-h-screen">
+
+  <!-- Logo / sistema -->
+  <div class="flex items-center gap-3 px-4 py-4 border-b border-base-300 min-h-14">
+    <div class="bg-primary/10 text-primary rounded-lg w-8 h-8 flex items-center justify-center shrink-0">
+      <i class="fa-solid fa-layer-group text-sm"></i>
+    </div>
+    <div class="min-w-0">
+      <p class="text-sm font-semibold text-base-content truncate leading-tight">SIPET</p>
+      <p class="text-xs text-base-content/40 truncate leading-tight">
+        v{{ app_version | default('1.0.0') }}
+      </p>
+    </div>
+  </div>
+
+  <!-- Navegación principal -->
+  <nav class="flex-1 overflow-y-auto py-3 px-2">
+
+    {% block sidebar_top %}{% endblock %}
+
+    <!-- Módulos del sistema -->
+    {% if nav_modules | default([]) %}
+      <p class="text-xs font-medium text-base-content/40 uppercase tracking-wider px-3 mb-1 mt-2">
+        Módulos
+      </p>
+      <ul class="menu menu-sm gap-0.5 p-0">
+        {% for mod in nav_modules %}
+          <li>
+            
+              href="{{ mod.route }}"
+              class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors
+                     {% if current_module == mod.key %}bg-primary/10 text-primary font-medium{% else %}text-base-content/70 hover:bg-base-200 hover:text-base-content{% endif %}"
+            >
+              <i class="{{ mod.icon | default('fa-solid fa-circle-dot') }} w-4 text-center shrink-0
+                        {% if current_module == mod.key %}text-primary{% else %}text-base-content/40{% endif %}"></i>
+              <span class="truncate">{{ mod.label }}</span>
+              {% if mod.badge | default(None) %}
+                <span class="badge badge-xs badge-primary ml-auto shrink-0">{{ mod.badge }}</span>
+              {% endif %}
+            </a>
+          </li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+
+    <!-- Secciones del módulo activo -->
+    {% if module_sections | default([]) %}
+      <div class="divider divider-start text-xs text-base-content/40 font-medium uppercase tracking-wider px-1 my-2">
+        {{ module_name | default('Módulo') }}
+      </div>
+      <ul class="menu menu-sm gap-0.5 p-0">
+        {% for section in module_sections %}
+          {% set section_id = section if section is string else section.id %}
+          {% set section_label = section.label if section is mapping else section | replace("_", " ") | title %}
+          {% set section_icon = section.icon if section is mapping else 'fa-solid fa-circle-dot' %}
+          {% set section_route = section.route if section is mapping else ('#' ~ section_id) %}
+          <li>
+            
+              href="{{ section_route }}"
+              class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors
+                     {% if current_section == section_id %}bg-base-200 text-base-content font-medium{% else %}text-base-content/60 hover:bg-base-200 hover:text-base-content{% endif %}"
+            >
+              <i class="{{ section_icon }} w-4 text-center shrink-0 text-base-content/40"></i>
+              <span class="truncate">{{ section_label }}</span>
+              {% if section is mapping and section.badge | default(None) %}
+                <span class="badge badge-xs badge-ghost ml-auto shrink-0">{{ section.badge }}</span>
+              {% endif %}
+            </a>
+          </li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+
+    {% block sidebar_nav_extra %}{% endblock %}
+
+  </nav>
+
+  <!-- Footer del sidebar -->
+  <div class="border-t border-base-300 px-3 py-3 flex flex-col gap-1">
+
+    {% block sidebar_footer_items %}
+      <a href="/ayuda" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-base-content/60 hover:bg-base-200 hover:text-base-content transition-colors">
+        <i class="fa-solid fa-circle-question w-4 text-center text-base-content/40"></i>
+        <span>Ayuda</span>
+      </a>
+      <a href="/configuracion" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-base-content/60 hover:bg-base-200 hover:text-base-content transition-colors">
+        <i class="fa-solid fa-gear w-4 text-center text-base-content/40"></i>
+        <span>Configuración</span>
+      </a>
+    {% endblock %}
+
+    <!-- Info de tenant -->
+    {% if current_tenant | default(None) %}
+      <div class="flex items-center gap-2 px-3 py-2 mt-1 bg-base-200 rounded-lg">
+        <div class="bg-secondary/20 text-secondary rounded w-6 h-6 flex items-center justify-center shrink-0 text-xs font-bold">
+          {{ (current_tenant.nombre | default('T'))[0] | upper }}
+        </div>
+        <div class="min-w-0">
+          <p class="text-xs font-medium text-base-content truncate leading-tight">
+            {{ current_tenant.nombre | default('Tenant') }}
+          </p>
+          <p class="text-xs text-base-content/40 truncate leading-tight">
+            {{ current_tenant.id | default('') }}
+          </p>
+        </div>
+      </div>
+    {% endif %}
+
+  </div>
+
 </aside>

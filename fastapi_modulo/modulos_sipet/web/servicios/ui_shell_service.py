@@ -4,7 +4,7 @@ import unicodedata
 from typing import Dict, List, Optional
 
 from fastapi_modulo.core.db import SessionLocal
-from fastapi_modulo.modulos.personalizacion.modelos.theme_system import MAIN_THEME_KEYS, build_institutional_theme
+from fastapi_modulo.modulos_sipet.personalizacion.modelos.theme_system import MAIN_THEME_KEYS, build_institutional_theme
 from fastapi_modulo.modulos_sipet.web.modelos.core_models import Colores
 
 

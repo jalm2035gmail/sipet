@@ -1,14 +1,151 @@
-<header class="modulo-base-topbar">
-  <div class="modulo-base-brand">
-    <span class="modulo-base-brand-icon"><i class="fa-solid fa-cubes-stacked"></i></span>
-    <div>
-      <strong>{{ module_name }}</strong>
-      <div class="modulo-base-muted">{{ module_description or "Referencia estructural para nuevos modulos" }}</div>
+<header class="navbar bg-base-100 border-b border-base-300 px-4 min-h-14 sticky top-0 z-30">
+
+  <!-- Hamburger (solo móvil) -->
+  <div class="flex-none lg:hidden">
+    <label for="sidebar-toggle" class="btn btn-ghost btn-sm btn-square" aria-label="Abrir menú">
+      <i class="fa-solid fa-bars text-base"></i>
+    </label>
+  </div>
+
+  <!-- Brand -->
+  <div class="flex-1 flex items-center gap-3 min-w-0">
+    <div class="flex items-center gap-2 min-w-0">
+      <span class="text-primary text-lg leading-none shrink-0">
+        <i class="{{ module_icon | default('fa-solid fa-cubes-stacked') }}"></i>
+      </span>
+      <div class="min-w-0">
+        <p class="font-semibold text-sm text-base-content leading-tight truncate">
+          {{ module_name | default('SIPET') }}
+        </p>
+        <p class="text-xs text-base-content/50 leading-tight truncate hidden sm:block">
+          {{ module_description | default('Referencia estructural para nuevos módulos') }}
+        </p>
+      </div>
     </div>
   </div>
-  <div class="modulo-base-topbar-actions">
-    <span class="badge badge-outline modulo-base-badge"><i class="fa-solid fa-palette"></i> Design System</span>
-    <span class="badge badge-outline modulo-base-badge"><i class="fa-brands fa-font-awesome"></i> Font Awesome</span>
-    <span class="badge badge-outline modulo-base-badge">SIPET</span>
+
+  <!-- Acciones del lado derecho -->
+  <div class="flex-none flex items-center gap-1">
+
+    <!-- Buscador global (opcional) -->
+    {% block navbar_search %}
+      <div class="hidden md:flex">
+        <label class="input input-sm input-bordered flex items-center gap-2 w-48 focus-within:w-64 transition-all duration-200">
+          <i class="fa-solid fa-magnifying-glass text-base-content/40 text-xs"></i>
+          <input
+            type="search"
+            id="navbar-search"
+            placeholder="Buscar..."
+            class="grow bg-transparent text-sm outline-none"
+            autocomplete="off"
+          >
+        </label>
+      </div>
+    {% endblock %}
+
+    <!-- Notificaciones -->
+    {% block navbar_notifications %}
+      <div class="dropdown dropdown-end">
+        <button tabindex="0" class="btn btn-ghost btn-sm btn-square" aria-label="Notificaciones">
+          <div class="indicator">
+            <i class="fa-solid fa-bell text-base"></i>
+            {% if unread_notifications | default(0) > 0 %}
+              <span class="badge badge-xs badge-error indicator-item">
+                {{ unread_notifications }}
+              </span>
+            {% endif %}
+          </div>
+        </button>
+        <div tabindex="0" class="dropdown-content z-50 mt-2 w-72 bg-base-100 rounded-box shadow-lg border border-base-300">
+          <div class="p-3 border-b border-base-300 flex items-center justify-between">
+            <span class="text-sm font-medium">Notificaciones</span>
+            {% if unread_notifications | default(0) > 0 %}
+              <button class="btn btn-ghost btn-xs text-primary">Marcar todas como leídas</button>
+            {% endif %}
+          </div>
+          <div class="max-h-64 overflow-y-auto">
+            {% block navbar_notification_items %}
+              <div class="p-4 text-center text-sm text-base-content/50">
+                <i class="fa-regular fa-bell-slash mb-2 text-lg block"></i>
+                Sin notificaciones pendientes
+              </div>
+            {% endblock %}
+          </div>
+        </div>
+      </div>
+    {% endblock %}
+
+    <!-- Tema claro / oscuro -->
+    <label class="swap swap-rotate btn btn-ghost btn-sm btn-square" aria-label="Cambiar tema" title="Cambiar tema">
+      <input type="checkbox" id="theme-toggle" class="hidden">
+      <i class="fa-solid fa-sun swap-off text-base"></i>
+      <i class="fa-solid fa-moon swap-on text-base"></i>
+    </label>
+
+    <!-- Divider -->
+    <div class="w-px h-5 bg-base-300 mx-1 hidden sm:block"></div>
+
+    <!-- Avatar / menú de usuario -->
+    {% block navbar_user %}
+      <div class="dropdown dropdown-end">
+        <button tabindex="0" class="btn btn-ghost btn-sm gap-2 px-2" aria-label="Menú de usuario">
+          <div class="avatar placeholder">
+            <div class="bg-primary text-primary-content rounded-full w-7">
+              <span class="text-xs font-semibold">
+                {{ (current_user.nombre | default('U'))[0] | upper }}
+              </span>
+            </div>
+          </div>
+          <span class="hidden md:inline text-sm font-medium max-w-28 truncate">
+            {{ current_user.nombre | default('Usuario') }}
+          </span>
+          <i class="fa-solid fa-chevron-down text-xs text-base-content/40 hidden md:inline"></i>
+        </button>
+
+        <ul tabindex="0" class="dropdown-content z-50 mt-2 w-52 bg-base-100 rounded-box shadow-lg border border-base-300 p-1">
+          <li class="px-3 py-2 border-b border-base-200 mb-1">
+            <p class="text-sm font-medium truncate">{{ current_user.nombre | default('Usuario') }}</p>
+            <p class="text-xs text-base-content/50 truncate">{{ current_user.email | default('') }}</p>
+          </li>
+          {% block navbar_user_menu_items %}
+            <li>
+              <a href="/perfil" class="flex items-center gap-2 px-3 py-2 text-sm rounded-lg hover:bg-base-200 transition-colors">
+                <i class="fa-solid fa-user w-4 text-center text-base-content/50"></i>
+                Mi perfil
+              </a>
+            </li>
+            <li>
+              <a href="/configuracion" class="flex items-center gap-2 px-3 py-2 text-sm rounded-lg hover:bg-base-200 transition-colors">
+                <i class="fa-solid fa-gear w-4 text-center text-base-content/50"></i>
+                Configuración
+              </a>
+            </li>
+          {% endblock %}
+          <li class="border-t border-base-200 mt-1 pt-1">
+            <a href="/logout" class="flex items-center gap-2 px-3 py-2 text-sm rounded-lg hover:bg-error/10 text-error transition-colors">
+              <i class="fa-solid fa-right-from-bracket w-4 text-center"></i>
+              Cerrar sesión
+            </a>
+          </li>
+        </ul>
+      </div>
+    {% endblock %}
+
   </div>
 </header>
+
+<!-- Toggle de tema -->
+<script>
+  (() => {
+    const toggle = document.getElementById("theme-toggle");
+    const html = document.documentElement;
+    const stored = localStorage.getItem("sipet-theme") || "light";
+    html.setAttribute("data-theme", stored);
+    if (stored === "dark") toggle.checked = true;
+    toggle.addEventListener("change", () => {
+      const theme = toggle.checked ? "dark" : "light";
+      html.setAttribute("data-theme", theme);
+      localStorage.setItem("sipet-theme", theme);
+    });
+  })();
+</script>

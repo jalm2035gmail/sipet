@@ -6,7 +6,7 @@ MANIFEST = {
         "Modulo de gobierno de aplicaciones para catalogar modulos, controlar su estado, "
         "administrar paquetes instalables y auditar el protocolo __init__.py y __manifest__.py."
     ),
-    "version": "1.2.0",
+    "version": "1.3.0",
     "category": "Base",
     "author": "SIPET",
     "sequence": "",
@@ -14,6 +14,9 @@ MANIFEST = {
     "route": "/aplicaciones",
     "icon": "fa-solid fa-cubes",
     "depends": ["main", "web"],
+    "external_dependencies": {
+        "python": ["openpyxl", "reportlab", "httpx"],
+    },
     "data": [
         "README.md",
         "vistas/aplicaciones.html",
@@ -52,6 +55,8 @@ MANIFEST = {
             "servicios/audit_service.py",
             "servicios/state_service.py",
             "servicios/security_service.py",
+            "servicios/export_service.py",
+            "servicios/report_service.py",
         ],
         "views": [
             "vistas/aplicaciones.html",

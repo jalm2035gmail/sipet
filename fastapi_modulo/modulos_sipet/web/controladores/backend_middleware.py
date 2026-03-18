@@ -29,8 +29,6 @@ PUBLIC_PATHS = {
     "/healthz",
     "/favicon.ico",
     "/api/backend/me",
-    "/base_datos/inicializar",
-    "/api/base_datos/inicializar",
 }
 
 

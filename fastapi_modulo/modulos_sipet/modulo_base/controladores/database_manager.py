@@ -25,7 +25,7 @@ from fastapi_modulo.core.database_router import (
     update_sipet_conf_settings,
 )
 from fastapi_modulo.modulos_sipet.web.controladores.backend_shell import render_backend_page
-from fastapi_modulo.modulos_sipet.web.servicios.access_service import require_admin_or_superadmin
+from fastapi_modulo.modulos_sipet.web.servicios.access_service import is_superadmin, require_admin_or_superadmin
 from fastapi_modulo.modulos_sipet.web.servicios.session_service import AUTH_COOKIE_SECRET
 
 router = APIRouter()
@@ -75,274 +75,263 @@ def _enforce_admin_or_setup(request: Request, *, require_setup_auth: bool = Fals
 
 
 def _manager_content() -> str:
-    settings = get_sipet_conf_settings()
-    settings_json = escape(json.dumps(settings, ensure_ascii=False))
     return f"""
-<section class="w-full space-y-4">
-  <div class="titulo bg-MAIN-200 rounded-box border border-MAIN-300 p-4 sm:p-6">
-    <div class="w-full flex flex-col md:flex-row items-center gap-10">
-      <img src="{BRAND_LOGO_URL}" alt="AVANCOOP" width="132" height="132" class="shrink-0 rounded-box shadow-lg object-contain" />
-      <div class="w-full grid gap-2 content-center">
-        <div class="block w-full text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight text-[color:var(--sidebar-bottom)]">Gestión de bases de datos</div>
-        <div class="block w-full text-MAIN sm:text-lg text-MAIN-content/70">Alta, edición, baja, exportación e importación de dominios y bases.</div>
-      </div>
+<style>
+  .db-btn {{
+    display:block; width:100%; padding:11px 0; border-radius:10px;
+    border:2px solid #16a34a; background:#16a34a; color:#fff;
+    font-weight:600; font-size:.95rem; cursor:pointer; text-align:center;
+    transition:background .15s, color .15s;
+  }}
+  .db-btn:hover {{ background:#fff; color:#16a34a; }}
+  .db-btn:disabled {{ opacity:.4; cursor:not-allowed; pointer-events:none; }}
+  .db-item {{
+    display:flex; flex-direction:column; gap:3px;
+    padding:14px 20px; border-bottom:1px solid var(--line);
+    cursor:pointer; border-left:4px solid transparent;
+    transition:background .1s, border-color .1s;
+  }}
+  .db-item:last-child {{ border-bottom:none; }}
+  .db-item:hover {{ background:#f0fdf4; }}
+  .db-item.selected {{ border-left-color:#16a34a; background:#f0fdf4; }}
+  .db-item-domain {{ font-weight:700; color:var(--text); font-size:.95rem; }}
+  .db-item-meta {{ font-size:.8rem; color:var(--muted); }}
+  .form-panel {{
+    display:none; background:#fff; border:1px solid var(--line);
+    border-radius:16px; padding:24px; flex-direction:column; gap:16px;
+  }}
+  .form-panel.open {{ display:flex; }}
+  .form-grid {{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }}
+  .field {{ display:flex; flex-direction:column; gap:5px; }}
+  .field label {{ font-size:.85rem; font-weight:600; color:var(--text); }}
+  .field input {{
+    padding:9px 12px; border:1px solid var(--line); border-radius:8px;
+    font-size:.9rem; background:#fff; color:var(--text); width:100%;
+    box-sizing:border-box;
+  }}
+  .field input:focus {{ outline:2px solid #16a34a; border-color:#16a34a; }}
+  .btn-cancel {{
+    padding:10px 24px; border-radius:10px; border:2px solid var(--line);
+    background:#fff; color:var(--text); font-weight:600; cursor:pointer;
+    font-size:.95rem;
+  }}
+  .btn-cancel:hover {{ background:#f8fafc; }}
+  @media (max-width:640px) {{
+    .two-col {{ grid-template-columns:1fr !important; }}
+    .form-grid {{ grid-template-columns:1fr !important; }}
+  }}
+</style>
+
+<section style="width:100%;display:grid;gap:20px;">
+
+  <!-- Encabezado -->
+  <div style="display:flex;align-items:center;gap:20px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:20px 24px;">
+    <img src="{BRAND_LOGO_URL}" alt="Logo" width="80" height="80"
+         style="border-radius:12px;box-shadow:0 4px 20px rgba(15,23,42,.18);object-fit:contain;flex-shrink:0;">
+    <div>
+      <h1 style="font-size:clamp(1.5rem,3vw,2.2rem);font-weight:800;margin:0;color:var(--text);">
+        Gestión de bases de datos
+      </h1>
+      <p style="margin:4px 0 0;color:var(--muted);font-size:.95rem;">
+        Alta, edición y baja de bases de datos del sitio.
+      </p>
     </div>
   </div>
 
-  <div class="grid grid-cols-1 xl:grid-cols-12 gap-4">
-    <aside class="card border border-MAIN-300 bg-MAIN-100 shadow-sm xl:col-span-4">
-      <div class="card-body gap-3">
-        <h3 class="card-title">`sipet.conf`</h3>
-        <label class="form-control gap-1"><span class="label-text">Dominio base</span><input id="sipet-domain" class="input input-bordered" value="{escape(str(settings.get('domain') or ''))}"></label>
-        <label class="form-control gap-1"><span class="label-text">Host BD</span><input id="sipet-db-host" class="input input-bordered" value="{escape(str(settings.get('db_host') or ''))}"></label>
-        <label class="form-control gap-1"><span class="label-text">Puerto</span><input id="sipet-db-port" class="input input-bordered" value="{escape(str(settings.get('db_port') or '5432'))}"></label>
-        <label class="form-control gap-1"><span class="label-text">Usuario BD</span><input id="sipet-db-user" class="input input-bordered" value="{escape(str(settings.get('db_user') or ''))}"></label>
-        <label class="form-control gap-1"><span class="label-text">Password BD</span><input id="sipet-db-password" type="password" class="input input-bordered" value=""></label>
-        <label class="form-control gap-1"><span class="label-text">Nombre BD</span><input id="sipet-db-name" class="input input-bordered" value="{escape(str(settings.get('db_name') or ''))}"></label>
-        <label class="form-control gap-1"><span class="label-text">dbfilter</span><input id="sipet-dbfilter" class="input input-bordered" value="{escape(str(settings.get('dbfilter') or ''))}"></label>
-        <label class="label cursor-pointer justify-start gap-3"><input id="sipet-show-db-path" type="checkbox" class="checkbox" {"checked" if settings.get("show_db_path") else ""}><span class="label-text">Mostrar ruta</span></label>
-        <div class="flex gap-2 flex-wrap">
-          <button id="save-sipet-conf" class="btn btn-primary btn-sm" type="button">Guardar</button>
-          <button id="initialize-database" class="btn btn-success btn-sm" type="button" onclick="sipetCrearBD(this)">Crear BD</button>
-          <a class="btn btn-outline btn-sm" href="/api/base_datos/gestion/export/sipet-conf">Exportar conf</a>
-        </div>
-        <p id="init-db-message" class="text-sm mt-1 hidden"></p>
-        <p class="text-xs text-MAIN-content/60 break-all">{escape(str(settings.get("path") or ""))}</p>
-      </div>
-    </aside>
+  <!-- Dos columnas: lista + botones -->
+  <div class="two-col" style="display:grid;grid-template-columns:1fr 180px;gap:20px;align-items:start;">
 
-    <section class="card border border-MAIN-300 bg-MAIN-100 shadow-sm xl:col-span-8">
-      <div class="card-body gap-4">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <label class="form-control gap-1"><span class="label-text">Dominio</span><input id="entry-domain" class="input input-bordered" placeholder="demo.midominio.com"></label>
-          <label class="form-control gap-1"><span class="label-text">Host BD</span><input id="entry-db-host" class="input input-bordered" placeholder="localhost"></label>
-          <label class="form-control gap-1"><span class="label-text">Puerto</span><input id="entry-db-port" class="input input-bordered" value="5432"></label>
-          <label class="form-control gap-1"><span class="label-text">Usuario BD</span><input id="entry-db-user" class="input input-bordered" placeholder="sipet"></label>
-          <label class="form-control gap-1"><span class="label-text">Password BD</span><input id="entry-db-password" type="password" class="input input-bordered"></label>
-          <label class="form-control gap-1"><span class="label-text">Nombre BD</span><input id="entry-db-name" class="input input-bordered" placeholder="sipet_demo"></label>
-          <label class="form-control gap-1 md:col-span-2"><span class="label-text">SQLite path opcional</span><input id="entry-sqlite-db-path" class="input input-bordered" placeholder="base_datos/demo.db"></label>
-          <label class="label cursor-pointer justify-start gap-3"><input id="entry-enabled" type="checkbox" class="checkbox" checked><span class="label-text">Activo</span></label>
-        </div>
-        <div class="flex gap-2 flex-wrap">
-          <button id="save-entry" class="btn btn-primary btn-sm" type="button">Guardar dominio</button>
-          <button id="reset-entry" class="btn btn-outline btn-sm" type="button">Limpiar</button>
-          <label class="btn btn-ghost btn-sm cursor-pointer">Importar conf<input id="import-conf-input" type="file" class="hidden" accept=".conf,.ini,.json,text/plain"></label>
-        </div>
-        <div class="overflow-x-auto rounded-box border border-MAIN-300 bg-MAIN-100">
-          <table class="table table-zebra w-full text-sm min-w-[960px]">
-            <thead>
-              <tr>
-                <th>Dominio</th>
-                <th>BD</th>
-                <th>Ruta/URL</th>
-                <th>Archivo</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody id="db-manager-body"></tbody>
-          </table>
-        </div>
-        <p id="db-manager-message" class="text-sm text-MAIN-content/60"></p>
+    <!-- Izquierda: lista de BD -->
+    <div style="background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden;">
+      <div style="padding:14px 20px;border-bottom:1px solid var(--line);font-weight:700;font-size:.95rem;color:var(--text);">
+        Bases de datos del sitio
       </div>
-    </section>
+      <ul id="db-list" style="list-style:none;margin:0;padding:0;min-height:120px;">
+        <li style="padding:20px;color:var(--muted);font-size:.9rem;">Cargando…</li>
+      </ul>
+      <p id="db-msg" style="padding:10px 20px;font-size:.85rem;margin:0;display:none;"></p>
+    </div>
+
+    <!-- Derecha: botones de acción -->
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <button class="db-btn" id="btn-crear" type="button">Crear</button>
+      <button class="db-btn" id="btn-editar" type="button" disabled>Editar</button>
+      <button class="db-btn" id="btn-eliminar" type="button" disabled>Eliminar</button>
+    </div>
   </div>
+
+  <!-- Panel de formulario (crear / editar) -->
+  <div class="form-panel" id="form-panel">
+    <h2 id="form-title" style="margin:0;font-size:1.1rem;font-weight:700;color:var(--text);"></h2>
+    <div class="form-grid">
+      <div class="field">
+        <label>Dominio</label>
+        <input id="f-domain" placeholder="demo.midominio.com">
+      </div>
+      <div class="field">
+        <label>Host BD</label>
+        <input id="f-db-host" placeholder="localhost">
+      </div>
+      <div class="field">
+        <label>Puerto</label>
+        <input id="f-db-port" value="5432">
+      </div>
+      <div class="field">
+        <label>Usuario BD</label>
+        <input id="f-db-user" placeholder="sipet">
+      </div>
+      <div class="field">
+        <label>Password BD</label>
+        <input id="f-db-password" type="password">
+      </div>
+      <div class="field">
+        <label>Nombre BD</label>
+        <input id="f-db-name" placeholder="sipet_demo">
+      </div>
+    </div>
+    <div class="field">
+      <label>SQLite path (opcional)</label>
+      <input id="f-sqlite-path" placeholder="base_datos/demo.db">
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+      <button class="db-btn" id="btn-guardar" type="button" style="width:auto;padding:10px 28px;">
+        Guardar
+      </button>
+      <button class="btn-cancel" id="btn-cancelar" type="button">Cancelar</button>
+    </div>
+    <p id="form-msg" style="font-size:.85rem;margin:0;"></p>
+  </div>
+
 </section>
 <script>
-window.sipetCrearBD = async function(btn) {{
-  const msgEl = document.getElementById('init-db-message');
-  const showM = (txt, err) => {{
-    if (msgEl) {{ msgEl.textContent = txt; msgEl.className = 'text-sm mt-1 ' + (err ? 'text-red-600' : 'text-green-600'); msgEl.classList.remove('hidden'); }}
-    else {{ alert(txt); }}
-  }};
-  btn.disabled = true;
-  const orig = btn.textContent;
-  btn.textContent = 'Procesando…';
-  try {{
-    const g = (id) => (document.getElementById(id) || {{}}).value || '';
-    const payload = {{
-      domain: g('sipet-domain').trim(),
-      db_host: g('sipet-db-host').trim(),
-      db_port: g('sipet-db-port').trim(),
-      db_user: g('sipet-db-user').trim(),
-      db_password: g('sipet-db-password').trim(),
-      db_name: g('sipet-db-name').trim(),
-      dbfilter: g('sipet-dbfilter').trim(),
-    }};
-    const res = await fetch('/api/base_datos/inicializar', {{ method: 'POST', headers: {{'Content-Type':'application/json'}}, body: JSON.stringify(payload) }});
-    let data;
-    try {{ data = await res.json(); }} catch(_) {{ throw new Error('Respuesta no válida (HTTP ' + res.status + ')'); }}
-    if (!res.ok || !data.success) throw new Error(data.error || data.detail || 'Error al crear la base');
-    showM(data.result?.connected ? '✓ Base de datos creada exitosamente.' : (data.result?.error || 'No se pudo conectar.'), !data.result?.connected);
-    if (data.result?.connected) setTimeout(() => location.href = '/backend/login', 1200);
-  }} catch(e) {{
-    showM(e.message || String(e), true);
-  }} finally {{
-    btn.disabled = false;
-    btn.textContent = orig;
-  }}
-}};
 (() => {{
-  const state = {{ settings: {settings_json}, entries: [] }};
-  const byId = (id) => document.getElementById(id);
-  const msg = byId('db-manager-message');
-  const body = byId('db-manager-body');
-  const text = (v) => String(v ?? '');
+  let entries = [];
+  let selected = null;
+  let mode = null;
 
-  const showMsg = (value, isError = false) => {{
-    if (!msg) return;
-    msg.textContent = value;
-    msg.className = isError ? 'text-sm text-red-600' : 'text-sm text-MAIN-content/60';
+  const $ = (id) => document.getElementById(id);
+  const t = (v) => String(v ?? '');
+
+  const showMsg = (el, text, err) => {{
+    el.textContent = text;
+    el.style.color = err ? '#b42318' : '#16a34a';
+    el.style.display = text ? '' : 'none';
   }};
 
-  const formPayload = () => ({{
-    domain: text(byId('entry-domain')?.value).trim(),
-    db_host: text(byId('entry-db-host')?.value).trim(),
-    db_port: text(byId('entry-db-port')?.value).trim(),
-    db_user: text(byId('entry-db-user')?.value).trim(),
-    db_password: text(byId('entry-db-password')?.value).trim(),
-    db_name: text(byId('entry-db-name')?.value).trim(),
-    sqlite_db_path: text(byId('entry-sqlite-db-path')?.value).trim(),
-    enabled: Boolean(byId('entry-enabled')?.checked),
-  }});
-
-  const fillForm = (entry) => {{
-    byId('entry-domain').value = text(entry.domain);
-    byId('entry-db-host').value = text(entry.db_host);
-    byId('entry-db-port').value = text(entry.db_port || '5432');
-    byId('entry-db-user').value = text(entry.db_user);
-    byId('entry-db-password').value = text(entry.db_password);
-    byId('entry-db-name').value = text(entry.db_name);
-    byId('entry-sqlite-db-path').value = text(entry.sqlite_path);
-    byId('entry-enabled').checked = Boolean(entry.enabled);
+  const syncButtons = () => {{
+    $('btn-editar').disabled = !selected;
+    $('btn-eliminar').disabled = !selected;
   }};
 
-  const clearForm = () => {{
-    fillForm({{ domain:'', db_host:'', db_port:'5432', db_user:'', db_password:'', db_name:'', sqlite_path:'', enabled:true }});
-  }};
-
-  const render = () => {{
-    const showPath = Boolean(state.settings.show_db_path);
-    body.innerHTML = (state.entries || []).map((entry) => {{
-      const pathCell = showPath ? (entry.sqlite_path || entry.db_url || '') : 'Oculta';
-      return `
-        <tr>
-          <td>${{text(entry.domain)}}</td>
-          <td>${{text(entry.db_name || (entry.sqlite_path ? 'sqlite' : ''))}}</td>
-          <td class="break-all">${{text(pathCell)}}</td>
-          <td class="break-all">${{text(entry.file_path)}}</td>
-          <td>
-            <div class="flex gap-2 flex-wrap">
-              <button type="button" class="btn btn-xs btn-outline" data-action="edit" data-domain="${{text(entry.domain)}}">Editar</button>
-              <a class="btn btn-xs btn-ghost" href="/api/base_datos/gestion/export/conf?domain=${{encodeURIComponent(text(entry.domain))}}">Exportar conf</a>
-              <a class="btn btn-xs btn-ghost" href="/api/base_datos/gestion/export/db?domain=${{encodeURIComponent(text(entry.domain))}}">Exportar BD</a>
-              <button type="button" class="btn btn-xs btn-error" data-action="delete" data-domain="${{text(entry.domain)}}">Eliminar</button>
-            </div>
-          </td>
-        </tr>
-      `;
-    }}).join('') || '<tr><td colspan="5" class="text-center">Sin dominios configurados.</td></tr>';
+  const renderList = () => {{
+    const list = $('db-list');
+    if (!entries.length) {{
+      list.innerHTML = '<li style="padding:20px;color:var(--muted);font-size:.9rem;">Sin bases de datos configuradas.</li>';
+      return;
+    }}
+    list.innerHTML = entries.map((e) => {{
+      const tipo = e.sqlite_path ? 'SQLite' : (e.db_name ? 'PostgreSQL' : '—');
+      const sel = e.domain === selected ? ' selected' : '';
+      return `<li class="db-item${{sel}}" data-domain="${{t(e.domain)}}">
+        <span class="db-item-domain">${{t(e.domain) || '—'}}</span>
+        <span class="db-item-meta">
+          ${{tipo}}${{e.db_name ? ' · ' + t(e.db_name) : ''}}${{e.db_host ? ' · ' + t(e.db_host) : ''}}
+        </span>
+      </li>`;
+    }}).join('');
+    list.querySelectorAll('.db-item').forEach((item) => {{
+      item.addEventListener('click', () => {{
+        selected = item.dataset.domain;
+        $('form-panel').classList.remove('open');
+        mode = null;
+        renderList();
+        syncButtons();
+      }});
+    }});
   }};
 
   const loadEntries = async () => {{
-    const res = await fetch('/api/base_datos/gestion/list');
-    const data = await res.json();
-    if (!res.ok || !data.success) throw new Error(data.error || 'No se pudo cargar');
-    state.entries = data.entries || [];
-    state.settings = data.settings || state.settings;
-    render();
+    try {{
+      const res = await fetch('/api/base_datos/gestion/list');
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'Error al cargar');
+      entries = data.entries || [];
+      renderList();
+    }} catch (err) {{
+      showMsg($('db-msg'), t(err.message || err), true);
+    }}
   }};
 
-  byId('save-entry')?.addEventListener('click', async () => {{
-    try {{
-      const res = await fetch('/api/base_datos/gestion/save', {{
-        method: 'POST',
-        headers: {{ 'Content-Type': 'application/json' }},
-        body: JSON.stringify(formPayload()),
-      }});
-      const data = await res.json();
-      if (!res.ok || !data.success) throw new Error(data.error || 'No se pudo guardar');
-      clearForm();
-      await loadEntries();
-      showMsg('Dominio guardado.');
-    }} catch (err) {{
-      showMsg(String(err.message || err), true);
-    }}
+  const openPanel = (m) => {{
+    mode = m;
+    $('form-title').textContent = m === 'crear' ? 'Nueva base de datos' : 'Editar base de datos';
+    const e = m === 'editar' ? entries.find((x) => x.domain === selected) : null;
+    $('f-domain').value = t(e?.domain); $('f-domain').disabled = m === 'editar';
+    $('f-db-host').value = t(e?.db_host);
+    $('f-db-port').value = t(e?.db_port || '5432');
+    $('f-db-user').value = t(e?.db_user);
+    $('f-db-password').value = '';
+    $('f-db-name').value = t(e?.db_name);
+    $('f-sqlite-path').value = t(e?.sqlite_path);
+    showMsg($('form-msg'), '', false);
+    $('form-panel').classList.add('open');
+    $('form-panel').scrollIntoView({{ behavior:'smooth', block:'nearest' }});
+  }};
+
+  $('btn-crear').addEventListener('click', () => openPanel('crear'));
+  $('btn-editar').addEventListener('click', () => openPanel('editar'));
+  $('btn-cancelar').addEventListener('click', () => {{
+    $('form-panel').classList.remove('open');
+    mode = null;
   }});
 
-  byId('reset-entry')?.addEventListener('click', clearForm);
-
-  byId('save-sipet-conf')?.addEventListener('click', async () => {{
+  $('btn-guardar').addEventListener('click', async () => {{
+    const payload = {{
+      domain: $('f-domain').value.trim(),
+      db_host: $('f-db-host').value.trim(),
+      db_port: $('f-db-port').value.trim(),
+      db_user: $('f-db-user').value.trim(),
+      db_password: $('f-db-password').value,
+      db_name: $('f-db-name').value.trim(),
+      sqlite_db_path: $('f-sqlite-path').value.trim(),
+      enabled: true,
+    }};
     try {{
-      const payload = {{
-        domain: text(byId('sipet-domain')?.value).trim(),
-        db_host: text(byId('sipet-db-host')?.value).trim(),
-        db_port: text(byId('sipet-db-port')?.value).trim(),
-        db_user: text(byId('sipet-db-user')?.value).trim(),
-        db_password: text(byId('sipet-db-password')?.value).trim(),
-        db_name: text(byId('sipet-db-name')?.value).trim(),
-        dbfilter: text(byId('sipet-dbfilter')?.value).trim(),
-        show_db_path: Boolean(byId('sipet-show-db-path')?.checked),
-      }};
-      const res = await fetch('/api/base_datos/gestion/sipet-conf', {{
-        method: 'PUT',
-        headers: {{ 'Content-Type': 'application/json' }},
+      const res = await fetch('/api/base_datos/gestion/save', {{
+        method:'POST', headers:{{'Content-Type':'application/json'}},
         body: JSON.stringify(payload),
       }});
       const data = await res.json();
-      if (!res.ok || !data.success) throw new Error(data.error || 'No se pudo guardar sipet.conf');
-      state.settings = data.settings || state.settings;
-      render();
-      showMsg('sipet.conf actualizado.');
-    }} catch (err) {{
-      showMsg(String(err.message || err), true);
-    }}
-  }});
-
-
-  byId('import-conf-input')?.addEventListener('change', async (event) => {{
-    const file = event.target.files?.[0];
-    if (!file) return;
-    try {{
-      const formData = new FormData();
-      formData.append('file', file);
-      const res = await fetch('/api/base_datos/gestion/import/conf', {{ method: 'POST', body: formData }});
-      const data = await res.json();
-      if (!res.ok || !data.success) throw new Error(data.error || 'No se pudo importar');
+      if (!res.ok || !data.success) throw new Error(data.error || 'Error al guardar');
+      selected = payload.domain;
+      $('form-panel').classList.remove('open');
+      mode = null;
       await loadEntries();
-      showMsg('Archivo importado.');
+      syncButtons();
+      showMsg($('db-msg'), 'Base de datos guardada correctamente.', false);
     }} catch (err) {{
-      showMsg(String(err.message || err), true);
-    }} finally {{
-      event.target.value = '';
+      showMsg($('form-msg'), t(err.message || err), true);
     }}
   }});
 
-  body?.addEventListener('click', async (event) => {{
-    const target = event.target.closest('[data-action]');
-    if (!target) return;
-    const action = target.dataset.action;
-    const domain = target.dataset.domain || '';
-    const entry = state.entries.find((item) => text(item.domain) === domain);
-    if (action === 'edit' && entry) {{
-      fillForm(entry);
-      return;
-    }}
-    if (action === 'delete' && domain) {{
-      if (!window.confirm(`Eliminar configuración para ${{domain}}?`)) return;
-      try {{
-        const res = await fetch(`/api/base_datos/gestion/${{encodeURIComponent(domain)}}`, {{ method: 'DELETE' }});
-        const data = await res.json();
-        if (!res.ok || !data.success) throw new Error(data.error || 'No se pudo eliminar');
-        await loadEntries();
-        showMsg('Dominio eliminado.');
-      }} catch (err) {{
-        showMsg(String(err.message || err), true);
-      }}
+  $('btn-eliminar').addEventListener('click', async () => {{
+    if (!selected || !confirm(`¿Eliminar la base de datos "${{selected}}"?`)) return;
+    try {{
+      const res = await fetch(`/api/base_datos/gestion/${{encodeURIComponent(selected)}}`, {{method:'DELETE'}});
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'Error al eliminar');
+      selected = null;
+      $('form-panel').classList.remove('open');
+      await loadEntries();
+      syncButtons();
+      showMsg($('db-msg'), 'Base de datos eliminada.', false);
+    }} catch (err) {{
+      showMsg($('db-msg'), t(err.message || err), true);
     }}
   }});
 
-  loadEntries().catch((err) => showMsg(String(err.message || err), true));
-  clearForm();
+  loadEntries();
+  syncButtons();
 }})();
 </script>
 """
@@ -525,14 +514,40 @@ def database_manager_page(request: Request):
     )
 
 
+def _forbidden_as_not_found() -> HTMLResponse:
+    return HTMLResponse(
+        """<!doctype html><html lang="es"><head><meta charset="utf-8">
+<title>404 — Página no encontrada</title>
+<style>
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+background:#f6f7f9;display:flex;align-items:center;justify-content:center;min-height:100vh;}
+.box{text-align:center;padding:48px 32px;}
+h1{font-size:6rem;font-weight:900;margin:0;color:#d1d5db;letter-spacing:-4px;}
+h2{font-size:1.4rem;font-weight:700;margin:12px 0 8px;color:#374151;}
+p{color:#6b7280;margin:0 0 24px;}
+a{color:#0f766e;text-decoration:none;font-weight:600;}
+a:hover{text-decoration:underline;}
+</style></head>
+<body><div class="box">
+<h1>404</h1>
+<h2>Página no encontrada</h2>
+<p>El recurso solicitado no existe o no está disponible.</p>
+<a href="/">← Ir al inicio</a>
+</div></body></html>""",
+        status_code=403,
+    )
+
+
 @router.get("/base_datos/inicializar", response_class=HTMLResponse)
 def database_setup_page(request: Request):
-    if not _setup_required(request):
-        return HTMLResponse("", status_code=303, headers={"Location": "/base_datos/gestion"})
-    return _standalone_setup_page(
-        "Inicializar base de datos",
-        _setup_login_content() if not _is_setup_authenticated(request) else _manager_content(),
-    )
+    if _setup_required(request):
+        return _standalone_setup_page(
+            "Inicializar base de datos",
+            _setup_login_content() if not _is_setup_authenticated(request) else _manager_content(),
+        )
+    if not is_superadmin(request):
+        return _forbidden_as_not_found()
+    return HTMLResponse("", status_code=303, headers={"Location": "/web/inicio"})
 
 
 @router.get("/api/base_datos/gestion/list")

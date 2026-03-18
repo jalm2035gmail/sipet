@@ -1,8 +1,13 @@
+from __future__ import annotations
+
+import io
 import os
 
 from fastapi import APIRouter, File, Form, HTTPException, Query, Request, UploadFile
+from fastapi.responses import StreamingResponse
 
 from fastapi_modulo.modulos_sipet.aplicaciones.controladores.dependencies import (
+    APPLICATIONS_PERMISSION_AUDIT_VIEW,
     APPLICATIONS_PERMISSION_PACKAGES_UPLOAD,
     APPLICATIONS_PERMISSION_VIEW,
     require_applications_permission,
@@ -21,6 +26,8 @@ from fastapi_modulo.modulos_sipet.aplicaciones.servicios.security_service import
     verify_sensitive_action_token,
 )
 from fastapi_modulo.modulos_sipet.aplicaciones.servicios.task_queue_service import queue_task
+from fastapi_modulo.modulos_sipet.aplicaciones.servicios.export_service import export_catalog_xlsx
+from fastapi_modulo.modulos_sipet.aplicaciones.servicios.report_service import generate_module_audit_pdf, get_report_filename
 from fastapi_modulo.core.module_registry import MODULES_BY_KEY
 
 router = APIRouter()
@@ -119,6 +126,30 @@ def aplicaciones_asset(
     if filename == "preview.png":
         return build_module_image_response(module_key, filename, label=label, variant=variant)
     raise HTTPException(status_code=404, detail="Recurso no encontrado")
+
+
+@router.get("/api/aplicaciones/modulos/export", summary="Exportar catálogo de módulos a Excel")
+def aplicaciones_export(request: Request):
+    require_applications_permission(request, APPLICATIONS_PERMISSION_VIEW)
+    buffer = export_catalog_xlsx()
+    headers = {"Content-Disposition": "attachment; filename=catalogo_modulos.xlsx"}
+    return StreamingResponse(
+        buffer,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers=headers,
+    )
+
+
+@router.get("/api/aplicaciones/modulos/{module_key}/reporte", summary="Reporte PDF de auditoría de un módulo")
+def aplicaciones_module_report(module_key: str, request: Request):
+    require_applications_permission(request, APPLICATIONS_PERMISSION_AUDIT_VIEW)
+    pdf_bytes = generate_module_audit_pdf(module_key)
+    filename = get_report_filename(module_key)
+    return StreamingResponse(
+        io.BytesIO(pdf_bytes),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
 
 
 __all__ = ["router"]

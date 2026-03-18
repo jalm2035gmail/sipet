@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import io
 import os
 import tempfile
 from datetime import datetime, timedelta
@@ -100,7 +101,10 @@ def access_events_by_role(hours: int = 24) -> list[dict[str, Any]]:
             .order_by(func.count(WebSecurityEvent.id).desc())
             .all()
         )
-        return [{"event_type": str(row.event_type or ""), "events": int(row.events or 0)} for row in rows]
+        return [
+            {"event_type": str(row.event_type or ""), "events": int(row.events or 0)}
+            for row in rows
+        ]
     finally:
         db.close()
 
@@ -114,13 +118,11 @@ def users_with_mfa_disabled(limit: int = 100) -> list[dict[str, Any]]:
             has_passkey = bool(row.get("backendauthn_credential_id") and row.get("backendauthn_public_key"))
             if has_totp or has_passkey:
                 continue
-            disabled.append(
-                {
-                    "user_id": int(row.get("id", 0) or 0),
-                    "username": str(row.get("usuario", "") or ""),
-                    "role_id": int(row.get("rol_id", 0) or 0),
-                }
-            )
+            disabled.append({
+                "user_id": int(row.get("id", 0) or 0),
+                "username": str(row.get("usuario", "") or ""),
+                "role_id": int(row.get("rol_id", 0) or 0),
+            })
         return disabled
     except Exception:
         return []
@@ -167,27 +169,30 @@ def build_security_compliance_report(hours: int = 24) -> dict[str, Any]:
         "credential_change_events": len(credential_events),
         "compliance_score": max(
             0,
-            100 - min(40, len(disabled_mfa) * 2) - min(30, len(failed_attempts)) - min(20, len(active_sessions)),
+            100
+            - min(40, len(disabled_mfa) * 2)
+            - min(30, len(failed_attempts))
+            - min(20, len(active_sessions)),
         ),
     }
 
 
-def export_security_audit_pdf(hours: int = 24, output_path: str = "") -> str:
-    if not reportlab_enabled():
-        return ""
-    resolved_path = output_path or os.path.join(
-        tempfile.gettempdir(),
-        f"web_security_audit_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.pdf",
-    )
+def _build_pdf_canvas(dest: Any, hours: int) -> None:
+    """
+    Escribe el contenido del reporte en un objeto canvas de ReportLab.
+    `dest` puede ser una ruta de archivo (str) o un objeto BytesIO,
+    ya que ReportLab acepta ambos en canvas.Canvas().
+    """
     report = build_security_compliance_report(hours)
     session_rows = active_sessions_by_user(limit=12)
     failed_rows = failed_login_attempts(hours, limit=12)
     credential_rows = credential_change_events(hours, limit=12)
     role_rows = access_events_by_role(hours)
 
-    pdf = canvas.Canvas(resolved_path, pagesize=letter)
+    pdf = canvas.Canvas(dest, pagesize=letter)
     width, height = letter
     y = height - 48
+
     pdf.setTitle("Reporte de Auditoria de Seguridad")
     pdf.setFont("Helvetica-Bold", 16)
     pdf.drawString(40, y, "Reporte de Auditoria de Seguridad")
@@ -196,7 +201,7 @@ def export_security_audit_pdf(hours: int = 24, output_path: str = "") -> str:
     pdf.drawString(40, y, f"Generado: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}")
     y -= 22
 
-    def draw_section(title: str, rows: list[str]) -> None:
+    def draw_section(title: str, lines: list[str]) -> None:
         nonlocal y
         if y < 100:
             pdf.showPage()
@@ -205,7 +210,7 @@ def export_security_audit_pdf(hours: int = 24, output_path: str = "") -> str:
         pdf.drawString(40, y, title)
         y -= 16
         pdf.setFont("Helvetica", 10)
-        for line in rows:
+        for line in lines:
             if y < 60:
                 pdf.showPage()
                 y = height - 48
@@ -230,32 +235,60 @@ def export_security_audit_pdf(hours: int = 24, output_path: str = "") -> str:
         [
             f"user_id={item['user_id']} tenant={item['tenant_id']} sesiones={item['active_sessions']}"
             for item in session_rows
-        ]
-        or ["Sin sesiones activas."],
+        ] or ["Sin sesiones activas."],
     )
     draw_section(
         "Intentos Fallidos de Login",
         [
             f"{item['created_at']} usuario={item['username']} ip={item['ip']}"
             for item in failed_rows
-        ]
-        or ["Sin intentos fallidos."],
+        ] or ["Sin intentos fallidos."],
     )
     draw_section(
         "Eventos de Credenciales",
         [
             f"{item['created_at']} {item['event_type']} usuario={item['username']}"
             for item in credential_rows
-        ]
-        or ["Sin cambios de credenciales."],
+        ] or ["Sin cambios de credenciales."],
     )
     draw_section(
         "Eventos de Acceso por Tipo",
         [
             f"{item['event_type']}: {item['events']}"
             for item in role_rows
-        ]
-        or ["Sin eventos."],
+        ] or ["Sin eventos."],
     )
     pdf.save()
+
+
+def export_security_audit_pdf_bytes(hours: int = 24) -> bytes:
+    """
+    Genera el PDF de auditoría en memoria y devuelve los bytes.
+    No escribe nada en disco — úsalo para HTTP responses, adjuntos
+    en notificaciones via httpx, o pruebas unitarias sin I/O.
+    Devuelve b"" si ReportLab no está disponible.
+    """
+    if not reportlab_enabled():
+        return b""
+    buf = io.BytesIO()
+    _build_pdf_canvas(buf, hours)
+    buf.seek(0)
+    return buf.read()
+
+
+def export_security_audit_pdf(hours: int = 24, output_path: str = "") -> str:
+    """
+    Genera el PDF de auditoría guardando en disco.
+    Mantiene compatibilidad con las tareas Celery existentes que
+    esperan una ruta de archivo como resultado.
+    Si output_path está vacío genera una ruta en /tmp.
+    Devuelve "" si ReportLab no está disponible.
+    """
+    if not reportlab_enabled():
+        return ""
+    resolved_path = output_path or os.path.join(
+        tempfile.gettempdir(),
+        f"web_security_audit_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.pdf",
+    )
+    _build_pdf_canvas(resolved_path, hours)
     return resolved_path

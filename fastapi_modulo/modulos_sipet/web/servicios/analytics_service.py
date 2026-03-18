@@ -1,8 +1,7 @@
 from __future__ import annotations
 
+import io
 import json
-import os
-import tempfile
 from datetime import datetime, timedelta
 from typing import Any
 
@@ -84,18 +83,16 @@ def load_screen_usage(hours: int = 24) -> list[dict[str, Any]]:
         items: list[dict[str, Any]] = []
         for row in rows:
             metadata = _normalize_event_metadata(row)
-            items.append(
-                {
-                    "created_at": row.created_at.isoformat() if row.created_at else "",
-                    "tenant_id": row.tenant_id,
-                    "user_id": row.user_id,
-                    "username": row.username,
-                    "role": str(metadata.get("role") or ""),
-                    "path": str(metadata.get("path") or ""),
-                    "module_name": str(metadata.get("module_name") or ""),
-                    "screen_name": str(metadata.get("screen_name") or ""),
-                }
-            )
+            items.append({
+                "created_at": row.created_at.isoformat() if row.created_at else "",
+                "tenant_id": row.tenant_id,
+                "user_id": row.user_id,
+                "username": row.username,
+                "role": str(metadata.get("role") or ""),
+                "path": str(metadata.get("path") or ""),
+                "module_name": str(metadata.get("module_name") or ""),
+                "screen_name": str(metadata.get("screen_name") or ""),
+            })
         return items
     finally:
         db.close()
@@ -151,12 +148,26 @@ def analyze_failed_login_patterns(hours: int = 24) -> dict[str, Any]:
         frame = pd.DataFrame(failures)
         frame["created_at"] = pd.to_datetime(frame["created_at"], errors="coerce")
         frame["hour_bucket"] = frame["created_at"].dt.strftime("%Y-%m-%d %H:00")
-        hour_counts = frame.groupby("hour_bucket").size().reset_index(name="attempts").sort_values("attempts", ascending=False)
-        ip_counts = frame.groupby("ip").size().reset_index(name="attempts").sort_values("attempts", ascending=False)
-        user_counts = frame.groupby("username").size().reset_index(name="attempts").sort_values("attempts", ascending=False)
-        values = [float(value) for value in hour_counts["attempts"].tolist()]
+        hour_counts = (
+            frame.groupby("hour_bucket").size()
+            .reset_index(name="attempts")
+            .sort_values("attempts", ascending=False)
+        )
+        ip_counts = (
+            frame.groupby("ip").size()
+            .reset_index(name="attempts")
+            .sort_values("attempts", ascending=False)
+        )
+        user_counts = (
+            frame.groupby("username").size()
+            .reset_index(name="attempts")
+            .sort_values("attempts", ascending=False)
+        )
+        values = [float(v) for v in hour_counts["attempts"].tolist()]
         mean_value, std_value = _safe_mean_std(values)
-        anomalies = hour_counts[hour_counts["attempts"] > (mean_value + max(std_value, 1.0))].to_dict(orient="records")
+        anomalies = hour_counts[
+            hour_counts["attempts"] > (mean_value + max(std_value, 1.0))
+        ].to_dict(orient="records")
         return {
             "window_hours": int(hours),
             "failed_attempts": int(len(frame.index)),
@@ -165,26 +176,34 @@ def analyze_failed_login_patterns(hours: int = 24) -> dict[str, Any]:
             "top_usernames": user_counts.head(10).to_dict(orient="records"),
             "anomalies": anomalies,
         }
-    hour_counts: dict[str, int] = {}
-    ip_counts: dict[str, int] = {}
-    user_counts: dict[str, int] = {}
+
+    hour_counts_d: dict[str, int] = {}
+    ip_counts_d: dict[str, int] = {}
+    user_counts_d: dict[str, int] = {}
     for item in failures:
         hour_bucket = str(item.get("created_at") or "")[:13] + ":00"
-        hour_counts[hour_bucket] = hour_counts.get(hour_bucket, 0) + 1
-        ip = str(item.get("ip") or "")
-        username = str(item.get("username") or "")
-        ip_counts[ip] = ip_counts.get(ip, 0) + 1
-        user_counts[username] = user_counts.get(username, 0) + 1
-    values = [float(value) for value in hour_counts.values()]
+        hour_counts_d[hour_bucket] = hour_counts_d.get(hour_bucket, 0) + 1
+        ip_counts_d[str(item.get("ip") or "")] = ip_counts_d.get(str(item.get("ip") or ""), 0) + 1
+        user_counts_d[str(item.get("username") or "")] = user_counts_d.get(str(item.get("username") or ""), 0) + 1
+    values = [float(v) for v in hour_counts_d.values()]
     mean_value, std_value = _safe_mean_std(values)
-    peak_hours = [{"hour_bucket": key, "attempts": value} for key, value in sorted(hour_counts.items(), key=lambda item: item[1], reverse=True)[:6]]
+    peak_hours = [
+        {"hour_bucket": k, "attempts": v}
+        for k, v in sorted(hour_counts_d.items(), key=lambda x: x[1], reverse=True)[:6]
+    ]
     anomalies = [item for item in peak_hours if item["attempts"] > (mean_value + max(std_value, 1.0))]
     return {
         "window_hours": int(hours),
         "failed_attempts": len(failures),
         "peak_hours": peak_hours,
-        "top_ips": [{"ip": key, "attempts": value} for key, value in sorted(ip_counts.items(), key=lambda item: item[1], reverse=True)[:10]],
-        "top_usernames": [{"username": key, "attempts": value} for key, value in sorted(user_counts.items(), key=lambda item: item[1], reverse=True)[:10]],
+        "top_ips": [
+            {"ip": k, "attempts": v}
+            for k, v in sorted(ip_counts_d.items(), key=lambda x: x[1], reverse=True)[:10]
+        ],
+        "top_usernames": [
+            {"username": k, "attempts": v}
+            for k, v in sorted(user_counts_d.items(), key=lambda x: x[1], reverse=True)[:10]
+        ],
         "anomalies": anomalies,
     }
 
@@ -201,14 +220,21 @@ def analyze_module_usage(hours: int = 24) -> dict[str, Any]:
         }
     if pd is not None:
         frame = pd.DataFrame(records)
-        module_counts = frame.groupby("module_name").size().reset_index(name="views").sort_values("views", ascending=False)
-        role_module_counts = (
-            frame.groupby(["role", "module_name"])
-            .size()
+        module_counts = (
+            frame.groupby("module_name").size()
             .reset_index(name="views")
             .sort_values("views", ascending=False)
         )
-        screen_counts = frame.groupby("screen_name").size().reset_index(name="views").sort_values("views", ascending=False)
+        role_module_counts = (
+            frame.groupby(["role", "module_name"]).size()
+            .reset_index(name="views")
+            .sort_values("views", ascending=False)
+        )
+        screen_counts = (
+            frame.groupby("screen_name").size()
+            .reset_index(name="views")
+            .sort_values("views", ascending=False)
+        )
         return {
             "window_hours": int(hours),
             "total_views": int(len(frame.index)),
@@ -216,22 +242,32 @@ def analyze_module_usage(hours: int = 24) -> dict[str, Any]:
             "top_modules_by_role": role_module_counts.head(20).to_dict(orient="records"),
             "top_screens": screen_counts.head(20).to_dict(orient="records"),
         }
-    module_counts: dict[str, int] = {}
-    role_module_counts: dict[tuple[str, str], int] = {}
-    screen_counts: dict[str, int] = {}
+
+    module_counts_d: dict[str, int] = {}
+    role_module_counts_d: dict[tuple[str, str], int] = {}
+    screen_counts_d: dict[str, int] = {}
     for item in records:
-        module_name = str(item.get("module_name") or "")
-        role_name = str(item.get("role") or "")
-        screen_name = str(item.get("screen_name") or "")
-        module_counts[module_name] = module_counts.get(module_name, 0) + 1
-        role_module_counts[(role_name, module_name)] = role_module_counts.get((role_name, module_name), 0) + 1
-        screen_counts[screen_name] = screen_counts.get(screen_name, 0) + 1
+        mn = str(item.get("module_name") or "")
+        rn = str(item.get("role") or "")
+        sn = str(item.get("screen_name") or "")
+        module_counts_d[mn] = module_counts_d.get(mn, 0) + 1
+        role_module_counts_d[(rn, mn)] = role_module_counts_d.get((rn, mn), 0) + 1
+        screen_counts_d[sn] = screen_counts_d.get(sn, 0) + 1
     return {
         "window_hours": int(hours),
         "total_views": len(records),
-        "top_modules": [{"module_name": key, "views": value} for key, value in sorted(module_counts.items(), key=lambda item: item[1], reverse=True)[:10]],
-        "top_modules_by_role": [{"role": key[0], "module_name": key[1], "views": value} for key, value in sorted(role_module_counts.items(), key=lambda item: item[1], reverse=True)[:20]],
-        "top_screens": [{"screen_name": key, "views": value} for key, value in sorted(screen_counts.items(), key=lambda item: item[1], reverse=True)[:20]],
+        "top_modules": [
+            {"module_name": k, "views": v}
+            for k, v in sorted(module_counts_d.items(), key=lambda x: x[1], reverse=True)[:10]
+        ],
+        "top_modules_by_role": [
+            {"role": k[0], "module_name": k[1], "views": v}
+            for k, v in sorted(role_module_counts_d.items(), key=lambda x: x[1], reverse=True)[:20]
+        ],
+        "top_screens": [
+            {"screen_name": k, "views": v}
+            for k, v in sorted(screen_counts_d.items(), key=lambda x: x[1], reverse=True)[:20]
+        ],
     }
 
 
@@ -250,16 +286,12 @@ def build_backend_analytics(hours: int = 24) -> dict[str, Any]:
     }
 
 
-def export_access_history_excel(hours: int = 24, output_path: str = "") -> str:
-    if Workbook is None:
-        return ""
-    resolved_path = output_path or os.path.join(
-        tempfile.gettempdir(),
-        f"web_access_history_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.xlsx",
-    )
+def _build_excel_workbook(hours: int) -> "Workbook":
+    """Construye el workbook en memoria sin escribir a disco."""
     workbook = Workbook()
     sheet = workbook.active
     sheet.title = "Historial"
+
     header_fill = PatternFill(fill_type="solid", fgColor="1F4E78") if PatternFill is not None else None
     header_font = Font(color="FFFFFF", bold=True) if Font is not None else None
 
@@ -267,7 +299,7 @@ def export_access_history_excel(hours: int = 24, output_path: str = "") -> str:
     headers = ["created_at", "tenant_id", "username", "ip", "user_agent", "success"]
     sheet.append(headers)
     for record in history:
-        sheet.append([record.get(header, "") for header in headers])
+        sheet.append([record.get(h, "") for h in headers])
     for cell in sheet[1]:
         if header_fill is not None:
             cell.fill = header_fill
@@ -277,23 +309,24 @@ def export_access_history_excel(hours: int = 24, output_path: str = "") -> str:
     if Table is not None and len(history) >= 1:
         table = Table(displayName="AccessHistory", ref=sheet.dimensions)
         if TableStyleInfo is not None:
-            table.tableStyleInfo = TableStyleInfo(name="TableStyleMedium2", showRowStripes=True, showColumnStripes=False)
+            table.tableStyleInfo = TableStyleInfo(
+                name="TableStyleMedium2", showRowStripes=True, showColumnStripes=False
+            )
         sheet.add_table(table)
 
     peaks_sheet = workbook.create_sheet("Analitica")
-    peaks_headers = ["Seccion", "Campo", "Valor"]
-    peaks_sheet.append(peaks_headers)
+    peaks_sheet.append(["Seccion", "Campo", "Valor"])
     analytics = build_backend_analytics(hours)
-    rows = [
+    analytics_rows = [
         ("Resumen", "successful_logins", analytics.get("successful_logins", 0)),
-        ("Resumen", "failed_logins", analytics.get("failed_logins", 0)),
-        ("Resumen", "failure_rate", analytics.get("failure_rate", 0.0)),
+        ("Resumen", "failed_logins",     analytics.get("failed_logins", 0)),
+        ("Resumen", "failure_rate",      analytics.get("failure_rate", 0.0)),
     ]
     for item in analytics.get("failed_login_patterns", {}).get("peak_hours", []):
-        rows.append(("Picos", str(item.get("hour_bucket") or ""), int(item.get("attempts") or 0)))
+        analytics_rows.append(("Picos", str(item.get("hour_bucket") or ""), int(item.get("attempts") or 0)))
     for item in analytics.get("module_usage", {}).get("top_modules", []):
-        rows.append(("Modulos", str(item.get("module_name") or ""), int(item.get("views") or 0)))
-    for row in rows:
+        analytics_rows.append(("Modulos", str(item.get("module_name") or ""), int(item.get("views") or 0)))
+    for row in analytics_rows:
         peaks_sheet.append(list(row))
     for cell in peaks_sheet[1]:
         if header_fill is not None:
@@ -302,5 +335,39 @@ def export_access_history_excel(hours: int = 24, output_path: str = "") -> str:
             cell.font = header_font
     peaks_sheet.auto_filter.ref = peaks_sheet.dimensions
 
-    workbook.save(resolved_path)
+    return workbook
+
+
+def export_access_history_excel_bytes(hours: int = 24) -> bytes:
+    """
+    Exporta el historial de acceso a Excel y devuelve los bytes en memoria.
+    No escribe nada en disco — el caller decide qué hacer con los bytes
+    (guardar, devolver como HTTP response, adjuntar en email, etc.).
+    Devuelve b"" si openpyxl no está disponible.
+    """
+    if Workbook is None:
+        return b""
+    buf = io.BytesIO()
+    _build_excel_workbook(hours).save(buf)
+    buf.seek(0)
+    return buf.read()
+
+
+def export_access_history_excel(hours: int = 24, output_path: str = "") -> str:
+    """
+    Exporta el historial de acceso a Excel guardando en disco.
+    Mantiene compatibilidad con las tareas Celery existentes que
+    esperan una ruta de archivo como resultado.
+    Si output_path está vacío genera una ruta en /tmp.
+    Devuelve "" si openpyxl no está disponible.
+    """
+    if Workbook is None:
+        return ""
+    import os
+    import tempfile
+    resolved_path = output_path or os.path.join(
+        tempfile.gettempdir(),
+        f"web_access_history_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.xlsx",
+    )
+    _build_excel_workbook(hours).save(resolved_path)
     return resolved_path

@@ -1,8 +1,12 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import Boolean, Column, DateTime, Integer, String
+
+
+def _utcnow() -> datetime:
+    return datetime.now(timezone.utc)
 
 
 class TenantMixin:
@@ -10,8 +14,8 @@ class TenantMixin:
 
 
 class TimestampMixin:
-    creado_en = Column(DateTime, nullable=False, default=datetime.utcnow)
-    actualizado_en = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    creado_en = Column(DateTime(timezone=True), nullable=False, default=_utcnow)
+    actualizado_en = Column(DateTime(timezone=True), nullable=False, default=_utcnow, onupdate=_utcnow)
 
 
 class AuditUserMixin:
@@ -21,7 +25,7 @@ class AuditUserMixin:
 
 class SoftDeleteMixin:
     eliminado = Column(Boolean, nullable=False, default=False, index=True)
-    eliminado_en = Column(DateTime, nullable=True, default=None)
+    eliminado_en = Column(DateTime(timezone=True), nullable=True, default=None)
     eliminado_por = Column(String(100), nullable=True, default=None)
 
 
@@ -37,3 +41,14 @@ class BaseEntity(TenantAuditMixin):
 
 class SoftDeleteBaseEntity(BaseEntity, SoftDeleteMixin):
     __abstract__ = True
+
+
+__all__ = [
+    "AuditUserMixin",
+    "BaseEntity",
+    "SoftDeleteBaseEntity",
+    "SoftDeleteMixin",
+    "TenantAuditMixin",
+    "TenantMixin",
+    "TimestampMixin",
+]

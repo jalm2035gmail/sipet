@@ -411,9 +411,39 @@
     render();
   });
 
+  async function exportExcel() {
+    var btn = document.getElementById("apps-export-excel");
+    if (btn) { btn.disabled = true; btn.classList.add("loading"); }
+    try {
+      var res = await fetch("/api/aplicaciones/modulos/export");
+      if (!res.ok) {
+        var err = await res.json().catch(function () { return {}; });
+        throw new Error(err.detail || "No se pudo generar el exportable.");
+      }
+      var disposition = res.headers.get("Content-Disposition") || "";
+      var match = disposition.match(/filename=([^\s;]+)/);
+      var filename = match ? match[1] : "catalogo_modulos.xlsx";
+      var blob = await res.blob();
+      var url = URL.createObjectURL(blob);
+      var anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = filename;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+      toast("Exportación descargada.", "alert-success");
+    } catch (error) {
+      toast(error.message || "No se pudo exportar.", "alert-error");
+    } finally {
+      if (btn) { btn.disabled = false; btn.classList.remove("loading"); }
+    }
+  }
+
   document.getElementById("apps-sync-protocol").addEventListener("click", syncProtocol);
   document.getElementById("apps-bulk-enable").addEventListener("click", function () { bulkUpdate(true); });
   document.getElementById("apps-bulk-disable").addEventListener("click", function () { bulkUpdate(false); });
+  document.getElementById("apps-export-excel").addEventListener("click", exportExcel);
 
   grid.addEventListener("change", function (event) {
     var selectBox = event.target.closest("[data-select-module]");

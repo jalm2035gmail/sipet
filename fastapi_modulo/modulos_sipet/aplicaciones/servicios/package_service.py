@@ -4,7 +4,7 @@ import os
 import shutil
 import tempfile
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import HTTPException, UploadFile
 
@@ -32,6 +32,14 @@ from fastapi_modulo.modulos_sipet.aplicaciones.servicios.redis_service import (
     invalidate_zip_inspection,
 )
 from fastapi_modulo.modulos_sipet.aplicaciones.servicios.task_queue_service import queue_task
+
+import logging
+
+_log = logging.getLogger(__name__)
+
+
+def _utc_now() -> datetime:
+    return datetime.now(timezone.utc)
 
 
 def _file_checksum(path: str) -> str:
@@ -77,7 +85,7 @@ def _build_snapshot_audit_payload(
         "snapshot_path": snapshot_path,
         "module_key": module_key,
         "requested_by": str(user_id or "").strip(),
-        "captured_at": datetime.utcnow().isoformat(),
+        "captured_at": _utc_now().isoformat(),
         "affected_files": affected_files,
     }
 
@@ -110,6 +118,25 @@ def _build_package_payload(
         "preview_files": inspection["preview_files"],
         "warnings": inspection["warnings"],
     }
+
+
+def _notify_webhook(event: str, payload: dict) -> None:
+    """Fire-and-forget POST to APPLICATIONS_WEBHOOK_URL. Silently swallows all errors."""
+    url = os.environ.get("APPLICATIONS_WEBHOOK_URL", "").strip()
+    if not url:
+        return
+    try:
+        import httpx
+
+        body = {
+            "event": event,
+            "occurred_at": _utc_now().isoformat(),
+            **payload,
+        }
+        with httpx.Client(timeout=5) as client:
+            client.post(url, json=body)
+    except Exception as exc:
+        _log.warning("webhook notification failed (%s): %s", event, exc)
 
 
 def _snapshot_module_root(module_key: str, target_root: str) -> str:
@@ -181,7 +208,7 @@ def apply_module_package_job(
                 enabled=True,
                 tenant_id=tenant_id,
                 installed_version=None,
-                uploaded_at=datetime.utcnow(),
+                uploaded_at=_utc_now(),
                 updated_by=user_id,
             )
             create_registry_audit(
@@ -195,6 +222,18 @@ def apply_module_package_job(
                 result="success",
                 user_id=user_id,
                 ip=ip,
+            )
+            _notify_webhook(
+                "upload_package",
+                {
+                    "module_key": module_key,
+                    "filename": original_filename,
+                    "checksum": checksum,
+                    "file_size": file_size,
+                    "updated_files": payload["updated_files"],
+                    "user_id": str(user_id or ""),
+                    "ip": str(ip or ""),
+                },
             )
             return payload
     finally:
@@ -225,12 +264,13 @@ def rollback_module_package_job(
         snapshot_path = str(payload.get("snapshot_path") or "").strip()
         restored_files = restore_module_snapshot(module_key, snapshot_path)
         invalidate_catalog_cache()
+        now = _utc_now()
         upsert_registry_state(
             module_key=module_key,
             enabled=True,
             tenant_id=tenant_id,
             installed_version=None,
-            uploaded_at=datetime.utcnow(),
+            uploaded_at=now,
             updated_by=user_id,
         )
         create_registry_audit(
@@ -240,12 +280,22 @@ def rollback_module_package_job(
                 "snapshot_path": snapshot_path,
                 "restored_files": restored_files,
                 "requested_by": str(user_id or "").strip(),
-                "rolled_back_at": datetime.utcnow().isoformat(),
+                "rolled_back_at": now.isoformat(),
                 "source_audit_id": int(getattr(audit_row, "id", 0) or 0),
             },
             result="success",
             user_id=user_id,
             ip=ip,
+        )
+        _notify_webhook(
+            "rollback_package",
+            {
+                "module_key": module_key,
+                "snapshot_path": snapshot_path,
+                "restored_files": restored_files,
+                "user_id": str(user_id or ""),
+                "ip": str(ip or ""),
+            },
         )
         return {
             "module_key": module_key,

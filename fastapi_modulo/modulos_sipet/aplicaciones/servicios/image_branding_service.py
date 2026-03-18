@@ -76,13 +76,22 @@ def _build_fallback_preview(module_key: str, label: str, variant: str = "card") 
         raise HTTPException(status_code=500, detail="Pillow no esta disponible para generar previews.")
 
     start, end = _fallback_colors(module_key or label)
-    image = Image.new("RGB", (width, height), _hex_rgb(start))
+
+    # Cachear los valores RGB fuera del loop para evitar recalcularlos
+    # height veces (antes se llamaba _hex_rgb 3x por iteración = 3*height llamadas extra)
+    start_rgb = _hex_rgb(start)
+    end_rgb = _hex_rgb(end)
+
+    image = Image.new("RGB", (width, height), start_rgb)
     draw = ImageDraw.Draw(image)
+    max_y = max(height - 1, 1)
     for y in range(height):
-        ratio = y / max(height - 1, 1)
-        color = tuple(
-            int(_hex_rgb(start)[index] * (1 - ratio) + _hex_rgb(end)[index] * ratio)
-            for index in range(3)
+        ratio = y / max_y
+        inv = 1 - ratio
+        color = (
+            int(start_rgb[0] * inv + end_rgb[0] * ratio),
+            int(start_rgb[1] * inv + end_rgb[1] * ratio),
+            int(start_rgb[2] * inv + end_rgb[2] * ratio),
         )
         draw.line([(0, y), (width, y)], fill=color)
 

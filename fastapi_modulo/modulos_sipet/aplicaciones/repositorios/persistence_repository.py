@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from sqlalchemy import desc
@@ -14,6 +14,10 @@ from fastapi_modulo.modulos_sipet.aplicaciones.modelos.db_models import (
     AppRegistryAudit,
     AppRegistryState,
 )
+
+
+def _utc_now() -> datetime:
+    return datetime.now(timezone.utc)
 
 
 def _admin_session():
@@ -61,7 +65,7 @@ def upsert_registry_state(
             row.installed_version = installed_version
             row.uploaded_at = uploaded_at
             row.updated_by = updated_by
-            row.updated_at = datetime.utcnow()
+            row.updated_at = _utc_now()
             db.commit()
             db.refresh(row)
             return row
@@ -73,7 +77,7 @@ def upsert_registry_state(
             installed_version=installed_version,
             uploaded_at=uploaded_at,
             updated_by=updated_by,
-            updated_at=datetime.utcnow(),
+            updated_at=_utc_now(),
         )
 
 
@@ -110,7 +114,7 @@ def replace_protocol_audit(module_key: str, payload: dict[str, Any]) -> AppProto
     row.has_manifest = bool(payload.get("has_manifest"))
     row.missing_json = json.dumps(list(payload.get("missing", [])), ensure_ascii=True)
     row.ok = bool(payload.get("ok"))
-    row.scanned_at = datetime.utcnow()
+    row.scanned_at = _utc_now()
     try:
         with _admin_session() as db:
             persisted = (

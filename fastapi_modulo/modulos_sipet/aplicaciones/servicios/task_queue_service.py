@@ -46,9 +46,41 @@ def queue_task(task_name: str, kwargs: dict[str, Any]) -> dict[str, Any]:
                 queue=TASK_QUEUE,
             )
             return payload
-        except Exception:
-            pass
+        except Exception as exc:
+            # Celery no disponible — actualizar estado a error y ejecutar inline
+            error_payload = {**payload, "status": "inline", "updated_at": _utc_now(), "error": str(exc)}
+            store_task_state(task_name, task_id, error_payload)
     return {"task_id": task_id, "task_name": task_name, "status": "inline", "updated_at": _utc_now(), "result": {}, "error": ""}
+
+
+def update_task_state(
+    task_name: str,
+    task_id: str,
+    *,
+    status: str,
+    result: dict[str, Any] | None = None,
+    error: str = "",
+) -> None:
+    """Actualiza el estado de una tarea en Redis.
+
+    Debe llamarse desde el worker Celery:
+      - Al iniciar la tarea:   update_task_state(name, id, status="running")
+      - Al completar con éxito: update_task_state(name, id, status="success", result={...})
+      - Al fallar:             update_task_state(name, id, status="error", error=str(exc))
+
+    Si Redis no está disponible la operación se descarta silenciosamente,
+    ya que store_task_state tiene el mismo comportamiento gracioso.
+    """
+    existing = get_task_state(task_name, task_id) or {}
+    payload = {
+        "task_id": str(task_id or "").strip(),
+        "task_name": str(task_name or "").strip(),
+        "status": str(status or "").strip(),
+        "updated_at": _utc_now(),
+        "result": result if result is not None else existing.get("result", {}),
+        "error": str(error or "").strip(),
+    }
+    store_task_state(task_name, task_id, payload)
 
 
 def get_async_task_state(task_name: str, task_id: str) -> dict[str, Any]:
@@ -65,4 +97,4 @@ def get_async_task_state(task_name: str, task_id: str) -> dict[str, Any]:
     return payload
 
 
-__all__ = ["TASKS_ENABLED", "get_async_task_state", "queue_task"]
+__all__ = ["TASKS_ENABLED", "get_async_task_state", "queue_task", "update_task_state"]

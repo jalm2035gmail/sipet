@@ -764,8 +764,7 @@ def ensure_system_superadmin_user() -> None:
             existing.rol_id = superadmin_role.id
             existing.role = "superadministrador"
             existing.is_active = True
-            if not (existing.contrasena or "").strip():
-                existing.contrasena = _hash_password_pbkdf2(password)
+            existing.contrasena = _hash_password_pbkdf2(password)
             db.add(existing)
             db.commit()
             return

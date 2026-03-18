@@ -1,1 +1,0 @@
-"""Modulo mesa_control."""

@@ -720,14 +720,21 @@ def register_enabled_routers(app: FastAPI, phase: str = "startup", tenant_key: O
         if not module.router_specs or not is_module_enabled(module.key, tenant_key=tenant_key):
             continue
         print(f"[startup] module {phase} {module.key} begin", flush=True)
+        module_ok = True
         for spec in module.router_specs:
             print(f"[startup] import {spec.module_path}", flush=True)
-            imported = import_module(spec.module_path)
+            try:
+                imported = import_module(spec.module_path)
+            except ModuleNotFoundError:
+                print(f"[startup] module {module.key} not installed — skipped", flush=True)
+                module_ok = False
+                break
             router = getattr(imported, spec.attr_name)
             app.include_router(router, **(spec.include_kwargs or {}))
             print(f"[startup] import {spec.module_path} done", flush=True)
-        registered.append(module.key)
-        print(f"[startup] module {phase} {module.key} done", flush=True)
+        if module_ok:
+            registered.append(module.key)
+            print(f"[startup] module {phase} {module.key} done", flush=True)
     return registered
 
 
