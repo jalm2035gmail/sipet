@@ -619,7 +619,11 @@ def _coerce_domain_conf_to_target(file_path: Path) -> tuple[str, str] | None:
     if sqlite_path:
         return host, coerce_database_target_to_url(sqlite_path)
 
-    return host, _build_database_url_from_options(options)
+    try:
+        return host, _build_database_url_from_options(options)
+    except Exception as exc:
+        print(f"[db] Configuración de dominio inválida '{file_path}': {exc}")
+        return None
 
 
 def load_domain_database_map() -> Dict[str, str]:
