@@ -51,6 +51,7 @@ from fastapi_modulo.modulos_sipet.web.controladores.backend_shell import (
 )
 from fastapi_modulo.modulos_sipet.web.controladores.backend_auth import router as backend_auth_router
 from fastapi_modulo.modulos_sipet.modulo_base.controladores.database_manager import router as database_manager_router
+from fastapi_modulo.modulos_sipet.modulo_base.controladores.server_admin import router as server_admin_router
 from fastapi_modulo.modulos_sipet.web.modelos.core_models import Rol, Usuario
 from fastapi_modulo.modulos_sipet.web.servicios.access_service import (
     can_assign_role,
@@ -1427,6 +1428,7 @@ app = FastAPI(
 
 app.include_router(backend_auth_router)
 app.include_router(database_manager_router)
+app.include_router(server_admin_router)
 
 
 def _mount_static_if_exists(app: FastAPI, route: str, directory: str, *, name: str) -> None:
