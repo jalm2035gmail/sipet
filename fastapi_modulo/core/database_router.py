@@ -176,6 +176,7 @@ def get_sipet_conf_settings() -> Dict[str, Any]:
         "db_port": "5432",
         "db_user": "",
         "db_name": "",
+        "db_engine": "",
         "dbfilter": "",
         "domain": "",
         "admin_passwd": "",
@@ -194,6 +195,7 @@ def get_sipet_conf_settings() -> Dict[str, Any]:
             "db_port": str(options.get("db_port") or "5432").strip(),
             "db_user": str(options.get("db_user") or "").strip(),
             "db_name": str(options.get("db_name") or "").strip(),
+            "db_engine": str(options.get("db_engine") or options.get("db_type") or "").strip().lower(),
             "dbfilter": str(options.get("dbfilter") or "").strip(),
             "domain": str(options.get("domain") or options.get("host") or "").strip(),
             "admin_passwd": str(options.get("admin_passwd") or "").strip(),
@@ -226,7 +228,7 @@ def get_sipet_superadmin_settings() -> Dict[str, str]:
 def update_sipet_conf_settings(payload: Mapping[str, Any]) -> Dict[str, Any]:
     parser = read_conf_file(SIPET_CONFIG_PATH)
     options = parser["options"]
-    for key in ("domain", "db_host", "db_port", "db_user", "db_password", "db_name", "dbfilter", "admin_passwd", "workers", "max_cron_threads", "log_level"):
+    for key in ("domain", "db_host", "db_port", "db_user", "db_password", "db_name", "db_engine", "dbfilter", "admin_passwd", "workers", "max_cron_threads", "log_level"):
         if key in payload:
             options[key] = str(payload.get(key) or "").strip()
     for key in ("list_db", "proxy_mode", "show_db_path"):
@@ -274,6 +276,7 @@ def _build_url_from_options(options: Mapping[str, str], host: str = "") -> Optio
     db_port = str(options.get("db_port") or "5432").strip()
     db_user = str(options.get("db_user") or "").strip()
     db_password = str(options.get("db_password") or "").strip()
+    db_engine = str(options.get("db_engine") or options.get("db_type") or "").strip().lower()
     db_name = _resolve_db_name_from_options(options, host)
     if not db_name:
         return None
@@ -283,6 +286,8 @@ def _build_url_from_options(options: Mapping[str, str], host: str = "") -> Optio
         if db_password:
             auth = f"{auth}:{db_password}"
         auth = f"{auth}@"
+    if db_engine == "mysql":
+        return f"mysql+pymysql://{auth}{db_host}:{db_port}/{db_name}"
     return f"postgresql://{auth}{db_host}:{db_port}/{db_name}"
 
 
@@ -373,6 +378,26 @@ def _build_postgresql_url_from_options(options: configparser.SectionProxy) -> st
     return f"postgresql://{auth}{db_host}:{db_port}/{db_name}"
 
 
+def _build_database_url_from_options(options: Mapping[str, str]) -> str:
+    db_engine = str(options.get("db_engine") or options.get("db_type") or "").strip().lower()
+    if db_engine == "mysql":
+        db_name = _resolve_db_name_from_options(options)
+        if not db_name:
+            raise RuntimeError("Falta 'db_name' en el archivo de dominio.")
+        db_host = str(options.get("db_host") or "localhost").strip()
+        db_port = str(options.get("db_port") or "3306").strip()
+        db_user = str(options.get("db_user") or "").strip()
+        db_password = str(options.get("db_password") or "").strip()
+        auth = ""
+        if db_user:
+            auth = db_user
+            if db_password:
+                auth = f"{auth}:{db_password}"
+            auth = f"{auth}@"
+        return f"mysql+pymysql://{auth}{db_host}:{db_port}/{db_name}"
+    return _build_postgresql_url_from_options(options)
+
+
 def domain_config_path(domain: str) -> Path:
     normalized = normalize_host(domain)
     slug = normalized or "default"
@@ -383,6 +408,13 @@ def _serialize_domain_options(file_path: Path, options: Mapping[str, str]) -> Di
     domain = normalize_host(str(options.get("domain") or options.get("host") or file_path.stem))
     db_url = _build_url_from_options(options, domain) or ""
     sqlite_path = extract_sqlite_path(db_url or "")
+    db_engine = str(options.get("db_engine") or options.get("db_type") or "").strip().lower()
+    if sqlite_path:
+        engine_name = "sqlite"
+    elif db_engine == "mysql" or db_url.startswith("mysql+pymysql://"):
+        engine_name = "mysql"
+    else:
+        engine_name = "postgresql"
     return {
         "domain": domain,
         "file_path": str(file_path),
@@ -391,6 +423,7 @@ def _serialize_domain_options(file_path: Path, options: Mapping[str, str]) -> Di
         "db_user": str(options.get("db_user") or "").strip(),
         "db_password": str(options.get("db_password") or "").strip(),
         "db_name": str(options.get("db_name") or "").strip(),
+        "db_engine": engine_name,
         "dbfilter": str(options.get("dbfilter") or "").strip(),
         "db_url": db_url,
         "sqlite_path": sqlite_path or "",
@@ -419,7 +452,7 @@ def save_domain_conf_entry(payload: Mapping[str, Any]) -> Dict[str, Any]:
     parser = read_conf_file(file_path)
     options = parser["options"]
     options["domain"] = domain
-    for key in ("db_host", "db_port", "db_user", "db_password", "db_name", "dbfilter", "db_url", "database_url", "datamain_url", "sqlite_db_path", "db_path"):
+    for key in ("db_host", "db_port", "db_user", "db_password", "db_name", "db_engine", "db_type", "dbfilter", "db_url", "database_url", "datamain_url", "sqlite_db_path", "db_path"):
         if key in payload:
             value = str(payload.get(key) or "").strip()
             if value:
@@ -508,20 +541,36 @@ def initialize_database_from_sipet_conf(payload: Mapping[str, Any]) -> Dict[str,
     database_name = str(parsed.database or "").strip()
     if not database_name:
         raise RuntimeError("No se pudo resolver el nombre de la base de datos")
-    maintenance_name = str(payload.get("maintenance_db") or "postgres").strip() or "postgres"
-    admin_url = parsed.set(database=maintenance_name)
-    admin_engine = create_engine(str(admin_url), isolation_level="AUTOCOMMIT", echo=False)
-    try:
-        with admin_engine.connect() as connection:
-            exists = connection.execute(
-                text("SELECT 1 FROM pg_database WHERE datname = :database_name"),
-                {"database_name": database_name},
-            ).scalar()
-            if not exists:
-                safe_name = database_name.replace('"', '""')
-                connection.execute(text(f'CREATE DATABASE "{safe_name}"'))
-    finally:
-        admin_engine.dispose()
+    if parsed.drivername.startswith("mysql"):
+        maintenance_name = str(payload.get("maintenance_db") or "mysql").strip() or "mysql"
+        admin_url = parsed.set(database=maintenance_name)
+        admin_engine = create_engine(str(admin_url), isolation_level="AUTOCOMMIT", echo=False)
+        try:
+            with admin_engine.connect() as connection:
+                exists = connection.execute(
+                    text("SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = :database_name"),
+                    {"database_name": database_name},
+                ).scalar()
+                if not exists:
+                    safe_name = database_name.replace("`", "``")
+                    connection.execute(text(f"CREATE DATABASE `{safe_name}`"))
+        finally:
+            admin_engine.dispose()
+    else:
+        maintenance_name = str(payload.get("maintenance_db") or "postgres").strip() or "postgres"
+        admin_url = parsed.set(database=maintenance_name)
+        admin_engine = create_engine(str(admin_url), isolation_level="AUTOCOMMIT", echo=False)
+        try:
+            with admin_engine.connect() as connection:
+                exists = connection.execute(
+                    text("SELECT 1 FROM pg_database WHERE datname = :database_name"),
+                    {"database_name": database_name},
+                ).scalar()
+                if not exists:
+                    safe_name = database_name.replace('"', '""')
+                    connection.execute(text(f'CREATE DATABASE "{safe_name}"'))
+        finally:
+            admin_engine.dispose()
     ok, error = can_connect_database_url(normalized_url)
     return {"db_url": normalized_url, "sqlite_path": "", "connected": ok, "error": error}
 
@@ -570,7 +619,7 @@ def _coerce_domain_conf_to_target(file_path: Path) -> tuple[str, str] | None:
     if sqlite_path:
         return host, coerce_database_target_to_url(sqlite_path)
 
-    return host, _build_postgresql_url_from_options(options)
+    return host, _build_database_url_from_options(options)
 
 
 def load_domain_database_map() -> Dict[str, str]:
@@ -674,12 +723,13 @@ class DatabaseRouter:
     def get_database_target(self, host: Optional[str] = None) -> DatabaseTarget:
         db_url = normalize_sqlite_url_for_runtime(self.get_database_url_for_host(host))
         sqlite_path = extract_sqlite_path(db_url)
+        engine_name = "sqlite" if sqlite_path else ("mysql" if db_url.startswith("mysql+pymysql://") else "postgresql")
         return DatabaseTarget(
             host=normalize_host(host) or self.get_request_host() or "",
             db_url=db_url,
-            engine_name="sqlite" if sqlite_path else "postgresql",
+            engine_name=engine_name,
             path=sqlite_path or "",
-            name=os.path.basename(sqlite_path) if sqlite_path else "postgresql",
+            name=os.path.basename(sqlite_path) if sqlite_path else engine_name,
         )
 
     def get_engine(self, host: Optional[str] = None) -> Engine:

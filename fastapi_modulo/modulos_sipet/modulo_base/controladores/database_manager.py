@@ -106,12 +106,12 @@ def _manager_content() -> str:
   .form-grid {{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }}
   .field {{ display:flex; flex-direction:column; gap:5px; }}
   .field label {{ font-size:.85rem; font-weight:600; color:var(--text); }}
-  .field input {{
+  .field input, .field select {{
     padding:9px 12px; border:1px solid var(--line); border-radius:8px;
     font-size:.9rem; background:#fff; color:var(--text); width:100%;
     box-sizing:border-box;
   }}
-  .field input:focus {{ outline:2px solid #16a34a; border-color:#16a34a; }}
+  .field input:focus, .field select:focus {{ outline:2px solid #16a34a; border-color:#16a34a; }}
   .btn-cancel {{
     padding:10px 24px; border-radius:10px; border:2px solid var(--line);
     background:#fff; color:var(--text); font-weight:600; cursor:pointer;
@@ -166,6 +166,14 @@ def _manager_content() -> str:
   <div class="form-panel" id="form-panel">
     <h2 id="form-title" style="margin:0;font-size:1.1rem;font-weight:700;color:var(--text);"></h2>
     <div class="form-grid">
+      <div class="field">
+        <label>Motor BD</label>
+        <select id="f-db-engine">
+          <option value="postgresql">PostgreSQL</option>
+          <option value="mysql">MySQL</option>
+          <option value="sqlite">SQLite</option>
+        </select>
+      </div>
       <div class="field">
         <label>Dominio</label>
         <input id="f-domain" placeholder="demo.midominio.com">
@@ -232,7 +240,8 @@ def _manager_content() -> str:
       return;
     }}
     list.innerHTML = entries.map((e) => {{
-      const tipo = e.sqlite_path ? 'SQLite' : (e.db_name ? 'PostgreSQL' : '—');
+      const engine = String(e.db_engine || '').trim().toLowerCase();
+      const tipo = e.sqlite_path ? 'SQLite' : (engine === 'mysql' ? 'MySQL' : (e.db_name ? 'PostgreSQL' : '—'));
       const sel = e.domain === selected ? ' selected' : '';
       return `<li class="db-item${{sel}}" data-domain="${{t(e.domain)}}">
         <span class="db-item-domain">${{t(e.domain) || '—'}}</span>
@@ -268,9 +277,10 @@ def _manager_content() -> str:
     mode = m;
     $('form-title').textContent = m === 'crear' ? 'Nueva base de datos' : 'Editar base de datos';
     const e = m === 'editar' ? entries.find((x) => x.domain === selected) : null;
+    $('f-db-engine').value = t(e?.db_engine || (e?.sqlite_path ? 'sqlite' : (String(e?.db_host || '').includes('mysql') ? 'mysql' : 'postgresql'))) || 'postgresql';
     $('f-domain').value = t(e?.domain); $('f-domain').disabled = m === 'editar';
     $('f-db-host').value = t(e?.db_host);
-    $('f-db-port').value = t(e?.db_port || '5432');
+    $('f-db-port').value = t(e?.db_port || ($('f-db-engine').value === 'mysql' ? '3306' : '5432'));
     $('f-db-user').value = t(e?.db_user);
     $('f-db-password').value = '';
     $('f-db-name').value = t(e?.db_name);
@@ -279,6 +289,11 @@ def _manager_content() -> str:
     $('form-panel').classList.add('open');
     $('form-panel').scrollIntoView({{ behavior:'smooth', block:'nearest' }});
   }};
+
+  $('f-db-engine').addEventListener('change', () => {{
+    if ($('f-db-engine').value === 'mysql' && !$('f-db-port').value.trim()) $('f-db-port').value = '3306';
+    if ($('f-db-engine').value === 'postgresql' && (!$('f-db-port').value.trim() || $('f-db-port').value.trim() === '3306')) $('f-db-port').value = '5432';
+  }});
 
   $('btn-crear').addEventListener('click', () => openPanel('crear'));
   $('btn-editar').addEventListener('click', () => openPanel('editar'));
@@ -289,6 +304,7 @@ def _manager_content() -> str:
 
   $('btn-guardar').addEventListener('click', async () => {{
     const payload = {{
+      db_engine: $('f-db-engine').value.trim(),
       domain: $('f-domain').value.trim(),
       db_host: $('f-db-host').value.trim(),
       db_port: $('f-db-port').value.trim(),
