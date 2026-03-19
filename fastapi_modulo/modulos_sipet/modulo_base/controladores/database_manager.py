@@ -157,6 +157,7 @@ def _manager_content() -> str:
     <!-- Derecha: botones de acción -->
     <div style="display:flex;flex-direction:column;gap:10px;">
       <button class="db-btn" id="btn-crear" type="button">Crear</button>
+      <button class="db-btn" id="btn-inicializar" type="button" disabled>Inicializar base</button>
       <button class="db-btn" id="btn-editar" type="button" disabled>Editar</button>
       <button class="db-btn" id="btn-eliminar" type="button" disabled>Eliminar</button>
     </div>
@@ -229,6 +230,7 @@ def _manager_content() -> str:
   }};
 
   const syncButtons = () => {{
+    $('btn-inicializar').disabled = !selected;
     $('btn-editar').disabled = !selected;
     $('btn-eliminar').disabled = !selected;
   }};
@@ -297,6 +299,33 @@ def _manager_content() -> str:
 
   $('btn-crear').addEventListener('click', () => openPanel('crear'));
   $('btn-editar').addEventListener('click', () => openPanel('editar'));
+  $('btn-inicializar').addEventListener('click', async () => {{
+    const entry = entries.find((x) => x.domain === selected);
+    if (!entry) return;
+    try {{
+      const payload = {{
+        domain: t(entry.domain).trim(),
+        db_engine: t(entry.db_engine).trim(),
+        db_host: t(entry.db_host).trim(),
+        db_port: t(entry.db_port).trim(),
+        db_user: t(entry.db_user).trim(),
+        db_password: t(entry.db_password),
+        db_name: t(entry.db_name).trim(),
+        sqlite_db_path: t(entry.sqlite_path).trim(),
+      }};
+      const res = await fetch('/api/base_datos/inicializar', {{
+        method:'POST',
+        headers:{{'Content-Type':'application/json'}},
+        body: JSON.stringify(payload),
+      }});
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'Error al inicializar');
+      showMsg($('db-msg'), 'Base de datos inicializada correctamente.', false);
+      await loadEntries();
+    }} catch (err) {{
+      showMsg($('db-msg'), t(err.message || err), true);
+    }}
+  }});
   $('btn-cancelar').addEventListener('click', () => {{
     $('form-panel').classList.remove('open');
     mode = null;
