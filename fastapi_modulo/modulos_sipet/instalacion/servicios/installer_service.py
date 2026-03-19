@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any, Dict, Mapping
 
 from sqlalchemy import func
+from sqlalchemy.exc import SQLAlchemyError
 
 from fastapi_modulo.core import db as core_db
 from fastapi_modulo.core.database_router import (
@@ -71,11 +72,14 @@ def _ensure_installation_superadmin(payload: Mapping[str, Any]) -> Dict[str, str
 
         username_hash = sensitive_lookup_hash(username)
         email_hash = sensitive_lookup_hash(email)
-        user = (
-            db.query(Usuario)
-            .filter((Usuario.usuario_hash == username_hash) | (Usuario.correo_hash == email_hash))
-            .first()
-        )
+        try:
+            user = (
+                db.query(Usuario)
+                .filter((Usuario.usuario_hash == username_hash) | (Usuario.correo_hash == email_hash))
+                .first()
+            )
+        except SQLAlchemyError:
+            user = None
         if user is None:
             user = (
                 db.query(Usuario)

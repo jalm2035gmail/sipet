@@ -25,6 +25,7 @@ from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import create_engine, Column, Integer, String, Boolean, DateTime, Date, ForeignKey, Text, JSON, UniqueConstraint, func, inspect
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import declarative_base, relationship
 from cryptography.fernet import Fernet, InvalidToken
 from textwrap import dedent
@@ -736,6 +737,29 @@ def _sqlite_table_exists(table_name: str) -> bool:
         )
 
 
+def _find_user_by_identity_fallback(db, *, username: str = "", email: str = "", username_hash: str = "", email_hash: str = ""):
+    user = None
+    if username_hash or email_hash:
+        try:
+            user = (
+                db.query(Usuario)
+                .filter((Usuario.usuario_hash == username_hash) | (Usuario.correo_hash == email_hash))
+                .first()
+            )
+        except SQLAlchemyError as exc:
+            print(f"[startup] hash identity lookup skipped: {exc}", flush=True)
+    if user is None and (username or email):
+        user = (
+            db.query(Usuario)
+            .filter(
+                (func.lower(Usuario.usuario) == str(username or "").lower())
+                | (func.lower(Usuario.correo) == str(email or "").lower())
+            )
+            .first()
+        )
+    return user
+
+
 def ensure_system_superadmin_user() -> None:
     if not _sqlite_table_exists("users"):
         return
@@ -766,20 +790,13 @@ def ensure_system_superadmin_user() -> None:
 
         username_hash = _sensitive_lookup_hash(username)
         email_hash = _sensitive_lookup_hash(email)
-        existing = (
-            db.query(Usuario)
-            .filter((Usuario.usuario_hash == username_hash) | (Usuario.correo_hash == email_hash))
-            .first()
+        existing = _find_user_by_identity_fallback(
+            db,
+            username=username,
+            email=email,
+            username_hash=username_hash,
+            email_hash=email_hash,
         )
-        if not existing:
-            existing = (
-                db.query(Usuario)
-                .filter(
-                    (func.lower(Usuario.usuario) == username.lower())
-                    | (func.lower(Usuario.correo) == email.lower())
-                )
-                .first()
-            )
         if existing:
             existing.full_name = existing.full_name or "Super Administrador"
             existing.usuario = _encrypt_sensitive(_decrypt_sensitive(existing.usuario) or username)
@@ -834,20 +851,13 @@ def ensure_demo_admin_user_seed() -> None:
 
         username_hash = _sensitive_lookup_hash(username)
         email_hash = _sensitive_lookup_hash(email)
-        existing = (
-            db.query(Usuario)
-            .filter((Usuario.usuario_hash == username_hash) | (Usuario.correo_hash == email_hash))
-            .first()
+        existing = _find_user_by_identity_fallback(
+            db,
+            username=username,
+            email=email,
+            username_hash=username_hash,
+            email_hash=email_hash,
         )
-        if not existing:
-            existing = (
-                db.query(Usuario)
-                .filter(
-                    (func.lower(Usuario.usuario) == username.lower())
-                    | (func.lower(Usuario.correo) == email.lower())
-                )
-                .first()
-            )
 
         password_hash = _hash_password_pbkdf2(password)
         if existing:
