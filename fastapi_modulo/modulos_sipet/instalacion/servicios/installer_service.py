@@ -10,6 +10,7 @@ from fastapi_modulo.core.database_router import (
     SIPET_CONFIG_PATH,
     can_connect_current_database,
     get_sipet_conf_settings,
+    has_explicit_database_config,
     initialize_database_from_sipet_conf,
 )
 from fastapi_modulo.modulos_sipet.web.modelos.core_models import Rol, Usuario
@@ -18,10 +19,10 @@ from fastapi_modulo.modulos_sipet.web.servicios.auth_service import encrypt_sens
 
 
 def get_installation_status() -> Dict[str, Any]:
-    if not SIPET_CONFIG_PATH.exists():
+    if not SIPET_CONFIG_PATH.exists() and not has_explicit_database_config():
         return {
             "required": True,
-            "reason": "sipet.conf no existe",
+            "reason": "No existe configuracion persistida ni variables de base de datos",
             "config_path": str(SIPET_CONFIG_PATH),
             "settings": get_sipet_conf_settings(),
         }

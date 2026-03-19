@@ -21,6 +21,12 @@ SIPET_CONFIG_PATH = Path(os.environ.get("SIPET_CONFIG") or os.path.join(PROJECT_
 _REQUEST_HOST: ContextVar[str] = ContextVar("sipet_request_host", default="")
 
 
+def _domain_config_files() -> list[Path]:
+    if not DOMAIN_CONFIG_DIR.exists():
+        return []
+    return sorted(DOMAIN_CONFIG_DIR.glob("*.conf")) + sorted(DOMAIN_CONFIG_DIR.glob("*.ini"))
+
+
 def normalize_host(value: Optional[str]) -> str:
     raw = (value or "").strip().lower()
     if not raw:
@@ -207,6 +213,25 @@ def get_sipet_conf_settings() -> Dict[str, Any]:
         }
     )
     return data
+
+
+def has_explicit_database_config() -> bool:
+    if SIPET_CONFIG_PATH.exists():
+        return True
+    if any(
+        str(os.environ.get(key) or "").strip()
+        for key in (
+            "DATAMAIN_URL",
+            "MYSQL_URL",
+            "POSTGRES_URL",
+            "POSTGRESQL_URL",
+            "SQLITE_DB_PATH",
+            "HOST_DATAMAIN_MAP",
+            "HOST_DATAMAIN_MAP_JSON",
+        )
+    ):
+        return True
+    return bool(_domain_config_files())
 
 
 def get_sipet_superadmin_settings() -> Dict[str, str]:
@@ -434,13 +459,53 @@ def _serialize_domain_options(file_path: Path, options: Mapping[str, str]) -> Di
 
 def list_domain_conf_entries() -> List[Dict[str, Any]]:
     entries: List[Dict[str, Any]] = []
-    if not DOMAIN_CONFIG_DIR.exists():
-        return entries
-    for file_path in sorted(DOMAIN_CONFIG_DIR.glob("*.conf")) + sorted(DOMAIN_CONFIG_DIR.glob("*.ini")):
+    for file_path in _domain_config_files():
         options = _load_conf_options(file_path)
         if options is None:
             continue
         entries.append(_serialize_domain_options(file_path, options))
+    if entries:
+        return entries
+
+    raw_url = (
+        os.environ.get("DATAMAIN_URL")
+        or os.environ.get("MYSQL_URL")
+        or os.environ.get("POSTGRES_URL")
+        or os.environ.get("POSTGRESQL_URL")
+        or ""
+    ).strip()
+    sqlite_path = (os.environ.get("SQLITE_DB_PATH") or "").strip()
+    if not raw_url and not sqlite_path:
+        return entries
+
+    db_url = normalize_database_url(raw_url) if raw_url else coerce_database_target_to_url(sqlite_path)
+    parsed = make_url(db_url)
+    host = normalize_host(
+        os.environ.get("RAILWAY_PUBLIC_DOMAIN")
+        or os.environ.get("PUBLIC_DOMAIN")
+        or os.environ.get("APP_DOMAIN")
+        or get_sipet_conf_settings().get("domain")
+        or "default"
+    )
+    engine_name = "sqlite" if db_url.startswith("sqlite:///") else ("mysql" if parsed.drivername.startswith("mysql") else "postgresql")
+    entries.append(
+        {
+            "domain": host or "default",
+            "file_path": "",
+            "db_host": "" if engine_name == "sqlite" else str(parsed.host or "").strip(),
+            "db_port": "" if engine_name == "sqlite" else str(parsed.port or ""),
+            "db_user": "" if engine_name == "sqlite" else str(parsed.username or "").strip(),
+            "db_password": "",
+            "db_name": "" if engine_name == "sqlite" else str(parsed.database or "").strip(),
+            "db_engine": engine_name,
+            "dbfilter": "",
+            "db_url": db_url,
+            "sqlite_path": extract_sqlite_path(db_url) or "",
+            "show_path": get_show_db_path_enabled(),
+            "enabled": True,
+            "is_runtime_entry": True,
+        }
+    )
     return entries
 
 

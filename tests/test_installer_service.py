@@ -6,12 +6,39 @@ from fastapi_modulo.modulos_sipet.instalacion.servicios import installer_service
 
 def test_installation_status_requires_setup_when_conf_missing(monkeypatch) -> None:
     monkeypatch.setattr(installer_service, "SIPET_CONFIG_PATH", Path("/tmp/nonexistent-sipet.conf"))
+    monkeypatch.setattr(installer_service, "has_explicit_database_config", lambda: False)
     monkeypatch.setattr(installer_service, "get_sipet_conf_settings", lambda: {"path": "/tmp/nonexistent-sipet.conf"})
 
     status = installer_service.get_installation_status()
 
     assert status["required"] is True
-    assert "sipet.conf no existe" in status["reason"]
+    assert "No existe configuracion" in status["reason"]
+
+
+def test_installation_status_uses_env_database_when_conf_missing(monkeypatch) -> None:
+    monkeypatch.setattr(installer_service, "SIPET_CONFIG_PATH", Path("/tmp/nonexistent-sipet.conf"))
+    monkeypatch.setattr(installer_service, "has_explicit_database_config", lambda: True)
+    monkeypatch.setattr(installer_service, "get_sipet_conf_settings", lambda: {"path": "/tmp/nonexistent-sipet.conf"})
+    monkeypatch.setattr(installer_service, "can_connect_current_database", lambda: (True, ""))
+
+    status = installer_service.get_installation_status()
+
+    assert status["required"] is False
+
+
+def test_list_domain_conf_entries_exposes_runtime_entry_from_env(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(database_router, "DOMAIN_CONFIG_DIR", tmp_path / "dominios")
+    monkeypatch.setattr(database_router, "SIPET_CONFIG_PATH", tmp_path / "sipet.conf")
+    monkeypatch.setenv("MYSQL_URL", "mysql://root:secret@mysql.railway.internal:3306/railway")
+    monkeypatch.setenv("RAILWAY_PUBLIC_DOMAIN", "backend-production-f1ca.up.railway.app")
+
+    entries = database_router.list_domain_conf_entries()
+
+    assert len(entries) == 1
+    assert entries[0]["domain"] == "backend-production-f1ca.up.railway.app"
+    assert entries[0]["db_engine"] == "mysql"
+    assert entries[0]["db_name"] == "railway"
+    assert entries[0]["is_runtime_entry"] is True
 
 
 def test_bootstrap_installation_refreshes_runtime_and_returns_superadmin(monkeypatch) -> None:

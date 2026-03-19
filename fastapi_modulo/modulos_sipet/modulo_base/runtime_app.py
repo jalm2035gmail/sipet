@@ -41,6 +41,7 @@ from fastapi_modulo.core import db as core_db
 from fastapi_modulo.core import apply_tenant_context_middleware
 from fastapi_modulo.core.db import DepartamentoOrganizacional
 from fastapi_modulo.core.database_router import can_connect_current_database
+from fastapi_modulo.core.database_router import has_explicit_database_config
 from fastapi_modulo.core.database_router import get_sipet_superadmin_settings
 from fastapi_modulo.core.database_router import SIPET_CONFIG_PATH
 from fastapi_modulo.modulos_sipet.web.controladores.backend_shell import (
@@ -1470,9 +1471,11 @@ def _initialize_core_schema() -> None:
     print("[startup] core_schema begin", flush=True)
     app.state.database_setup_required = False
     app.state.database_setup_error = ""
-    if not SIPET_CONFIG_PATH.exists():
+    if not SIPET_CONFIG_PATH.exists() and not has_explicit_database_config():
         app.state.database_setup_required = True
-        app.state.database_setup_error = f"{SIPET_CONFIG_PATH} no existe"
+        app.state.database_setup_error = (
+            f"{SIPET_CONFIG_PATH} no existe y no hay variables de entorno de base de datos"
+        )
         app.state.core_schema_initialized = False
         print(f"[startup] core_schema setup required: {app.state.database_setup_error}", flush=True)
         return
