@@ -1,5 +1,6 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from fastapi import FastAPI
 
 from fastapi_modulo.core.db import MAIN, TenantInstalledApp, ensure_tenant_admin_schema
 import fastapi_modulo.core.module_registry as module_registry
@@ -37,3 +38,26 @@ def test_always_enabled_module_stays_available_without_install(monkeypatch) -> N
     monkeypatch.setattr(module_registry, "_read_module_state_map", lambda: {"system_admin": True})
 
     assert module_registry.is_module_enabled("system_admin", tenant_key="tenant_demo") is True
+
+
+def test_register_enabled_routers_skips_incomplete_module_import(monkeypatch) -> None:
+    app = FastAPI()
+    fake_module = module_registry.ModuleDefinition(
+        key="organizacion",
+        label="Organizacion",
+        description="Test",
+        router_specs=[module_registry.RouterSpec("fastapi_modulo.modulos.empleados.controladores.empleados")],
+    )
+
+    monkeypatch.setattr(module_registry, "MODULE_DEFINITIONS", [fake_module])
+    monkeypatch.setattr(module_registry, "_ensure_module_settings_table", lambda: None)
+    monkeypatch.setattr(module_registry, "is_module_enabled", lambda module_key, tenant_key=None: True)
+
+    def _raise_key_error(_path: str):
+        raise KeyError("fastapi_modulo.modulos.empleados")
+
+    monkeypatch.setattr(module_registry, "import_module", _raise_key_error)
+
+    registered = module_registry.register_enabled_routers(app)
+
+    assert registered == []

@@ -704,7 +704,13 @@ def list_modules_payload(tenant_key: Optional[str] = None) -> List[Dict[str, Any
                 "label": str(metadata.get("label") or manifest.get("label") or module.label),
                 "description": str(metadata.get("description") or manifest.get("description") or module.description),
                 "route": str(metadata.get("route") or manifest.get("route") or module.route),
-                "icon": str(metadata.get("icon") or manifest.get("icon") or module.icon),
+                "icon": str(
+                    metadata.get("icon")
+                    or metadata.get("fafa")
+                    or manifest.get("icon")
+                    or manifest.get("fafa")
+                    or module.icon
+                ),
                 "icon_url": _resolve_manifest_icon_url(metadata),
                 "sequence": sequence_label,
                 "sequence_sort": sequence_sort,
@@ -716,6 +722,7 @@ def list_modules_payload(tenant_key: Optional[str] = None) -> List[Dict[str, Any
                 "enabled": is_module_enabled(module.key, tenant_key=resolved_tenant_key),
                 "boot_strategy": module.boot_strategy,
                 "router_count": len(module.router_specs),
+                "screen_access_levels": manifest.get("screen_access_levels") or {},
             }
         )
     payload.sort(key=lambda item: (int(item.get("sequence_sort", 10_000)), str(item.get("label") or "").lower(), str(item.get("key") or "")))
@@ -764,8 +771,11 @@ def register_enabled_routers(app: FastAPI, phase: str = "startup", tenant_key: O
             print(f"[startup] import {spec.module_path}", flush=True)
             try:
                 imported = import_module(spec.module_path)
-            except ModuleNotFoundError:
-                print(f"[startup] module {module.key} not installed — skipped", flush=True)
+            except (ModuleNotFoundError, ImportError, KeyError) as exc:
+                print(
+                    f"[startup] module {module.key} not installed or incomplete — skipped: {exc}",
+                    flush=True,
+                )
                 module_ok = False
                 break
             router = getattr(imported, spec.attr_name)
