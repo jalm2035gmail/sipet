@@ -30,6 +30,7 @@ rsync -az --delete \
   --exclude '__pycache__' \
   --exclude '*.pyc' \
   --exclude '.env' \
+  --exclude 'fastapi_modulo/modulos/' \
   --exclude 'fastapi_modulo/runtime_store/' \
   --exclude 'fastapi_modulo/templates/imagenes/' \
   --exclude 'fastapi_modulo/identidad_login.json' \
