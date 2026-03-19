@@ -5,6 +5,7 @@ import sys
 import types
 
 from fastapi.responses import HTMLResponse, JSONResponse
+from sqlalchemy.exc import OperationalError
 from starlette.requests import Request
 
 from fastapi_modulo.modulos_sipet.web.controladores import backend_middleware
@@ -60,10 +61,31 @@ def test_backend_login_submit_redirects_to_database_setup_when_required() -> Non
     request = _request("/backend/login", method="POST")
     request.scope["app"] = types.SimpleNamespace(state=types.SimpleNamespace(database_setup_required=True))
 
-    response = backend_login_submit(request, usuario="admin", contrasena="secret")
+    response = backend_login_submit(request, usuario="admin", contrasena="secret", codigo_autenticador="")
 
     assert response.status_code == 303
     assert response.headers["location"] == "/base_datos/inicializar"
+
+
+def test_backend_login_submit_redirects_to_database_setup_when_schema_is_incomplete(monkeypatch) -> None:
+    _install_frontend_public_path_stub()
+    request = _request("/backend/login", method="POST")
+    fake_db = types.SimpleNamespace(close=lambda: None)
+    fake_auth_service = types.SimpleNamespace(
+        is_login_rate_limited=lambda request: False,
+        register_failed_login_attempt=lambda request: None,
+        record_login_attempt=lambda request, username, success: None,
+        get_session_local=lambda: (lambda: fake_db),
+        find_user_by_login=lambda db, username: (_ for _ in ()).throw(OperationalError("SELECT 1", {}, Exception("missing table"))),
+    )
+
+    monkeypatch.setattr("fastapi_modulo.modulos_sipet.web.controladores.auth_api.auth_service", fake_auth_service)
+
+    response = backend_login_submit(request, usuario="admin", contrasena="secret", codigo_autenticador="")
+
+    assert response.status_code == 303
+    assert response.headers["location"] == "/base_datos/inicializar"
+    assert request.app.state.database_setup_required is True
 
 
 def test_enforce_backend_login_redirects_without_session(monkeypatch) -> None:

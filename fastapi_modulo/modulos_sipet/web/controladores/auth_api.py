@@ -3,6 +3,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import JSONResponse
 from fastapi.responses import RedirectResponse
+from sqlalchemy.exc import SQLAlchemyError
 
 from fastapi_modulo.modulos_sipet.web.schemas import LoginFormSchema
 from fastapi_modulo.modulos_sipet.web.repositorios.security_repository import list_active_sessions, revoke_session
@@ -15,6 +16,13 @@ from fastapi_modulo.modulos_sipet.web.servicios.session_service import AUTH_COOK
 from fastapi_modulo.modulos_sipet.web.servicios.tenant_observability_service import build_tenant_diagnostics
 
 router = APIRouter()
+
+
+def _redirect_to_database_setup(request: Request) -> RedirectResponse:
+    app_state = getattr(getattr(request, "app", None), "state", None)
+    if app_state is not None:
+        app_state.database_setup_required = True
+    return RedirectResponse(url="/base_datos/inicializar", status_code=303)
 
 
 @router.post("/backend/login")
@@ -49,22 +57,25 @@ def backend_login_submit(
     totp_secret = ""
     global_superadmin = None
     try:
-        user = auth_service.find_user_by_login(db, username)
-        if not user or not auth_service.rehash_user_password_if_needed(db, user, password):
-            global_superadmin = auth_service.authenticate_global_superadmin(username, password)
-            if not global_superadmin:
-                auth_service.register_failed_login_attempt(request)
-                auth_service.record_login_attempt(request, username, False)
-                return auth_page_error(request, "Datos incorrectos, vuelva a intentarlo", 401)
-            role_name = str(global_superadmin["role_name"])
-            session_username = str(global_superadmin["username"])
-            has_passkey = False
-            totp_secret = ""
-        else:
-            role_name = auth_service.resolve_user_role_name(db, user)
-            session_username = auth_service.decrypt_sensitive(user.usuario) or username
-            has_passkey = bool(user.backendauthn_credential_id and user.backendauthn_public_key)
-            totp_secret = mfa_service.get_user_totp_secret(user, role_name)
+        try:
+            user = auth_service.find_user_by_login(db, username)
+            if not user or not auth_service.rehash_user_password_if_needed(db, user, password):
+                global_superadmin = auth_service.authenticate_global_superadmin(username, password)
+                if not global_superadmin:
+                    auth_service.register_failed_login_attempt(request)
+                    auth_service.record_login_attempt(request, username, False)
+                    return auth_page_error(request, "Datos incorrectos, vuelva a intentarlo", 401)
+                role_name = str(global_superadmin["role_name"])
+                session_username = str(global_superadmin["username"])
+                has_passkey = False
+                totp_secret = ""
+            else:
+                role_name = auth_service.resolve_user_role_name(db, user)
+                session_username = auth_service.decrypt_sensitive(user.usuario) or username
+                has_passkey = bool(user.backendauthn_credential_id and user.backendauthn_public_key)
+                totp_secret = mfa_service.get_user_totp_secret(user, role_name)
+        except SQLAlchemyError:
+            return _redirect_to_database_setup(request)
     finally:
         db.close()
 
@@ -119,15 +130,18 @@ def backend_login_submit(
         return auth_page_error(request, "Ingresa tu código de autenticador para completar el acceso.", 401)
 
     response = RedirectResponse(url="/inicio", status_code=303)
-    auth_service.apply_login_session(
-        response,
-        request,
-        session_username,
-        role_name,
-        resolved_user_id,
-        password_fingerprint=password_fingerprint,
-    )
-    auth_service.record_login_attempt(request, username, True)
+    try:
+        auth_service.apply_login_session(
+            response,
+            request,
+            session_username,
+            role_name,
+            resolved_user_id,
+            password_fingerprint=password_fingerprint,
+        )
+        auth_service.record_login_attempt(request, username, True)
+    except SQLAlchemyError:
+        return _redirect_to_database_setup(request)
     response.delete_cookie(passkey_service.PASSKEY_COOKIE_MFA_GATE)
     return response
 
