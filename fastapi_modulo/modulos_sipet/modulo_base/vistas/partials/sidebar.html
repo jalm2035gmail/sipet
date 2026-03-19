@@ -79,6 +79,12 @@
   <div class="border-t border-base-300 px-3 py-3 flex flex-col gap-1">
 
     {% block sidebar_footer_items %}
+      {% if is_superadmin_user or current_role in ['superadministrador', 'superadmin'] %}
+      <a href="/server-admin" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors {% if request.url.path.startswith('/server-admin') %}bg-primary/10 text-primary font-medium{% else %}text-base-content/60 hover:bg-base-200 hover:text-base-content{% endif %}">
+        <i class="fa-solid fa-server w-4 text-center {% if request.url.path.startswith('/server-admin') %}text-primary{% else %}text-base-content/40{% endif %}"></i>
+        <span>Servidor</span>
+      </a>
+      {% endif %}
       <a href="/ayuda" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-base-content/60 hover:bg-base-200 hover:text-base-content transition-colors">
         <i class="fa-solid fa-circle-question w-4 text-center text-base-content/40"></i>
         <span>Ayuda</span>
