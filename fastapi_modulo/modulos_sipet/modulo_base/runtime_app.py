@@ -40,6 +40,7 @@ from fastapi_modulo.core import db as core_db
 from fastapi_modulo.core import apply_tenant_context_middleware
 from fastapi_modulo.core.db import DepartamentoOrganizacional
 from fastapi_modulo.core.database_router import can_connect_current_database
+from fastapi_modulo.core.database_router import SIPET_CONFIG_PATH
 from fastapi_modulo.modulos_sipet.web.controladores.backend_shell import (
     _render_backend_MAIN,
     backend_screen,
@@ -467,6 +468,16 @@ AUTO_UPDATE_ENABLED = (os.environ.get("AUTO_UPDATE_ENABLED") or "true").strip().
 MAIN = declarative_base()
 engine = core_db.engine
 SessionLocal = core_db.SessionLocal
+
+
+def refresh_runtime_database_globals() -> None:
+    global DATAMAIN_URL, IS_SQLITE_DATAMAIN, PRIMARY_DB_PATH, engine, SessionLocal
+
+    DATAMAIN_URL = core_db.DATAMAIN_URL
+    IS_SQLITE_DATAMAIN = DATAMAIN_URL.startswith("sqlite:///")
+    PRIMARY_DB_PATH = core_db.get_current_database_info().get("path") or None
+    engine = core_db.get_current_engine()
+    SessionLocal = core_db.SessionLocal
 
 
 class StrategicAxisConfig(MAIN):
@@ -923,6 +934,22 @@ def ensure_default_strategic_axes_data() -> None:
         db.commit()
     finally:
         db.close()
+
+
+def run_core_schema_bootstrap(*, force_refresh_database: bool = False) -> None:
+    if force_refresh_database:
+        refresh_runtime_database_globals()
+    MAIN.metadata.create_all(bind=core_db.get_current_engine())
+    ensure_documentos_schema()
+    ensure_forms_schema()
+    unify_users_table()
+    ensure_default_roles()
+    ensure_passkey_user_schema()
+    ensure_strategic_axes_schema()
+    protect_sensitive_user_fields()
+    ensure_system_superadmin_user()
+    ensure_demo_admin_user_seed()
+    ensure_default_strategic_axes_data()
 
 
 def protect_sensitive_user_fields() -> None:
@@ -1415,28 +1442,24 @@ def _initialize_core_schema() -> None:
     print("[startup] core_schema begin", flush=True)
     app.state.database_setup_required = False
     app.state.database_setup_error = ""
+    if not SIPET_CONFIG_PATH.exists():
+        app.state.database_setup_required = True
+        app.state.database_setup_error = f"{SIPET_CONFIG_PATH} no existe"
+        app.state.core_schema_initialized = False
+        print(f"[startup] core_schema setup required: {app.state.database_setup_error}", flush=True)
+        return
     try:
-        MAIN.metadata.create_all(bind=engine)
+        run_core_schema_bootstrap(force_refresh_database=True)
         print("[startup] create_all ok", flush=True)
-        ensure_documentos_schema()
         print("[startup] documentos ok", flush=True)
-        ensure_forms_schema()
         print("[startup] forms ok", flush=True)
-        unify_users_table()
         print("[startup] unify_users ok", flush=True)
-        ensure_default_roles()
         print("[startup] roles ok", flush=True)
-        ensure_passkey_user_schema()
         print("[startup] passkey ok", flush=True)
-        ensure_strategic_axes_schema()
         print("[startup] strategic_axes ok", flush=True)
-        protect_sensitive_user_fields()
         print("[startup] sensitive_fields ok", flush=True)
-        ensure_system_superadmin_user()
         print("[startup] superadmin ok", flush=True)
-        ensure_demo_admin_user_seed()
         print("[startup] demo_admin ok", flush=True)
-        ensure_default_strategic_axes_data()
         print("[startup] strategic_axes_data ok", flush=True)
         app.state.core_schema_initialized = True
         print("[startup] core_schema done", flush=True)

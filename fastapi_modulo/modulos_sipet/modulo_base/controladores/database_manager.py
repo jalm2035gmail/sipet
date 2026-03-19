@@ -18,12 +18,12 @@ from fastapi_modulo.core.database_router import (
     export_domain_conf_text,
     get_sipet_conf_settings,
     import_domain_conf_text,
-    initialize_database_from_sipet_conf,
     list_domain_conf_entries,
     read_conf_file,
     save_domain_conf_entry,
     update_sipet_conf_settings,
 )
+from fastapi_modulo.modulos_sipet.instalacion.servicios.installer_service import bootstrap_installation
 from fastapi_modulo.modulos_sipet.web.controladores.backend_shell import render_backend_page
 from fastapi_modulo.modulos_sipet.web.servicios.access_service import is_superadmin, require_admin_or_superadmin
 from fastapi_modulo.modulos_sipet.web.servicios.session_service import AUTH_COOKIE_SECRET
@@ -655,7 +655,7 @@ async def initialize_database(request: Request):
     _enforce_admin_or_setup(request, require_setup_auth=_setup_required(request))
     payload = await request.json()
     try:
-        result = initialize_database_from_sipet_conf(payload if isinstance(payload, dict) else {})
+        result = bootstrap_installation(payload if isinstance(payload, dict) else {})
     except Exception as exc:
         return JSONResponse({"success": False, "error": str(exc)}, status_code=400)
     if getattr(request.app.state, "database_setup_required", False):

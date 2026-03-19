@@ -626,6 +626,17 @@ class DatabaseRouter:
     def refresh_host_map(self) -> None:
         self._host_database_map = load_host_database_map()
 
+    def refresh(self) -> None:
+        for engine_instance in self._engine_cache.values():
+            try:
+                engine_instance.dispose()
+            except Exception:
+                pass
+        self._engine_cache.clear()
+        self._session_factory_cache.clear()
+        self.refresh_host_map()
+        self.default_database_url = resolve_default_database_url()
+
     def set_request_host(self, host: Optional[str]):
         return _REQUEST_HOST.set(normalize_host(host))
 

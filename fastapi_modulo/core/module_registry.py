@@ -54,6 +54,18 @@ MODULE_DEFINITIONS: List[ModuleDefinition] = [
         always_enabled=True,
     ),
     ModuleDefinition(
+        key="instalacion_core",
+        label="Instalación",
+        description="Bootstrap inicial de SIPET para preparar la base y el archivo sipet.conf.",
+        route="/instalacion",
+        icon="fa-solid fa-screwdriver-wrench",
+        manifest_file="fastapi_modulo/modulos_sipet/instalacion/__manifest__.py",
+        sidebar_visible=False,
+        manageable=False,
+        always_enabled=True,
+        router_specs=[RouterSpec("fastapi_modulo.modulos_sipet.instalacion.controladores.instalacion")],
+    ),
+    ModuleDefinition(
         key="modulo_base",
         label="Modulo base",
         description="Núcleo reusable interno para contratos, utilidades y servicios compartidos.",

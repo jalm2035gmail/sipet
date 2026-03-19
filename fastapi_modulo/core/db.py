@@ -227,6 +227,15 @@ def dispose_engine_for_host(host: Optional[str] = None) -> None:
     DEFAULT_DATABASE_ROUTER.dispose_engine(host)
 
 
+def refresh_runtime_database_state() -> None:
+    global HOST_DATAMAIN_MAP, DATAMAIN_URL, engine
+
+    DEFAULT_DATABASE_ROUTER.refresh()
+    HOST_DATAMAIN_MAP = DEFAULT_DATABASE_ROUTER._host_database_map
+    DATAMAIN_URL = DEFAULT_DATABASE_ROUTER.default_database_url
+    engine = get_engine_for_host()
+
+
 class _DynamicSessionLocal:
     def __call__(self, **kwargs):
         return get_session_factory_for_host()(**kwargs)
