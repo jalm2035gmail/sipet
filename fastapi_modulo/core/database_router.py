@@ -207,6 +207,22 @@ def get_sipet_conf_settings() -> Dict[str, Any]:
     return data
 
 
+def get_sipet_superadmin_settings() -> Dict[str, str]:
+    parser = read_conf_file(SIPET_CONFIG_PATH)
+    if not parser.has_section("superadmin"):
+        return {
+            "username": "",
+            "password": "",
+            "email": "",
+        }
+    section = parser["superadmin"]
+    return {
+        "username": str(section.get("superadmin_user") or section.get("username") or "").strip(),
+        "password": str(section.get("superadmin_password") or section.get("password") or ""),
+        "email": str(section.get("superadmin_email") or section.get("email") or "").strip(),
+    }
+
+
 def update_sipet_conf_settings(payload: Mapping[str, Any]) -> Dict[str, Any]:
     parser = read_conf_file(SIPET_CONFIG_PATH)
     options = parser["options"]

@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from fastapi_modulo.core import database_router
 from fastapi_modulo.modulos_sipet.instalacion.servicios import installer_service
 
 
@@ -40,3 +41,23 @@ def test_bootstrap_installation_refreshes_runtime_and_returns_superadmin(monkeyp
     assert result["connected"] is True
     assert result["superadmin"]["username"] == "root"
     assert calls == ["refresh", "bootstrap:False"]
+
+
+def test_get_sipet_superadmin_settings_reads_superadmin_section(tmp_path, monkeypatch) -> None:
+    conf_path = tmp_path / "sipet.conf"
+    conf_path.write_text(
+        "[options]\n"
+        "domain = localhost\n\n"
+        "[superadmin]\n"
+        "superadmin_user = 0konomiyaki\n"
+        "superadmin_password = XX,$,26,sipet,26,$,XX\n"
+        "superadmin_email = alopez@avancoop.org\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(database_router, "SIPET_CONFIG_PATH", conf_path)
+
+    settings = database_router.get_sipet_superadmin_settings()
+
+    assert settings["username"] == "0konomiyaki"
+    assert settings["password"] == "XX,$,26,sipet,26,$,XX"
+    assert settings["email"] == "alopez@avancoop.org"

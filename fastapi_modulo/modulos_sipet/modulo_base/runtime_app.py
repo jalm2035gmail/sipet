@@ -40,6 +40,7 @@ from fastapi_modulo.core import db as core_db
 from fastapi_modulo.core import apply_tenant_context_middleware
 from fastapi_modulo.core.db import DepartamentoOrganizacional
 from fastapi_modulo.core.database_router import can_connect_current_database
+from fastapi_modulo.core.database_router import get_sipet_superadmin_settings
 from fastapi_modulo.core.database_router import SIPET_CONFIG_PATH
 from fastapi_modulo.modulos_sipet.web.controladores.backend_shell import (
     _render_backend_MAIN,
@@ -738,9 +739,22 @@ def _sqlite_table_exists(table_name: str) -> bool:
 def ensure_system_superadmin_user() -> None:
     if not _sqlite_table_exists("users"):
         return
-    username = (os.environ.get("SYSTEM_SUPERADMIN_USERNAME") or _decode_b64(DEFAULT_SUPERADMIN_USERNAME_B64)).strip()
-    password = (os.environ.get("SYSTEM_SUPERADMIN_PASSWORD") or _decode_b64(DEFAULT_SUPERADMIN_PASSWORD_B64))
-    email = (os.environ.get("SYSTEM_SUPERADMIN_EMAIL") or _decode_b64(DEFAULT_SUPERADMIN_EMAIL_B64)).strip()
+    conf_superadmin = get_sipet_superadmin_settings()
+    username = (
+        os.environ.get("SYSTEM_SUPERADMIN_USERNAME")
+        or conf_superadmin.get("username")
+        or _decode_b64(DEFAULT_SUPERADMIN_USERNAME_B64)
+    ).strip()
+    password = (
+        os.environ.get("SYSTEM_SUPERADMIN_PASSWORD")
+        or conf_superadmin.get("password")
+        or _decode_b64(DEFAULT_SUPERADMIN_PASSWORD_B64)
+    )
+    email = (
+        os.environ.get("SYSTEM_SUPERADMIN_EMAIL")
+        or conf_superadmin.get("email")
+        or _decode_b64(DEFAULT_SUPERADMIN_EMAIL_B64)
+    ).strip()
     if not username or not password or not email:
         return
 
@@ -2731,26 +2745,26 @@ def _render_ajustes_configuracion_page(request: Request) -> HTMLResponse:
         pass
 
     content = f"""
-    <section style="background:#fff;border:1px solid #dbe3ef;border-radius:14px;padding:16px;display:grid;gap:12px;max-width:980px;">
+    <section style="background:#fff;border:1px solid #dbe3ef;border-radius:14px;padding:16px;display:grid;gap:12px;max-width:980px;color:#000;">
         <h3 style="margin:0;font-size:1.12rem;color:#0f172a;">Configuración del sistema</h3>
         <p style="margin:0;color:#475569;">Datos principales de base de datos y salud operativa.</p>
         <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;">
-            <article style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;"><strong>SIPET Versión</strong><div>{escape(SIPET_VERSION)}</div></article>
-            <article style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;"><strong>Entorno</strong><div>{escape(APP_ENV)}</div></article>
-            <article style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;"><strong>Motor BD</strong><div>{escape(db_info["engine"].capitalize())}</div></article>
-            <article style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;"><strong>Nombre BD</strong><div>{escape(db_name)}</div></article>
-            <article style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;"><strong>Ruta BD</strong><div style="word-break:break-all;">{escape(db_file_path)}</div></article>
-            <article style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;"><strong>Tamaño BD</strong><div>{_format_bytes(db_size_bytes)}</div></article>
-            <article style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;"><strong>Tablas</strong><div>{tables_count}</div></article>
-            <article style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;"><strong>Usuarios</strong><div>{users_count} (activos: {active_users_count})</div></article>
-            <article style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;"><strong>Departamentos</strong><div>{departments_count}</div></article>
-            <article style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;"><strong>Uptime proceso</strong><div>{process_uptime_seconds} s</div></article>
-            <article style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;"><strong>Runtime store</strong><div style="word-break:break-all;">{escape(runtime_store_path)}</div></article>
-            <article style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;"><strong>Disco total</strong><div>{_format_bytes(disk_total)}</div></article>
-            <article style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;"><strong>Disco libre</strong><div>{_format_bytes(disk_free)}</div></article>
+            <article style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;color:#000;"><strong>SIPET Versión</strong><div>{escape(SIPET_VERSION)}</div></article>
+            <article style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;color:#000;"><strong>Entorno</strong><div>{escape(APP_ENV)}</div></article>
+            <article style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;color:#000;"><strong>Motor BD</strong><div>{escape(db_info["engine"].capitalize())}</div></article>
+            <article style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;color:#000;"><strong>Nombre BD</strong><div>{escape(db_name)}</div></article>
+            <article style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;color:#000;"><strong>Ruta BD</strong><div style="word-break:break-all;">{escape(db_file_path)}</div></article>
+            <article style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;color:#000;"><strong>Tamaño BD</strong><div>{_format_bytes(db_size_bytes)}</div></article>
+            <article style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;color:#000;"><strong>Tablas</strong><div>{tables_count}</div></article>
+            <article style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;color:#000;"><strong>Usuarios</strong><div>{users_count} (activos: {active_users_count})</div></article>
+            <article style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;color:#000;"><strong>Departamentos</strong><div>{departments_count}</div></article>
+            <article style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;color:#000;"><strong>Uptime proceso</strong><div>{process_uptime_seconds} s</div></article>
+            <article style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;color:#000;"><strong>Runtime store</strong><div style="word-break:break-all;">{escape(runtime_store_path)}</div></article>
+            <article style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;color:#000;"><strong>Disco total</strong><div>{_format_bytes(disk_total)}</div></article>
+            <article style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;color:#000;"><strong>Disco libre</strong><div>{_format_bytes(disk_free)}</div></article>
         </div>
     </section>
-    <section style="background:#fff;border:1px solid #dbe3ef;border-radius:14px;padding:16px;display:grid;gap:12px;max-width:980px;margin-top:14px;">
+    <section style="background:#fff;border:1px solid #dbe3ef;border-radius:14px;padding:16px;display:grid;gap:12px;max-width:980px;margin-top:14px;color:#000;">
         <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;">
             <div>
                 <h3 style="margin:0;font-size:1.12rem;color:#0f172a;">Actualización de SIPET</h3>
@@ -2766,10 +2780,10 @@ def _render_ajustes_configuracion_page(request: Request) -> HTMLResponse:
             </div>
         </div>
         <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;">
-            <article style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;"><strong>Host</strong><div>{escape(update_context["host"] or "N/A")}</div></article>
-            <article style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;"><strong>Canal</strong><div>{escape(update_context["channel"])}</div></article>
-            <article style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;"><strong>Estrategia</strong><div>{escape(update_context["strategy"])}</div></article>
-            <article style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;"><strong>Origen</strong><div style="word-break:break-all;">{escape(update_context["manifest_url"] or "No configurado")}</div></article>
+            <article style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;color:#000;"><strong>Host</strong><div>{escape(update_context["host"] or "N/A")}</div></article>
+            <article style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;color:#000;"><strong>Canal</strong><div>{escape(update_context["channel"])}</div></article>
+            <article style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;color:#000;"><strong>Estrategia</strong><div>{escape(update_context["strategy"])}</div></article>
+            <article style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;color:#000;"><strong>Origen</strong><div style="word-break:break-all;">{escape(update_context["manifest_url"] or "No configurado")}</div></article>
         </div>
         <div id="sipet-update-panel" style="border:1px solid #e2e8f0;border-radius:10px;padding:12px;background:#f8fafc;color:#0f172a;">
             <strong>Estado</strong>
