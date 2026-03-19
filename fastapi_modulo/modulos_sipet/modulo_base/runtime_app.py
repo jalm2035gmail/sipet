@@ -1244,6 +1244,8 @@ def unify_users_table() -> None:
         "coach": "VARCHAR",
         "rol_id": "INTEGER",
         "imagen": "VARCHAR",
+        "nivel_acceso": "VARCHAR",
+        "identidad_institucional": "VARCHAR",
     }
 
     with sqlite3.connect(PRIMARY_DB_PATH) as conn:
