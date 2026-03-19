@@ -104,6 +104,30 @@ def test_enforce_backend_login_redirects_without_session(monkeypatch) -> None:
     assert response.status_code == 303
 
 
+def test_enforce_backend_login_allows_database_api_with_setup_cookie(monkeypatch) -> None:
+    _install_frontend_public_path_stub()
+    monkeypatch.setattr(
+        backend_middleware.tenant_context,
+        "bind_request_tenant_context",
+        lambda request: types.SimpleNamespace(context=types.SimpleNamespace(tenant_id="default"), host_token="token", tenant_token="tenant"),
+    )
+    monkeypatch.setattr(backend_middleware.tenant_context, "reset_request_tenant_context", lambda binding: None)
+    monkeypatch.setattr(backend_middleware, "read_session_cookie", lambda token: None)
+    monkeypatch.setattr(backend_middleware, "_is_setup_authenticated_request", lambda request: True)
+
+    async def call_next(_request):
+        return JSONResponse({"ok": True})
+
+    response = asyncio.run(
+        backend_middleware.enforce_backend_login(
+            _request("/api/base_datos/inicializar", method="POST"),
+            call_next,
+        )
+    )
+
+    assert response.status_code == 200
+
+
 def test_enforce_backend_login_blocks_csrf(monkeypatch) -> None:
     _install_frontend_public_path_stub()
     monkeypatch.setattr(

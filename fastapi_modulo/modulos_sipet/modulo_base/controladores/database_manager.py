@@ -222,6 +222,7 @@ def _manager_content() -> str:
 
   const $ = (id) => document.getElementById(id);
   const t = (v) => String(v ?? '');
+  const csrfToken = () => String(window.__sipet_csrf_token || '').trim();
 
   const showMsg = (el, text, err) => {{
     el.textContent = text;
@@ -315,7 +316,8 @@ def _manager_content() -> str:
       }};
       const res = await fetch('/api/base_datos/inicializar', {{
         method:'POST',
-        headers:{{'Content-Type':'application/json'}},
+        credentials:'same-origin',
+        headers:{{'Content-Type':'application/json', 'x-csrf-token': csrfToken()}},
         body: JSON.stringify(payload),
       }});
       const data = await res.json();
@@ -345,7 +347,9 @@ def _manager_content() -> str:
     }};
     try {{
       const res = await fetch('/api/base_datos/gestion/save', {{
-        method:'POST', headers:{{'Content-Type':'application/json'}},
+        method:'POST',
+        credentials:'same-origin',
+        headers:{{'Content-Type':'application/json', 'x-csrf-token': csrfToken()}},
         body: JSON.stringify(payload),
       }});
       const data = await res.json();
@@ -364,7 +368,11 @@ def _manager_content() -> str:
   $('btn-eliminar').addEventListener('click', async () => {{
     if (!selected || !confirm(`¿Eliminar la base de datos "${{selected}}"?`)) return;
     try {{
-      const res = await fetch(`/api/base_datos/gestion/${{encodeURIComponent(selected)}}`, {{method:'DELETE'}});
+      const res = await fetch(`/api/base_datos/gestion/${{encodeURIComponent(selected)}}`, {{
+        method:'DELETE',
+        credentials:'same-origin',
+        headers:{{'x-csrf-token': csrfToken()}},
+      }});
       const data = await res.json();
       if (!res.ok || !data.success) throw new Error(data.error || 'Error al eliminar');
       selected = null;

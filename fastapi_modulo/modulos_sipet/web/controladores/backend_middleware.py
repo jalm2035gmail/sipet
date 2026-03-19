@@ -7,6 +7,7 @@ from fastapi_modulo.core import tenant_context
 from fastapi_modulo.modulos_sipet.web.servicios.access_service import get_user_screen_access_levels, has_screen_access
 from fastapi_modulo.modulos_sipet.web.servicios.session_service import (
     AUTH_COOKIE_NAME,
+    AUTH_COOKIE_SECRET,
     CSRF_PROTECTION_ENABLED,
     clear_auth_cookies,
     is_same_origin_request,
@@ -15,6 +16,9 @@ from fastapi_modulo.modulos_sipet.web.servicios.session_service import (
     read_session_cookie,
     validate_csrf_request,
 )
+
+SETUP_AUTH_COOKIE_NAME = "sipet_setup_auth"
+DEFAULT_SETUP_USERNAME_B64 = "MGtvbm9taXlha2k="
 from fastapi_modulo.modulos_sipet.web.servicios.template_context_service import build_not_found_context
 
 PUBLIC_PATHS = {
@@ -91,6 +95,38 @@ def _screen_access_denied(request: Request, path: str) -> bool:
     return not has_screen_access(request, analytics_context["screen_name"], app_name=analytics_context["module_name"])
 
 
+def _decode_b64(value: str) -> str:
+    import base64
+
+    return base64.b64decode(value.encode("utf-8")).decode("utf-8")
+
+
+def _setup_username() -> str:
+    return (request_env("SYSTEM_SUPERADMIN_USERNAME") or _decode_b64(DEFAULT_SETUP_USERNAME_B64)).strip()
+
+
+def request_env(name: str) -> str:
+    import os
+
+    return str(os.environ.get(name) or "")
+
+
+def _is_setup_authenticated_request(request: Request) -> bool:
+    import hashlib
+    import hmac
+
+    token = str(request.cookies.get(SETUP_AUTH_COOKIE_NAME) or "").strip()
+    if "." not in token:
+        return False
+    payload, signature = token.rsplit(".", 1)
+    expected = hmac.new(
+        AUTH_COOKIE_SECRET.encode("utf-8"),
+        payload.encode("utf-8"),
+        hashlib.sha256,
+    ).hexdigest()
+    return hmac.compare_digest(signature, expected) and payload == _setup_username()
+
+
 def _record_screen_view_async(
     request: Request,
     session_data: dict,
@@ -150,6 +186,15 @@ async def enforce_backend_login(request: Request, call_next):
 
     # ── Rutas públicas — pasar sin validación ─────────────────────────────────
     if is_public_backend_path(request, path):
+        try:
+            return await call_next(request)
+        finally:
+            if binding is not None:
+                tenant_context.reset_request_tenant_context(binding)
+
+    if _is_setup_authenticated_request(request) and (
+        path.startswith("/base_datos/") or path.startswith("/api/base_datos/")
+    ):
         try:
             return await call_next(request)
         finally:
