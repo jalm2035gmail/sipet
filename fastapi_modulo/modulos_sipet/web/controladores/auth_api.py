@@ -24,6 +24,8 @@ def backend_login_submit(
     contrasena: str = Form(""),
     codigo_autenticador: str = Form(""),
 ):
+    if bool(getattr(getattr(request, "app", None), "state", None) and getattr(request.app.state, "database_setup_required", False)):
+        return RedirectResponse(url="/base_datos/inicializar", status_code=303)
     import re
     from urllib.parse import quote
 

@@ -8,6 +8,8 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from starlette.requests import Request
 
 from fastapi_modulo.modulos_sipet.web.controladores import backend_middleware
+from fastapi_modulo.modulos_sipet.web.controladores.auth_api import backend_login_submit
+from fastapi_modulo.modulos_sipet.web.controladores.auth_pages import backend_login
 
 
 def _request(path: str, method: str = "GET", headers: list[tuple[bytes, bytes]] | None = None, cookies: dict[str, str] | None = None):
@@ -25,7 +27,7 @@ def _request(path: str, method: str = "GET", headers: list[tuple[bytes, bytes]] 
         "scheme": "https",
         "path": path,
         "headers": request_headers,
-        "app": types.SimpleNamespace(docs_url=None),
+        "app": types.SimpleNamespace(docs_url=None, state=types.SimpleNamespace(database_setup_required=False)),
     }
     return Request(scope, receive=receive)
 
@@ -40,6 +42,28 @@ def test_is_public_backend_path_allows_login() -> None:
     _install_frontend_public_path_stub()
     request = _request("/backend/login")
     assert backend_middleware.is_public_backend_path(request, "/backend/login") is True
+
+
+def test_backend_login_redirects_to_database_setup_when_required() -> None:
+    _install_frontend_public_path_stub()
+    request = _request("/backend/login")
+    request.scope["app"] = types.SimpleNamespace(state=types.SimpleNamespace(database_setup_required=True))
+
+    response = backend_login(request)
+
+    assert response.status_code == 303
+    assert response.headers["location"] == "/base_datos/inicializar"
+
+
+def test_backend_login_submit_redirects_to_database_setup_when_required() -> None:
+    _install_frontend_public_path_stub()
+    request = _request("/backend/login", method="POST")
+    request.scope["app"] = types.SimpleNamespace(state=types.SimpleNamespace(database_setup_required=True))
+
+    response = backend_login_submit(request, usuario="admin", contrasena="secret")
+
+    assert response.status_code == 303
+    assert response.headers["location"] == "/base_datos/inicializar"
 
 
 def test_enforce_backend_login_redirects_without_session(monkeypatch) -> None:
@@ -145,8 +169,8 @@ def test_bind_request_tenant_context_sets_request_state() -> None:
     request = _request("/api/secure", headers=[(b"host", b"cliente1.midominio.com")])
     binding = tenant_context.bind_request_tenant_context(request)
     try:
-        assert request.state.tenant_id == "cliente1.midominio.com"
-        assert request.state.tenant_key == "cliente1.midominio.com"
+        assert request.state.tenant_id == "cliente1_midominio_com"
+        assert request.state.tenant_key == "cliente1_midominio_com"
         assert request.state.access_mode == "tenant"
         assert request.state.db_key
         assert request.state.db_url
