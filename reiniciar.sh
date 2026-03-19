@@ -124,6 +124,7 @@ fi
 PORT="${PORT:-8000}"
 HOST="${HOST:-0.0.0.0}"
 LOG_FILE="${LOG_FILE:-uvicorn.log}"
+LOG_MAX_LINES="${LOG_MAX_LINES:-1000}"
 STARTUP_TIMEOUT_SECONDS="${STARTUP_TIMEOUT_SECONDS:-180}"
 PYTHON_BIN="${PYTHON_BIN:-python3}"
 UVICORN_LOG_LEVEL="${UVICORN_LOG_LEVEL:-debug}"
@@ -165,9 +166,9 @@ mkdir -p "$(dirname "$LOG_FILE")" 2>/dev/null || true
 : > "$LOG_FILE"
 export PYTHONUNBUFFERED=1
 if command -v setsid >/dev/null 2>&1; then
-    nohup setsid "$PYTHON_BIN" main.py > "$LOG_FILE" 2>&1 < /dev/null &
+    nohup setsid "$PYTHON_BIN" scripts/run_with_capped_log.py --log-file "$LOG_FILE" --max-lines "$LOG_MAX_LINES" -- "$PYTHON_BIN" -m uvicorn fastapi_modulo.modulos_sipet.modulo_base.runtime:app --host "$HOST" --port "$PORT" --log-level "$UVICORN_LOG_LEVEL" > /dev/null 2>&1 < /dev/null &
 else
-    nohup "$PYTHON_BIN" main.py > "$LOG_FILE" 2>&1 < /dev/null &
+    nohup "$PYTHON_BIN" scripts/run_with_capped_log.py --log-file "$LOG_FILE" --max-lines "$LOG_MAX_LINES" -- "$PYTHON_BIN" -m uvicorn fastapi_modulo.modulos_sipet.modulo_base.runtime:app --host "$HOST" --port "$PORT" --log-level "$UVICORN_LOG_LEVEL" > /dev/null 2>&1 < /dev/null &
 fi
 UVICORN_PID=$!
 disown "$UVICORN_PID" 2>/dev/null || true

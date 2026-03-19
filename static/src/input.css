@@ -14,9 +14,9 @@
 /* Módulos del backend (HTML parciales que se inyectan en MAIN.html) */
 @source "../../fastapi_modulo/modulos/**/*.html";
 
-/* Archivos Python con HTML embebido (main.py, módulos con f-strings HTML) */
+/* Archivos Python con HTML embebido (runtime_app.py, módulos con f-strings HTML) */
 @source "../../fastapi_modulo/modulos/**/*.py";
-@source "../../fastapi_modulo/main.py";
+@source "../../fastapi_modulo/modulos_sipet/modulo_base/runtime_app.py";
 @source "../../fastapi_modulo/*.html";
 
 /* JS y CSS custom del proyecto */
