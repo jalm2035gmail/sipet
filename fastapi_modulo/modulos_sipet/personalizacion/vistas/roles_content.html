@@ -1,0 +1,135 @@
+<section class="form-section">
+
+  <div class="section-title">
+    <h2>Gestión de roles</h2>
+    <p class="section-description">Administra los roles del sistema. Los roles del sistema no pueden eliminarse.</p>
+  </div>
+
+  <form method="post" action="/roles/create" class="section-grid">
+    <label class="form-field">
+      <span>Nombre del rol</span>
+      <input
+        type="text"
+        name="nombre"
+        required
+        class="campo-personalizado"
+        placeholder="Ej. supervisor"
+        maxlength="80"
+        pattern="[a-zA-Z0-9_\- ]+"
+        title="Solo letras, números, guiones y espacios"
+      >
+      <span class="field-hint">Se normalizará a snake_case al guardar. Ej: "Super Admin" → "super_admin"</span>
+    </label>
+    <label class="form-field">
+      <span>Descripción</span>
+      <input
+        type="text"
+        name="descripcion"
+        class="campo-personalizado"
+        placeholder="Describe el alcance de este rol"
+        maxlength="255"
+      >
+    </label>
+    <div class="form-field form-field--actions">
+      <button type="submit" class="color-btn color-btn--primary">
+        Crear rol
+      </button>
+    </div>
+  </form>
+
+  <div class="roles-table-wrapper">
+    <table class="roles-table">
+      <thead>
+        <tr>
+          <th scope="col">Nombre</th>
+          <th scope="col">Descripción</th>
+          <th scope="col" class="col-actions">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{ rows_html }}
+      </tbody>
+    </table>
+  </div>
+
+</section>
+
+<style>
+  .section-description {
+    margin: 4px 0 0;
+    color: var(--muted, #64748b);
+    font-size: 13px;
+  }
+  .field-hint {
+    display: block;
+    margin-top: 4px;
+    font-size: 12px;
+    color: var(--muted, #64748b);
+  }
+  .form-field--actions {
+    display: flex;
+    align-items: flex-end;
+    padding-bottom: 2px;
+  }
+  .roles-table-wrapper {
+    margin-top: 24px;
+    overflow-x: auto;
+    border-radius: 12px;
+    border: 1px solid rgba(148,163,184,.25);
+  }
+  .roles-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+  .roles-table thead tr {
+    background: rgba(15,23,42,.04);
+  }
+  .roles-table th,
+  .roles-table td {
+    padding: 10px 14px;
+    text-align: left;
+    border-bottom: 1px solid rgba(148,163,184,.18);
+    vertical-align: middle;
+  }
+  .roles-table th {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--muted, #64748b);
+    text-transform: uppercase;
+    letter-spacing: .03em;
+  }
+  .roles-table tbody tr:last-child td {
+    border-bottom: none;
+  }
+  .roles-table tbody tr:hover {
+    background: rgba(15,23,42,.02);
+  }
+  .col-actions {
+    width: 280px;
+  }
+  .roles-table td.col-actions {
+    padding: 6px 10px;
+  }
+  .role-actions-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .role-edit-form {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .role-edit-form .campo-personalizado {
+    flex: 1 1 90px;
+    min-width: 80px;
+    padding: 6px 10px;
+    font-size: 13px;
+    border-radius: 8px;
+  }
+  .role-delete-form {
+    display: flex;
+  }
+</style>
