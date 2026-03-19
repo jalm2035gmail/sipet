@@ -44,27 +44,41 @@ def get_redis_client() -> Optional[Redis]:
         return None
 
 
+def _disable_redis_client() -> None:
+    global _REDIS_CLIENT, _REDIS_UNAVAILABLE
+    _REDIS_CLIENT = None
+    _REDIS_UNAVAILABLE = True
+
+
+def _safe_redis_call(operation, default):
+    client = get_redis_client()
+    if client is None:
+        return default
+    try:
+        return operation(client)
+    except Exception:
+        _disable_redis_client()
+        return default
+
+
 def _key(*parts: str) -> str:
     safe_parts = [str(part or "").strip() for part in parts if str(part or "").strip()]
     return ":".join([REDIS_PREFIX, *safe_parts])
 
 
 def rate_limit_increment(scope: str, identifier: str, window_seconds: int) -> int:
-    client = get_redis_client()
-    if client is None:
-        return 0
     key = _key("rate", scope, identifier)
-    count = int(client.incr(key))
-    if count == 1:
-        client.expire(key, max(1, int(window_seconds)))
-    return count
+    def _op(client: Redis) -> int:
+        count = int(client.incr(key))
+        if count == 1:
+            client.expire(key, max(1, int(window_seconds)))
+        return count
+
+    return int(_safe_redis_call(_op, 0) or 0)
 
 
 def rate_limit_get(scope: str, identifier: str) -> int:
-    client = get_redis_client()
-    if client is None:
-        return 0
-    value = client.get(_key("rate", scope, identifier))
+    value = _safe_redis_call(lambda client: client.get(_key("rate", scope, identifier)), None)
     try:
         return int(value or 0)
     except Exception:
@@ -72,10 +86,7 @@ def rate_limit_get(scope: str, identifier: str) -> int:
 
 
 def rate_limit_clear(scope: str, identifier: str) -> None:
-    client = get_redis_client()
-    if client is None:
-        return
-    client.delete(_key("rate", scope, identifier))
+    _safe_redis_call(lambda client: client.delete(_key("rate", scope, identifier)), 0)
 
 
 def sensitive_endpoint_key(path: str) -> str:
@@ -84,17 +95,18 @@ def sensitive_endpoint_key(path: str) -> str:
 
 
 def cache_json(namespace: str, identifier: str, payload: dict[str, Any], ttl_seconds: int) -> None:
-    client = get_redis_client()
-    if client is None:
-        return
-    client.setex(_key("cache", namespace, identifier), max(1, int(ttl_seconds)), json.dumps(payload))
+    _safe_redis_call(
+        lambda client: client.setex(
+            _key("cache", namespace, identifier),
+            max(1, int(ttl_seconds)),
+            json.dumps(payload),
+        ),
+        None,
+    )
 
 
 def get_cached_json(namespace: str, identifier: str) -> Optional[dict[str, Any]]:
-    client = get_redis_client()
-    if client is None:
-        return None
-    raw = client.get(_key("cache", namespace, identifier))
+    raw = _safe_redis_call(lambda client: client.get(_key("cache", namespace, identifier)), None)
     if not raw:
         return None
     try:
@@ -105,10 +117,7 @@ def get_cached_json(namespace: str, identifier: str) -> Optional[dict[str, Any]]
 
 
 def delete_cached(namespace: str, identifier: str) -> None:
-    client = get_redis_client()
-    if client is None:
-        return
-    client.delete(_key("cache", namespace, identifier))
+    _safe_redis_call(lambda client: client.delete(_key("cache", namespace, identifier)), 0)
 
 
 def mark_session_active(session_jti: str, payload: dict[str, Any], ttl_seconds: int) -> None:
@@ -120,15 +129,12 @@ def get_active_session(session_jti: str) -> Optional[dict[str, Any]]:
 
 
 def mark_session_revoked(session_jti: str, ttl_seconds: int) -> None:
-    client = get_redis_client()
-    if client is None:
-        return
-    client.setex(_key("session_revoked", session_jti), max(1, int(ttl_seconds)), str(int(time.time())))
-    client.delete(_key("cache", "session_active", session_jti))
+    def _op(client: Redis) -> None:
+        client.setex(_key("session_revoked", session_jti), max(1, int(ttl_seconds)), str(int(time.time())))
+        client.delete(_key("cache", "session_active", session_jti))
+
+    _safe_redis_call(_op, None)
 
 
 def is_session_revoked(session_jti: str) -> bool:
-    client = get_redis_client()
-    if client is None:
-        return False
-    return bool(client.exists(_key("session_revoked", session_jti)))
+    return bool(_safe_redis_call(lambda client: client.exists(_key("session_revoked", session_jti)), False))

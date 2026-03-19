@@ -40,3 +40,15 @@ def test_rate_limit_and_cache_helpers(monkeypatch) -> None:
     assert redis_security_service.get_cached_json("challenge", "abc") == {"ok": True}
     redis_security_service.mark_session_revoked("jti1", 60)
     assert redis_security_service.is_session_revoked("jti1") is True
+
+
+def test_rate_limit_get_disables_broken_redis_client(monkeypatch) -> None:
+    class _BrokenRedis:
+        def get(self, _key):
+            raise RuntimeError("redis down")
+
+    monkeypatch.setattr(redis_security_service, "_REDIS_CLIENT", _BrokenRedis())
+    monkeypatch.setattr(redis_security_service, "_REDIS_UNAVAILABLE", False)
+
+    assert redis_security_service.rate_limit_get("ip", "127.0.0.1") == 0
+    assert redis_security_service._REDIS_UNAVAILABLE is True
