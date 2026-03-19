@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
+from fastapi import Request, Response
+
 from fastapi_modulo.modulos_sipet.web.servicios import auth_service
 
 
@@ -92,3 +94,50 @@ def test_is_password_fingerprint_valid_accepts_global_superadmin(monkeypatch) ->
     expected = auth_service.build_password_fingerprint("XX,$,26,sipet,26,$,XX")
 
     assert auth_service.is_password_fingerprint_valid(_FakeDb(), "0konomiyaki", expected) is True
+
+
+def test_apply_login_session_persists_global_superadmin_zero_user_id(monkeypatch) -> None:
+    stored: dict[str, object] = {}
+    request = Request(
+        {
+            "type": "http",
+            "method": "GET",
+            "path": "/backend/login",
+            "headers": [(b"host", b"127.0.0.1:8000")],
+            "client": ("127.0.0.1", 12345),
+            "scheme": "http",
+            "server": ("127.0.0.1", 8000),
+        }
+    )
+    response = Response()
+
+    monkeypatch.setattr(auth_service, "count_active_sessions", lambda **kwargs: 0)
+    monkeypatch.setattr(auth_service, "should_revoke_other_sessions", lambda **kwargs: False)
+    monkeypatch.setattr(auth_service, "max_concurrent_sessions", lambda **kwargs: 5)
+    monkeypatch.setattr(auth_service, "revoke_user_sessions", lambda **kwargs: None)
+    monkeypatch.setattr(auth_service, "record_security_event", lambda *args, **kwargs: None, raising=False)
+
+    def _store_user_session(**kwargs):
+        stored["store"] = kwargs
+
+    def _mark_session_active(session_jti, payload, ttl_seconds):
+        stored["active"] = {
+            "session_jti": session_jti,
+            "payload": payload,
+            "ttl_seconds": ttl_seconds,
+        }
+
+    monkeypatch.setattr(auth_service, "store_user_session", _store_user_session)
+    monkeypatch.setattr(auth_service, "mark_session_active", _mark_session_active)
+
+    auth_service.apply_login_session(
+        response,
+        request,
+        "0konomiyaki",
+        "superadministrador",
+        user_id=0,
+        password_fingerprint="fingerprint",
+    )
+
+    assert stored["store"]["user_id"] == 0
+    assert stored["active"]["payload"]["user_id"] == 0

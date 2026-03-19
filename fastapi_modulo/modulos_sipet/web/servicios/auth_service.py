@@ -532,13 +532,13 @@ def apply_login_session(
         normalized_role,
         password_fingerprint=password_fingerprint,
     )
-    if user_id:
+    if user_id is not None:
         active_sessions_before = count_active_sessions(user_id=int(user_id), tenant_id=tenant_id)
         if should_revoke_other_sessions(role_name=normalized_role, tenant_id=tenant_id, user_id=user_id):
             revoke_user_sessions(user_id=int(user_id), tenant_id=tenant_id, keep_session_jti=session_jti)
         elif active_sessions_before >= max_concurrent_sessions(role_name=normalized_role, tenant_id=tenant_id, user_id=user_id):
             revoke_user_sessions(user_id=int(user_id), tenant_id=tenant_id)
-    if user_id:
+    if user_id is not None:
         from datetime import datetime, timedelta
 
         expires_at = datetime.utcnow() + timedelta(seconds=SESSION_MAX_AGE_SECONDS)
