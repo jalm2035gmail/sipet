@@ -3,6 +3,8 @@ from __future__ import annotations
 import unicodedata
 from typing import Dict, List, Optional
 
+from sqlalchemy.exc import SQLAlchemyError
+
 from fastapi_modulo.core.db import SessionLocal
 from fastapi_modulo.modulos_sipet.personalizacion.modelos.theme_system import MAIN_THEME_KEYS, build_institutional_theme
 from fastapi_modulo.modulos_sipet.web.modelos.core_models import Colores
@@ -50,9 +52,13 @@ def build_view_buttons_html(view_buttons: Optional[List[Dict]]) -> str:
 def get_colores_context() -> Dict[str, str]:
     db = SessionLocal()
     try:
-        stored_colors = {str(c.key or "").strip(): str(c.value or "").strip() for c in db.query(Colores).all()}
+        try:
+            rows = db.query(Colores).all()
+        except SQLAlchemyError as exc:
+            print(f"[web.ui_shell_service] colores unavailable, using defaults: {exc}", flush=True)
+            rows = []
+        stored_colors = {str(c.key or "").strip(): str(c.value or "").strip() for c in rows}
     finally:
         db.close()
     main_colors = {key: stored_colors.get(key, "") for key in MAIN_THEME_KEYS}
     return build_institutional_theme(main_colors)
-
