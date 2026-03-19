@@ -1,6 +1,7 @@
-from fastapi_modulo.modulos_sipet.web.controladores.backend_auth import router as backend_auth_router
-from fastapi_modulo.modulos_sipet.web.controladores.auth_api import router as auth_api_router
-from fastapi_modulo.modulos_sipet.web.controladores.auth_pages import router as auth_pages_router
-from fastapi_modulo.modulos_sipet.web.controladores.auth_passkey import router as auth_passkey_router
+"""Controladores del backend web.
 
-__all__ = ["auth_api_router", "auth_pages_router", "auth_passkey_router", "backend_auth_router"]
+Este paquete no debe importar routers en tiempo de carga para evitar ciclos
+entre auth, backend_auth y shell durante el arranque.
+"""
+
+__all__: list[str] = []
