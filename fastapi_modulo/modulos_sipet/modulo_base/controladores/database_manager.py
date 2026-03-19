@@ -67,6 +67,8 @@ def _setup_required(request: Request) -> bool:
 
 
 def _enforce_admin_or_setup(request: Request, *, require_setup_auth: bool = False) -> None:
+    if _is_setup_authenticated(request):
+        return
     if _setup_required(request):
         if require_setup_auth and not _is_setup_authenticated(request):
             raise HTTPException(status_code=401, detail="Autenticación requerida para gestionar la base de datos")
@@ -545,9 +547,11 @@ def database_setup_page(request: Request):
             "Inicializar base de datos",
             _setup_login_content() if not _is_setup_authenticated(request) else _manager_content(),
         )
+    if _is_setup_authenticated(request):
+        return _standalone_setup_page("Gestión de bases de datos", _manager_content())
     if not is_superadmin(request):
         return _forbidden_as_not_found()
-    return HTMLResponse("", status_code=303, headers={"Location": "/web/inicio"})
+    return _standalone_setup_page("Gestión de bases de datos", _manager_content())
 
 
 @router.get("/api/base_datos/gestion/list")
@@ -667,8 +671,6 @@ async def initialize_database(request: Request):
 @router.post("/api/base_datos/setup/login")
 async def setup_login(request: Request):
     try:
-        if not _setup_required(request):
-            return JSONResponse({"success": False, "error": "Setup no requerido"}, status_code=404)
         payload = await request.json()
         username = str((payload or {}).get("username") or "").strip()
         password = str((payload or {}).get("password") or "")
@@ -690,11 +692,9 @@ async def setup_login(request: Request):
 
 @router.post("/base_datos/setup/login")
 async def setup_login_form(request: Request, username: str = Form(""), password: str = Form("")):
-    if not _setup_required(request):
-        return RedirectResponse(url="/base_datos/gestion", status_code=303)
     if str(username or "").strip() != _setup_username() or str(password or "") != _setup_password():
         return _standalone_setup_page(
-            "Inicializar base de datos",
+            "Gestión de bases de datos" if not _setup_required(request) else "Inicializar base de datos",
             _setup_login_content() + '<p class="text-sm text-danger">Credenciales inválidas.</p>',
         )
     response = RedirectResponse(url="/base_datos/inicializar", status_code=303)
