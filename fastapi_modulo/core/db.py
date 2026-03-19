@@ -37,6 +37,8 @@ def _normalize_host(value: Optional[str]) -> str:
 def _normalize_dataMAIN_url(raw_url: str) -> str:
     if raw_url.startswith("postgres://"):
         return raw_url.replace("postgres://", "postgresql://", 1)
+    if raw_url.startswith("mysql://"):
+        return raw_url.replace("mysql://", "mysql+pymysql://", 1)
     return raw_url
 
 
@@ -103,6 +105,7 @@ def _prepare_sqlite_directory(sqlite_path: str) -> str:
 def _resolve_default_dataMAIN_url() -> str:
     raw_url = (
         os.environ.get("DATAMAIN_URL")
+        or os.environ.get("MYSQL_URL")
         or os.environ.get("POSTGRES_URL")
         or os.environ.get("POSTGRESQL_URL")
         or ""

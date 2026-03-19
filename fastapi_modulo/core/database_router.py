@@ -37,6 +37,8 @@ def normalize_host(value: Optional[str]) -> str:
 def normalize_database_url(raw_url: str) -> str:
     if raw_url.startswith("postgres://"):
         return raw_url.replace("postgres://", "postgresql://", 1)
+    if raw_url.startswith("mysql://"):
+        return raw_url.replace("mysql://", "mysql+pymysql://", 1)
     return raw_url
 
 
@@ -579,6 +581,7 @@ def resolve_default_database_url() -> str:
 
     raw_url = (
         os.environ.get("DATAMAIN_URL")
+        or os.environ.get("MYSQL_URL")
         or os.environ.get("POSTGRES_URL")
         or os.environ.get("POSTGRESQL_URL")
         or ""

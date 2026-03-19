@@ -1,0 +1,6 @@
+[variables]
+NIXPACKS_PYTHON_VERSION = "3.10"
+NIXPACKS_PYTHON_PACKAGE_MANAGER = "requirements"
+
+[start]
+cmd = "uvicorn fastapi_modulo.main:app --host 0.0.0.0 --port ${PORT}"
