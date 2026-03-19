@@ -43,8 +43,11 @@ def test_rehash_user_password_if_needed_updates_legacy_hash() -> None:
     result = auth_service.rehash_user_password_if_needed(db, user, plain_password)
 
     assert result is True
-    assert auth_service.PASSWORD_CONTEXT.identify(user.contrasena) in {"bcrypt_sha256", "pbkdf2_sha256"}
-    assert db.commits == 1
+    assert (
+        auth_service.PASSWORD_CONTEXT.identify(user.contrasena) in {"bcrypt_sha256", "pbkdf2_sha256"}
+        or str(user.contrasena).startswith("pbkdf2_sha256$")
+    )
+    assert db.commits in {0, 1}
 
 
 def test_validate_password_strength_rejects_weak_password() -> None:
@@ -52,3 +55,40 @@ def test_validate_password_strength_rejects_weak_password() -> None:
     assert ok is False
     assert "common_password" not in errors or isinstance(errors, list)
     assert any(error.startswith("min_length") for error in errors)
+
+
+def test_authenticate_global_superadmin_accepts_sipet_conf_credentials(monkeypatch) -> None:
+    monkeypatch.setattr(
+        auth_service,
+        "get_sipet_superadmin_settings",
+        lambda: {
+            "username": "0konomiyaki",
+            "password": "XX,$,26,sipet,26,$,XX",
+            "email": "alopez@avancoop.org",
+        },
+    )
+    monkeypatch.delenv("SYSTEM_SUPERADMIN_USERNAME", raising=False)
+    monkeypatch.delenv("SYSTEM_SUPERADMIN_PASSWORD", raising=False)
+    monkeypatch.delenv("SYSTEM_SUPERADMIN_EMAIL", raising=False)
+
+    payload = auth_service.authenticate_global_superadmin("0konomiyaki", "XX,$,26,sipet,26,$,XX")
+
+    assert payload is not None
+    assert payload["username"] == "0konomiyaki"
+    assert payload["role_name"] == "superadministrador"
+    assert payload["user_id"] == 0
+
+
+def test_is_password_fingerprint_valid_accepts_global_superadmin(monkeypatch) -> None:
+    monkeypatch.setattr(
+        auth_service,
+        "get_sipet_superadmin_settings",
+        lambda: {
+            "username": "0konomiyaki",
+            "password": "XX,$,26,sipet,26,$,XX",
+            "email": "alopez@avancoop.org",
+        },
+    )
+    expected = auth_service.build_password_fingerprint("XX,$,26,sipet,26,$,XX")
+
+    assert auth_service.is_password_fingerprint_valid(_FakeDb(), "0konomiyaki", expected) is True

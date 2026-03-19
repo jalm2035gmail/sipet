@@ -11,9 +11,14 @@ from typing import Any, Optional
 
 from cryptography.fernet import Fernet, InvalidToken
 from fastapi import Request, Response
+from fastapi_modulo.core.security_compat import ensure_bcrypt_passlib_compat
+
+ensure_bcrypt_passlib_compat()
+
 from passlib.context import CryptContext
 
 from fastapi_modulo.core import db as core_db
+from fastapi_modulo.core.database_router import get_sipet_superadmin_settings
 from fastapi_modulo.modulos_sipet.web.repositorios.core_repository import (
     find_role_name_by_id,
     find_user_by_id as repository_find_user_by_id,
@@ -79,6 +84,68 @@ PASSWORD_CONTEXT = _build_password_context()
 def _sensitive_fernet() -> Fernet:
     key = base64.urlsafe_b64encode(hashlib.sha256(SENSITIVE_DATA_SECRET.encode("utf-8")).digest())
     return Fernet(key)
+
+
+def get_global_superadmin_credentials() -> dict[str, str]:
+    settings = get_sipet_superadmin_settings()
+    username = (
+        os.environ.get("SYSTEM_SUPERADMIN_USERNAME")
+        or settings.get("username")
+        or ""
+    ).strip()
+    password = (
+        os.environ.get("SYSTEM_SUPERADMIN_PASSWORD")
+        or settings.get("password")
+        or ""
+    )
+    email = (
+        os.environ.get("SYSTEM_SUPERADMIN_EMAIL")
+        or settings.get("email")
+        or ""
+    ).strip()
+    return {
+        "username": username,
+        "password": password,
+        "email": email,
+        "role": "superadministrador",
+    }
+
+
+def is_global_superadmin_username(login_value: str) -> bool:
+    normalized_login = (login_value or "").strip().lower()
+    if not normalized_login:
+        return False
+    credentials = get_global_superadmin_credentials()
+    return normalized_login in {
+        str(credentials.get("username") or "").strip().lower(),
+        str(credentials.get("email") or "").strip().lower(),
+    }
+
+
+def authenticate_global_superadmin(login_value: str, password: str) -> Optional[dict[str, Any]]:
+    normalized_login = (login_value or "").strip().lower()
+    provided_password = str(password or "")
+    credentials = get_global_superadmin_credentials()
+    configured_username = str(credentials.get("username") or "").strip()
+    configured_email = str(credentials.get("email") or "").strip()
+    configured_password = str(credentials.get("password") or "")
+    if not configured_username or not configured_password:
+        return None
+    allowed_logins = {configured_username.lower()}
+    if configured_email:
+        allowed_logins.add(configured_email.lower())
+    if normalized_login not in allowed_logins:
+        return None
+    if not hmac.compare_digest(provided_password, configured_password):
+        return None
+    return {
+        "username": configured_username,
+        "email": configured_email,
+        "role_name": "superadministrador",
+        "user_id": 0,
+        "password_fingerprint": build_password_fingerprint(configured_password),
+        "is_global_superadmin": True,
+    }
 
 
 def encrypt_sensitive(value: Optional[str]) -> Optional[str]:
@@ -356,6 +423,11 @@ def password_fingerprint_for_user(user) -> str:
 def is_password_fingerprint_valid(db, username: str, expected_fingerprint: str) -> bool:
     if not expected_fingerprint:
         return True
+    if is_global_superadmin_username(username):
+        configured = get_global_superadmin_credentials()
+        configured_password = str(configured.get("password") or "")
+        if configured_password:
+            return hmac.compare_digest(build_password_fingerprint(configured_password), expected_fingerprint)
     user = find_user_by_login(db, username)
     if not user:
         return False

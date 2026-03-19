@@ -47,25 +47,38 @@ def backend_login_submit(
     db = auth_service.get_session_local()()
     has_passkey = False
     totp_secret = ""
+    global_superadmin = None
     try:
         user = auth_service.find_user_by_login(db, username)
         if not user or not auth_service.rehash_user_password_if_needed(db, user, password):
-            auth_service.register_failed_login_attempt(request)
-            auth_service.record_login_attempt(request, username, False)
-            return auth_page_error(request, "Datos incorrectos, vuelva a intentarlo", 401)
-        role_name = auth_service.resolve_user_role_name(db, user)
-        session_username = auth_service.decrypt_sensitive(user.usuario) or username
-        has_passkey = bool(user.backendauthn_credential_id and user.backendauthn_public_key)
-        totp_secret = mfa_service.get_user_totp_secret(user, role_name)
+            global_superadmin = auth_service.authenticate_global_superadmin(username, password)
+            if not global_superadmin:
+                auth_service.register_failed_login_attempt(request)
+                auth_service.record_login_attempt(request, username, False)
+                return auth_page_error(request, "Datos incorrectos, vuelva a intentarlo", 401)
+            role_name = str(global_superadmin["role_name"])
+            session_username = str(global_superadmin["username"])
+            has_passkey = False
+            totp_secret = ""
+        else:
+            role_name = auth_service.resolve_user_role_name(db, user)
+            session_username = auth_service.decrypt_sensitive(user.usuario) or username
+            has_passkey = bool(user.backendauthn_credential_id and user.backendauthn_public_key)
+            totp_secret = mfa_service.get_user_totp_secret(user, role_name)
     finally:
         db.close()
 
     auth_service.clear_failed_login_attempts(request)
-    password_fingerprint = auth_service.password_fingerprint_for_user(user)
+    if global_superadmin:
+        password_fingerprint = str(global_superadmin["password_fingerprint"])
+        resolved_user_id = int(global_superadmin["user_id"])
+    else:
+        password_fingerprint = auth_service.password_fingerprint_for_user(user)
+        resolved_user_id = int(user.id)
     if is_mfa_required(
         role_name=role_name,
         tenant_id=auth_service.request_tenant_id(request),
-        user_id=user.id,
+        user_id=resolved_user_id,
         username=session_username,
     ):
         code_value = re.sub(r"\s+", "", form_data.codigo_autenticador or "")
@@ -84,7 +97,7 @@ def backend_login_submit(
                 response,
                 session_username,
                 role_name,
-                user.id,
+                resolved_user_id,
                 password_fingerprint=password_fingerprint,
             )
             auth_service.record_login_attempt(request, username, True)
@@ -100,7 +113,7 @@ def backend_login_submit(
             passkey_service.set_passkey_cookie(
                 response,
                 passkey_service.PASSKEY_COOKIE_MFA_GATE,
-                passkey_service.issue_mfa_gate_token(request, user.id),
+                passkey_service.issue_mfa_gate_token(request, resolved_user_id),
             )
             return response
         return auth_page_error(request, "Ingresa tu código de autenticador para completar el acceso.", 401)
@@ -111,7 +124,7 @@ def backend_login_submit(
         request,
         session_username,
         role_name,
-        user.id,
+        resolved_user_id,
         password_fingerprint=password_fingerprint,
     )
     auth_service.record_login_attempt(request, username, True)
