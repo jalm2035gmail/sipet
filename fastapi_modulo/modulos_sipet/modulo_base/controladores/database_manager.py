@@ -322,6 +322,8 @@ def _manager_content() -> str:
       }});
       const data = await res.json();
       if (!res.ok || !data.success) throw new Error(data.error || 'Error al inicializar');
+      const result = data.result || {{}};
+      if (!result.connected) throw new Error(t(result.error || data.error || 'La base no quedo lista para iniciar sesion'));
       showMsg($('db-msg'), 'Base de datos inicializada correctamente.', false);
       await loadEntries();
     }} catch (err) {{
@@ -718,6 +720,11 @@ async def initialize_database(request: Request):
     if getattr(request.app.state, "database_setup_required", False):
         request.app.state.database_setup_required = not bool(result.get("connected"))
         request.app.state.database_setup_error = str(result.get("error") or "")
+    if not bool(result.get("connected")):
+        return JSONResponse(
+            {"success": False, "error": str(result.get("error") or "La base no quedo inicializada"), "result": result},
+            status_code=400,
+        )
     return JSONResponse({"success": True, "result": result, "settings": get_sipet_conf_settings()})
 
 
