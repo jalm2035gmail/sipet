@@ -1,7 +1,8 @@
 import os
+import re
 from pathlib import Path
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 import bcrypt
@@ -13,7 +14,7 @@ from apps.vendors.routes import router as vendors_router
 from apps.products.routes import router as products_router
 from apps.orders.routes import router as orders_router
 from apps.payments.routes import router as payments_router
-from core.db import engine
+from core.db import Base, engine
 
 # Registrar modelos relacionados para resolver relationships SQLAlchemy.
 import apps.analytics.models  # noqa: F401
@@ -36,6 +37,34 @@ templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 SEED_USER_USERNAME = "0konomiyaki"
 SEED_USER_PASSWORD = "XX,$,26,multitienda,26,$,XX"
 SEED_USER_EMAIL = "0konomiyaki@multitienda.local"
+_ROOT_RELATIVE_URL_PATTERN = re.compile(r'(?P<prefix>(?:href|src|action)=["\']|fetch\(["\']|url\(["\']?)\/(?!\/)')
+
+
+def _prefix_root_relative_urls(content: str, root_path: str) -> str:
+    normalized_root = (root_path or "").rstrip("/")
+    if not normalized_root:
+        return content
+    return _ROOT_RELATIVE_URL_PATTERN.sub(lambda match: f"{match.group('prefix')}{normalized_root}/", content)
+
+
+@app.middleware("http")
+async def _apply_mount_root_path(request: Request, call_next):
+    response = await call_next(request)
+    content_type = str(response.headers.get("content-type") or "").lower()
+    if "text/html" not in content_type:
+        return response
+    body = b""
+    async for chunk in response.body_iterator:
+        body += chunk
+    rendered = _prefix_root_relative_urls(body.decode("utf-8"), request.scope.get("root_path", ""))
+    headers = dict(response.headers)
+    headers.pop("content-length", None)
+    return Response(
+        content=rendered,
+        status_code=response.status_code,
+        headers=headers,
+        media_type=response.media_type,
+    )
 
 BACKEND_SHARED_SIDEBAR_CSS = """
     .menu-toggle {
@@ -337,6 +366,7 @@ def render_backend_view_html(html: str, blank_path: str, add_user_path: str, con
 
 @app.on_event("startup")
 def seed_default_user():
+    Base.metadata.create_all(bind=engine)
     User.__table__.create(bind=engine, checkfirst=True)
     with engine.begin() as conn:
         conn.execute(

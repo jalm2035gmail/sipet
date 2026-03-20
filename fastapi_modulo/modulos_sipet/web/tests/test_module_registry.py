@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import importlib
+
 from fastapi_modulo.core import module_registry
 
 
@@ -30,3 +32,18 @@ def test_list_modules_payload_uses_manifest_fafa_when_icon_is_missing(monkeypatc
 
     assert len(payload) == 1
     assert payload[0]["icon"] == "fa-solid fa-building"
+
+
+def test_multitienda_module_is_registered() -> None:
+    module = module_registry.MODULES_BY_KEY["multitienda"]
+
+    assert module.route == "/multitienda"
+    assert module.app_access_name == "Multitienda"
+    assert module.router_specs[0].module_path == "fastapi_modulo.modulos.multitienda.controladores.multitienda"
+
+
+def test_multitienda_wrapper_exposes_mount() -> None:
+    mod = importlib.import_module("fastapi_modulo.modulos.multitienda.controladores.multitienda")
+    paths = [getattr(route, "path", "") for route in mod.router.routes]
+
+    assert "/multitienda" in paths

@@ -1,21 +1,61 @@
 MANIFEST = {'name': 'multitienda',
  'label': 'Multitienda',
- 'summary': 'Modulo multitienda del sistema SIPET.',
- 'description': 'Modulo multitienda del sistema SIPET.',
+ 'fafa': 'fa-solid fa-store',
+ 'summary': 'Marketplace multitienda integrable al runtime de SIPET.',
+ 'description': 'Marketplace multitienda integrado como módulo independiente que reutiliza autenticación, runtime y base de datos de SIPET.',
  'version': '1.0.0',
  'category': 'Operaciones',
  'author': 'SIPET',
  'sequence': '',
  'website': 'https://avancoop.org',
  'route': '/multitienda',
- 'icon': '',
- 'depends': ['main'],
+ 'icon': 'fa-solid fa-store',
+ 'screen_access_levels': {
+     'multitienda': {
+         'screen_key': 'multitienda',
+         'label': 'Multitienda',
+         'levels': {
+             'full_access': {
+                 'label': 'Administrador',
+                 'description': 'Administra por completo el marketplace, configuración, catálogos y operación comercial.',
+             },
+             'special_permissions': {
+                 'label': 'Gestor comercial',
+                 'description': 'Opera el marketplace y gestiona tiendas, productos y pedidos sin administrar accesos globales.',
+             },
+             'read_only': {
+                 'label': 'Solo lectura',
+                 'description': 'Consulta tiendas, pedidos y métricas del marketplace sin editar información.',
+             },
+         },
+     },
+     'multitienda.gestion': {
+         'screen_key': 'multitienda.gestion',
+         'label': 'Gestión del marketplace',
+         'levels': {
+             'full_access': {
+                 'label': 'Gestión completa',
+                 'description': 'Accede a panel administrativo, configuración, vendedores y operación del marketplace.',
+             },
+             'special_permissions': {
+                 'label': 'Operador',
+                 'description': 'Gestiona operación comercial y seguimiento de tiendas sin administrar seguridad global.',
+             },
+             'read_only': {
+                 'label': 'Solo lectura',
+                 'description': 'Consulta el panel y la operación del marketplace sin realizar cambios.',
+             },
+         },
+     },
+ },
+ 'depends': ['web'],
  'data': [],
- 'assets': {'css': [], 'js': [], 'description': [], 'img': []},
- 'structure': {},
+ 'assets': {'css': [], 'js': [], 'description': ['marketplace/static/description/marketplace.svg'], 'img': []},
+ 'structure': {'router': ['controladores/multitienda.py'],
+               'backend': ['marketplace/backend/main.py', 'marketplace/backend/apps/', 'marketplace/backend/core/']},
  'installable': True,
  'application': True,
  'auto_install': False}
-MANIFEST['sidebar'] = {'icon': 'fafa', 'label': 'Multitienda', 'route': '/multitienda'}
+MANIFEST['sidebar'] = {'icon': 'fa-solid fa-store', 'label': 'Multitienda', 'route': '/multitienda'}
 
 __all__ = ["MANIFEST"]

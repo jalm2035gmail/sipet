@@ -1,0 +1,7 @@
+.env.local
+.logs/
+marketplace/backend/__pycache__/
+marketplace/backend/apps/**/__pycache__/
+marketplace/backend/core/__pycache__/
+marketplace/backend/tasks/__pycache__/
+marketplace/backend/.env

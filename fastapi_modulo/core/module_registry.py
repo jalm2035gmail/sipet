@@ -314,6 +314,18 @@ MODULE_DEFINITIONS: List[ModuleDefinition] = [
         router_specs=[RouterSpec("fastapi_modulo.modulos.reportes.controladores.reportes")],
     ),
     ModuleDefinition(
+        key="multitienda",
+        label="Multitienda",
+        description="Marketplace multitienda integrado al runtime de SIPET.",
+        route="/multitienda",
+        icon="fa-solid fa-store",
+        manifest_file="fastapi_modulo/modulos/multitienda/__manifest__.py",
+        app_access_name="Multitienda",
+        sidebar_visible=True,
+        manageable=True,
+        router_specs=[RouterSpec("fastapi_modulo.modulos.multitienda.controladores.multitienda")],
+    ),
+    ModuleDefinition(
         key="frontend",
         label="Frontend",
         description="Sitio backend y constructor frontend.",
