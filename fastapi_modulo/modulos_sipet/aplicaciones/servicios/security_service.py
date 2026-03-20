@@ -6,6 +6,10 @@ from datetime import datetime, timedelta, timezone
 
 from fastapi import HTTPException
 from jose import JWTError, jwt
+from fastapi_modulo.core.security_compat import ensure_bcrypt_passlib_compat
+
+ensure_bcrypt_passlib_compat()
+
 from passlib.context import CryptContext
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")

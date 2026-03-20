@@ -19,6 +19,13 @@ from urllib.parse import urlparse
 from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field, ConfigDict
 from dotenv import load_dotenv
+
+RUNTIME_APP_FILE = Path(__file__).resolve()
+REPO_ROOT = RUNTIME_APP_FILE.parents[3]
+MODULE_ROOT = RUNTIME_APP_FILE.parents[1]
+load_dotenv(REPO_ROOT / ".env")
+load_dotenv(MODULE_ROOT / ".env")
+
 from fastapi import Request, UploadFile, HTTPException
 from fastapi import File
 from fastapi import FastAPI
@@ -110,7 +117,6 @@ templates = Jinja2Templates(directory="fastapi_modulo")
 date = Date
 
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-load_dotenv(os.path.join(PROJECT_ROOT, ".env"))
 
 HIDDEN_SYSTEM_USERS = {"0konomiyaki"}
 PROCESS_STARTED_AT = time.time()
@@ -2393,12 +2399,12 @@ def _has_app_access(request: Request, app_name: str) -> bool:
 
 @app.get("/", response_class=HTMLResponse)
 def root():
-    return RedirectResponse(url="/backend/inicio", status_code=308)
+    return RedirectResponse(url="/web/inicio", status_code=308)
 
 
 @app.head("/", response_class=HTMLResponse)
 def root_head():
-    return RedirectResponse(url="/backend/inicio", status_code=308)
+    return RedirectResponse(url="/web/inicio", status_code=308)
 
 # Área de configuración de imagen (menú)
 @app.get("/configura-imagen", response_class=HTMLResponse)

@@ -1,0 +1,119 @@
+{% for section in sections %}
+<section class="enc-preview-section">
+  <header>
+    <h3>{{ section.titulo or "Seccion" }}</h3>
+    <p>{{ section.descripcion or "" }}</p>
+  </header>
+  <div class="enc-preview-questions">
+    {% set questions = section.questions or [] %}
+    {% if questions %}
+      {% for question in questions %}
+        {% set qtype = question.question_type or "short_text" %}
+        {% set options = question.options or [] %}
+        {% set config = question.config_json or {} %}
+        <article class="enc-preview-question">
+          <h4>{{ question.titulo or "Pregunta sin titulo" }}</h4>
+          <p>{{ question.descripcion or "" }}</p>
+          <small>{{ question.question_type_label or qtype }}</small>
+          <div class="enc-preview-field">
+            {% if qtype == "long_text" %}
+              <textarea class="enc-preview-input enc-preview-textarea" placeholder="Respuesta abierta"></textarea>
+
+            {% elif qtype in ["short_text", "word_cloud"] %}
+              <input class="enc-preview-input" type="text" placeholder="{{ config.placeholder or 'Respuesta breve' }}" />
+
+            {% elif qtype in ["single_choice", "live_poll_single_choice", "quiz_single_choice", "yes_no", "image_choice"] %}
+              {% if options %}
+                {% for option in options %}
+                  <label class="enc-preview-choice"><input type="radio" name="q-{{ question.id }}" /> <span>{{ option.label }}</span></label>
+                {% endfor %}
+              {% else %}
+                <div class="enc-preview-empty">Sin opciones configuradas.</div>
+              {% endif %}
+
+            {% elif qtype == "multiple_choice" %}
+              {% if options %}
+                {% for option in options %}
+                  <label class="enc-preview-choice"><input type="checkbox" /> <span>{{ option.label }}</span></label>
+                {% endfor %}
+              {% else %}
+                <div class="enc-preview-empty">Sin opciones configuradas.</div>
+              {% endif %}
+
+            {% elif qtype == "ranking" %}
+              {% if options %}
+                {% for option in options %}
+                  <label class="enc-preview-choice"><span>{{ loop.index }}. {{ option.label }}</span></label>
+                {% endfor %}
+              {% else %}
+                <div class="enc-preview-empty">Sin opciones configuradas.</div>
+              {% endif %}
+
+            {% elif qtype in ["scale_1_5", "live_scale_1_5", "nps_0_10"] %}
+              {% if options %}
+                {% for option in options %}
+                  <button type="button" class="enc-preview-scale">{{ option.label }}</button>
+                {% endfor %}
+              {% else %}
+                <div class="enc-preview-empty">Escala pendiente.</div>
+              {% endif %}
+
+            {% elif qtype in ["matrix", "likert_scale", "semantic_differential"] %}
+              {% set columns = config.columns or [] %}
+              <table class="enc-table">
+                <thead>
+                  <tr>
+                    <th>Ítem</th>
+                    {% for col in columns %}<th>{{ col.label }}</th>{% endfor %}
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for option in options %}
+                    <tr>
+                      <td>{{ option.label }}</td>
+                      {% for _ in columns %}<td>○</td>{% endfor %}
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+
+            {% elif qtype == "dropdown" %}
+              <select class="enc-preview-input">
+                {% for option in options %}
+                  <option>{{ option.label }}</option>
+                {% endfor %}
+              </select>
+
+            {% elif qtype == "slider" %}
+              <input class="enc-preview-input" type="range"
+                min="{{ config.min or 0 }}"
+                max="{{ config.max or 10 }}"
+                step="{{ config.step or 1 }}" />
+
+            {% elif qtype == "true_false" %}
+              <label class="enc-preview-choice"><input type="radio" name="q-{{ question.id }}" /> <span>Verdadero</span></label>
+              <label class="enc-preview-choice"><input type="radio" name="q-{{ question.id }}" /> <span>Falso</span></label>
+
+            {% elif qtype == "date" %}
+              <input class="enc-preview-input" type="date" />
+
+            {% elif qtype == "time" %}
+              <input class="enc-preview-input" type="time" />
+
+            {% elif qtype == "file_upload" %}
+              <input class="enc-preview-input" type="file" />
+
+            {% else %}
+              <input class="enc-preview-input" type="text" placeholder="Respuesta..." />
+            {% endif %}
+          </div>
+        </article>
+      {% endfor %}
+    {% else %}
+      <div class="enc-preview-empty">Agrega preguntas para visualizar la encuesta.</div>
+    {% endif %}
+  </div>
+</section>
+{% else %}
+<div class="enc-preview-empty">Agrega secciones para visualizar la encuesta.</div>
+{% endfor %}

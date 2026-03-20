@@ -1,10 +1,4 @@
-(trapped) error reading bcrypt version
-Traceback (most recent call last):
-  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/passlib/handlers/bcrypt.py", line 620, in _load_backend_mixin
-    version = _bcrypt.__about__.__version__
-AttributeError: module 'bcrypt' has no attribute '__about__'
-[startup] static mount skipped /modulos/activo_fijo/static: directory 'fastapi_modulo/modulos/activo_fijo/static' does not exist
-INFO:     Started server process [91602]
+INFO:     Started server process [3835]
 INFO:     Waiting for application startup.
 [startup] core_schema begin
 [startup] create_all ok
@@ -20,70 +14,113 @@ INFO:     Waiting for application startup.
 [startup] strategic_axes_data ok
 [startup] core_schema done
 [startup] register startup routers begin
+[startup] module startup instalacion_core begin
+[startup] import fastapi_modulo.modulos_sipet.instalacion.controladores.instalacion
+[startup] import fastapi_modulo.modulos_sipet.instalacion.controladores.instalacion done
+[startup] module startup instalacion_core done
 [startup] module startup mi_tablero begin
 [startup] import fastapi_modulo.modulos.mi_tablero.controladores.mi_tablero
-[startup] module mi_tablero not installed — skipped
+[startup] import fastapi_modulo.modulos.mi_tablero.controladores.mi_tablero done
+[startup] module startup mi_tablero done
 [startup] module startup conversaciones begin
 [startup] import fastapi_modulo.modulos.notificaciones.controladores.notificaciones
-[startup] module conversaciones not installed — skipped
+[startup] import fastapi_modulo.modulos.notificaciones.controladores.notificaciones done
+[startup] module startup conversaciones done
 [startup] module startup organizacion begin
 [startup] import fastapi_modulo.modulos.empleados.controladores.empleados
-[startup] module organizacion not installed — skipped
+[startup] module organizacion not installed or incomplete — skipped: No module named 'fastapi_modulo.modulos.empleados'
 [startup] module startup estrategia_tactica begin
 [startup] import fastapi_modulo.modulos.planificacion.controladores.annual_cycle_service
-[startup] module estrategia_tactica not installed — skipped
+[startup] import fastapi_modulo.modulos.planificacion.controladores.annual_cycle_service done
+[startup] import fastapi_modulo.modulos.planificacion.controladores.plan_estrategico
+[startup] module estrategia_tactica not installed or incomplete — skipped: No module named 'fastapi_modulo.modulos.empleados'
 [startup] module startup datos_financieros begin
 [startup] import fastapi_modulo.modulos.proyectando.controladores.presupuesto
-[startup] module datos_financieros not installed — skipped
-[startup] module startup mesa_control begin
-[startup] import fastapi_modulo.modulos.mesa_control.controladores.mesa_control
-[startup] module mesa_control not installed — skipped
+[startup] import fastapi_modulo.modulos.proyectando.controladores.presupuesto done
+[startup] import fastapi_modulo.modulos.proyectando.controladores.tablero
+[startup] import fastapi_modulo.modulos.proyectando.controladores.tablero done
+[startup] import fastapi_modulo.modulos.proyectando.controladores.datos_preliminares
+[startup] import fastapi_modulo.modulos.proyectando.controladores.datos_preliminares done
+[startup] import fastapi_modulo.modulos.proyectando.controladores.crecimiento_general
+[startup] import fastapi_modulo.modulos.proyectando.controladores.crecimiento_general done
+[startup] import fastapi_modulo.modulos.proyectando.controladores.sucursales
+[startup] import fastapi_modulo.modulos.proyectando.controladores.sucursales done
+[startup] import fastapi_modulo.modulos.proyectando.controladores.no_acceso
+[startup] import fastapi_modulo.modulos.proyectando.controladores.no_acceso done
+[startup] module startup datos_financieros done
 [startup] module startup cartera_prestamos begin
 [startup] import fastapi_modulo.modulos.cartera_prestamos.controladores.cartera_prestamos
-[startup] module cartera_prestamos not installed — skipped
+[startup] import fastapi_modulo.modulos.cartera_prestamos.controladores.cartera_prestamos done
+[startup] module startup cartera_prestamos done
 [startup] module startup pld begin
 [startup] import fastapi_modulo.modulos.pld.controladores.pld
-[startup] module pld not installed — skipped
+[startup] import fastapi_modulo.modulos.pld.controladores.pld done
+[startup] module startup pld done
 [startup] module startup mkt begin
 [startup] import fastapi_modulo.modulos.mkt.controladores.mkt
-[startup] module mkt not installed — skipped
+[startup] import fastapi_modulo.modulos.mkt.controladores.mkt done
+[startup] module startup mkt done
 [startup] module startup intelicoop begin
 [startup] import fastapi_modulo.modulos.intelicoop.controladores.intelicoop
-[startup] module intelicoop not installed — skipped
+[startup] import fastapi_modulo.modulos.intelicoop.controladores.intelicoop done
+[startup] module startup intelicoop done
 [startup] module startup brujula begin
 [startup] import fastapi_modulo.modulos.brujula.controladores.brujula
-[startup] module brujula not installed — skipped
+[startup] import fastapi_modulo.modulos.brujula.controladores.brujula done
+[startup] module startup brujula done
 [startup] module startup crm begin
 [startup] import fastapi_modulo.modulos.crm.controladores.crm
-[startup] module crm not installed — skipped
+[startup] import fastapi_modulo.modulos.crm.controladores.crm done
+[startup] module startup crm done
 [startup] module startup encuestas begin
 [startup] import fastapi_modulo.modulos.encuestas.controladores.encuesta
-[startup] module encuestas not installed — skipped
+[startup] import fastapi_modulo.modulos.encuestas.controladores.encuesta done
+[startup] module startup encuestas done
 [startup] module startup auditoria begin
 [startup] import fastapi_modulo.modulos.auditoria.controladores.auditoria
-[startup] module auditoria not installed — skipped
+[startup] import fastapi_modulo.modulos.auditoria.controladores.auditoria done
+[startup] module startup auditoria done
 [startup] module startup activo_fijo begin
 [startup] import fastapi_modulo.modulos.activo_fijo.controladores.activo_fijo
-[startup] module activo_fijo not installed — skipped
+[startup] import fastapi_modulo.modulos.activo_fijo.controladores.activo_fijo done
+[startup] module startup activo_fijo done
 [startup] module startup bsc begin
 [startup] import fastapi_modulo.modulos.main.controladores.inicio
-[startup] module bsc not installed — skipped
+[startup] import fastapi_modulo.modulos.main.controladores.inicio done
+[startup] module startup bsc done
 [startup] module startup control_seguimiento begin
 [startup] import fastapi_modulo.modulos.control_interno.controladores.control
-[startup] module control_seguimiento not installed — skipped
+[startup] import fastapi_modulo.modulos.control_interno.controladores.control done
+[startup] import fastapi_modulo.modulos.control_interno.controladores.programa
+[startup] import fastapi_modulo.modulos.control_interno.controladores.programa done
+[startup] import fastapi_modulo.modulos.control_interno.controladores.evidencia
+[startup] import fastapi_modulo.modulos.control_interno.controladores.evidencia done
+[startup] import fastapi_modulo.modulos.control_interno.controladores.hallazgos
+[startup] import fastapi_modulo.modulos.control_interno.controladores.hallazgos done
+[startup] import fastapi_modulo.modulos.control_interno.controladores.tablero
+[startup] import fastapi_modulo.modulos.control_interno.controladores.tablero done
+[startup] import fastapi_modulo.modulos.control_interno.controladores.reportes_ci
+[startup] import fastapi_modulo.modulos.control_interno.controladores.reportes_ci done
+[startup] module startup control_seguimiento done
 [startup] module startup kpis begin
 [startup] import fastapi_modulo.modulos.kpis.controladores.kpis
-[startup] module kpis not installed — skipped
+[startup] import fastapi_modulo.modulos.kpis.controladores.kpis done
+[startup] module startup kpis done
 [startup] module startup reportes begin
 [startup] import fastapi_modulo.modulos.reportes.controladores.reportes
-[startup] module reportes not installed — skipped
+[startup] module reportes not installed or incomplete — skipped: No module named 'fastapi_modulo.modulos.personalizacion'
+[startup] module startup frontend begin
+[startup] import fastapi_modulo.modulos_sipet.frontend.controladores.frontend
+[startup] import fastapi_modulo.modulos_sipet.frontend.controladores.frontend done
+[startup] module startup frontend done
 [startup] module startup empresa begin
 [startup] import fastapi_modulo.modulos_sipet.identidad_institucional.controladores.identidad_institucional
 [startup] import fastapi_modulo.modulos_sipet.identidad_institucional.controladores.identidad_institucional done
 [startup] module startup empresa done
 [startup] module startup capacitacion begin
 [startup] import fastapi_modulo.modulos.capacitacion.controladores.capacitacion
-[startup] module capacitacion not installed — skipped
+[startup] import fastapi_modulo.modulos.capacitacion.controladores.capacitacion done
+[startup] module startup capacitacion done
 [startup] module startup multiempresa begin
 [startup] import fastapi_modulo.modulos_sipet.multiempresa.controladores.multiempresa
 [startup] import fastapi_modulo.modulos_sipet.multiempresa.controladores.multiempresa done
@@ -93,36 +130,44 @@ INFO:     Waiting for application startup.
 [startup] import fastapi_modulo.modulos_sipet.aplicaciones.controladores.aplicaciones done
 [startup] module startup system_admin done
 [startup] module startup personalizacion_core begin
-[startup] import fastapi_modulo.modulos.personalizacion.controladores.personalizar
-[startup] module personalizacion_core not installed — skipped
+[startup] import fastapi_modulo.modulos_sipet.personalizacion.controladores.personalizar
+[startup] import fastapi_modulo.modulos_sipet.personalizacion.controladores.personalizar done
+[startup] module startup personalizacion_core done
 [startup] module startup membresia_core begin
 [startup] import fastapi_modulo.modulos_sipet.aplicaciones.controladores.membresia
 [startup] import fastapi_modulo.modulos_sipet.aplicaciones.controladores.membresia done
 [startup] module startup membresia_core done
 [startup] module startup roles_core begin
-[startup] import fastapi_modulo.modulos.personalizacion.controladores.roles
-[startup] module roles_core not installed — skipped
+[startup] import fastapi_modulo.modulos_sipet.personalizacion.controladores.roles
+[startup] import fastapi_modulo.modulos_sipet.personalizacion.controladores.roles done
+[startup] module startup roles_core done
 [startup] module startup plantillas_core begin
 [startup] import fastapi_modulo.modulos.plantillas.controladores.plantillas_forms
-[startup] module plantillas_core not installed — skipped
+[startup] module plantillas_core not installed or incomplete — skipped: 'fastapi_modulo.modulos.plantillas'
 [startup] module startup diagnostico_core begin
 [startup] import fastapi_modulo.modulos.diagnostico.controladores.diagnostico
-[startup] module diagnostico_core not installed — skipped
+[startup] import fastapi_modulo.modulos.diagnostico.controladores.diagnostico done
+[startup] module startup diagnostico_core done
 [startup] module startup ajustes_ia_core begin
 [startup] import fastapi_modulo.modulos_sipet.web.controladores.ajustes_ia
 [startup] import fastapi_modulo.modulos_sipet.web.controladores.ajustes_ia done
 [startup] module startup ajustes_ia_core done
 [startup] module startup ajustes_core begin
 [startup] import fastapi_modulo.modulos.main.controladores.ajustes
-[startup] module ajustes_core not installed — skipped
+[startup] import fastapi_modulo.modulos.main.controladores.ajustes done
+[startup] module startup ajustes_core done
 [startup] module startup ia_core begin
 [startup] import fastapi_modulo.modulos.ia.controladores.ia_router
-[startup] module ia_core not installed — skipped
+[startup] import fastapi_modulo.modulos.ia.controladores.ia_router done
+[startup] import fastapi_modulo.modulos.ia.controladores.predictivo
+[startup] import fastapi_modulo.modulos.ia.controladores.predictivo done
+[startup] module startup ia_core done
 [startup] register startup routers done
 [startup] register late routers begin
-[startup] module late backend begin
-[startup] import fastapi_modulo.modulos.frontend.controladores.frontend
-[startup] module backend not installed — skipped
 [startup] register late routers done
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     127.0.0.1:62943 - "GET /backend/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62944 - "GET /web HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:62944 - "GET /web/inicio HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62944 - "GET /favicon.ico HTTP/1.1" 404 Not Found

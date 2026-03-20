@@ -1,12 +1,13 @@
-<section id="empresa-usuarios-module" class="w-full space-y-4">
+<section id="empresa-usuarios-module" class="w-full space-y-4" data-initial-section="{{ initial_section | default('usuarios') }}">
   <style>
     .access-module-block {
       display: grid;
       gap: 1.5rem;
+      color: var(--body-text, #0f172a);
     }
 
     .access-module-block__header {
-      border-bottom: 1px solid oklch(var(--bc) / 0.2);
+      border-bottom: 1px solid color-mix(in srgb, var(--body-text, #0f172a) 20%, transparent);
       padding-bottom: 0.25rem;
     }
 
@@ -15,7 +16,7 @@
       font-weight: 600;
       letter-spacing: 0.04em;
       text-transform: uppercase;
-      color: oklch(var(--bc) / 0.7);
+      color: color-mix(in srgb, var(--body-text, #0f172a) 70%, transparent);
     }
 
     .access-module-block__row {
@@ -27,13 +28,13 @@
       padding-top: 0.5rem;
       font-size: 0.875rem;
       font-weight: 500;
-      color: oklch(var(--bc) / 1);
+      color: var(--body-text, #0f172a);
     }
 
     .access-module-block__name-line {
       margin-top: 0.75rem;
       width: 100%;
-      border-bottom: 1px solid oklch(var(--bc) / 0.18);
+      border-bottom: 1px solid color-mix(in srgb, var(--body-text, #0f172a) 18%, transparent);
     }
 
     .access-module-block__content {
@@ -44,7 +45,7 @@
 
     .access-module-block__hint {
       font-size: 0.75rem;
-      color: oklch(var(--bc) / 0.6);
+      color: color-mix(in srgb, var(--body-text, #0f172a) 60%, transparent);
     }
 
     .access-module-block__panel {
@@ -70,7 +71,7 @@
 
     .access-module-block__note {
       font-size: 0.75rem;
-      color: oklch(var(--bc) / 0.7);
+      color: color-mix(in srgb, var(--body-text, #0f172a) 70%, transparent);
     }
 
     .access-module-grid {
@@ -81,7 +82,7 @@
     .access-module-card {
       display: grid;
       gap: 0.875rem;
-      border: 1px solid oklch(var(--bc) / 0.12);
+      border: 1px solid color-mix(in srgb, var(--body-text, #0f172a) 12%, transparent);
       border-radius: 20px;
       background: var(--b1, #fff);
       padding: 1rem 1.125rem;
@@ -93,12 +94,12 @@
       font-weight: 700;
       letter-spacing: 0.04em;
       text-transform: uppercase;
-      color: oklch(var(--bc) / 0.85);
+      color: color-mix(in srgb, var(--body-text, #0f172a) 85%, transparent);
     }
 
     .access-module-card__divider {
       width: 100%;
-      border-top: 1px solid oklch(var(--bc) / 0.14);
+      border-top: 1px solid color-mix(in srgb, var(--body-text, #0f172a) 14%, transparent);
     }
 
     .access-module-card__fields {
@@ -107,7 +108,7 @@
     }
 
     .access-module-card__panel {
-      border: 1px solid oklch(var(--bc) / 0.12);
+      border: 1px solid color-mix(in srgb, var(--body-text, #0f172a) 12%, transparent);
       border-radius: 20px;
       background: color-mix(in srgb, var(--b1, #ffffff) 86%, var(--b2, #f3f4f6) 14%);
       padding: 1rem;
@@ -121,7 +122,7 @@
     .access-module-card__control-label {
       font-size: 0.95rem;
       font-weight: 700;
-      color: oklch(var(--bc) / 0.92);
+      color: color-mix(in srgb, var(--body-text, #0f172a) 92%, transparent);
     }
 
     .access-module-card__select {
@@ -134,7 +135,7 @@
       justify-content: flex-start;
       gap: 0.75rem;
       min-height: 0;
-      border: 1px solid oklch(var(--bc) / 0.1);
+      border: 1px solid color-mix(in srgb, var(--body-text, #0f172a) 10%, transparent);
       border-radius: 999px;
       background: color-mix(in srgb, var(--b1, #ffffff) 88%, var(--b2, #f3f4f6) 12%);
       padding: 0.75rem 1rem;
@@ -144,7 +145,72 @@
     .access-module-card__toggle-label {
       font-size: 0.95rem;
       font-weight: 400;
-      color: oklch(var(--bc) / 0.92);
+      color: color-mix(in srgb, var(--body-text, #0f172a) 92%, transparent);
+    }
+
+    .access-reference-grid {
+      display: grid;
+      gap: 1rem;
+    }
+
+    .access-reference-card {
+      display: grid;
+      gap: 0.9rem;
+      border: 1px solid color-mix(in srgb, var(--body-text, #0f172a) 12%, transparent);
+      border-radius: 20px;
+      background: var(--b1, #fff);
+      padding: 1rem 1.125rem;
+    }
+
+    .access-reference-card__title {
+      margin: 0;
+      font-size: 0.95rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: color-mix(in srgb, var(--body-text, #0f172a) 85%, transparent);
+    }
+
+    .access-reference-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.55rem;
+    }
+
+    .access-reference-tag {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      border: 1px solid color-mix(in srgb, var(--body-text, #0f172a) 14%, transparent);
+      background: color-mix(in srgb, var(--b1, #ffffff) 86%, var(--b2, #f3f4f6) 14%);
+      padding: 0.45rem 0.8rem;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: color-mix(in srgb, var(--body-text, #0f172a) 92%, transparent);
+    }
+
+    .access-reference-list {
+      display: grid;
+      gap: 0.65rem;
+    }
+
+    .access-reference-list-item {
+      border-radius: 16px;
+      border: 1px solid color-mix(in srgb, var(--body-text, #0f172a) 10%, transparent);
+      background: color-mix(in srgb, var(--b1, #ffffff) 88%, var(--b2, #f3f4f6) 12%);
+      padding: 0.85rem 0.95rem;
+    }
+
+    .access-reference-list-item strong {
+      display: block;
+      margin-bottom: 0.2rem;
+      color: color-mix(in srgb, var(--body-text, #0f172a) 95%, transparent);
+    }
+
+    .access-reference-list-item span {
+      display: block;
+      font-size: 0.85rem;
+      color: color-mix(in srgb, var(--body-text, #0f172a) 68%, transparent);
     }
 
     @media (min-width: 768px) {
@@ -164,8 +230,22 @@
       .access-module-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
       }
+
+      .access-reference-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
     }
   </style>
+  {% set active_section = initial_section | default('usuarios') %}
+  {% set section_title = 'Usuarios' %}
+  {% set section_description = 'Administra roles y permisos de acceso de los usuarios del sistema.' %}
+  {% if active_section == 'roles' %}
+    {% set section_title = 'Roles' %}
+    {% set section_description = 'Define perfiles base de roles y sus permisos predeterminados.' %}
+  {% elif active_section == 'acceso' %}
+    {% set section_title = 'Niveles de acceso' %}
+    {% set section_description = 'Configura niveles de acceso por módulo y por pantalla para cada rol.' %}
+  {% endif %}
   <div class="titulo bg-MAIN-200 rounded-box border border-MAIN-300 p-4 sm:p-6">
     <div class="w-full flex flex-col md:flex-row items-center gap-10">
       <img
@@ -176,10 +256,15 @@
         class="shrink-0 rounded-box border border-MAIN-300 bg-MAIN-100 p-3 object-contain"
       />
       <div class="w-full grid gap-2 content-center">
-        <div class="block w-full text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight text-[color:var(--sidebar-bottom)]">Usuarios</div>
-        <div class="block w-full text-MAIN sm:text-lg text-MAIN-content/70">Administra roles y permisos de acceso de los usuarios del sistema.</div>
+        <div class="block w-full text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight text-[color:var(--sidebar-bottom)]">{{ section_title }}</div>
+        <div class="block w-full text-MAIN sm:text-lg text-MAIN-content/70">{{ section_description }}</div>
       </div>
     </div>
+  </div>
+  <div class="tabs tabs-boxed w-full justify-start gap-2 bg-MAIN-100 border border-MAIN-300 p-2">
+    <a href="/empresa/usuarios" class="tab {{ 'tab-active' if active_section == 'usuarios' else '' }}">Usuarios</a>
+    <a href="/empresa/usuarios/roles" class="tab {{ 'tab-active' if active_section == 'roles' else '' }}">Roles</a>
+    <a href="/empresa/usuarios/acceso" class="tab {{ 'tab-active' if active_section == 'acceso' else '' }}">Niveles de acceso</a>
   </div>
 
   <template id="usuarios-create-template">
@@ -188,7 +273,7 @@
         <h3 class="card-title" id="usuarios-create-title">Alta de usuario</h3>
         <p class="text-sm text-MAIN-content/70" id="usuarios-create-description">Crea un nuevo colaborador del sistema y define su acceso inicial.</p>
       </div>
-      <form id="usuarios-create-form" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+      <form id="usuarios-create-form" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         <label class="form-control">
           <div class="label"><span class="label-text font-semibold">Nombre</span></div>
           <input type="text" name="nombre" class="input input-bordered" placeholder="Nombre completo" required>
@@ -205,6 +290,24 @@
           <div class="label"><span class="label-text font-semibold">Contraseña</span></div>
           <input type="password" name="contrasena" class="input input-bordered" placeholder="Mínimo 8 caracteres" required>
         </label>
+        <label class="form-control">
+          <div class="label"><span class="label-text font-semibold">Rol</span></div>
+          <select name="rol" id="usuarios-create-rol" class="select select-bordered">
+            <option value="usuario">Usuario</option>
+          </select>
+        </label>
+        <label class="form-control">
+          <div class="label"><span class="label-text font-semibold">Nivel de acceso</span></div>
+          <select name="nivel_acceso" id="usuarios-create-nivel-acceso" class="select select-bordered">
+            <option value="">Heredar del rol</option>
+            <option value="full_access">Acceso total</option>
+            <option value="read_only">Solo lectura</option>
+            <option value="department_only">Solo departamento</option>
+            <option value="user_only">Solo usuario</option>
+            <option value="special_permissions">Permisos especiales</option>
+            <option value="__custom__" disabled>Personalizado por modulo</option>
+          </select>
+        </label>
         <label class="label justify-start gap-3 cursor-pointer rounded-box border border-MAIN-300 bg-MAIN-100 px-4 py-3">
           <input type="checkbox" name="empleado" class="checkbox">
           <span class="label-text font-semibold">Empleado</span>
@@ -213,7 +316,7 @@
           <input type="checkbox" name="totp_enabled" class="checkbox">
           <span class="label-text font-semibold">Habilitar doble autenticación</span>
         </label>
-        <div class="md:col-span-2 xl:col-span-2 flex items-end">
+        <div class="md:col-span-2 xl:col-span-3 flex items-end">
           <button type="submit" class="btn btn-primary" id="usuarios-create-submit">Dar de alta</button>
         </div>
       </form>
@@ -221,7 +324,7 @@
     </div>
   </template>
 
-  <article class="card bg-MAIN-100 border border-MAIN-300 shadow-sm">
+  <article class="card bg-MAIN-100 border border-MAIN-300 shadow-sm {{ 'hidden' if active_section != 'usuarios' else '' }}">
     <div class="card-body gap-4">
       <div class="view-buttons page-view-buttons">
         <button class="view-pill boton_vista active" type="button" data-usuarios-view="list" data-tooltip="Lista" aria-label="Lista">
@@ -255,14 +358,87 @@
     </div>
   </article>
 
+  <article class="card bg-MAIN-100 border border-MAIN-300 shadow-sm">
+    <div class="card-body gap-4">
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        <div class="grid gap-1">
+          <h3 class="card-title">{{ 'Niveles de acceso' if active_section == 'acceso' else 'Perfiles de rol' }}</h3>
+          <p class="text-sm text-MAIN-content/70">
+            {% if active_section == 'acceso' %}
+              Configura el acceso base por rol, incluyendo módulos y pantallas específicas de Empresa.
+            {% else %}
+              Define el acceso base por rol. Los usuarios pueden heredar este perfil o usar una sobreescritura propia.
+            {% endif %}
+          </p>
+        </div>
+      </div>
+      <div id="role-profiles-panel"></div>
+    </div>
+  </article>
+
+  {% if active_section == 'acceso' %}
+  <article class="card bg-MAIN-100 border border-MAIN-300 shadow-sm">
+    <div class="card-body gap-4">
+      <div class="grid gap-1">
+        <h3 class="card-title">Usuarios, roles y niveles</h3>
+        <p class="text-sm text-MAIN-content/70">Vista rápida de los usuarios del sistema, su rol asignado y si el nivel de acceso es heredado o personalizado.</p>
+      </div>
+      <div id="access-users-summary-panel">
+        <div class="rounded-box border border-dashed border-MAIN-300 bg-MAIN-100 p-4 text-sm text-MAIN-content/70">Cargando usuarios…</div>
+      </div>
+    </div>
+  </article>
+
+  <article class="card bg-MAIN-100 border border-MAIN-300 shadow-sm">
+    <div class="card-body gap-4">
+      <div class="grid gap-1">
+        <h3 class="card-title">Resumen de roles y niveles</h3>
+        <p class="text-sm text-MAIN-content/70">Resumen rápido de los roles disponibles y de los niveles estándar que se pueden asignar en Empresa.</p>
+      </div>
+      <div id="access-overview-panel">
+        <div class="rounded-box border border-dashed border-MAIN-300 bg-MAIN-100 p-4 text-sm text-MAIN-content/70">Cargando resumen…</div>
+      </div>
+    </div>
+  </article>
+
+  <article class="card bg-MAIN-100 border border-MAIN-300 shadow-sm">
+    <div class="card-body gap-4">
+      <div class="grid gap-1">
+        <h3 class="card-title">Roles y niveles de acceso</h3>
+        <p class="text-sm text-MAIN-content/70">Referencia rápida de roles disponibles y niveles estándar usados en la administración de accesos.</p>
+      </div>
+      <div id="access-reference-panel">
+        <div class="rounded-box border border-dashed border-MAIN-300 bg-MAIN-100 p-4 text-sm text-MAIN-content/70">Cargando referencia…</div>
+      </div>
+    </div>
+  </article>
+
+  <article class="card bg-MAIN-100 border border-MAIN-300 shadow-sm">
+    <div class="card-body gap-4">
+      <div class="grid gap-1">
+        <h3 class="card-title">Catálogo de pantallas</h3>
+        <p class="text-sm text-MAIN-content/70">Pantallas y niveles de acceso disponibles en los módulos instalados.</p>
+      </div>
+      <div id="screen-access-catalog-panel">
+        <div class="rounded-box border border-dashed border-MAIN-300 bg-MAIN-100 p-4 text-sm text-MAIN-content/70">Cargando catálogo…</div>
+      </div>
+    </div>
+  </article>
+  {% endif %}
+
 </section>
 
 <script>
 (function () {
+  var moduleRoot = document.getElementById('empresa-usuarios-module');
   var viewHost = document.getElementById('usuarios-view');
   var searchInput = document.getElementById('usuarios-search');
   var viewButtons = Array.from(document.querySelectorAll('#empresa-usuarios-module .view-buttons .view-pill[data-usuarios-view]'));
   var newBtn = document.getElementById('usuarios-new-btn');
+  var roleProfilesHost = document.getElementById('role-profiles-panel');
+  var accessOverviewHost = document.getElementById('access-overview-panel');
+  var accessReferenceHost = document.getElementById('access-reference-panel');
+  var accessUsersSummaryHost = document.getElementById('access-users-summary-panel');
   var initialPayloadNode = document.getElementById('usuarios-initial-data');
   var createTemplate = document.getElementById('usuarios-create-template');
   var createForm = null;
@@ -270,18 +446,35 @@
   var createNotebookHost = null;
   var createTitle = null;
   var createDescription = null;
+  var createRolSelect = null;
+  var createNivelAccesoSelect = null;
   if (!viewHost) return;
 
   var usuarios = [];
   var selectedKey = '';
   var searchTerm = '';
   var assignableRoles = [];
+  var roleProfiles = [];
+  var selectedRoleProfileKey = '';
   var currentView = 'list';
   var currentCreateTab = 'roles';
   var createProfileState = null;
   var orgLibPromise = null;
   var usuariosOrgChart = null;
   var orgExpandedUsuarioId = '';
+  var initialSection = moduleRoot ? String(moduleRoot.getAttribute('data-initial-section') || 'usuarios').trim().toLowerCase() : 'usuarios';
+  var initialSectionApplied = false;
+
+  function applyInitialSectionFocus() {
+    if (initialSectionApplied || !roleProfilesHost) return;
+    if (initialSection !== 'acceso' && initialSection !== 'roles') return;
+    initialSectionApplied = true;
+    window.setTimeout(function () {
+      if (typeof roleProfilesHost.scrollIntoView === 'function') {
+        roleProfilesHost.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 120);
+  }
 
   function cacheCreateElements() {
     createForm = document.getElementById('usuarios-create-form');
@@ -289,6 +482,8 @@
     createNotebookHost = document.getElementById('usuarios-create-notebook-host');
     createTitle = document.getElementById('usuarios-create-title');
     createDescription = document.getElementById('usuarios-create-description');
+    createRolSelect = document.getElementById('usuarios-create-rol');
+    createNivelAccesoSelect = document.getElementById('usuarios-create-nivel-acceso');
   }
 
   function setActiveViewButton(view) {
@@ -297,7 +492,15 @@
     });
   }
 
-  var ACCESS_APP_OPTIONS = ['Mi tablero', 'Conversaciones', 'BSC', 'Organización', 'Estrategia y táctica', 'Datos financieros', 'Mesa de control', 'Cartera de préstamos', 'MKT', 'PLD', 'Control y seguimiento', 'KPIs', 'Reportes', 'Empresa', 'Intelicoop', 'Brújula', 'CRM', 'Encuestas', 'Auditoria', 'ActivoFijo', 'Multiempresa', 'Capacitacion'];
+  var _ALL_APP_OPTIONS = ['Mi tablero', 'Conversaciones', 'BSC', 'Organización', 'Estrategia y táctica', 'Datos financieros', 'Mesa de control', 'Cartera de préstamos', 'MKT', 'PLD', 'Control y seguimiento', 'KPIs', 'Reportes', 'Empresa', 'Intelicoop', 'Brújula', 'CRM', 'Encuestas', 'Auditoria', 'ActivoFijo', 'Multiempresa', 'Capacitacion'];
+  var ACCESS_APP_OPTIONS = _ALL_APP_OPTIONS.slice();
+  var EMPRESA_SCREEN_OPTIONS = [
+    { key: 'empresa', label: 'Empresa' },
+    { key: 'empresa.identidad', label: 'Identidad institucional' },
+    { key: 'empresa.usuarios', label: 'Usuarios' },
+    { key: 'empresa.roles', label: 'Roles' },
+    { key: 'empresa.acceso', label: 'Niveles de acceso' }
+  ];
   var ACCESS_LEVEL_OPTIONS = [
     { key: 'full_access', label: 'Acceso total' },
     { key: 'read_only', label: 'Solo lectura' },
@@ -356,9 +559,24 @@
     return String(raw || '').trim().toLowerCase() === 'todas_tareas' ? 'todas_tareas' : 'mis_tareas';
   }
 
+  function getAccessOptionNames(rawLevels) {
+    var names = [];
+    function pushName(value) {
+      var key = String(value || '').trim();
+      if (!key || names.indexOf(key) !== -1) return;
+      names.push(key);
+    }
+    ACCESS_APP_OPTIONS.forEach(pushName);
+    EMPRESA_SCREEN_OPTIONS.forEach(function (item) { pushName(item.key); });
+    if (rawLevels && typeof rawLevels === 'object') {
+      Object.keys(rawLevels).forEach(pushName);
+    }
+    return names;
+  }
+
   function normalizeAccessMatrix(appAccessLevels, fallbackAppAccess) {
     var normalized = {};
-    ACCESS_APP_OPTIONS.forEach(function (appName) {
+    getAccessOptionNames(appAccessLevels).forEach(function (appName) {
       normalized[appName] = {
         full_access: false,
         read_only: false,
@@ -400,6 +618,23 @@
     });
   }
 
+  function getUniformAccessLevel(matrix) {
+    var normalized = normalizeAccessMatrix(matrix, []);
+    var selectedLevels = [];
+    ACCESS_APP_OPTIONS.forEach(function (appName) {
+      var entry = normalized[appName];
+      if (!entry) return;
+      var activeLevel = ACCESS_LEVEL_OPTIONS.find(function (level) {
+        return Boolean(entry[level.key]);
+      });
+      if (activeLevel) selectedLevels.push(activeLevel.key);
+    });
+    if (!selectedLevels.length) return '';
+    return selectedLevels.every(function (levelKey) { return levelKey === selectedLevels[0]; })
+      ? selectedLevels[0]
+      : '__custom__';
+  }
+
   function roleLabel(role) {
     return role === 'superadministrador' ? 'Superadministrador'
       : role === 'administrador' ? 'Administrador'
@@ -407,6 +642,172 @@
       : role === 'departamento' ? 'Departamento'
       : role === 'administrador_multiempresa' ? 'Administrador multiempresa'
       : 'Usuario';
+  }
+
+  function normalizeRoleProfile(raw) {
+    var entry = raw && typeof raw === 'object' ? raw : {};
+    return {
+      role_name: normalizeAccessRole(entry.role_name || entry.nombre || entry.role || 'usuario'),
+      description: String(entry.description || entry.descripcion || '').trim(),
+      screen_access_levels: normalizeAccessMatrix(entry.screen_access_levels, entry.app_access),
+      conversation_access: normalizeConversationAccess(entry.conversation_access),
+      is_system_role: Boolean(entry.is_system_role),
+      is_protected: Boolean(entry.is_protected)
+    };
+  }
+
+  function getRoleProfile(roleName) {
+    var normalizedRole = normalizeAccessRole(roleName || 'usuario');
+    var found = roleProfiles.find(function (profile) {
+      return normalizeAccessRole(profile.role_name) === normalizedRole;
+    });
+    return found || normalizeRoleProfile({ role_name: normalizedRole });
+  }
+
+  function summarizeRoleProfile(profile) {
+    var normalized = normalizeRoleProfile(profile);
+    var modules = deriveAppAccessFromMatrix(normalized.screen_access_levels);
+    if (!modules.length) return 'Sin permisos base configurados.';
+    return modules.slice(0, 6).join(', ') + (modules.length > 6 ? '…' : '');
+  }
+
+  function accessLevelDescription(levelKey) {
+    return levelKey === 'full_access' ? 'Administra y opera todas las pantallas habilitadas.'
+      : levelKey === 'read_only' ? 'Consulta información sin cambios operativos.'
+      : levelKey === 'department_only' ? 'Trabaja dentro del alcance de su departamento.'
+      : levelKey === 'user_only' ? 'Acceso acotado al propio usuario.'
+      : 'Permisos puntuales por módulo o pantalla.';
+  }
+
+  function accessLevelLabel(levelKey) {
+    var key = String(levelKey || '').trim();
+    var found = ACCESS_LEVEL_OPTIONS.find(function (level) {
+      return level.key === key;
+    });
+    return found ? found.label : 'Personalizado por modulo';
+  }
+
+  function renderAccessReferencePanel() {
+    if (!accessReferenceHost) return;
+    var roles = (assignableRoles.length ? assignableRoles : ['usuario']).map(normalizeAccessRole);
+    var uniqueRoles = [];
+    roles.forEach(function (role) {
+      if (uniqueRoles.indexOf(role) === -1) uniqueRoles.push(role);
+    });
+    var roleItems = uniqueRoles.map(function (role) {
+      var profile = getRoleProfile(role);
+      return '<div class="access-reference-list-item">' +
+        '<strong>' + esc(roleLabel(role)) + '</strong>' +
+        '<span>' + esc(profile.description || summarizeRoleProfile(profile)) + '</span>' +
+      '</div>';
+    }).join('');
+
+    var levelItems = ACCESS_LEVEL_OPTIONS.map(function (level) {
+      return '<div class="access-reference-list-item">' +
+        '<strong>' + esc(level.label) + '</strong>' +
+        '<span>' + esc(accessLevelDescription(level.key)) + '</span>' +
+      '</div>';
+    }).join('');
+
+    accessReferenceHost.innerHTML = '' +
+      '<div class="access-reference-grid">' +
+        '<section class="access-reference-card">' +
+          '<h4 class="access-reference-card__title">Roles</h4>' +
+          '<div class="access-reference-tags">' +
+            uniqueRoles.map(function (role) {
+              return '<span class="access-reference-tag">' + esc(roleLabel(role)) + '</span>';
+            }).join('') +
+          '</div>' +
+          '<div class="access-reference-list">' + roleItems + '</div>' +
+        '</section>' +
+        '<section class="access-reference-card">' +
+          '<h4 class="access-reference-card__title">Niveles</h4>' +
+          '<div class="access-reference-tags">' +
+            ACCESS_LEVEL_OPTIONS.map(function (level) {
+              return '<span class="access-reference-tag">' + esc(level.label) + '</span>';
+            }).join('') +
+          '</div>' +
+          '<div class="access-reference-list">' + levelItems + '</div>' +
+        '</section>' +
+      '</div>';
+  }
+
+  function renderAccessOverviewPanel() {
+    if (!accessOverviewHost) return;
+    var roles = (assignableRoles.length ? assignableRoles : ['usuario']).map(normalizeAccessRole);
+    var uniqueRoles = [];
+    roles.forEach(function (role) {
+      if (uniqueRoles.indexOf(role) === -1) uniqueRoles.push(role);
+    });
+    var levelTags = ACCESS_LEVEL_OPTIONS.map(function (level) {
+      return '<span class="badge badge-outline">' + esc(level.label) + '</span>';
+    }).join('');
+    var roleTags = uniqueRoles.map(function (role) {
+      return '<span class="badge badge-primary badge-outline">' + esc(roleLabel(role)) + '</span>';
+    }).join('');
+    accessOverviewHost.innerHTML = '' +
+      '<div class="grid gap-4 lg:grid-cols-2">' +
+        '<section class="rounded-box border border-MAIN-300 bg-base-100 p-4">' +
+          '<div class="text-xs uppercase tracking-[0.2em] text-MAIN-content/60">Roles disponibles</div>' +
+          '<div class="mt-2 text-3xl font-black text-MAIN-content">' + esc(String(uniqueRoles.length)) + '</div>' +
+          '<p class="mt-2 text-sm text-MAIN-content/70">Roles visibles para asignación en usuarios y perfiles base.</p>' +
+          '<div class="mt-3 flex flex-wrap gap-2">' + roleTags + '</div>' +
+        '</section>' +
+        '<section class="rounded-box border border-MAIN-300 bg-base-100 p-4">' +
+          '<div class="text-xs uppercase tracking-[0.2em] text-MAIN-content/60">Niveles estándar</div>' +
+          '<div class="mt-2 text-3xl font-black text-MAIN-content">' + esc(String(ACCESS_LEVEL_OPTIONS.length)) + '</div>' +
+          '<p class="mt-2 text-sm text-MAIN-content/70">Niveles configurables por módulo y por pantalla dentro de Empresa.</p>' +
+          '<div class="mt-3 flex flex-wrap gap-2">' + levelTags + '</div>' +
+        '</section>' +
+      '</div>';
+  }
+
+  function summarizeUserAccess(item) {
+    if (!item || typeof item !== 'object') return 'Sin permisos configurados.';
+    if (item.inherit_role_permissions !== false) {
+      var roleProfile = getRoleProfile(item.rol || 'usuario');
+      return summarizeRoleProfile(roleProfile);
+    }
+    var modules = deriveAppAccessFromMatrix(item.app_access_levels);
+    if (!modules.length) return 'Sin permisos configurados.';
+    return modules.slice(0, 4).join(', ') + (modules.length > 4 ? '…' : '');
+  }
+
+  function getUserAccessLevel(item) {
+    if (!item || typeof item !== 'object') return '';
+    if (item.inherit_role_permissions !== false) {
+      return 'Heredado del rol';
+    }
+    var levelKey = getUniformAccessLevel(item.app_access_levels);
+    return levelKey ? accessLevelLabel(levelKey) : 'Sin acceso';
+  }
+
+  function renderAccessUsersSummaryPanel() {
+    if (!accessUsersSummaryHost) return;
+    if (!usuarios.length) {
+      accessUsersSummaryHost.innerHTML = '<div class="rounded-box border border-dashed border-MAIN-300 bg-MAIN-100 p-4 text-sm text-MAIN-content/70">No hay usuarios disponibles.</div>';
+      return;
+    }
+    var rows = usuarios.map(function (item) {
+      var inherited = item.inherit_role_permissions !== false;
+      var badgeClass = inherited ? 'badge-ghost' : 'badge-info';
+      var badgeLabel = inherited ? 'Heredado' : 'Personalizado';
+      return '<tr>' +
+        '<td class="font-semibold text-MAIN-content">' + esc(item.nombre || '') + '</td>' +
+        '<td>' + esc(item.usuario || '') + '</td>' +
+        '<td>' + esc(roleLabel(item.rol || 'usuario')) + '</td>' +
+        '<td><span class="badge badge-sm ' + badgeClass + '">' + esc(badgeLabel) + '</span></td>' +
+        '<td class="text-sm text-MAIN-content/80">' + esc(getUserAccessLevel(item)) + '</td>' +
+        '<td class="text-sm text-MAIN-content/80">' + esc(summarizeUserAccess(item)) + '</td>' +
+      '</tr>';
+    }).join('');
+    accessUsersSummaryHost.innerHTML = '' +
+      '<div class="overflow-x-auto rounded-box border border-MAIN-300">' +
+        '<table class="table table-zebra table-sm md:table-md">' +
+          '<thead><tr><th>Nombre</th><th>Usuario</th><th>Rol</th><th>Tipo</th><th>Nivel de acceso</th><th>Resumen</th></tr></thead>' +
+          '<tbody>' + rows + '</tbody>' +
+        '</table>' +
+      '</div>';
   }
 
   function normalizeConversationAccess(raw) {
@@ -477,6 +878,7 @@
   function resetCreateProfileState() {
     createProfileState = {
       rol: 'usuario',
+      inherit_role_permissions: true,
       conversation_access: normalizeConversationAccess(null),
       app_access_levels: normalizeAccessMatrix(null, [])
     };
@@ -485,6 +887,7 @@
   function syncCreateProfileFromUser(user) {
     createProfileState = {
       rol: normalizeAccessRole(user && (user.rol || user.role) || 'usuario'),
+      inherit_role_permissions: Boolean(user ? user.inherit_role_permissions !== false : true),
       conversation_access: normalizeConversationAccess(user && user.conversation_access),
       app_access_levels: normalizeAccessMatrix(user && user.app_access_levels, user && user.app_access)
     };
@@ -520,28 +923,61 @@
       '</div>';
   }
 
-  function renderAccessModuleCards(selectedMatrix, conversationAccess) {
+  function renderAccessModuleCards(selectedMatrix, conversationAccess, conversationPrefix) {
     var matrix = normalizeAccessMatrix(selectedMatrix, []);
     var moduleNames = ACCESS_APP_OPTIONS.filter(function (appName) {
       return appName !== 'Conversaciones';
     });
-    return '<div class="access-module-grid">' +
-      moduleNames.map(function (appName) {
-        return '<section class="access-module-card">' +
-          '<h5 class="access-module-card__title">' + esc(appName) + '</h5>' +
-          '<div class="access-module-card__divider"></div>' +
-          '<div class="access-module-card__fields">' +
-            ACCESS_LEVEL_OPTIONS.map(function (level) {
-              return '<label class="label justify-start gap-3 cursor-pointer p-0 min-h-0">' +
-                '<span class="access-module-block__option-control"><input type="checkbox" class="checkbox checkbox-sm" data-access-app-level="1" data-menu-name="' + esc(appName) + '" data-level-key="' + esc(level.key) + '"' + (matrix[appName][level.key] ? ' checked' : '') + '></span>' +
-                '<span class="label-text text-sm text-MAIN-content font-normal">' + esc(level.label) + '</span>' +
-              '</label>';
-            }).join('') +
-          '</div>' +
-        '</section>';
-      }).join('') +
-      renderConversationAccessConfigurator('create-conversation', conversationAccess, 'create-conversation') +
-    '</div>';
+    var empresaScreenNames = EMPRESA_SCREEN_OPTIONS.filter(function (item) {
+      return !!matrix[item.key];
+    });
+    var prefix = String(conversationPrefix || 'create-conversation');
+    return '' +
+      '<div class="grid gap-4">' +
+        '<div class="grid gap-2">' +
+          '<h5 class="text-MAIN font-semibold text-MAIN-content">Módulos</h5>' +
+          '<p class="text-sm text-MAIN-content/70">Define el nivel de acceso general por módulo.</p>' +
+        '</div>' +
+        '<div class="access-module-grid">' +
+          moduleNames.map(function (appName) {
+            return '<section class="access-module-card">' +
+              '<h5 class="access-module-card__title">' + esc(appName) + '</h5>' +
+              '<div class="access-module-card__divider"></div>' +
+              '<div class="access-module-card__fields">' +
+                ACCESS_LEVEL_OPTIONS.map(function (level) {
+                  return '<label class="label justify-start gap-3 cursor-pointer p-0 min-h-0">' +
+                    '<span class="access-module-block__option-control"><input type="checkbox" class="checkbox checkbox-sm" data-access-app-level="1" data-menu-name="' + esc(appName) + '" data-level-key="' + esc(level.key) + '"' + (matrix[appName][level.key] ? ' checked' : '') + '></span>' +
+                    '<span class="label-text text-sm text-MAIN-content font-normal">' + esc(level.label) + '</span>' +
+                  '</label>';
+                }).join('') +
+              '</div>' +
+            '</section>';
+          }).join('') +
+          renderConversationAccessConfigurator(prefix, conversationAccess, prefix) +
+        '</div>' +
+      '</div>' +
+      '<div class="grid gap-4 pt-2">' +
+        '<div class="grid gap-2">' +
+          '<h5 class="text-MAIN font-semibold text-MAIN-content">Pantallas de Empresa</h5>' +
+          '<p class="text-sm text-MAIN-content/70">Separa el acceso a identidad institucional, usuarios, roles y niveles de acceso.</p>' +
+        '</div>' +
+        '<div class="access-module-grid">' +
+          empresaScreenNames.map(function (item) {
+            return '<section class="access-module-card">' +
+              '<h5 class="access-module-card__title">' + esc(item.label) + '</h5>' +
+              '<div class="access-module-card__divider"></div>' +
+              '<div class="access-module-card__fields">' +
+                ACCESS_LEVEL_OPTIONS.map(function (level) {
+                  return '<label class="label justify-start gap-3 cursor-pointer p-0 min-h-0">' +
+                    '<span class="access-module-block__option-control"><input type="checkbox" class="checkbox checkbox-sm" data-access-app-level="1" data-menu-name="' + esc(item.key) + '" data-level-key="' + esc(level.key) + '"' + (matrix[item.key][level.key] ? ' checked' : '') + '></span>' +
+                    '<span class="label-text text-sm text-MAIN-content font-normal">' + esc(level.label) + '</span>' +
+                  '</label>';
+                }).join('') +
+              '</div>' +
+            '</section>';
+          }).join('') +
+        '</div>' +
+      '</div>';
   }
 
   function renderAccessMatrix(selectedMatrix) {
@@ -685,6 +1121,14 @@
     var selectedRoleInput = createNotebookHost.querySelector('input[name="create-rol"]:checked');
     if (selectedRoleInput) {
       createProfileState.rol = normalizeAccessRole(selectedRoleInput.value || 'usuario');
+    } else if (createRolSelect && createRolSelect.value) {
+      createProfileState.rol = normalizeAccessRole(createRolSelect.value);
+    }
+    createProfileState.inherit_role_permissions = Boolean(createNotebookHost.querySelector('input[type="checkbox"][data-create-inherit-role="1"]')?.checked);
+    if (createProfileState.inherit_role_permissions) {
+      createProfileState.conversation_access = normalizeConversationAccess(null);
+      createProfileState.app_access_levels = normalizeAccessMatrix(null, []);
+      return;
     }
     var moduleRoleInput = createNotebookHost.querySelector('select[name="create-conversation-role"], input[name="create-conversation-role"]:checked');
     var currentConversationAccess = normalizeConversationAccess(createProfileState.conversation_access);
@@ -780,20 +1224,22 @@
   function renderList() {
     var visible = getVisibleUsuarios();
     var rowsHtml = !visible.length
-      ? '<tr><td colspan="5" class="text-MAIN-content/60">Sin usuarios.</td></tr>'
+      ? '<tr><td colspan="6" class="text-MAIN-content/60">Sin usuarios.</td></tr>'
       : visible.map(function (item) {
+      var nivelBadge = item.inherit_role_permissions !== false ? '<span class="badge badge-ghost badge-sm">Heredado</span>' : '<span class="badge badge-info badge-sm">Personalizado</span>';
       return '<tr class="cursor-pointer hover" data-usuario-key="' + esc(getKey(item)) + '">' +
         '<td><button type="button" class="link link-hover font-semibold">' + esc(item.nombre || '') + '</button></td>' +
         '<td>' + esc(item.usuario || '') + '</td>' +
         '<td>' + esc(item.correo || '') + '</td>' +
-        '<td>' + esc(item.rol || '') + '</td>' +
+        '<td>' + esc(roleLabel(item.rol || 'usuario')) + '</td>' +
+        '<td><div class="grid gap-1">' + nivelBadge + '<span class="text-xs text-MAIN-content/70">' + esc(getUserAccessLevel(item)) + '</span></div></td>' +
         '<td>' + esc(item.puesto || '') + '</td>' +
       '</tr>';
       }).join('');
     viewHost.innerHTML = '' +
       '<div class="overflow-x-auto rounded-box border border-MAIN-300">' +
         '<table class="table table-zebra table-sm md:table-md">' +
-          '<thead><tr><th>Nombre</th><th>Usuario</th><th>Correo</th><th>Rol</th><th>Puesto</th></tr></thead>' +
+          '<thead><tr><th>Nombre</th><th>Usuario</th><th>Correo</th><th>Rol</th><th>Nivel de acceso</th><th>Puesto</th></tr></thead>' +
           '<tbody id="usuarios-tbody">' + rowsHtml + '</tbody>' +
         '</table>' +
       '</div>';
@@ -1012,6 +1458,7 @@
       if (totpInput) totpInput.checked = Boolean(current.totp_enabled);
     }
     renderCreateNotebook();
+    populateRolSelect();
     if (createSubmitBtn) {
       createSubmitBtn.textContent = current ? 'Guardar cambios' : 'Dar de alta';
     }
@@ -1026,6 +1473,42 @@
     return renderList();
   }
 
+  function populateRolSelect() {
+    if (!createRolSelect) return;
+    var roles = assignableRoles.length ? assignableRoles : ['usuario'];
+    if (roles.indexOf('usuario') === -1) roles = roles.concat(['usuario']);
+    createRolSelect.innerHTML = roles.map(function (role) {
+      return '<option value="' + esc(role) + '">' + esc(roleLabel(role)) + '</option>';
+    }).join('');
+    createRolSelect.value = createProfileState.rol || 'usuario';
+    createRolSelect.addEventListener('change', function () {
+      createProfileState.rol = normalizeAccessRole(createRolSelect.value || 'usuario');
+      renderCreateNotebook();
+    });
+    if (createNivelAccesoSelect) {
+      var nivelValue = createProfileState.inherit_role_permissions ? '' : getUniformAccessLevel(createProfileState.app_access_levels);
+      createNivelAccesoSelect.value = nivelValue;
+      createNivelAccesoSelect.addEventListener('change', function () {
+        var selectedLevel = createNivelAccesoSelect.value;
+        if (selectedLevel === '__custom__') return;
+        if (!selectedLevel) {
+          createProfileState.inherit_role_permissions = true;
+          createProfileState.app_access_levels = normalizeAccessMatrix(null, []);
+        } else {
+          createProfileState.inherit_role_permissions = false;
+          var matrix = normalizeAccessMatrix(null, []);
+          ACCESS_APP_OPTIONS.forEach(function (app) {
+            ACCESS_LEVEL_OPTIONS.forEach(function (level) {
+              matrix[app][level.key] = level.key === selectedLevel;
+            });
+          });
+          createProfileState.app_access_levels = matrix;
+        }
+        renderCreateNotebook();
+      });
+    }
+  }
+
   function renderCreateNotebook() {
     if (!createNotebookHost) return;
     var roleOptions = (assignableRoles.length ? assignableRoles : ['usuario']).map(function (role) {
@@ -1035,6 +1518,8 @@
       roleOptions.push({ value: 'usuario', label: 'Usuario' });
     }
     var selectedRole = normalizeAccessRole(createProfileState.rol || 'usuario');
+    var selectedRoleProfile = getRoleProfile(selectedRole);
+    var inheritRolePermissions = Boolean(createProfileState.inherit_role_permissions);
     var conversationAccess = normalizeConversationAccess(createProfileState.conversation_access);
     var appAccessLevels = normalizeAccessMatrix(createProfileState.app_access_levels, []);
 
@@ -1054,15 +1539,47 @@
               renderAccessRadioGroup('create-rol', roleOptions, selectedRole, 'data-create-role') +
             '</div>'
           : '<div class="grid gap-5">' +
-              '<div class="rounded-box border border-dashed border-MAIN-300 bg-MAIN-100 p-4">' +
-                '<div class="grid gap-3">' +
-                  '<div class="grid gap-2 pt-2">' +
-                    '<h4 class="text-MAIN font-semibold text-MAIN-content">Permisos de módulos</h4>' +
-                    '<p class="text-sm text-MAIN-content/70">Selecciona un nivel de acceso por módulo.</p>' +
-                  '</div>' +
-                  renderAccessModuleCards(appAccessLevels, conversationAccess) +
-                '</div>' +
+              '<div class="grid gap-4 md:grid-cols-2">' +
+                '<label class="form-control">' +
+                  '<div class="label"><span class="label-text font-semibold">Rol del usuario</span></div>' +
+                  '<select class="select select-bordered" data-create-access-role="1">' +
+                    roleOptions.map(function (opt) {
+                      var isSelected = String(opt.value || '').trim().toLowerCase() === String(selectedRole || '').trim().toLowerCase();
+                      return '<option value="' + esc(opt.value || '') + '"' + (isSelected ? ' selected' : '') + '>' + esc(opt.label || '') + '</option>';
+                    }).join('') +
+                  '</select>' +
+                '</label>' +
+                '<label class="form-control">' +
+                  '<div class="label"><span class="label-text font-semibold">Nivel de acceso</span></div>' +
+                  '<select class="select select-bordered" data-create-access-level="1">' +
+                    '<option value=""' + (inheritRolePermissions ? ' selected' : '') + '>Heredar del rol</option>' +
+                    ACCESS_LEVEL_OPTIONS.map(function (level) {
+                      var isSelected = !inheritRolePermissions && getUniformAccessLevel(appAccessLevels) === level.key;
+                      return '<option value="' + esc(level.key) + '"' + (isSelected ? ' selected' : '') + '>' + esc(level.label) + '</option>';
+                    }).join('') +
+                    '<option value="__custom__"' + (!inheritRolePermissions && getUniformAccessLevel(appAccessLevels) === '__custom__' ? ' selected' : '') + ' disabled>Personalizado por modulo</option>' +
+                  '</select>' +
+                '</label>' +
               '</div>' +
+              '<label class="label justify-start gap-3 cursor-pointer rounded-box border border-MAIN-300 bg-MAIN-100 px-4 py-3">' +
+                '<input type="checkbox" class="checkbox" data-create-inherit-role="1"' + (inheritRolePermissions ? ' checked' : '') + '>' +
+                '<span class="label-text font-semibold">Heredar permisos del rol seleccionado</span>' +
+              '</label>' +
+              '<div class="rounded-box border border-MAIN-300 bg-white px-4 py-3">' +
+                '<div class="text-sm font-semibold text-MAIN-content">Perfil base: ' + esc(roleLabel(selectedRoleProfile.role_name)) + '</div>' +
+                '<div class="text-sm text-MAIN-content/70">' + esc(summarizeRoleProfile(selectedRoleProfile)) + '</div>' +
+              '</div>' +
+              (inheritRolePermissions
+                ? '<div class="rounded-box border border-dashed border-MAIN-300 bg-MAIN-100 p-4 text-sm text-MAIN-content/70">El usuario usará el acceso definido en el perfil del rol. Desactiva esta opción si necesitas una sobreescritura específica para este usuario.</div>'
+                : '<div class="rounded-box border border-dashed border-MAIN-300 bg-MAIN-100 p-4">' +
+                    '<div class="grid gap-3">' +
+                      '<div class="grid gap-2 pt-2">' +
+                        '<h4 class="text-MAIN font-semibold text-MAIN-content">Permisos de módulos</h4>' +
+                        '<p class="text-sm text-MAIN-content/70">Selecciona un nivel de acceso por módulo para este usuario.</p>' +
+                      '</div>' +
+                      renderAccessModuleCards(appAccessLevels, conversationAccess) +
+                    '</div>' +
+                  '</div>') +
             '</div>') +
       '</div>';
 
@@ -1074,7 +1591,185 @@
       });
     });
 
+    Array.from(createNotebookHost.querySelectorAll('input[name="create-rol"]')).forEach(function (input) {
+      input.addEventListener('change', function () {
+        syncCreateProfileFromDom();
+        renderCreateNotebook();
+      });
+    });
+
+    var accessRoleSelect = createNotebookHost.querySelector('select[data-create-access-role="1"]');
+    if (accessRoleSelect) {
+      accessRoleSelect.addEventListener('change', function () {
+        createProfileState.rol = normalizeAccessRole(accessRoleSelect.value || 'usuario');
+        if (createRolSelect) createRolSelect.value = createProfileState.rol;
+        renderCreateNotebook();
+      });
+    }
+
+    var accessLevelSelect = createNotebookHost.querySelector('select[data-create-access-level="1"]');
+    if (accessLevelSelect) {
+      accessLevelSelect.addEventListener('change', function () {
+        var selectedLevel = String(accessLevelSelect.value || '').trim();
+        if (selectedLevel === '__custom__') return;
+        if (!selectedLevel) {
+          createProfileState.inherit_role_permissions = true;
+          createProfileState.app_access_levels = normalizeAccessMatrix(null, []);
+          createProfileState.conversation_access = normalizeConversationAccess(null);
+        } else {
+          createProfileState.inherit_role_permissions = false;
+          var matrix = normalizeAccessMatrix(null, []);
+          ACCESS_APP_OPTIONS.forEach(function (app) {
+            ACCESS_LEVEL_OPTIONS.forEach(function (level) {
+              matrix[app][level.key] = level.key === selectedLevel;
+            });
+          });
+          createProfileState.app_access_levels = matrix;
+        }
+        if (createNivelAccesoSelect) createNivelAccesoSelect.value = selectedLevel || '';
+        renderCreateNotebook();
+      });
+    }
+
+    var inheritToggle = createNotebookHost.querySelector('input[type="checkbox"][data-create-inherit-role="1"]');
+    if (inheritToggle) {
+      inheritToggle.addEventListener('change', function () {
+        syncCreateProfileFromDom();
+        renderCreateNotebook();
+      });
+    }
+
     bindAccessMatrixExclusive(createNotebookHost);
+  }
+
+  function getCurrentRoleProfile() {
+    if (!roleProfiles.length) return null;
+    if (!selectedRoleProfileKey) return roleProfiles[0];
+    return roleProfiles.find(function (profile) {
+      return normalizeAccessRole(profile.role_name) === normalizeAccessRole(selectedRoleProfileKey);
+    }) || roleProfiles[0];
+  }
+
+  function upsertRoleProfile(profile) {
+    var normalized = normalizeRoleProfile(profile);
+    var key = normalizeAccessRole(normalized.role_name);
+    var index = roleProfiles.findIndex(function (item) {
+      return normalizeAccessRole(item.role_name) === key;
+    });
+    if (index >= 0) {
+      roleProfiles[index] = normalized;
+    } else {
+      roleProfiles.push(normalized);
+      roleProfiles.sort(function (left, right) {
+        return String(left.role_name || '').localeCompare(String(right.role_name || ''));
+      });
+    }
+    if (!assignableRoles.some(function (role) { return normalizeAccessRole(role) === key; })) {
+      assignableRoles.push(normalized.role_name);
+      assignableRoles.sort();
+    }
+    selectedRoleProfileKey = normalized.role_name;
+  }
+
+  function renderRoleProfilesPanel() {
+    if (!roleProfilesHost) return;
+    if (!roleProfiles.length) {
+      roleProfilesHost.innerHTML = '<div class="rounded-box border border-dashed border-MAIN-300 bg-MAIN-100 p-4 text-sm text-MAIN-content/70">No hay perfiles configurados.</div>';
+      return;
+    }
+    var currentProfile = getCurrentRoleProfile();
+    if (!currentProfile) return;
+    var normalizedProfile = normalizeRoleProfile(currentProfile);
+    roleProfilesHost.innerHTML = '' +
+      '<div class="grid gap-4 lg:grid-cols-[260px_minmax(0,1fr)]">' +
+        '<div class="rounded-box border border-MAIN-300 bg-white p-3">' +
+          '<div class="grid gap-2">' +
+            roleProfiles.map(function (profile) {
+              var active = normalizeAccessRole(profile.role_name) === normalizeAccessRole(normalizedProfile.role_name);
+              return '<button type="button" class="btn btn-sm justify-start ' + (active ? 'btn-primary' : 'btn-ghost') + '" data-role-profile-select="' + esc(profile.role_name) + '">' + esc(roleLabel(profile.role_name)) + '</button>';
+            }).join('') +
+          '</div>' +
+        '</div>' +
+        '<form id="role-profile-form" class="grid gap-4 rounded-box border border-MAIN-300 bg-white p-4">' +
+          '<div class="grid gap-4 md:grid-cols-2">' +
+            '<label class="form-control">' +
+              '<div class="label"><span class="label-text font-semibold">Rol</span></div>' +
+              '<input type="text" name="role_name" class="input input-bordered" value="' + esc(normalizedProfile.role_name) + '"' + (normalizedProfile.is_protected ? ' readonly' : '') + ' required>' +
+            '</label>' +
+            '<label class="form-control">' +
+              '<div class="label"><span class="label-text font-semibold">Descripción</span></div>' +
+              '<input type="text" name="description" class="input input-bordered" value="' + esc(normalizedProfile.description) + '" placeholder="Descripción del perfil">' +
+            '</label>' +
+          '</div>' +
+          '<div class="rounded-box border border-dashed border-MAIN-300 bg-MAIN-100 p-4">' +
+            '<div class="grid gap-2 pb-3">' +
+              '<h4 class="text-MAIN font-semibold text-MAIN-content">Permisos base del rol</h4>' +
+              '<p class="text-sm text-MAIN-content/70">Estos permisos se aplican por defecto a todos los usuarios que hereden este rol.</p>' +
+            '</div>' +
+            '<div class="grid gap-4">' +
+              renderAccessModuleCards(normalizedProfile.screen_access_levels, normalizedProfile.conversation_access, 'role-profile-conversation') +
+            '</div>' +
+          '</div>' +
+          '<div class="flex flex-wrap gap-3">' +
+            '<button type="submit" class="btn btn-primary">Guardar perfil</button>' +
+            '<button type="button" class="btn btn-ghost" data-role-profile-new="1">Nuevo perfil</button>' +
+          '</div>' +
+        '</form>' +
+      '</div>';
+
+    Array.from(roleProfilesHost.querySelectorAll('[data-role-profile-select]')).forEach(function (button) {
+      button.addEventListener('click', function () {
+        selectedRoleProfileKey = button.getAttribute('data-role-profile-select') || '';
+        renderRoleProfilesPanel();
+      });
+    });
+
+    var newButton = roleProfilesHost.querySelector('[data-role-profile-new="1"]');
+    if (newButton) {
+      newButton.addEventListener('click', function () {
+        selectedRoleProfileKey = 'usuario';
+        roleProfilesHost.querySelector('#role-profile-form input[name="role_name"]').value = '';
+        roleProfilesHost.querySelector('#role-profile-form input[name="description"]').value = '';
+      });
+    }
+
+    var form = roleProfilesHost.querySelector('#role-profile-form');
+    if (form) {
+      bindAccessMatrixExclusive(form);
+      form.addEventListener('submit', function (event) {
+        event.preventDefault();
+        var formData = new window.FormData(form);
+        var payload = {
+          role_name: String(formData.get('role_name') || '').trim(),
+          description: String(formData.get('description') || '').trim(),
+          screen_access_levels: collectAccessMatrix(form),
+          conversation_access: collectConversationAccess(form, 'role-profile-conversation')
+        };
+        fetch('/api/roles-permisos', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify(payload)
+        })
+          .then(async function (res) {
+            var raw = await res.text();
+            var json = null;
+            try { json = raw ? JSON.parse(raw) : {}; } catch (err) {}
+            return { ok: res.ok, json: json };
+          })
+          .then(function (result) {
+            if (!result.ok || !result.json || result.json.success === false) {
+              throw new Error((result.json && (result.json.error || result.json.detail)) || 'No se pudo guardar el perfil');
+            }
+            upsertRoleProfile(result.json.data || payload);
+            renderRoleProfilesPanel();
+            renderCreateNotebook();
+            window.alert('Perfil de rol guardado correctamente.');
+          })
+          .catch(function (error) {
+            window.alert(error && error.message ? error.message : 'No se pudo guardar el perfil');
+          });
+      });
+    }
   }
 
   viewHost.addEventListener('click', function (event) {
@@ -1132,8 +1827,23 @@
     }
     usuarios = Array.isArray(payload.data) ? payload.data : [];
     assignableRoles = Array.isArray(payload.assignable_roles) ? payload.assignable_roles : [];
+    if (Array.isArray(payload.installed_app_options) && payload.installed_app_options.length) {
+      var installed = payload.installed_app_options;
+      ACCESS_APP_OPTIONS = _ALL_APP_OPTIONS.filter(function (name) {
+        return installed.indexOf(name) !== -1;
+      });
+    }
+    roleProfiles = Array.isArray(payload.role_profiles) ? payload.role_profiles.map(normalizeRoleProfile) : [];
+    if (roleProfiles.length && !selectedRoleProfileKey) {
+      selectedRoleProfileKey = roleProfiles[0].role_name;
+    }
     renderCreateNotebook();
+    renderRoleProfilesPanel();
+    renderAccessOverviewPanel();
+    renderAccessReferencePanel();
+    renderAccessUsersSummaryPanel();
     renderCurrentView();
+    applyInitialSectionFocus();
   }
 
   function upsertUsuario(item) {
@@ -1185,9 +1895,10 @@
         colaborador: formData.get('empleado') === 'on',
         totp_enabled: formData.get('totp_enabled') === 'on',
         rol: normalizeAccessRole(createProfileState.rol || 'usuario'),
-        conversation_access: normalizeConversationAccess(createProfileState.conversation_access),
-        app_access_levels: normalizeAccessMatrix(createProfileState.app_access_levels, []),
-        app_access: deriveAppAccessFromMatrix(createProfileState.app_access_levels)
+        inherit_role_permissions: Boolean(createProfileState.inherit_role_permissions),
+        conversation_access: createProfileState.inherit_role_permissions ? null : normalizeConversationAccess(createProfileState.conversation_access),
+        app_access_levels: createProfileState.inherit_role_permissions ? null : normalizeAccessMatrix(createProfileState.app_access_levels, []),
+        app_access: createProfileState.inherit_role_permissions ? [] : deriveAppAccessFromMatrix(createProfileState.app_access_levels)
       };
       if (current) {
         payload.departamento = String(current.departamento || '').trim();
@@ -1257,7 +1968,11 @@
   resetCreateProfileState();
   cacheCreateElements();
   renderCreateNotebook();
+  renderRoleProfilesPanel();
+  renderAccessReferencePanel();
+  renderAccessUsersSummaryPanel();
   bindCreateForm();
+  applyInitialSectionFocus();
 
   if (!usuarios.length) {
     fetch('/api/colaboradores', { credentials: 'same-origin', headers: { Accept: 'application/json' } })
@@ -1274,6 +1989,59 @@
         applyUsuariosPayload(result.json);
       })
       .catch(showUsuariosError);
+  }
+
+  var screenCatalogHost = document.getElementById('screen-access-catalog-panel');
+  if (screenCatalogHost) {
+    fetch('/api/screen-access-catalog', { credentials: 'same-origin', headers: { Accept: 'application/json' } })
+      .then(function (res) { return res.json(); })
+      .then(function (result) {
+        if (!result || result.success === false || !result.data) {
+          screenCatalogHost.innerHTML = '<div class="rounded-box border border-dashed border-MAIN-300 bg-MAIN-100 p-4 text-sm text-MAIN-content/70">No hay pantallas configuradas.</div>';
+          return;
+        }
+        var catalog = result.data;
+        var moduleKeys = Object.keys(catalog);
+        if (!moduleKeys.length) {
+          screenCatalogHost.innerHTML = '<div class="rounded-box border border-dashed border-MAIN-300 bg-MAIN-100 p-4 text-sm text-MAIN-content/70">No hay pantallas configuradas.</div>';
+          return;
+        }
+        var LEVEL_LABELS = { full_access: 'Acceso total', special_permissions: 'Permisos especiales', department_only: 'Solo departamento', read_only: 'Solo lectura', user_only: 'Solo usuario' };
+        var html = '<div class="grid gap-6">';
+        moduleKeys.forEach(function (moduleKey) {
+          var mod = catalog[moduleKey];
+          var screens = mod && typeof mod.screens === 'object' ? mod.screens : {};
+          var screenKeys = Object.keys(screens);
+          if (!screenKeys.length) return;
+          html += '<div class="grid gap-3">';
+          html += '<div class="text-sm font-semibold text-MAIN-content uppercase tracking-wide">' + esc(mod.module_label || moduleKey) + '</div>';
+          html += '<div class="grid gap-2">';
+          screenKeys.forEach(function (screenKey) {
+            var screen = screens[screenKey];
+            var levels = screen && typeof screen.levels === 'object' ? screen.levels : {};
+            var levelKeys = Object.keys(levels);
+            html += '<div class="rounded-box border border-MAIN-300 bg-white p-3 grid gap-2">';
+            html += '<div class="font-semibold text-sm text-MAIN-content">' + esc(screen.label || screenKey) + '</div>';
+            if (levelKeys.length) {
+              html += '<div class="grid gap-1 pl-2">';
+              levelKeys.forEach(function (levelKey) {
+                var level = levels[levelKey];
+                html += '<div class="text-sm text-MAIN-content/80"><span class="font-medium">' + esc(level.label || LEVEL_LABELS[levelKey] || levelKey) + '</span>';
+                if (level.description) { html += ' — <span class="text-MAIN-content/60">' + esc(level.description) + '</span>'; }
+                html += '</div>';
+              });
+              html += '</div>';
+            }
+            html += '</div>';
+          });
+          html += '</div></div>';
+        });
+        html += '</div>';
+        screenCatalogHost.innerHTML = html;
+      })
+      .catch(function () {
+        screenCatalogHost.innerHTML = '<div class="rounded-box border border-dashed border-MAIN-300 bg-MAIN-100 p-4 text-sm text-error">No se pudo cargar el catálogo.</div>';
+      });
   }
 })();
 </script>

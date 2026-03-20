@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  {# ── Título ── #}
+  <title>{{ meta_title or title }}</title>
+
+  {# ── Meta SEO ── #}
+  {% if meta_desc %}
+  <meta name="description" content="{{ meta_desc }}">
+  {% endif %}
+
+  {# ── Open Graph ── #}
+  <meta property="og:title"   content="{{ meta_title or title }}">
+  <meta property="og:type"    content="website">
+  <meta property="og:locale"  content="es_ES">
+  {% if meta_desc %}
+  <meta property="og:description" content="{{ meta_desc }}">
+  {% endif %}
+  {% if og_image %}
+  <meta property="og:image" content="{{ og_image }}">
+  {% endif %}
+
+  {# ── Twitter Card ── #}
+  <meta name="twitter:card"  content="summary_large_image">
+  <meta name="twitter:title" content="{{ meta_title or title }}">
+  {% if meta_desc %}
+  <meta name="twitter:description" content="{{ meta_desc }}">
+  {% endif %}
+  {% if og_image %}
+  <meta name="twitter:image" content="{{ og_image }}">
+  {% endif %}
+
+  {# ── Fuentes ── #}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  {# ── CSS variables de marca (generado por brand_css_vars()) ── #}
+  {{ brand_vars }}
+
+  {# ── Reset y base ── #}
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      color: #1e293b;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    img {
+      max-width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    a {
+      color: inherit;
+    }
+  </style>
+
+  {# ── CSS del builder GrapesJS (inline, generado al guardar la página) ── #}
+  {{ extra_style }}
+</head>
+
+<body>
+
+  {# ── Contenido principal: HTML del builder o bloques renderizados ── #}
+  {{ body_content }}
+
+  {# ── Menú inferior móvil (solo si menu_position == "abajo") ── #}
+  {{ bottom_menu }}
+
+  {# ── Script de widgets de formulario (solo si la página los usa) ── #}
+  {{ form_script }}
+
+</body>
+</html>

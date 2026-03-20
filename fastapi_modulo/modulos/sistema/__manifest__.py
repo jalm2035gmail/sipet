@@ -1,0 +1,20 @@
+MANIFEST = {'name': 'sistema',
+ 'label': 'Sistema',
+ 'summary': 'Modulo sistema del sistema SIPET.',
+ 'description': 'Modulo sistema del sistema SIPET.',
+ 'version': '1.0.0',
+ 'category': 'Base',
+ 'author': 'SIPET',
+ 'sequence': '',
+ 'website': 'https://avancoop.org',
+ 'route': '/sistema',
+ 'icon': '',
+ 'depends': ['main'],
+ 'data': [],
+ 'assets': {'css': [], 'js': [], 'description': [], 'img': []},
+ 'structure': {},
+ 'installable': True,
+ 'application': False,
+ 'auto_install': False}
+
+__all__ = ["MANIFEST"]

@@ -1,0 +1,28 @@
+MANIFEST = {'name': 'diagnostico',
+ 'label': 'Diagnóstico',
+ 'summary': 'Core de diagnóstico.',
+ 'description': 'Core de diagnóstico.',
+ 'version': '1.0.0',
+ 'category': 'Operaciones',
+ 'author': 'SIPET',
+ 'sequence': '',
+ 'website': 'https://avancoop.org',
+ 'route': '/diagnostico',
+ 'icon': '',
+ 'depends': ['web'],
+ 'data': ['vistas/foda.html',
+          'vistas/percepcion_cliente.html',
+          'vistas/pestel.html',
+          'vistas/porter.html'],
+ 'assets': {'css': [], 'js': [], 'description': ['static/description/diagnostico.svg'], 'img': []},
+ 'structure': {'router': ['controladores/diagnostico.py'],
+               'views': ['vistas/foda.html',
+                         'vistas/percepcion_cliente.html',
+                         'vistas/pestel.html',
+                         'vistas/porter.html']},
+ 'installable': True,
+ 'application': True,
+ 'auto_install': False}
+MANIFEST['sidebar'] = {'icon': 'fafa', 'label': 'Diagnóstico', 'route': '/diagnostico'}
+
+__all__ = ["MANIFEST"]

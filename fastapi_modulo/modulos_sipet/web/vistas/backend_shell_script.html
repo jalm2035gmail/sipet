@@ -454,10 +454,16 @@
                 if (text.includes('indicadores') || route.includes('/brujula/indicadores')) return 'fa-solid fa-chart-line';
                 if (text.includes('bandeja') || route === '/notificaciones' || route.startsWith('/notificaciones/')) return 'fa-regular fa-envelope';
                 if (text === 'configuración' || text === 'configuracion' || route === '/ajustes/configuracion') return 'fa-solid fa-gear';
+                if (text === 'general' && route.includes('/ajustes/configuracion')) return 'fa-solid fa-sliders';
+                if (text === 'seguridad' || route.includes('#seguridad')) return 'fa-solid fa-lock';
+                if (text === 'integraciones' || route.includes('#integraciones')) return 'fa-solid fa-plug';
                 if (text === 'ia' || route === '/ajustes/ia') return 'fa-solid fa-brain';
+                if (text.includes('configuración de ia') || text.includes('configuracion de ia')) return 'fa-solid fa-robot';
                 if (text.includes('análisis predictivo') || text.includes('analisis predictivo') || route.includes('/ia/predictivo')) return 'fa-solid fa-chart-line';
-                if (text.includes('colores') || route === '/personalizar') return 'fa-solid fa-palette';
-                if (text.includes('roles') || route.includes('/roles-permisos')) return 'fa-solid fa-user-shield';
+                if (text.includes('temas y colores') || text.includes('colores') || route === '/personalizar') return 'fa-solid fa-palette';
+                if (text.includes('estado del tema') || route.includes('/personalizar/estado')) return 'fa-solid fa-swatchbook';
+                if (text.includes('roles') || route.includes('/roles-permisos') || route.includes('/roles')) return 'fa-solid fa-user-shield';
+                if (text.includes('membresía') || text.includes('membresia') || route.startsWith('/membresia')) return 'fa-solid fa-id-card';
                 if (text.includes('catálogo de cursos') || text.includes('catalogo de cursos') || route === '/capacitacion') return 'fa-solid fa-book-open';
                 if (text.includes('mi progreso') || route.includes('/capacitacion/mi-progreso')) return 'fa-solid fa-chart-line';
                 if (text.includes('gamificación') || text.includes('gamificacion') || route.includes('/capacitacion/gamificacion')) return 'fa-solid fa-trophy';
@@ -541,7 +547,7 @@
                             const normHref = href.replace(/\/+$/, '') || '/';
                             return normHref === currentPath || (normHref !== '/' && currentPath.startsWith(normHref + '/'));
                         });
-                        const iconClass = getNavbarSubmenuIconClass(label, '');
+                        const iconClass = String(item?.fa || '').trim() || getNavbarSubmenuIconClass(label, '');
                         return `<details class="navbar-section-group"${hasActiveChild ? ' open' : ''}><summary class="navbar-section-group-summary"><i class="navbar-section-link-icon ${iconClass}" aria-hidden="true"></i><span>${label}</span></summary><div class="navbar-section-group-items">${childItems}</div></details>`;
                     }
                     const href = String(item?.href || '').trim();
@@ -549,7 +555,7 @@
                     seen.add((isChild ? 'child:' : 'root:') + label);
                     const normHref = href.replace(/\/+$/, '') || '/';
                     const isActive = normHref === currentPath || (normHref !== '/' && currentPath.startsWith(normHref + '/'));
-                    const iconClass = getNavbarSubmenuIconClass(label, href);
+                    const iconClass = String(item?.fa || '').trim() || getNavbarSubmenuIconClass(label, href);
                     return `<a class="navbar-section-link${isActive ? ' is-active' : ''}${isChild ? ' is-child' : ''}" href="${href}" data-menu-name="${key}"><i class="navbar-section-link-icon ${iconClass}" aria-hidden="true"></i><span>${label}</span></a>`;
                 };
                 const items = links.map((item) => renderItem(item, false)).filter(Boolean);

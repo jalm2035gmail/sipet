@@ -16,10 +16,10 @@ from fastapi_modulo.modulos_sipet.web.servicios.session_service import (
     read_session_cookie,
     validate_csrf_request,
 )
+from fastapi_modulo.modulos_sipet.web.servicios.template_context_service import build_not_found_context
 
 SETUP_AUTH_COOKIE_NAME = "sipet_setup_auth"
 DEFAULT_SETUP_USERNAME_B64 = "MGtvbm9taXlha2k="
-from fastapi_modulo.modulos_sipet.web.servicios.template_context_service import build_not_found_context
 
 PUBLIC_PATHS = {
     "/",
@@ -61,7 +61,7 @@ def is_public_backend_path(request: Request, path: str) -> bool:
     if not getattr(request.app.state, "database_setup_required", False):
         try:
             frontend_public = __import__(
-                "fastapi_modulo.modulos.frontend.controladores.frontend",
+                "fastapi_modulo.modulos_sipet.frontend.controladores.frontend",
                 fromlist=["_is_public_frontend_page_path"],
             )._is_public_frontend_page_path(path)
         except Exception:
@@ -69,6 +69,9 @@ def is_public_backend_path(request: Request, path: str) -> bool:
     return bool(
         request.method == "OPTIONS"
         or path in public_paths
+        or path == "/web"
+        or path == "/web/"
+        or path.startswith("/web/")
         or frontend_public
         or path.startswith("/api/public/")
         or path.startswith("/backend/passkey/")
@@ -101,14 +104,14 @@ def _decode_b64(value: str) -> str:
     return base64.b64decode(value.encode("utf-8")).decode("utf-8")
 
 
-def _setup_username() -> str:
-    return (request_env("SYSTEM_SUPERADMIN_USERNAME") or _decode_b64(DEFAULT_SETUP_USERNAME_B64)).strip()
-
-
 def request_env(name: str) -> str:
     import os
 
     return str(os.environ.get(name) or "")
+
+
+def _setup_username() -> str:
+    return (request_env("SYSTEM_SUPERADMIN_USERNAME") or _decode_b64(DEFAULT_SETUP_USERNAME_B64)).strip()
 
 
 def _is_setup_authenticated_request(request: Request) -> bool:
@@ -132,14 +135,9 @@ def _record_screen_view_async(
     session_data: dict,
     path: str,
 ) -> None:
-    """
-    Registra el evento screen_view de forma asíncrona vía Celery.
-    Al no esperar el resultado, el tiempo de respuesta de cada GET
-    no se ve afectado por la escritura en base de datos.
-    Falla silenciosamente si Celery/Redis no están disponibles.
-    """
     try:
         from fastapi_modulo.modulos_sipet.web.servicios.audit_service import record_security_event
+
         analytics_context = _path_analytics_context(path)
         record_security_event(
             request,
@@ -162,7 +160,6 @@ async def enforce_backend_login(request: Request, call_next):
         binding = tenant_context.bind_request_tenant_context(request)
     path = request.url.path
 
-    # ── Redirección al setup de base de datos si aplica ───────────────────────
     if getattr(request.app.state, "database_setup_required", False):
         setup_public_prefixes = (
             "/base_datos",
@@ -184,7 +181,6 @@ async def enforce_backend_login(request: Request, call_next):
                 if binding is not None:
                     tenant_context.reset_request_tenant_context(binding)
 
-    # ── Rutas públicas — pasar sin validación ─────────────────────────────────
     if is_public_backend_path(request, path):
         try:
             return await call_next(request)
@@ -201,7 +197,6 @@ async def enforce_backend_login(request: Request, call_next):
             if binding is not None:
                 tenant_context.reset_request_tenant_context(binding)
 
-    # ── Validar sesión ────────────────────────────────────────────────────────
     session_data = read_session_cookie(request.cookies.get(AUTH_COOKIE_NAME, ""))
     if session_data and not is_session_bound_to_request(request, session_data):
         session_data = None
@@ -219,9 +214,9 @@ async def enforce_backend_login(request: Request, call_next):
         request.state.user_role = session_data["role"]
         request.state.tenant_id = normalize_tenant_id(session_data.get("tenant_id"))
 
-        # ── Validar huella de contraseña ──────────────────────────────────────
         try:
             from fastapi_modulo.modulos_sipet.web.servicios import auth_service
+
             session_db = auth_service.get_session_local()()
             try:
                 if not auth_service.is_password_fingerprint_valid(
@@ -237,7 +232,6 @@ async def enforce_backend_login(request: Request, call_next):
         except Exception:
             pass
 
-        # ── Validar CSRF en métodos mutantes ──────────────────────────────────
         if (
             CSRF_PROTECTION_ENABLED
             and request.method in {"POST", "PUT", "PATCH", "DELETE"}
@@ -251,17 +245,18 @@ async def enforce_backend_login(request: Request, call_next):
                 if path.startswith("/api/") or path.startswith("/guardar-colores"):
                     return JSONResponse({"success": False, "error": "CSRF validation failed"}, status_code=403)
                 from fastapi_modulo.modulos_sipet.web.servicios.template_service import get_templates
+
                 return get_templates(request).TemplateResponse(
                     "not_found.html",
                     build_not_found_context(request, title="Solicitud no válida"),
                     status_code=403,
                 )
 
-        # ── Validar acceso a pantalla ─────────────────────────────────────────
         if _screen_access_denied(request, path):
             if path.startswith("/api/"):
                 return JSONResponse({"success": False, "error": "Sin permisos para esta pantalla"}, status_code=403)
             from fastapi_modulo.modulos_sipet.web.servicios.template_service import render_no_access_module_page
+
             return render_no_access_module_page(
                 request,
                 title="Sin acceso",
@@ -269,14 +264,8 @@ async def enforce_backend_login(request: Request, call_next):
                 message="Sin acceso a esta pantalla, consulte con el administrador",
             )
 
-        # ── Ejecutar handler ──────────────────────────────────────────────────
         response = await call_next(request)
 
-        # ── Registrar screen_view de forma no bloqueante ──────────────────────
-        # Se usa _record_screen_view_async que delega a record_security_event,
-        # el cual a su vez encola la tarea ML vía Celery sin bloquear.
-        # La escritura del evento en DB sigue siendo síncrona pero se aísla
-        # en una función separada para que cualquier error no afecte la respuesta.
         if request.method == "GET" and not path.startswith("/api/") and response.status_code < 400:
             _record_screen_view_async(request, session_data, path)
 
@@ -285,4 +274,3 @@ async def enforce_backend_login(request: Request, call_next):
     finally:
         if binding is not None:
             tenant_context.reset_request_tenant_context(binding)
-            

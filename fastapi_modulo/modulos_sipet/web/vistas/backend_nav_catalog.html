@@ -1,6 +1,9 @@
 <script>
 window.__SIPET_BACKEND_NAVBAR_SUBMENU_CATALOG = {
     "backend": [
+        { href: "/aplicaciones", label: "Actualizar lista de aplicaciones" },
+        { href: "/aplicaciones", label: "Aplicar actualizaciones programadas" },
+        { href: "/aplicaciones", label: "Importar módulo" },
     ],
     "Mi tablero": [
         { href: "/mi-tablero", label: "Mi tablero" },
@@ -46,15 +49,9 @@ window.__SIPET_BACKEND_NAVBAR_SUBMENU_CATALOG = {
         { href: "/proyectando/tasa-referencia", label: "9. Tasa de referencia" },
         { href: "/proyectando/presupuesto", label: "Presupuesto" },
     ],
-    "Mesa de control": [
-        { href: "/mesa-de-control", label: "Dashboard ejecutivo" },
-        { href: "/mesa-de-control/captura-consolidacion", label: "Captura y consolidación" },
-        { href: "/mesa-de-control/analisis-priorizacion", label: "Analisis y priorización" },
-        { href: "/mesa-de-control/comite-decisiones", label: "Comité y decisiones" },
-        { href: "/mesa-de-control/monitoreo-cierre", label: "Monitoreo y cierre" },
-    ],
     "Cartera de préstamos": [
         { href: "/resumen_ejecutivo", label: "Resumen ejecutivo" },
+        { href: "/cartera-prestamos/mesa-control", label: "Mesa de control" },
         { href: "/cartera-prestamos/indicadores-financieros", label: "Indicadores financieros" },
         { href: "/cartera-prestamos/alertas-riesgos", label: "Alertas y riesgos" },
         { href: "/cartera-prestamos/operacion-comercial", label: "Operacion comercial" },
@@ -127,11 +124,13 @@ window.__SIPET_BACKEND_NAVBAR_SUBMENU_CATALOG = {
         { href: "/reportes/documentos", label: "Documentos" },
     ],
     "Empresa": [
-        { href: "/identidad-institucional", label: "Identidad institucional" },
-        { href: "/empresa/usuarios", label: "Usuarios" },
-        { href: "/empresa/MAIN-datos", label: "MAIN de datos" },
-        { href: "/plantillas", label: "Plantillas" },
-        { href: "/plantillas/constructor", label: "Constructor de formularios" },
+        { href: "/identidad-institucional", label: "Identidad institucional", fa: "fa-solid fa-id-card-clip" },
+        { href: "/empresa/usuarios", label: "Usuarios", fa: "fa-solid fa-users" },
+        { href: "/empresa/usuarios/roles", label: "Roles", fa: "fa-solid fa-user-shield" },
+        { href: "/empresa/usuarios/acceso", label: "Niveles de acceso", fa: "fa-solid fa-shield-halved" },
+        { href: "/empresa/MAIN-datos", label: "MAIN de datos", fa: "fa-solid fa-database" },
+        { href: "/plantillas", label: "Plantillas", fa: "fa-solid fa-file-lines" },
+        { href: "/plantillas/constructor", label: "Constructor de formularios", fa: "fa-solid fa-screwdriver-wrench" },
     ],
     "Aplicaciones": [
         { href: "/aplicaciones", label: "Módulos" },

@@ -6,7 +6,12 @@ from typing import Dict, List
 from fastapi import Request
 
 from fastapi_modulo.core.module_registry import get_active_app_access_names, get_active_module_keys, is_module_enabled, list_modules_payload
-from fastapi_modulo.modulos_sipet.web.servicios.access_service import get_user_app_access, is_superadmin
+from fastapi_modulo.modulos_sipet.web.servicios.access_service import (
+    get_user_app_access,
+    get_user_screen_access_levels,
+    is_admin_or_superadmin,
+    is_superadmin,
+)
 from fastapi_modulo.modulos_sipet.web.servicios.icon_catalog_service import resolve_module_icon
 
 
@@ -17,6 +22,30 @@ def _cached_modules_payload() -> tuple[dict, ...]:
 
 def invalidate_module_catalog_cache() -> None:
     _cached_modules_payload.cache_clear()
+
+
+def _screen_access_enabled(entry: object) -> bool:
+    if isinstance(entry, bool):
+        return entry
+    if not isinstance(entry, dict):
+        return False
+    return any(
+        bool(entry.get(level_key, False))
+        for level_key in ("full_access", "read_only", "department_only", "user_only", "special_permissions")
+    )
+
+
+def _has_capacitacion_role_assignment(request: Request) -> bool:
+    if is_admin_or_superadmin(request):
+        return True
+    access_levels = get_user_screen_access_levels(request)
+    for key in ("capacitacion", "Capacitacion", "Capacitación"):
+        if _screen_access_enabled(access_levels.get(key)):
+            return True
+    for key, value in access_levels.items():
+        if str(key or "").strip().lower().startswith("capacitacion.") and _screen_access_enabled(value):
+            return True
+    return False
 
 
 def build_sidebar_modules(request: Request) -> List[Dict[str, str]]:
@@ -34,6 +63,8 @@ def build_sidebar_modules(request: Request) -> List[Dict[str, str]]:
         if not bool(item.get("sidebar_visible")) and not (key in ("system_admin", "backend") and superadmin):
             continue
         if key in ("system_admin", "backend") and not superadmin:
+            continue
+        if key == "capacitacion" and not _has_capacitacion_role_assignment(request):
             continue
         app_access_name = str(item.get("app_access_name") or "").strip()
         if app_access_name and not superadmin and app_access_name not in user_access:

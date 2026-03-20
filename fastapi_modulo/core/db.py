@@ -2,6 +2,7 @@ import json
 import os
 from contextlib import nullcontext
 from datetime import datetime
+from pathlib import Path
 from typing import Dict, Optional
 
 from dotenv import load_dotenv
@@ -9,11 +10,16 @@ from sqlalchemy import Column, DateTime, Float, Integer, String, Text, create_en
 from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
+DB_MODULE_FILE = Path(__file__).resolve()
+REPO_ROOT = DB_MODULE_FILE.parents[2]
+PACKAGE_ROOT = DB_MODULE_FILE.parents[1]
+load_dotenv(REPO_ROOT / ".env")
+load_dotenv(PACKAGE_ROOT / ".env")
+
 from fastapi_modulo.core.database_router import DEFAULT_DATABASE_ROUTER
 
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 PROJECT_DB_DIR = os.path.join(PROJECT_ROOT, "..", "base_datos")
-load_dotenv(os.path.join(PROJECT_ROOT, ".env"))
 
 APP_ENV_DEFAULT = (os.environ.get("APP_ENV") or os.environ.get("ENVIRONMENT") or "development").strip().lower()
 DEFAULT_SIPET_DATA_DIR = (os.environ.get("SIPET_DATA_DIR") or os.path.expanduser("~/.sipet/data")).strip()

@@ -1,0 +1,213 @@
+<section class="min-h-[70vh] w-full px-0 py-2 pb-6 box-border">
+  <link rel="stylesheet" href="/static/vendor/grapesjs/css/grapes.min.css">
+  <div class="grid gap-5">
+    <article class="hero rounded-[28px] bg-gradient-to-br from-slate-950 via-slate-900 to-green-900 px-7 py-8 text-white shadow-2xl shadow-slate-900/15">
+      <div class="hero-content block max-w-none p-0">
+        <span class="badge badge-lg border-white/10 bg-white/10 px-4 py-4 text-[11px] font-extrabold uppercase tracking-[0.22em] text-white">Mi tablero</span>
+        <h2 class="mt-4 max-w-3xl text-3xl font-black leading-tight md:text-5xl">Accesos rapidos del sistema</h2>
+        <p class="mt-3 max-w-3xl text-sm leading-7 text-white/80 md:text-base">Centraliza los modulos habilitados para tu perfil y entra directo a las vistas operativas principales.</p>
+      </div>
+    </article>
+    <section class="grid grid-cols-1 gap-4 md:grid-cols-3 xl:grid-cols-4">
+      <article class="stats shadow bg-base-100 border border-base-300 rounded-3xl">
+        <div class="stat">
+          <div class="stat-title text-[11px] font-extrabold uppercase tracking-[0.22em] text-slate-500">Layout</div>
+          <div class="stat-value text-3xl text-slate-900">{{ payload.preferences.layout }}</div>
+        </div>
+      </article>
+      <article class="stats shadow bg-base-100 border border-base-300 rounded-3xl">
+        <div class="stat">
+          <div class="stat-title text-[11px] font-extrabold uppercase tracking-[0.22em] text-slate-500">Widgets</div>
+          <div class="stat-value text-3xl text-slate-900">{{ payload.widgets | length }}</div>
+        </div>
+      </article>
+      <article class="stats shadow bg-base-100 border border-base-300 rounded-3xl">
+        <div class="stat">
+          <div class="stat-title text-[11px] font-extrabold uppercase tracking-[0.22em] text-slate-500">Modulos</div>
+          <div class="stat-value text-3xl text-slate-900">{{ payload.metrics.total_modules }}</div>
+        </div>
+      </article>
+      <article class="stats shadow bg-emerald-950 text-emerald-50 border border-emerald-900 rounded-3xl">
+        <div class="stat">
+          <div class="stat-title text-[11px] font-extrabold uppercase tracking-[0.22em] text-emerald-200/80">Estado</div>
+          <div class="stat-value text-2xl text-white">{{ payload.stats_job.status }}</div>
+        </div>
+      </article>
+    </section>
+    <section class="grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-4">
+      {% for item in payload.sections.ordered_modules %}
+      <div class="card border border-base-300 bg-base-100 shadow-xl transition-all duration-200 hover:-translate-y-1 hover:shadow-2xl" data-item-key="{{ item.key }}">
+        <a href="/dashboard/open/{{ item.key }}" class="block no-underline text-inherit" data-item-key="{{ item.key }}">
+          <article class="card-body h-full p-5">
+            <div class="mb-3 flex items-center justify-between gap-3">
+              <h3 class="m-0 text-lg font-extrabold text-slate-900">{{ item.label }}</h3>
+              <span class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 text-lg font-extrabold text-emerald-800">
+                {% if item.key in payload.sections.pinned_keys %}P{% else %}&rarr;{% endif %}
+              </span>
+            </div>
+            <p class="m-0 text-sm leading-6 text-slate-600">{{ item.description or 'Acceso rapido al modulo.' }}</p>
+            <div class="card-actions mt-4 justify-end">
+              <span class="btn btn-ghost btn-sm rounded-full">Abrir</span>
+            </div>
+          </article>
+        </a>
+      </div>
+      {% else %}
+      <article class="card border border-dashed border-base-300 bg-base-100 text-center shadow-sm">
+        <div class="card-body p-7">
+          <h3 class="m-0 text-xl font-extrabold text-slate-900">Sin modulos disponibles</h3>
+          <p class="m-0 text-sm leading-6 text-slate-600">Este usuario no tiene accesos directos asignados en este momento.</p>
+        </div>
+      </article>
+      {% endfor %}
+    </section>
+    <section class="grid grid-cols-1 gap-4 xl:grid-cols-[1.2fr_.8fr]">
+      <article class="card border border-base-300 bg-base-100 shadow-lg">
+        <div class="card-body">
+          <div class="mb-4 flex items-center justify-between">
+            <h3 class="text-xl font-black text-slate-900">Favoritas y recientes</h3>
+            <span class="badge badge-outline">drag & drop</span>
+          </div>
+          <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+            <div>
+              <div class="mb-2 text-xs font-extrabold uppercase tracking-[0.22em] text-slate-500">Apps favoritas</div>
+              {% for item in payload.sections.favorites %}
+              <a href="/dashboard/open/{{ item.key }}" class="mb-2 flex items-center justify-between rounded-2xl border border-base-300 px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50">
+                <span>{{ item.key }}</span><span>Favorita</span>
+              </a>
+              {% else %}
+              <div class="rounded-2xl border border-dashed border-base-300 px-4 py-3 text-sm text-slate-500">Sin apps fijadas.</div>
+              {% endfor %}
+            </div>
+            <div>
+              <div class="mb-2 text-xs font-extrabold uppercase tracking-[0.22em] text-slate-500">Apps recientes</div>
+              {% for item in payload.sections.recent %}
+              <a href="/dashboard/open/{{ item.key }}" class="mb-2 flex items-center justify-between rounded-2xl border border-base-300 px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50">
+                <span>{{ item.key }}</span><span>Reciente</span>
+              </a>
+              {% endfor %}
+            </div>
+          </div>
+          <div class="divider my-3">Orden actual</div>
+          <div class="flex flex-wrap gap-2">
+            {% for item in payload.sections.ordered_modules %}
+            <span class="badge badge-lg border-base-300 bg-base-200 px-4 py-3 text-slate-700">{{ loop.index }}. {{ item.key }}</span>
+            {% endfor %}
+          </div>
+        </div>
+      </article>
+      <article class="card border border-base-300 bg-base-100 shadow-lg">
+        <div class="card-body">
+          <h3 class="mb-4 text-xl font-black text-slate-900">Alertas y tareas</h3>
+          {% for alert in payload.sections.alerts %}
+          <div class="alert mb-3 border border-amber-200 bg-amber-50 text-amber-900">
+            <span class="font-bold">{{ alert.label }}</span>
+            <span class="text-sm">{{ alert.description }}</span>
+          </div>
+          {% endfor %}
+          <div class="divider my-2">Pendientes</div>
+          {% for task in payload.sections.tasks %}
+          <div class="mb-2 flex items-center justify-between rounded-2xl border border-base-300 px-4 py-3">
+            <span class="font-semibold text-slate-700">{{ task.label }}</span>
+            <span class="badge {% if task.done %}badge-success{% else %}badge-ghost{% endif %}">{{ "Listo" if task.done else "Pendiente" }}</span>
+          </div>
+          {% endfor %}
+          <div class="divider my-2">Apps ocultas</div>
+          {% for item in payload.sections.hidden %}
+          <div class="mb-2 flex items-center justify-between rounded-2xl border border-dashed border-base-300 px-4 py-3 text-sm">
+            <span class="font-semibold text-slate-700">{{ item.key }}</span>
+            <span class="badge badge-outline">Oculta</span>
+          </div>
+          {% else %}
+          <div class="rounded-2xl border border-dashed border-base-300 px-4 py-3 text-sm text-slate-500">Sin apps ocultas.</div>
+          {% endfor %}
+        </div>
+      </article>
+    </section>
+    <section class="grid grid-cols-1 gap-4 xl:grid-cols-3">
+      <article class="card border border-base-300 bg-base-100 shadow-lg">
+        <div class="card-body">
+          <h3 class="mb-4 text-xl font-black text-slate-900">Indicadores</h3>
+          {% for indicator in payload.sections.indicators %}
+          <div class="mb-3 flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3">
+            <span class="text-sm font-bold text-slate-600">{{ indicator.label }}</span>
+            <span class="text-xl font-black text-slate-900">{{ indicator.value }}</span>
+          </div>
+          {% endfor %}
+        </div>
+      </article>
+      <article class="card border border-base-300 bg-base-100 shadow-lg">
+        <div class="card-body">
+          <h3 class="mb-4 text-xl font-black text-slate-900">Estadisticas personales</h3>
+          <div class="stats stats-vertical shadow">
+            <div class="stat">
+              <div class="stat-title">Apps por rol</div>
+              <div class="stat-value text-2xl">{{ payload.sections.personal_stats.allowed_apps }}</div>
+            </div>
+            <div class="stat">
+              <div class="stat-title">Mas usadas</div>
+              <div class="stat-value text-2xl">{{ payload.sections.personal_stats.most_used_apps | length }}</div>
+            </div>
+            <div class="stat">
+              <div class="stat-title">Abandonadas</div>
+              <div class="stat-value text-2xl">{{ payload.sections.personal_stats.abandoned_apps | length }}</div>
+            </div>
+          </div>
+          <div class="divider my-2">Pantallas mas usadas</div>
+          {% for screen in payload.sections.personal_stats.most_used_screens %}
+          <div class="mb-2 flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3 text-sm">
+            <span class="font-semibold text-slate-700">{{ screen.screen_key }}</span>
+            <span class="font-black text-slate-900">{{ screen.usage_count }}</span>
+          </div>
+          {% else %}
+          <div class="rounded-2xl border border-dashed border-base-300 px-4 py-3 text-sm text-slate-500">Sin actividad registrada.</div>
+          {% endfor %}
+        </div>
+      </article>
+      <article class="card border border-base-300 bg-base-100 shadow-lg">
+        <div class="card-body">
+          <h3 class="mb-4 text-xl font-black text-slate-900">Inteligencia</h3>
+          <div class="mb-2 text-xs font-extrabold uppercase tracking-[0.22em] text-slate-500">Apps sugeridas</div>
+          {% for item in payload.sections.recommended %}
+          <a href="/dashboard/open/{{ item.key }}" class="mb-2 flex items-center justify-between rounded-2xl border border-base-300 px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50">
+            <span>{{ item.key }}</span><span>Sugerida</span>
+          </a>
+          {% endfor %}
+          <div class="divider my-2">Por rol</div>
+          {% for item in payload.sections.suggested_by_role %}
+          <a href="/dashboard/open/{{ item.key }}" class="mb-2 flex items-center justify-between rounded-2xl border border-base-300 px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50">
+            <span>{{ item.key }}</span><span>Rol</span>
+          </a>
+          {% endfor %}
+          <div class="divider my-2">Apps mas usadas</div>
+          {% for item in payload.sections.personal_stats.most_used_apps %}
+          <div class="mb-2 flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3 text-sm">
+            <span class="font-semibold text-slate-700">{{ item.item_key }}</span>
+            <span class="font-black text-slate-900">{{ item.usage_count }}</span>
+          </div>
+          {% else %}
+          <div class="rounded-2xl border border-dashed border-base-300 px-4 py-3 text-sm text-slate-500">Sin uso consolidado.</div>
+          {% endfor %}
+        </div>
+      </article>
+    </section>
+    <section class="card border border-base-300 bg-base-100 shadow-xl">
+      <div class="card-body p-5">
+      <div class="mb-4 flex flex-col justify-between gap-3 md:flex-row md:items-center">
+        <div>
+          <div class="text-[11px] font-extrabold uppercase tracking-[0.22em] text-slate-500">GrapesJS</div>
+          <h3 class="mt-1 text-2xl font-black text-slate-900">Personaliza tu tablero</h3>
+        </div>
+        <button id="dashboard-layout-save" type="button" class="btn btn-primary rounded-full px-6">Guardar layout</button>
+      </div>
+      <div
+        id="dashboard-layout-editor"
+        data-layout='{{ payload.preferences.designer_layout | tojson }}'
+        class="min-h-[320px] overflow-hidden rounded-2xl border border-dashed border-base-300 bg-slate-50"
+      ></div>
+      </div>
+    </section>
+  </div>
+  <script src="/static/vendor/grapesjs/grapes.min.js"></script>
+  <script src="/modulos/mi_tablero/static/js/grapes_dashboard.js"></script>
+</section>

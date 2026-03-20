@@ -96,6 +96,27 @@ def test_is_password_fingerprint_valid_accepts_global_superadmin(monkeypatch) ->
     assert auth_service.is_password_fingerprint_valid(_FakeDb(), "0konomiyaki", expected) is True
 
 
+def test_is_password_fingerprint_valid_falls_back_to_local_user_when_superadmin_collides(monkeypatch) -> None:
+    monkeypatch.setattr(
+        auth_service,
+        "get_sipet_superadmin_settings",
+        lambda: {
+            "username": "0konomiyaki",
+            "password": "XX,$,26,sipet,26,$,XX",
+            "email": "alopez@avancoop.org",
+        },
+    )
+
+    class _User:
+        contrasena = "pbkdf2_sha256$120000$abcd$" + ("1" * 64)
+
+    monkeypatch.setattr(auth_service, "find_user_by_login", lambda db, username: _User())
+
+    expected = auth_service.build_password_fingerprint(_User.contrasena)
+
+    assert auth_service.is_password_fingerprint_valid(_FakeDb(), "0konomiyaki", expected) is True
+
+
 def test_apply_login_session_persists_global_superadmin_zero_user_id(monkeypatch) -> None:
     stored: dict[str, object] = {}
     request = Request(

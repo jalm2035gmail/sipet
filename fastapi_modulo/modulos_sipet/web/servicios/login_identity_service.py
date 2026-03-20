@@ -92,7 +92,7 @@ async def store_login_image(upload: UploadFile, prefix: str) -> Optional[str]:
 
 def clear_frontend_page_cache() -> None:
     try:
-        from fastapi_modulo.modulos.frontend.controladores import frontend as frontend_module
+        from fastapi_modulo.modulos_sipet.frontend.controladores import frontend as frontend_module
 
         frontend_module._page_cache.clear()
     except Exception:

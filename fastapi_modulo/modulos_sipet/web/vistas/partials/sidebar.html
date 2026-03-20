@@ -17,8 +17,8 @@
                 <span class="sidebar-main-icon sidebar-main-icon-custom" aria-hidden="true">
                     <img src="{{ item.icon_url }}" alt="">
                 </span>
-                {% elif item.key in ['encuestas', 'capacitacion', 'activo_fijo', 'auditoria'] %}
-                <span class="sidebar-main-icon{% if item.key in ['activo_fijo', 'auditoria'] %} sidebar-main-icon-custom{% endif %}" aria-hidden="true">
+                {% elif item.key in ['encuestas', 'capacitacion', 'auditoria'] %}
+                <span class="sidebar-main-icon{% if item.key in ['auditoria'] %} sidebar-main-icon-custom{% endif %}" aria-hidden="true">
                     {{ module_icon(item.key) }}
                 </span>
                 {% else %}
@@ -28,14 +28,6 @@
             </span>
         </a>
         {% endfor %}
-        {% if current_role in ['superadministrador', 'superadmin'] %}
-        <a class="sidebar-main-link" href="/ajustes/configuracion" data-menu-name="Ajustes" data-route="/ajustes/configuracion">
-            <span class="sidebar-main-left">
-                <i class="sidebar-main-icon fa-solid fa-gear" aria-hidden="true"></i>
-                <span class="sidebar-main-label">Ajustes</span>
-            </span>
-        </a>
-        {% endif %}
     </nav>
     <div class="sidebar-notifications-panel" id="sidebar-notifications-panel" aria-hidden="true">
         <div class="sidebar-notifications-header">

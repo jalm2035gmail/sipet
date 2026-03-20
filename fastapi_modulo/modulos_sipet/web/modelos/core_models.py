@@ -41,6 +41,8 @@ class Usuario(MAIN):
     rol_id = Column(Integer)
     imagen = Column(String)
     role = Column(String)
+    nivel_acceso = Column(String)
+    identidad_institucional = Column(String)
     is_active = Column(Boolean, default=True)
     backendauthn_credential_id = Column(String, unique=True, index=True)
     backendauthn_public_key = Column(String)

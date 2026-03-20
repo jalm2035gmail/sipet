@@ -1,0 +1,289 @@
+<link rel="stylesheet" href="/api/crm/assets/crm.css">
+
+<div class="crm-shell" id="crm-root" data-js-url="/api/crm/assets/crm.js">
+
+  <!-- Hero con KPIs -->
+  <section class="crm-hero">
+    <div class="crm-hero-head">
+      <img class="crm-hero-logo" src="/icon/boton/crm.svg" alt="CRM" />
+      <div class="crm-hero-copy">
+        <h1>CRM</h1>
+        <p>Gestión de contactos, oportunidades, actividades y campañas.</p>
+      </div>
+    </div>
+    <div class="crm-kpi-grid" id="crm-kpis">
+      <article class="crm-kpi-card">
+        <span class="crm-kpi-label">Contactos</span>
+        <strong class="crm-kpi-value" id="crm-kpi-contactos">—</strong>
+      </article>
+      <article class="crm-kpi-card">
+        <span class="crm-kpi-label">Oportunidades abiertas</span>
+        <strong class="crm-kpi-value" id="crm-kpi-oportunidades">—</strong>
+      </article>
+      <article class="crm-kpi-card">
+        <span class="crm-kpi-label">Actividades pendientes</span>
+        <strong class="crm-kpi-value" id="crm-kpi-actividades">—</strong>
+      </article>
+      <article class="crm-kpi-card">
+        <span class="crm-kpi-label">Campañas activas</span>
+        <strong class="crm-kpi-value" id="crm-kpi-campanias">—</strong>
+      </article>
+    </div>
+  </section>
+
+  <section class="crm-dashboard-grid" id="crm-dashboard-insights">
+    <article class="crm-dashboard-card">
+      <h3>Pipeline total</h3>
+      <div class="crm-dashboard-stat" id="crm-insight-pipeline">—</div>
+      <div class="crm-dashboard-substat" id="crm-insight-forecast">—</div>
+      <div class="crm-dashboard-list" id="crm-insight-monto-etapa"></div>
+    </article>
+    <article class="crm-dashboard-card">
+      <h3>Conversión y cierres</h3>
+      <div class="crm-dashboard-list" id="crm-insight-conversion"></div>
+    </article>
+    <article class="crm-dashboard-card">
+      <h3>Embudo comercial</h3>
+      <div class="crm-dashboard-list" id="crm-insight-embudo"></div>
+    </article>
+    <article class="crm-dashboard-card">
+      <h3>Actividades</h3>
+      <div class="crm-dashboard-list" id="crm-insight-actividades"></div>
+    </article>
+    <article class="crm-dashboard-card">
+      <h3>Comercial</h3>
+      <div class="crm-dashboard-list" id="crm-insight-comercial"></div>
+    </article>
+    <article class="crm-dashboard-card">
+      <h3>Fuentes</h3>
+      <div class="crm-dashboard-list" id="crm-insight-fuentes"></div>
+    </article>
+    <article class="crm-dashboard-card">
+      <h3>Campañas</h3>
+      <div class="crm-dashboard-list" id="crm-insight-campanias"></div>
+    </article>
+    <article class="crm-dashboard-card">
+      <h3>Pipeline por sucursal</h3>
+      <div class="crm-dashboard-list" id="crm-insight-sucursales"></div>
+    </article>
+    <article class="crm-dashboard-card">
+      <h3>Pipeline por ejecutivo</h3>
+      <div class="crm-dashboard-list" id="crm-insight-ejecutivos"></div>
+    </article>
+    <article class="crm-dashboard-card">
+      <h3>Semáforo sin movimiento</h3>
+      <div class="crm-dashboard-list" id="crm-insight-semaforo"></div>
+    </article>
+    <article class="crm-dashboard-card">
+      <h3>Lead scoring</h3>
+      <div class="crm-dashboard-list" id="crm-insight-scoring"></div>
+    </article>
+    <article class="crm-dashboard-card">
+      <h3>Próximos vencimientos</h3>
+      <div class="crm-dashboard-list" id="crm-insight-vencimientos"></div>
+    </article>
+    <article class="crm-dashboard-card">
+      <h3>Historial reciente</h3>
+      <div class="crm-dashboard-list" id="crm-insight-historial"></div>
+    </article>
+    <article class="crm-dashboard-card">
+      <h3>Dashboard por asesor</h3>
+      <div class="crm-dashboard-list" id="crm-insight-asesor"></div>
+    </article>
+    <article class="crm-dashboard-card">
+      <h3>Dashboard por sucursal</h3>
+      <div class="crm-dashboard-list" id="crm-insight-dashboard-sucursal"></div>
+    </article>
+    <article class="crm-dashboard-card">
+      <h3>Dashboard por campaña</h3>
+      <div class="crm-dashboard-list" id="crm-insight-dashboard-campania"></div>
+    </article>
+  </section>
+
+  <!-- Layout principal -->
+  <section class="crm-layout">
+    <div>
+      {{CRM_MENU}}
+
+      <!-- ── Contactos ────────────────────────────────────── -->
+      <section class="crm-panel is-active crm-card" data-panel-id="contactos">
+        <h2 class="crm-panel-title">Contactos</h2>
+
+        <form class="crm-form" id="crm-form-contacto">
+          <div class="crm-form-grid">
+            <input name="nombre"   placeholder="Nombre *" required />
+            <input name="email"    placeholder="Email" type="email" />
+            <input name="telefono" placeholder="Teléfono" />
+            <input name="empresa"  placeholder="Empresa" />
+            <input name="puesto"   placeholder="Puesto" />
+            <input name="sucursal" placeholder="Sucursal" />
+            <select name="tipo">
+              <option value="prospecto">Prospecto</option>
+              <option value="cliente">Cliente</option>
+              <option value="inactivo">Inactivo</option>
+            </select>
+            <select name="fuente">
+              <option value="manual">Manual</option>
+              <option value="backend">backend</option>
+              <option value="referido">Referido</option>
+              <option value="campania">Campaña</option>
+            </select>
+            <input name="fuente_detalle" placeholder="Origen detallado" />
+          </div>
+          <textarea name="notas" placeholder="Notas (opcional)"></textarea>
+          <div class="crm-actions">
+            <button type="submit">Agregar contacto</button>
+          </div>
+          <p class="crm-status" id="crm-contacto-form-status"></p>
+        </form>
+
+        <p class="crm-section-title">Lista de contactos</p>
+        <p class="crm-status" id="crm-contactos-status">Cargando...</p>
+        <div id="crm-contactos-table"></div>
+      </section>
+
+      <!-- ── Oportunidades ────────────────────────────────── -->
+      <section class="crm-panel crm-card" data-panel-id="oportunidades">
+        <h2 class="crm-panel-title">Oportunidades</h2>
+
+        <form class="crm-form" id="crm-form-oportunidad">
+          <div class="crm-form-grid">
+            <select name="contacto_id" id="crm-op-contacto-select" required>
+              <option value="">Seleccionar contacto *</option>
+            </select>
+            <input name="nombre" placeholder="Nombre oportunidad *" required />
+            <select name="etapa">
+              <option value="prospecto">Prospecto</option>
+              <option value="negociacion">Negociación</option>
+              <option value="propuesta">Propuesta</option>
+              <option value="cerrado_ganado">Cerrado ganado</option>
+              <option value="cerrado_perdido">Cerrado perdido</option>
+            </select>
+            <input name="valor_estimado" placeholder="Valor estimado" type="number" min="0" step="0.01" />
+            <input name="probabilidad"  placeholder="Probabilidad %" type="number" min="0" max="100" />
+            <input name="fecha_cierre_est" type="date" />
+            <input name="responsable" placeholder="Responsable" />
+            <input name="sucursal" placeholder="Sucursal" />
+          </div>
+          <textarea name="descripcion" placeholder="Descripción (opcional)"></textarea>
+          <div class="crm-actions">
+            <button type="submit">Agregar oportunidad</button>
+          </div>
+          <p class="crm-status" id="crm-oportunidad-form-status"></p>
+        </form>
+
+        <p class="crm-section-title">Pipeline</p>
+        <p class="crm-status" id="crm-oportunidades-status">Cargando...</p>
+        <div id="crm-oportunidades-kanban"></div>
+        <div id="crm-oportunidades-table"></div>
+      </section>
+
+      <!-- ── Actividades ──────────────────────────────────── -->
+      <section class="crm-panel crm-card" data-panel-id="actividades">
+        <h2 class="crm-panel-title">Actividades</h2>
+
+        <form class="crm-form" id="crm-form-actividad">
+          <div class="crm-form-grid">
+            <select name="tipo">
+              <option value="tarea">Tarea</option>
+              <option value="llamada">Llamada</option>
+              <option value="reunion">Reunión</option>
+              <option value="email">Email</option>
+              <option value="visita">Visita</option>
+            </select>
+            <input name="titulo" placeholder="Título *" required />
+            <select name="contacto_id" id="crm-act-contacto-select">
+              <option value="">Contacto (opcional)</option>
+            </select>
+            <select name="oportunidad_id" id="crm-act-op-select">
+              <option value="">Oportunidad (opcional)</option>
+            </select>
+            <input name="fecha" type="datetime-local" />
+            <input name="responsable" placeholder="Responsable" />
+          </div>
+          <textarea name="descripcion" placeholder="Descripción (opcional)"></textarea>
+          <div class="crm-actions">
+            <button type="submit">Agregar actividad</button>
+          </div>
+          <p class="crm-status" id="crm-actividad-form-status"></p>
+        </form>
+
+        <p class="crm-section-title">Actividades pendientes</p>
+        <p class="crm-status" id="crm-actividades-status">Cargando...</p>
+        <div id="crm-actividades-table"></div>
+      </section>
+
+      <!-- ── Notas ────────────────────────────────────────── -->
+      <section class="crm-panel crm-card" data-panel-id="notas">
+        <h2 class="crm-panel-title">Notas</h2>
+
+        <form class="crm-form" id="crm-form-nota">
+          <div class="crm-form-grid">
+            <select name="contacto_id" id="crm-nota-contacto-select">
+              <option value="">Contacto (opcional)</option>
+            </select>
+            <select name="oportunidad_id" id="crm-nota-op-select">
+              <option value="">Oportunidad (opcional)</option>
+            </select>
+          </div>
+          <textarea name="contenido" placeholder="Nota *" required></textarea>
+          <div class="crm-actions">
+            <button type="submit">Guardar nota</button>
+          </div>
+          <p class="crm-status" id="crm-nota-form-status"></p>
+        </form>
+
+        <p class="crm-section-title">Notas recientes</p>
+        <p class="crm-status" id="crm-notas-status">Cargando...</p>
+        <div id="crm-notas-list"></div>
+      </section>
+
+      <!-- ── Campañas ─────────────────────────────────────── -->
+      <section class="crm-panel crm-card" data-panel-id="campanias">
+        <h2 class="crm-panel-title">Campañas</h2>
+
+        <form class="crm-form" id="crm-form-campania">
+          <div class="crm-form-grid">
+            <input name="nombre" placeholder="Nombre *" required />
+            <select name="tipo">
+              <option value="email">Email</option>
+              <option value="llamada">Llamada</option>
+              <option value="evento">Evento</option>
+              <option value="promocion">Promoción</option>
+            </select>
+            <select name="estado">
+              <option value="borrador">Borrador</option>
+              <option value="activa">Activa</option>
+              <option value="finalizada">Finalizada</option>
+            </select>
+            <input name="fecha_inicio" type="date" />
+            <input name="fecha_fin"    type="date" />
+          </div>
+          <textarea name="descripcion" placeholder="Descripción (opcional)"></textarea>
+          <div class="crm-actions">
+            <button type="submit">Crear campaña</button>
+          </div>
+          <p class="crm-status" id="crm-campania-form-status"></p>
+        </form>
+
+        <p class="crm-section-title">Campañas</p>
+        <p class="crm-status" id="crm-campanias-status">Cargando...</p>
+        <div id="crm-campanias-table"></div>
+      </section>
+
+    </div>
+  </section>
+</div>
+<script>
+  (function () {
+    var root = document.getElementById('crm-root');
+    if (!root) return;
+    var jsUrl = root.getAttribute('data-js-url');
+    if (!jsUrl) return;
+    var s = document.createElement('script');
+    s.type = 'module';
+    s.src = jsUrl;
+    s.defer = true;
+    document.body.appendChild(s);
+  })();
+</script>

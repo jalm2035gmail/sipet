@@ -427,7 +427,8 @@ def is_password_fingerprint_valid(db, username: str, expected_fingerprint: str) 
         configured = get_global_superadmin_credentials()
         configured_password = str(configured.get("password") or "")
         if configured_password:
-            return hmac.compare_digest(build_password_fingerprint(configured_password), expected_fingerprint)
+            if hmac.compare_digest(build_password_fingerprint(configured_password), expected_fingerprint):
+                return True
     user = find_user_by_login(db, username)
     if not user:
         return False

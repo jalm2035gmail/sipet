@@ -29,7 +29,10 @@ def aplicaciones_legacy_redirect() -> RedirectResponse:
 def aplicaciones_page(request: Request):
     require_applications_permission(request, APPLICATIONS_PERMISSION_VIEW)
     template = get_templates().env.get_template(TEMPLATE_NAME)
-    content = template.render(applications_css_url="/api/aplicaciones/assets/aplicaciones.css")
+    content = template.render(
+        applications_css_url="/api/aplicaciones/assets/aplicaciones.css",
+        applications_js_url="/api/aplicaciones/assets/aplicaciones.js",
+    )
     return render_backend_page_html(
         request,
         title="Aplicaciones",
@@ -45,6 +48,16 @@ def aplicaciones_css_asset():
     return text_asset_response(
         "fastapi_modulo/modulos_sipet/aplicaciones/static/css/aplicaciones.css",
         media_type="text/css",
+        fallback="",
+    )
+
+
+@router.get("/api/aplicaciones/assets/aplicaciones.js")
+def aplicaciones_js_asset():
+    from fastapi_modulo.modulos_sipet.web.servicios.module_tools import text_asset_response
+    return text_asset_response(
+        "fastapi_modulo/modulos_sipet/aplicaciones/static/js/aplicaciones.js",
+        media_type="application/javascript",
         fallback="",
     )
 

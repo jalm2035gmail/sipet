@@ -1,0 +1,23 @@
+MANIFEST = {'name': 'main',
+ 'label': 'main',
+ 'summary': 'Core principal compartido del sistema.',
+ 'description': 'Core principal compartido del sistema.',
+ 'version': '1.0.0',
+ 'category': 'Base',
+ 'author': 'SIPET',
+ 'sequence': '',
+ 'website': 'https://avancoop.org',
+ 'route': '',
+ 'icon': '',
+ 'depends': [],
+ 'data': [],
+ 'assets': {'css': [], 'js': [], 'description': [], 'img': []},
+ 'structure': {'router': ['controladores/__init__.py',
+                          'controladores/ajustes.py',
+                          'controladores/inicio.py',
+                          'controladores/usuarios.py']},
+ 'installable': True,
+ 'application': False,
+ 'auto_install': False}
+
+__all__ = ["MANIFEST"]

@@ -49,6 +49,34 @@ def test_rate_limit_get_disables_broken_redis_client(monkeypatch) -> None:
 
     monkeypatch.setattr(redis_security_service, "_REDIS_CLIENT", _BrokenRedis())
     monkeypatch.setattr(redis_security_service, "_REDIS_UNAVAILABLE", False)
+    monkeypatch.setattr(redis_security_service, "REDIS_ENABLED", True)
 
     assert redis_security_service.rate_limit_get("ip", "127.0.0.1") == 0
     assert redis_security_service._REDIS_UNAVAILABLE is True
+
+
+def test_resolve_redis_enabled_defaults_to_disabled_in_local_without_config(monkeypatch) -> None:
+    monkeypatch.delenv("WEB_SECURITY_REDIS_ENABLED", raising=False)
+    monkeypatch.delenv("WEB_SECURITY_REDIS_URL", raising=False)
+    monkeypatch.delenv("REDIS_URL", raising=False)
+    monkeypatch.setattr(redis_security_service, "APP_ENV", "development")
+
+    assert redis_security_service._resolve_redis_enabled() is False
+
+
+def test_resolve_redis_enabled_ignores_generic_redis_url_in_local(monkeypatch) -> None:
+    monkeypatch.delenv("WEB_SECURITY_REDIS_ENABLED", raising=False)
+    monkeypatch.delenv("WEB_SECURITY_REDIS_URL", raising=False)
+    monkeypatch.setenv("REDIS_URL", "redis://localhost:6379/0")
+    monkeypatch.setattr(redis_security_service, "APP_ENV", "development")
+
+    assert redis_security_service._resolve_redis_enabled() is False
+
+
+def test_resolve_redis_enabled_accepts_module_specific_url_in_local(monkeypatch) -> None:
+    monkeypatch.delenv("WEB_SECURITY_REDIS_ENABLED", raising=False)
+    monkeypatch.setenv("WEB_SECURITY_REDIS_URL", "redis://localhost:6379/0")
+    monkeypatch.delenv("REDIS_URL", raising=False)
+    monkeypatch.setattr(redis_security_service, "APP_ENV", "development")
+
+    assert redis_security_service._resolve_redis_enabled() is True

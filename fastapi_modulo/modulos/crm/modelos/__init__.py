@@ -1,0 +1,41 @@
+from fastapi_modulo.modulos.crm.modelos.db_models import (
+    CrmActividad,
+    CrmCampania,
+    CrmContacto,
+    CrmContactoCampania,
+    CrmEvento,
+    CrmNota,
+    CrmOportunidad,
+)
+from fastapi_modulo.modulos.crm.modelos.schemas import (
+    ActividadCreate,
+    ActividadUpdate,
+    CampaniaCreate,
+    CampaniaUpdate,
+    ContactoCampaniaCreate,
+    ContactoCreate,
+    ContactoUpdate,
+    NotaCreate,
+    OportunidadCreate,
+    OportunidadUpdate,
+)
+
+__all__ = [
+    "ActividadCreate",
+    "ActividadUpdate",
+    "CampaniaCreate",
+    "CampaniaUpdate",
+    "ContactoCampaniaCreate",
+    "ContactoCreate",
+    "ContactoUpdate",
+    "CrmActividad",
+    "CrmCampania",
+    "CrmContacto",
+    "CrmContactoCampania",
+    "CrmEvento",
+    "CrmNota",
+    "CrmOportunidad",
+    "NotaCreate",
+    "OportunidadCreate",
+    "OportunidadUpdate",
+]

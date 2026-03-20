@@ -1,0 +1,528 @@
+Avance fase 5: 00.00% 
+
+
+📋 Etapas de Desarrollo - Arquitectura Backend/Frontend Separados
+Visión General de la Arquitectura
+text
+┌─────────────────┐      ┌─────────────────────────────────────┐      ┌─────────────────┐
+│                 │      │            BACKEND                   │      │                 │
+│    FRONTEND     │────▶│  ┌──────────────┐  ┌──────────────┐  │────▶│   MAIN DE       │
+│   (React/Vue)   │      │  │   Django     │  │   FastAPI    │  │      │    DATOS        │
+│                 │◀────│  │   (Admin +   │  │  (ML APIs)   │  │◀────│   PostgreSQL    │
+└─────────────────┘      │  │   REST API)  │  └──────────────┘  │      └─────────────────┘
+                         │  └──────────────┘                    │
+                         └─────────────────────────────────────┘
+📁 Estructura de Directorios (Actualizada)
+text
+✅ intellicoop/
+✅ ├── backend/                    # 🔥 BACKEND (Django + FastAPI)
+✅ │   ├── django_project/         # Proyecto Django principal
+✅ │   │   ├── config/             # Configuración (settings, urls)
+✅ │   │   ├── apps/               # Aplicaciones Django
+✅ │   │   │   ├── socios/         # API de socios
+✅ │   │   │   ├── creditos/       # API de créditos
+✅ │   │   │   ├── ahorros/        # API de ahorros
+✅ │   │   │   └── analitica/      # Endpoints para dashboards
+✅ │   │   ├── manage.py
+✅ │   │   └── requirements.txt
+│   │
+✅ │   └── fastapi_service/        # Microservicio de ML
+✅ │       ├── app/
+✅ │       │   ├── api/             # Endpoints ML
+✅ │       │   ├── core/            # Modelos .pkl
+✅ │       │   └── main.py
+✅ │       └── requirements.txt
+│
+✅ ├── frontend/                   # 🎨 FRONTEND (Independiente)
+✅ │   ├── public/
+│   │   ├── index.html
+✅ │   │   └── favicon.ico
+✅ │   ├── src/
+✅ │   │   ├── assets/             # Imágenes, iconos, estilos
+✅ │   │   │   ├── images/
+✅ │   │   │   ├── icons/
+✅ │   │   │   └── scss/
+✅ │   │   ├── components/         # Componentes reutilizables
+✅ │   │   ├── pages/              # Vistas/páginas
+✅ │   │   ├── services/           # Conexión con APIs
+✅ │   │   │   ├── api_django.js   # Llamadas a Django
+✅ │   │   │   └── api_fastapi.js  # Llamadas a FastAPI
+│   │   ├── App.js
+│   │   └── index.js
+✅ │   ├── package.json
+│   └── README.md
+│
+✅ ├── docker/                      # Configuración Docker
+✅ │   ├── Dockerfile.backend
+✅ │   ├── Dockerfile.frontend
+✅ │   └── docker-compose.yml
+│
+✅ ├── data_pipelines/              # Scripts de Big Data
+✅ │   ├── spark_jobs/
+✅ │   └── notebooks/
+│
+✅ └── .env.example
+
+
+🚀 Etapas de Desarrollo Detalladas
+FASE 0: Fundación y Setup Inicial
+
+Objetivo: Establecer la estructura MAIN de backend y frontend por separado.
+
+Backend (Django)
+✅ Crear proyecto Django config
+
+✅ Configurar PostgreSQL como MAIN de datos
+
+✅ Crear apps: socios, creditos, ahorros, analitica
+
+✅ Diseñar modelos ORM:
+
+✅ Socio (nombre, email, teléfono, dirección, fecha_registro)
+
+✅ Cuenta (tipo, saldo, socio_id)
+
+✅ Transaccion (monto, tipo, fecha, cuenta_id)
+
+✅ Credito (monto, plazo, estado, socio_id)
+
+✅ HistorialPago (fecha, monto, credito_id)
+
+✅ Configurar Django REST Framework (DRF)
+
+✅ Crear serializers básicos para cada modelo
+
+✅ Implementar autenticación JWT (djangorestframework-simplejwt)
+
+Frontend (React - elegimos React por popularidad)
+✅ Inicializar proyecto frontend (React)
+
+✅ Crear estructura de carpetas (assets/, components/, pages/, services/)
+
+✅ Agregar archivos estáticos de ejemplo:
+
+✅ frontend/src/assets/images/logo.png
+
+✅ frontend/src/assets/icons/favicon.ico
+
+✅ frontend/src/assets/scss/main.scss
+
+✅ Configurar rutas básicas (React Router)
+
+✅ Crear componente Layout con navbar y footer
+
+✅ Crear página Home simple
+
+✅ Configurar axios para llamadas API
+
+Conexión Inicial
+✅ Crear endpoint en Django: GET /api/health/
+
+✅ Desde frontend, llamar a ese endpoint para verificar conexión
+
+Entregable: Backend con modelos y API básica, frontend con estructura y conexión verificada.
+
+FASE 1: Templates UI y Autenticación
+
+Objetivo: Construir la interfaz de usuario con los templates/componentes visuales.
+
+Frontend - Componentes MAIN
+Assets finales:
+
+✅ 1/23 - Agregar imágenes institucionales a /assets/images (placeholders temporales)
+
+✅ Campos definidos para reemplazo posterior:
+
+frontend/src/assets/images/institucional/hero_home.png
+
+frontend/src/assets/images/institucional/login_bg.png
+
+frontend/src/assets/images/institucional/dashboard_banner.png
+
+✅ 2/23 - Agregar iconos personalizados a /assets/icons (placeholders temporales)
+
+✅ Campos definidos para reemplazo posterior:
+
+frontend/src/assets/icons/custom/dashboard.svg
+
+frontend/src/assets/icons/custom/socios.svg
+
+frontend/src/assets/icons/custom/creditos.svg
+
+frontend/src/assets/icons/custom/ahorros.svg
+
+frontend/src/assets/icons/custom/analitica.svg
+
+frontend/src/assets/icons/custom/configuracion.svg
+
+✅ 3/23 - Crear archivo de variables CSS/SCSS (colores corporativos)
+
+✅ Archivo creado:
+
+frontend/src/assets/scss/variables.scss
+
+Componentes reutilizables:
+
+✅ 4/23 - Button.jsx - Botones personalizados
+
+✅ 5/23 - Card.jsx - Tarjetas para mostrar información
+
+✅ 6/23 - Table.jsx - Tablas de datos
+
+✅ 7/23 - Modal.jsx - Ventanas modales
+
+✅ 8/23 - Chart.jsx - Gráficos (implementación MAIN local)
+
+Páginas de autenticación:
+
+✅ 9/23 - Login.jsx - Formulario de inicio de sesión
+
+✅ 10/23 - Register.jsx - Registro de usuarios
+
+✅ 11/23 - ForgotPassword.jsx - Recuperación de contraseña
+
+Layouts:
+
+✅ 12/23 - MainLayout.jsx - Layout para usuarios autenticados (con sidebar)
+
+✅ 13/23 - AuthLayout.jsx - Layout para páginas de login/registro
+
+Backend - Autenticación y Perfiles
+Endpoints de autenticación:
+
+✅ 14/23 - POST /api/auth/login/
+
+✅ 15/23 - POST /api/auth/register/
+
+✅ 16/23 - POST /api/auth/refresh/
+
+✅ 17/23 - GET /api/auth/profile/
+
+✅ 18/23 - Modelo UserProfile extendiendo User de Django
+
+✅ 19/23 - Permisos por rol (Admin, Oficial, Gerente)
+
+Templates Visuales
+Dashboard principal:
+
+✅ 20/23 - Tarjetas de KPIs (Total socios, Créditos activos, Total ahorros)
+
+✅ 21/23 - Gráficos de tendencia
+
+✅ 22/23 - Tabla de últimos movimientos
+
+✅ 23/23 - Sidebar de navegación:
+
+✅ Iconos desde /assets/icons
+
+✅ Menús: Dashboard, Socios, Créditos, Ahorros, Analítica, Configuración
+
+Entregable: Frontend con sistema de autenticación, layout completo y componentes visuales listos.
+
+FASE 2: Motor de Colocación - Scoring de Crédito
+
+Objetivo: Implementar el modelo de scoring y su interfaz.
+
+✅ 1/25 - Definir alcance técnico de Créditos
+
+✅ 2/25 - Ajustar modelo Credito para scoring
+
+✅ 3/25 - Crear serializer Credito para CRUD y scoring
+
+✅ 4/25 - Crear vistas/API de Créditos (CRUD MAIN)
+
+✅ 5/25 - Exponer y validar GET /api/creditos/ (listar solicitudes)
+
+✅ 6/25 - Exponer y validar POST /api/creditos/ (crear solicitud)
+
+✅ 7/25 - Exponer y validar GET /api/creditos/{id}/ (detalle)
+
+✅ 8/25 - Exponer y validar PUT /api/creditos/{id}/ (actualizar)
+
+✅ 9/25 - Exponer y validar DELETE /api/creditos/{id}/ (eliminar)
+
+✅ 10/25 - Exponer y validar POST /api/ml/scoring/ (evaluación de riesgo)
+
+✅ 11/25 - Exponer y validar documentación automática en /docs (FastAPI)
+
+✅ 12/25 - Crear página CreditosList.jsx con tabla de solicitudes y consumo de API
+
+✅ 13/25 - Crear página CreditoForm.jsx con formulario y POST /api/creditos/
+
+✅ 14/25 - Integrar scoring en tiempo real en CreditoForm.jsx (POST /api/ml/scoring)
+
+✅ 15/25 - Mostrar badge visual de riesgo (bajo/medio/alto) en CreditoForm.jsx
+
+✅ 16/25 - Sugerir preaprobación automática cuando score > 0.8
+
+✅ 17/25 - Crear página CreditoDetail.jsx con detalle e historial de pagos
+
+✅ 18/25 - Registrar pagos desde CreditoDetail.jsx (POST /api/creditos/pagos/)
+
+✅ 19/25 - Actualizar estado del crédito desde CreditoDetail.jsx (PATCH /api/creditos/{id}/)
+
+✅ 20/25 - Eliminar solicitud desde CreditoDetail.jsx (DELETE /api/creditos/{id}/)
+
+✅ 21/25 - Integrar autenticación JWT en frontend (login + token en APIs)
+
+✅ 22/25 - Proteger rutas privadas del frontend con guard de autenticación
+
+✅ 23/25 - Implementar cierre de sesión (logout) y limpieza de tokens en frontend
+
+✅ 24/25 - Renovar access token automáticamente al expirar (refresh JWT en APIs)
+
+✅ 25/25 - Proteger rutas públicas de autenticación cuando ya existe sesión activa
+
+✅ Campos de scoring agregados:
+- ingreso_mensual
+- deuda_actual
+- antiguedad_meses
+
+✅ Campos mínimos de solicitud de crédito:
+- socio_id
+- monto
+- plazo (meses)
+- estado (solicitado/aprobado/rechazado)
+- fecha_creacion
+
+✅ Estados operativos:
+- solicitado (default al crear)
+- aprobado (tras evaluación/scoring)
+- rechazado (tras evaluación/scoring)
+
+✅ Reglas de negocio iniciales:
+- monto > 0
+- plazo > 0
+- socio_id obligatorio y existente
+- solo estados permitidos según catálogo
+
+Backend Django - API de Créditos
+Endpoints CRUD para solicitudes de crédito:
+
+GET /api/creditos/ - Listar solicitudes
+
+POST /api/creditos/ - Crear solicitud
+
+GET /api/creditos/{id}/ - Detalle
+
+PUT /api/creditos/{id}/ - Actualizar
+
+DELETE /api/creditos/{id}/ - Eliminar
+
+FastAPI - Servicio de Scoring
+Modelo ML (XGBoost) guardado en fastapi_service/app/core/modelo_scoring.pkl
+
+Endpoint: POST /api/ml/scoring/
+
+Input: datos del socio y solicitud
+
+Output: {"score": 0.85, "recomendacion": "aprobar", "riesgo": "bajo"}
+
+Documentación automática en /docs
+
+Frontend - Interfaz de Créditos
+Página CreditosList.jsx - Tabla de solicitudes
+
+Página CreditoForm.jsx - Formulario de solicitud
+
+Integración con scoring:
+
+Al llenar el formulario, llamar a FastAPI para obtener score en tiempo real
+
+Mostrar badge de riesgo (🟢 Bajo, 🟡 Medio, 🔴 Alto)
+
+Si score > 0.8, sugerir preaprobación automática
+
+Página CreditoDetail.jsx - Detalle con historial de pagos
+
+Entregable: Sistema completo de solicitud de créditos con scoring automático.
+
+FASE 3: Motor de Captación - Segmentación y Ahorros
+
+Objetivo: Segmentar socios y personalizar ofertas de ahorro.
+
+Avance fase 3: 100.00% (5/5)
+
+✅ 1/5 - Backend API de ahorros (cuentas, movimientos, aperturar) con pruebas
+
+✅ 2/5 - Campo segmento en Socio (modelo + migración + exposición API)
+
+✅ 3/5 - Pipeline nocturno de segmentación con soporte K-Means (PySpark) y fallback
+
+✅ 4/5 - Frontend de ahorros/segmentación (AhorrosDashboard, SociosList, ProductoRecomendado)
+
+✅ 5/5 - Integración y validación de Fase 3 (tests backend y pruebas UI preparadas)
+
+Backend Django - API de Ahorros
+Endpoints:
+
+GET /api/ahorros/cuentas/ - Listar cuentas de ahorro
+
+GET /api/ahorros/movimientos/ - Ver transacciones
+
+POST /api/ahorros/aperturar/ - Aperturar cuenta
+
+Campo segmento en modelo Socio (actualizado por script nocturno)
+
+Data Pipeline - Segmentación
+Script PySpark que corre diariamente:
+
+Extrae datos de transacciones
+
+Aplica K-Means para segmentar socios
+
+Actualiza campo segmento en DB
+
+Frontend - Interfaz de Ahorros y Segmentación
+Página AhorrosDashboard.jsx:
+
+Gráfico de torta con distribución de segmentos
+
+KPIs de captación
+
+Página SociosList.jsx con columna de segmento:
+
+🐜 "Ahorrador Hormiga"
+
+🐘 "Gran Ahorrador"
+
+💤 "Inactivo"
+
+Componente ProductoRecomendado.jsx:
+
+Muestra producto ideal según segmento
+
+Botón "Ofrecer producto"
+
+Entregable: Visualización de segmentos y recomendaciones personalizadas.
+
+FASE 4: Motor de Crecimiento - Propensión y Campañas
+
+Objetivo: Identificar prospectos y gestionar campañas.
+
+Avance fase 4: 100.00% (5/5)
+
+✅ 1/5 - Definir alcance técnico del módulo de crecimiento y campañas
+
+✅ 2/5 - Backend de campañas/prospectos (modelos, serializers, endpoints y pruebas)
+
+✅ 3/5 - Frontend de campañas (CampaniasList con listado y alta)
+
+✅ 4/5 - Frontend de prospectos (ProspectosList) integrado a navegación
+
+✅ 5/5 - Socios inactivos + mapa de calor (Leaflet) y cierre de validaciones/template backend
+
+Backend Django - Módulo de Campañas
+Modelos:
+
+Campania (nombre, tipo, fecha_inicio, fecha_fin, estado)
+
+Prospecto (nombre, telefono, direccion, fuente, score_propension)
+
+Endpoints:
+
+GET /api/campanas/ - Listar campañas
+
+POST /api/campanas/ - Crear campaña
+
+GET /api/prospectos/ - Listar prospectos
+
+Frontend - Interfaz de Marketing
+Página CampaniasList.jsx - Gestión de campañas
+
+Página ProspectosList.jsx - Lista de prospectos potenciales
+
+Mapa de calor:
+
+Usar biblioteca como Leaflet o Google Maps
+
+Mostrar zonas con alta concentración de socios ideales
+
+Página SociosInactivos.jsx - Lista de socios a reactivar
+
+Entregable: Módulo de marketing para captación de nuevos socios.
+
+FASE 5: Consolidación y Despliegue
+
+Objetivo: Unificar, optimizar y desplegar.
+
+Avance fase 5: 100.00% (5/5)
+
+✅ 1/5 - Variables de entorno unificadas con perfiles dev/prod
+
+✅ 2/5 - Dockerización completa y orquestación con postgres/redis/django/fastapi/frontend/nginx
+
+✅ 3/5 - Backend productivo MAIN (cache Redis, Celery worker/beat, logging estructurado)
+
+✅ 4/5 - Frontend productivo (lazy loading de rutas + estado global con Context API)
+
+✅ 5/5 - Validación técnica final y checklist de despliegue/rollback
+
+Backend - Optimización
+Cache con Redis para endpoints frecuentes
+
+Tareas asíncronas con Celery (reportes, reentrenamiento)
+
+Logging centralizado
+
+Tests unitarios y de integración
+
+Frontend - Mejoras
+Lazy loading de rutas
+
+Estado global con Context API o Redux
+
+PWA (Progressive backend App) - opcional
+
+Modo oscuro/claro con variables CSS
+
+Infraestructura
+Dockerizar:
+
+Dockerfile.backend (Django + Gunicorn)
+
+Dockerfile.fastapi (Uvicorn)
+
+Dockerfile.frontend (Nginx para servir build)
+
+docker-compose.yml completo:
+
+yaml
+services:
+  postgres:
+  redis:
+  django:
+  fastapi:
+  frontend:
+  nginx:
+Variables de entorno para producción
+
+Despliegue
+Configurar dominio y SSL
+
+Desplegar en VPS (DigitalOcean, AWS) o PaaS (Render, Railway)
+
+Monitoreo con Sentry (errores) y Prometheus (métricas)
+
+Entregable: Aplicación completa en producción.
+
+📊 Resumen de Etapas
+Fase	Nombre	Duración	Entregable Principal
+0	Fundación	2-3 sem	Backend y frontend MAIN conectados
+1	Templates UI	3-4 sem	Sistema de autenticación + layout visual
+2	Scoring	4-5 sem	Solicitud de créditos con IA
+3	Segmentación	4-5 sem	Dashboard de ahorros segmentados
+4	Crecimiento	3-4 sem	Módulo de campañas y prospectos
+5	Consolidación	4 sem	App en producción con Docker
+Total estimado: 20-25 semanas (5-6 meses)
+
+🎨 Nota sobre /static y /templates
+En esta arquitectura:
+
+/static (backend): Solo para archivos del panel admin de Django (si lo usas). Los assets del frontend van en frontend/src/assets/.
+
+/templates (backend): Solo para plantillas del admin o emails HTML. Las páginas principales están en React.
+
+/assets (frontend): Aquí van imágenes, iconos, estilos globales.
+
+x con fondo rojo

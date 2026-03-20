@@ -1,22 +1,194 @@
-<section id="applications-root" class="mx-auto max-w-5xl px-4 py-10">
+<section
+  id="applications-root"
+  class="gov-apps-page mx-auto max-w-7xl px-4 py-6 lg:px-6"
+  data-bootstrap='{"modules":[]}'
+>
   <link rel="stylesheet" href="{{ applications_css_url }}">
 
-  <div class="mb-8">
-    <h1 class="text-3xl font-black text-base-content">Panel de aplicaciones</h1>
-    <p class="mt-2 text-base-content/60">
-      Los módulos instalados registrarán aquí sus permisos y accesos disponibles.
-    </p>
+  <div class="gov-apps-shell space-y-6">
+    <header class="gov-apps-toolbar rounded-[2rem] border border-base-300 bg-base-100/95 px-4 py-4 shadow-sm backdrop-blur">
+      <div class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+        <div class="min-w-0">
+          <div class="flex items-center gap-3">
+            <div class="gov-apps-toolbar-badge">
+              <i class="fa-solid fa-cubes-stacked"></i>
+            </div>
+            <div>
+              <p class="text-xs font-bold uppercase tracking-[0.28em] text-primary/70">Gestion de modulos</p>
+              <h1 class="text-3xl font-black text-base-content">Aplicaciones</h1>
+            </div>
+          </div>
+          <p class="mt-3 max-w-3xl text-sm leading-6 text-base-content/65">
+            Administra activacion, auditoria de protocolo, importacion y acceso directo a los modulos instalados.
+          </p>
+        </div>
+
+        <nav class="gov-apps-submenu" aria-label="Acciones de modulos">
+          <a class="gov-apps-submenu-link is-active" href="/aplicaciones">
+            <i class="fa-solid fa-grid-2"></i>
+            <span>Aplicaciones</span>
+          </a>
+          <button id="apps-refresh-list" class="gov-apps-submenu-link" type="button">
+            <i class="fa-solid fa-rotate"></i>
+            <span>Actualizar lista de aplicaciones</span>
+          </button>
+          <button id="apps-sync-protocol" class="gov-apps-submenu-link" type="button">
+            <i class="fa-solid fa-wand-magic-sparkles"></i>
+            <span>Aplicar actualizaciones programadas</span>
+          </button>
+          <button id="apps-import-shortcut" class="gov-apps-submenu-link" type="button">
+            <i class="fa-solid fa-file-import"></i>
+            <span>Importar modulo</span>
+          </button>
+        </nav>
+      </div>
+    </header>
+
+    <section class="hero overflow-hidden rounded-[2rem] border border-base-300 px-5 py-6 shadow-sm lg:px-6">
+      <div class="grid gap-4 xl:grid-cols-[1.7fr,0.9fr] xl:items-end">
+        <div class="space-y-5">
+          <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <article class="rounded-3xl border border-base-300 bg-base-100/75 p-4">
+              <div class="text-xs font-bold uppercase tracking-[0.2em] text-base-content/50">Total</div>
+              <div id="apps-total-count" class="mt-2 text-3xl font-black">0</div>
+            </article>
+            <article class="rounded-3xl border border-base-300 bg-base-100/75 p-4">
+              <div class="text-xs font-bold uppercase tracking-[0.2em] text-base-content/50">Protocolos OK</div>
+              <div id="apps-ok-count" class="mt-2 text-3xl font-black text-success">0</div>
+            </article>
+            <article class="rounded-3xl border border-base-300 bg-base-100/75 p-4">
+              <div class="text-xs font-bold uppercase tracking-[0.2em] text-base-content/50">Con hallazgos</div>
+              <div id="apps-missing-count" class="mt-2 text-3xl font-black text-warning">0</div>
+            </article>
+            <article class="rounded-3xl border border-base-300 bg-base-100/75 p-4">
+              <div class="text-xs font-bold uppercase tracking-[0.2em] text-base-content/50">Seleccionados</div>
+              <div id="apps-selected-count" class="mt-2 text-3xl font-black text-primary">0</div>
+            </article>
+          </div>
+
+          <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div class="tabs tabs-boxed inline-flex w-fit bg-base-100/85 p-1">
+              <button class="tab tab-active" type="button" data-filter="all">Todos</button>
+              <button class="tab" type="button" data-filter="ok">Protocolo OK</button>
+              <button class="tab" type="button" data-filter="missing">Requiere atencion</button>
+            </div>
+
+            <label class="input input-bordered flex w-full items-center gap-3 rounded-2xl bg-base-100/90 lg:max-w-xl">
+              <i class="fa-solid fa-magnifying-glass text-base-content/50"></i>
+              <input
+                id="apps-search-input"
+                type="search"
+                class="grow"
+                placeholder="Buscar modulo, ruta, descripcion o hallazgos"
+              >
+            </label>
+          </div>
+        </div>
+
+        <aside class="audit-box">
+          <div class="audit-metrics">
+            <div class="audit-item">
+              <div class="label">Activos</div>
+              <div id="apps-enabled-count" class="value">0</div>
+            </div>
+            <div class="audit-item">
+              <div class="label">Importables</div>
+              <div id="apps-uploadable-count" class="value">0</div>
+            </div>
+            <div class="audit-item">
+              <div class="label">Con ruta</div>
+              <div id="apps-routed-count" class="value">0</div>
+            </div>
+          </div>
+          <p id="apps-selection-summary" class="audit-note">
+            Selecciona modulos para ejecutar acciones por lote o revisar auditoria.
+          </p>
+        </aside>
+      </div>
+    </section>
+
+    <section class="grid gap-6 2xl:grid-cols-[minmax(0,1.65fr),minmax(20rem,0.8fr)]">
+      <div class="space-y-4">
+        <div class="rounded-[1.75rem] border border-base-300 bg-base-100 p-4 shadow-sm">
+          <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <label class="flex items-center gap-3 text-sm font-semibold">
+              <input id="apps-select-all" type="checkbox" class="checkbox checkbox-sm">
+              <span>Seleccionar visibles</span>
+            </label>
+
+            <div class="flex flex-wrap gap-2">
+              <button id="apps-bulk-enable" class="btn btn-primary btn-sm gap-2" type="button">
+                <i class="fa-solid fa-power-off"></i>Activar lote
+              </button>
+              <button id="apps-bulk-disable" class="btn btn-outline btn-sm gap-2" type="button">
+                <i class="fa-solid fa-toggle-off"></i>Desactivar lote
+              </button>
+              <button id="apps-export-excel" class="btn btn-ghost btn-sm gap-2" type="button">
+                <i class="fa-solid fa-file-arrow-down"></i>Exportar
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div id="apps-grid" class="grid gap-4 xl:grid-cols-2"></div>
+      </div>
+
+      <aside class="space-y-4">
+        <div class="rounded-[1.75rem] border border-base-300 bg-base-100 p-5 shadow-sm">
+          <div class="flex items-center justify-between gap-3">
+            <div>
+              <p class="text-xs font-bold uppercase tracking-[0.18em] text-base-content/50">Auditoria</p>
+              <h2 class="text-2xl font-black text-base-content">Detalle del modulo</h2>
+            </div>
+            <span id="apps-audit-pill" class="badge badge-outline">Sin seleccion</span>
+          </div>
+          <div id="apps-audit-panel" class="mt-5"></div>
+        </div>
+
+        <div id="apps-toast" class="alert shadow-lg opacity-0 transition-opacity duration-200">
+          <i class="fa-solid fa-circle-info"></i>
+          <span></span>
+        </div>
+      </aside>
+    </section>
   </div>
 
-  <div id="apps-modules-zone">
-    <!-- Los módulos instalados inyectan su contenido aquí -->
-  </div>
+  <dialog id="apps-upload-modal" class="modal">
+    <div class="modal-box max-w-3xl rounded-[1.75rem]">
+      <form method="dialog">
+        <button class="btn btn-sm btn-circle btn-ghost absolute right-4 top-4" type="submit">✕</button>
+      </form>
+      <h3 class="text-2xl font-black">Importar modulo</h3>
+      <p id="apps-upload-label" class="mt-2 text-sm text-base-content/65">
+        Selecciona un ZIP para actualizar el modulo.
+      </p>
 
-  <div id="apps-empty-state" class="rounded-2xl border border-dashed border-base-300 bg-base-200/50 px-8 py-16 text-center">
-    <i class="fa-solid fa-cubes-stacked text-4xl text-base-content/30"></i>
-    <p class="mt-4 text-base font-semibold text-base-content/50">Sin módulos instalados</p>
-    <p class="mt-1 text-sm text-base-content/40">
-      Cuando se instale un módulo aparecerá aquí con sus opciones de acceso.
-    </p>
-  </div>
+      <div class="mt-5 space-y-5">
+        <input id="apps-upload-input" type="file" class="file-input file-input-bordered w-full" accept=".zip,application/zip">
+
+        <div id="apps-upload-summary" class="hidden rounded-3xl border border-base-300 bg-base-200/60 p-4">
+          <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div><div class="text-xs uppercase tracking-[0.18em] text-base-content/50">Checksum</div><div id="apps-upload-checksum" class="mt-1 font-semibold">-</div></div>
+            <div><div class="text-xs uppercase tracking-[0.18em] text-base-content/50">Archivos</div><div id="apps-upload-total-files" class="mt-1 font-semibold">0</div></div>
+            <div><div class="text-xs uppercase tracking-[0.18em] text-base-content/50">Tamano ZIP</div><div id="apps-upload-file-size" class="mt-1 font-semibold">0 B</div></div>
+            <div><div class="text-xs uppercase tracking-[0.18em] text-base-content/50">Peso total</div><div id="apps-upload-total-size" class="mt-1 font-semibold">0 B</div></div>
+            <div><div class="text-xs uppercase tracking-[0.18em] text-base-content/50">Nuevos</div><div id="apps-upload-new-files" class="mt-1 font-semibold">0</div></div>
+            <div><div class="text-xs uppercase tracking-[0.18em] text-base-content/50">Modificados</div><div id="apps-upload-changed-files" class="mt-1 font-semibold">0</div></div>
+            <div><div class="text-xs uppercase tracking-[0.18em] text-base-content/50">Sin cambio</div><div id="apps-upload-unchanged-files" class="mt-1 font-semibold">0</div></div>
+          </div>
+          <div id="apps-upload-warnings" class="alert alert-warning mt-4 hidden text-sm"></div>
+          <ul id="apps-upload-preview" class="mt-4 divide-y divide-base-300 overflow-hidden rounded-2xl border border-base-300 bg-base-100"></ul>
+        </div>
+      </div>
+
+      <div class="modal-action">
+        <form method="dialog">
+          <button class="btn btn-ghost" type="submit">Cancelar</button>
+        </form>
+        <button id="apps-upload-apply" class="btn btn-primary" type="button" disabled>Aplicar ZIP</button>
+      </div>
+    </div>
+  </dialog>
+
+  <script src="{{ applications_js_url }}"></script>
 </section>

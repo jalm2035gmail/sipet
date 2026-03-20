@@ -1,0 +1,510 @@
+/* ============================================================
+   conversaciones.css
+   Usa variables CSS nativas del sistema (DaisyUI/Tailwind) para
+   soporte automático de modo oscuro y coherencia con el resto
+   de la app. Se eliminan valores hardcoded de color y sombra,
+   y se reemplazan componentes que DaisyUI ya provee.
+   ============================================================ */
+
+/* ---------------------------------------------------------------------------
+   Variables locales del módulo (mapeadas a tokens de DaisyUI/Tailwind)
+   --------------------------------------------------------------------------- */
+:root {
+  --wa-radius-panel:  20px;
+  --wa-radius-item:   14px;
+  --wa-radius-msg:    16px;
+  --wa-radius-avatar: 12px;
+  --wa-sidebar-w:     320px;
+  --wa-gap:           16px;
+  --wa-avatar-size:   44px;
+  --wa-shadow-panel:  0 4px 24px color-mix(in srgb, var(--fallback-bc, oklch(var(--bc))) 8%, transparent);
+  --wa-shadow-btn:    0 2px 8px  color-mix(in srgb, var(--fallback-bc, oklch(var(--bc))) 10%, transparent);
+  --wa-transition:    background 0.18s ease, border-color 0.18s ease, color 0.18s ease,
+                      transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+/* ---------------------------------------------------------------------------
+   Layout principal
+   --------------------------------------------------------------------------- */
+.wa-shell {
+  display: grid;
+  grid-template-columns: var(--wa-sidebar-w) minmax(0, 1fr);
+  gap: var(--wa-gap);
+  min-height: 72vh;
+}
+
+/* ---------------------------------------------------------------------------
+   Paneles: sidebar, chat y modal base
+   DaisyUI provee .card para esto; aquí se mantiene clase propia para
+   no acoplar el HTML al renombrar, pero se usan los tokens de DaisyUI.
+   --------------------------------------------------------------------------- */
+.wa-sidebar,
+.wa-chat {
+  background: var(--fallback-b1, oklch(var(--b1)));
+  border: 1px solid var(--fallback-b3, oklch(var(--b3)));
+  border-radius: var(--wa-radius-panel);
+  box-shadow: var(--wa-shadow-panel);
+  min-height: 0;
+}
+
+.wa-sidebar {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ---------------------------------------------------------------------------
+   Cabeceras
+   --------------------------------------------------------------------------- */
+.wa-sidebar-head,
+.wa-chat-head,
+.wa-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.wa-profile,
+.wa-chat-contact {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+/* ---------------------------------------------------------------------------
+   Imágenes dentro de avatares
+   --------------------------------------------------------------------------- */
+.wa-profile img,
+.wa-chat-avatar img,
+.wa-modal-avatar img,
+.wa-item-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+}
+
+.wa-profile img {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--wa-radius-avatar);
+}
+
+/* ---------------------------------------------------------------------------
+   Grupos de acciones
+   --------------------------------------------------------------------------- */
+.wa-head-actions,
+.wa-chat-tools,
+.wa-chat-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ---------------------------------------------------------------------------
+   Botones icono — usa btn de DaisyUI como base semántica
+   --------------------------------------------------------------------------- */
+.wa-icon-btn,
+.wa-send-btn {
+  border: 1px solid var(--fallback-b3, oklch(var(--b3)));
+  background: var(--fallback-b1, oklch(var(--b1)));
+  color: var(--fallback-bc, oklch(var(--bc)));
+  border-radius: var(--wa-radius-item);
+  cursor: pointer;
+  transition: var(--wa-transition);
+}
+
+.wa-icon-btn {
+  width: 40px;
+  height: 40px;
+  font-size: 1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--wa-shadow-btn);
+}
+
+.wa-icon-btn i {
+  font-size: 1.05rem;
+  line-height: 1;
+}
+
+/* Botón de vista alternativa (toggle de panel) */
+.wa-icon-btn.boton_vista {
+  background: var(--fallback-b2, oklch(var(--b2)));
+  color: var(--fallback-bc, oklch(var(--bc)));
+  width: 42px;
+  min-width: 42px;
+  height: 42px;
+  padding: 0;
+  border: none;
+  box-shadow: var(--wa-shadow-btn);
+}
+
+.wa-icon-btn.boton_vista:hover,
+.wa-icon-btn.boton_vista.active {
+  background: var(--fallback-bc, oklch(var(--bc)));
+  color: var(--fallback-b1, oklch(var(--b1)));
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--fallback-bc, oklch(var(--bc))) 22%, transparent);
+}
+
+.wa-icon-btn.boton_vista .boton_vista-icono,
+.wa-icon-btn.boton_vista .view-pill-fa {
+  font-size: 18px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Tamaños de iconos por botón específico */
+#wa-new-btn i     { font-size: 1.1rem; }
+#wa-new-group-btn i { font-size: 0.96rem; }
+#wa-index-btn i   { font-size: 1rem; }
+
+/* Estado hover compartido */
+.wa-icon-btn:hover,
+.wa-send-btn:hover,
+.wa-modal-user:hover,
+.wa-item:hover {
+  border-color: var(--fallback-bc, oklch(var(--bc) / 0.3));
+  background: var(--fallback-b2, oklch(var(--b2)));
+  color: var(--fallback-bc, oklch(var(--bc)));
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--fallback-bc, oklch(var(--bc))) 12%, transparent);
+  transform: translateY(-1px);
+}
+
+.wa-icon-btn:active,
+.wa-send-btn:active {
+  transform: translateY(0);
+  box-shadow: var(--wa-shadow-btn);
+}
+
+/* ---------------------------------------------------------------------------
+   Textos secundarios — usa color de contenido secundario de DaisyUI
+   --------------------------------------------------------------------------- */
+.wa-index-status,
+.wa-empty,
+.wa-item-msg,
+.wa-msg-meta,
+.wa-modal-info small {
+  color: var(--fallback-bc, oklch(var(--bc) / 0.55));
+  font-size: 0.82rem;
+}
+
+/* ---------------------------------------------------------------------------
+   Inputs — usa input de DaisyUI como referencia de tokens
+   --------------------------------------------------------------------------- */
+.wa-search-wrap input,
+.wa-input input,
+.wa-modal-search-wrap input,
+#wa-topk {
+  width: 100%;
+  border: 1px solid var(--fallback-b3, oklch(var(--b3)));
+  background: var(--fallback-b1, oklch(var(--b1)));
+  border-radius: var(--wa-radius-item);
+  padding: 10px 14px;
+  color: var(--fallback-bc, oklch(var(--bc)));
+  outline: none;
+  transition: border-color 0.18s ease;
+}
+
+.wa-search-wrap input:focus,
+.wa-input input:focus,
+.wa-modal-search-wrap input:focus,
+#wa-topk:focus {
+  border-color: var(--fallback-p, oklch(var(--p)));
+}
+
+/* ---------------------------------------------------------------------------
+   Listas y scroll
+   --------------------------------------------------------------------------- */
+.wa-list,
+.wa-messages,
+.wa-modal-list {
+  min-height: 0;
+  overflow: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--fallback-b3, oklch(var(--b3))) transparent;
+}
+
+.wa-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* ---------------------------------------------------------------------------
+   Ítem de conversación
+   --------------------------------------------------------------------------- */
+.wa-item {
+  width: 100%;
+  border: 1px solid var(--fallback-b3, oklch(var(--b3)));
+  background: var(--fallback-b1, oklch(var(--b1)));
+  border-radius: var(--wa-radius-panel);
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  text-align: left;
+  transition: var(--wa-transition);
+}
+
+.wa-item.active {
+  border-color: var(--fallback-p, oklch(var(--p) / 0.6));
+  background: var(--fallback-p, oklch(var(--p) / 0.08));
+}
+
+/* ---------------------------------------------------------------------------
+   Avatares — equivalen a .avatar de DaisyUI
+   --------------------------------------------------------------------------- */
+.wa-item-avatar,
+.wa-chat-avatar,
+.wa-modal-avatar {
+  width: var(--wa-avatar-size);
+  height: var(--wa-avatar-size);
+  border-radius: var(--wa-radius-avatar);
+  background: var(--fallback-b2, oklch(var(--b2)));
+  color: var(--fallback-bc, oklch(var(--bc)));
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  flex: 0 0 var(--wa-avatar-size);
+  overflow: hidden;
+  font-size: 0.85rem;
+}
+
+/* ---------------------------------------------------------------------------
+   Contenido del ítem
+   --------------------------------------------------------------------------- */
+.wa-item-main,
+.wa-modal-info {
+  min-width: 0;
+  flex: 1;
+}
+
+.wa-item-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+
+.wa-item-name {
+  font-weight: 600;
+  color: var(--fallback-bc, oklch(var(--bc)));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wa-item-time {
+  font-size: 0.76rem;
+  white-space: nowrap;
+  color: var(--fallback-bc, oklch(var(--bc) / 0.5));
+}
+
+/* Badge de no leídos — equivale a .badge .badge-primary de DaisyUI */
+.wa-unread-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--fallback-p, oklch(var(--p)));
+  color: var(--fallback-pc, oklch(var(--pc)));
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+/* ---------------------------------------------------------------------------
+   Panel de chat
+   --------------------------------------------------------------------------- */
+.wa-chat {
+  display: flex;
+  flex-direction: column;
+}
+
+.wa-chat-head,
+.wa-input {
+  padding: 16px 18px;
+}
+
+.wa-messages {
+  flex: 1;
+  padding: 0 18px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Burbujas de mensajes — equivalen a .chat-bubble de DaisyUI */
+.wa-msg {
+  max-width: min(76%, 640px);
+  border-radius: var(--wa-radius-msg);
+  padding: 10px 14px;
+  border: 1px solid var(--fallback-b3, oklch(var(--b3)));
+  background: var(--fallback-b1, oklch(var(--b1)));
+  color: var(--fallback-bc, oklch(var(--bc)));
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.wa-msg--out {
+  align-self: flex-end;
+  background: var(--fallback-p, oklch(var(--p) / 0.1));
+  border-color: var(--fallback-p, oklch(var(--p) / 0.25));
+}
+
+/* ---------------------------------------------------------------------------
+   Área de input
+   --------------------------------------------------------------------------- */
+.wa-input {
+  display: flex;
+  gap: 10px;
+  border-top: 1px solid var(--fallback-b3, oklch(var(--b3)));
+}
+
+.wa-send-btn {
+  padding: 0 18px;
+  font-weight: 600;
+  white-space: nowrap;
+  border-radius: var(--wa-radius-item);
+  box-shadow: var(--wa-shadow-btn);
+}
+
+/* ---------------------------------------------------------------------------
+   Modal — equivale a .modal de DaisyUI
+   --------------------------------------------------------------------------- */
+.wa-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: color-mix(in srgb, var(--fallback-bc, oklch(var(--bc))) 30%, transparent);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 20;
+}
+
+.wa-modal {
+  background: var(--fallback-b1, oklch(var(--b1)));
+  border: 1px solid var(--fallback-b3, oklch(var(--b3)));
+  border-radius: var(--wa-radius-panel);
+  box-shadow: var(--wa-shadow-panel);
+  padding: 18px;
+  width: min(500px, 100%);
+  max-height: 72vh;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.wa-modal-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.wa-modal-user {
+  border: 1px solid var(--fallback-b3, oklch(var(--b3)));
+  border-radius: var(--wa-radius-item);
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: var(--wa-transition);
+}
+
+.wa-modal-user input {
+  margin-left: auto;
+  accent-color: var(--fallback-p, oklch(var(--p)));
+}
+
+/* ---------------------------------------------------------------------------
+   Estado vacío — equivale a .alert de DaisyUI
+   --------------------------------------------------------------------------- */
+.wa-empty-state {
+  border: 1px dashed var(--fallback-b3, oklch(var(--b3)));
+  border-radius: var(--wa-radius-panel);
+  padding: 28px;
+  text-align: center;
+  color: var(--fallback-bc, oklch(var(--bc) / 0.55));
+  background: var(--fallback-b2, oklch(var(--b2)));
+}
+
+/* ---------------------------------------------------------------------------
+   Notificaciones flotantes (SSE / toast)
+   --------------------------------------------------------------------------- */
+#wa-floating-stack {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 80;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+}
+
+/* Equivale a .alert .alert-info de DaisyUI */
+.wa-floating-note {
+  width: min(340px, calc(100vw - 32px));
+  background: var(--fallback-bc, oklch(var(--bc)));
+  color: var(--fallback-b1, oklch(var(--b1)));
+  border-radius: var(--wa-radius-panel);
+  padding: 12px 16px;
+  box-shadow: 0 8px 32px color-mix(in srgb, var(--fallback-bc, oklch(var(--bc))) 25%, transparent);
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  pointer-events: auto;
+  line-height: 1.45;
+}
+
+.wa-floating-note.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.wa-floating-note strong {
+  display: block;
+  margin-bottom: 2px;
+  font-weight: 600;
+}
+
+/* ---------------------------------------------------------------------------
+   Responsive
+   --------------------------------------------------------------------------- */
+@media (max-width: 1180px) {
+  :root { --wa-sidebar-w: 280px; }
+}
+
+@media (max-width: 860px) {
+  .wa-shell {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Modo oscuro — los tokens de DaisyUI se redefinen automáticamente cuando
+   el tema cambia (data-theme="dark"), así que la mayoría de reglas ya
+   funcionan. Solo se ajustan los colores hardcoded que quedaron en las
+   sombras usando color-mix con opacidad.
+   --------------------------------------------------------------------------- */
+[data-theme="dark"] .wa-msg--out {
+  background: var(--fallback-p, oklch(var(--p) / 0.15));
+  border-color: var(--fallback-p, oklch(var(--p) / 0.3));
+}

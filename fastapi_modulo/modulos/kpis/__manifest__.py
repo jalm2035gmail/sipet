@@ -1,0 +1,22 @@
+MANIFEST = {'name': 'kpis',
+ 'label': 'KPIs',
+ 'summary': 'Indicadores clave y analítica resumida.',
+ 'description': 'Indicadores clave y analítica resumida.',
+ 'version': '1.0.0',
+ 'category': 'Operaciones',
+ 'author': 'SIPET',
+ 'sequence': '',
+ 'website': 'https://avancoop.org',
+ 'route': '/kpis',
+ 'icon': 'fa-solid fa-chart-line',
+ 'fafa': 'fa-solid fa-chart-line',
+ 'depends': ['web'],
+ 'data': ['vistas/indicadores.html', 'vistas/kpis.html'],
+ 'assets': {'css': [], 'js': [], 'description': ['static/description/kpis.svg'], 'img': []},
+ 'structure': {'router': ['controladores/kpis.py'],
+               'views': ['vistas/indicadores.html', 'vistas/kpis.html']},
+ 'installable': True,
+ 'application': True,
+ 'auto_install': False}
+
+__all__ = ["MANIFEST"]

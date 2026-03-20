@@ -14,6 +14,8 @@
   var uploadSummary = document.getElementById("apps-upload-summary");
   var uploadWarnings = document.getElementById("apps-upload-warnings");
   var uploadPreview = document.getElementById("apps-upload-preview");
+  var refreshButton = document.getElementById("apps-refresh-list");
+  var importShortcut = document.getElementById("apps-import-shortcut");
   var activeUploadModule = "";
   var pendingUploadFile = null;
   var pendingUploadInspection = null;
@@ -132,6 +134,7 @@
   }
 
   function updateSummary() {
+    var selectAll = document.getElementById("apps-select-all");
     var total = modules.length;
     var ok = modules.filter(function (item) { return item.protocol_ok; }).length;
     var missing = total - ok;
@@ -148,9 +151,9 @@
     document.getElementById("apps-uploadable-count").textContent = String(uploadable);
     document.getElementById("apps-routed-count").textContent = String(routed);
     document.getElementById("apps-selection-summary").textContent = selected
-      ? "Seleccionados " + String(selected) + " módulo(s) para acción por lote."
-      : "Selecciona módulos para ejecutar acciones por lote o revisar auditoría.";
-    document.getElementById("apps-select-all").checked = !!visibleModules().length && visibleModules().every(function (item) {
+      ? "Seleccionados " + String(selected) + " modulo(s) para accion por lote."
+      : "Selecciona modulos para ejecutar acciones por lote o revisar auditoria.";
+    if (selectAll) selectAll.checked = !!visibleModules().length && visibleModules().every(function (item) {
       return selectedSet().has(item.key);
     });
   }
@@ -161,13 +164,13 @@
     var item = modules.find(function (candidate) { return candidate.key === state.focusedKey; }) || null;
     if (!item) {
       pill.textContent = "Sin selección";
-      panel.innerHTML = '<div class="alert border border-dashed border-base-300 bg-base-200/60 text-sm"><i class="fa-regular fa-compass"></i><span>Selecciona un módulo para ver protocolo, ruta, dependencias y capacidad de importación.</span></div>';
+      panel.innerHTML = '<div class="alert border border-dashed border-base-300 bg-base-200/60 text-sm"><i class="fa-regular fa-compass"></i><span>Selecciona un modulo para ver protocolo, ruta, dependencias y capacidad de importacion.</span></div>';
       return;
     }
     pill.textContent = item.label || item.key;
     panel.innerHTML = [
       '<div class="space-y-4">',
-      '<div><h3 class="text-xl font-black">' + esc(item.label) + '</h3><p class="mt-1 text-sm text-base-content/60">' + esc(item.description || "Sin descripción") + '</p></div>',
+      '<div><h3 class="text-xl font-black">' + esc(item.label) + '</h3><p class="mt-1 text-sm text-base-content/60">' + esc(item.description || "Sin descripcion") + '</p></div>',
       '<div class="grid gap-2 sm:grid-cols-2">',
       '<div class="rounded-2xl bg-base-200 p-3"><div class="text-xs uppercase tracking-[0.18em] text-base-content/50">Ruta</div><div class="mt-1 font-semibold">' + esc(item.route || "Sin ruta") + '</div></div>',
       '<div class="rounded-2xl bg-base-200 p-3"><div class="text-xs uppercase tracking-[0.18em] text-base-content/50">Directorio</div><div class="mt-1 break-all font-semibold text-sm">' + esc(item.module_dir || "-") + '</div></div>',
@@ -203,35 +206,32 @@
         ? '<img src="' + esc(item.image_url) + '" alt="' + esc(item.label) + '">'
         : (item.icon ? '<i class="' + esc(item.icon) + ' text-3xl"></i>' : '<span class="text-2xl font-black">' + initials + '</span>');
       var selectedClass = selected.has(item.key) ? ' is-selected' : '';
+      var actionLabel = item.enabled ? 'Activo' : 'Activar';
+      var actionClass = item.enabled ? ' btn-primary is-enabled' : ' btn-primary';
+      var actionState = item.enabled ? ' data-state="enabled"' : '';
       return '' +
         '<article class="gov-app-card card border border-base-300 bg-base-100 shadow-sm' + selectedClass + '" data-focus-module="' + esc(item.key) + '">' +
-          '<div class="card-body gap-4 p-5">' +
-            '<div class="flex items-start justify-between gap-3">' +
-              '<label class="label cursor-pointer gap-3 p-0">' +
-                '<input type="checkbox" class="checkbox checkbox-sm" data-select-module="' + esc(item.key) + '"' + (selected.has(item.key) ? ' checked' : '') + '>' +
-                '<span class="label-text text-xs uppercase tracking-[0.18em] text-base-content/50">Lote</span>' +
-              '</label>' +
-              '<div class="gov-app-icon flex h-16 w-16 items-center justify-center rounded-3xl border border-base-300 text-primary">' + iconHtml + '</div>' +
+          '<div class="card-body">' +
+            '<div class="dropdown dropdown-end gov-app-menu">' +
+              '<button tabindex="0" class="btn btn-ghost btn-sm btn-square" type="button" aria-label="Opciones del módulo">' +
+                '<i class="fa-solid fa-ellipsis-vertical"></i>' +
+              '</button>' +
+              '<ul tabindex="0" class="menu dropdown-content z-[20] mt-2 w-60 rounded-box border border-base-300 bg-base-100 p-2 shadow-lg">' +
+                '<li><button type="button" data-show-audit="' + esc(item.key) + '"><i class="fa-regular fa-circle-info"></i>Información del módulo</button></li>' +
+                (item.package_upload_enabled ? '<li><button type="button" data-open-upload="' + esc(item.key) + '"><i class="fa-solid fa-file-import"></i>Importar módulo</button></li>' : '') +
+                '<li><button type="button" data-select-card-module="' + esc(item.key) + '"><i class="fa-regular fa-square-check"></i>' + (selected.has(item.key) ? 'Quitar de lote' : 'Agregar a lote') + '</button></li>' +
+              '</ul>' +
             '</div>' +
-            '<div class="space-y-2">' +
-              '<div class="flex items-start justify-between gap-3">' +
-                '<div><h3 class="text-xl font-black leading-tight">' + esc(item.label) + '</h3><div class="mt-1 text-xs font-semibold uppercase tracking-[0.18em] text-base-content/50">' + esc(item.key) + '</div></div>' +
-                '<span class="badge ' + (item.enabled ? 'badge-success' : 'badge-ghost') + '">' + (item.enabled ? 'Activo' : 'Inactivo') + '</span>' +
+            '<div class="gov-app-body">' +
+              '<div class="gov-app-icon flex items-center justify-center text-primary">' + iconHtml + '</div>' +
+              '<div class="gov-app-main min-w-0">' +
+                '<h3 class="gov-app-title">' + esc(item.label) + '</h3>' +
+                '<p class="gov-app-key">' + esc(item.key) + '</p>' +
               '</div>' +
-              '<p class="min-h-[3.5rem] text-sm leading-6 text-base-content/70">' + esc(item.description || "Sin descripción") + '</p>' +
-            '</div>' +
-            '<div class="flex flex-wrap gap-2">' +
-              '<span class="badge ' + (item.protocol_ok ? 'badge-success' : 'badge-warning') + '">' + esc(protocolLabel(item)) + '</span>' +
-              '<span class="badge badge-outline">' + esc(String(item.router_count || 0)) + ' routers</span>' +
-              '<span class="badge ' + (item.package_upload_enabled ? 'badge-info' : 'badge-ghost') + '">' + (item.package_upload_enabled ? 'Importable' : 'Sin ZIP') + '</span>' +
-            '</div>' +
-            '<div class="mt-1 flex items-center justify-between gap-3 rounded-2xl bg-base-200 px-4 py-3">' +
-              '<span class="text-sm font-semibold">Estado operativo</span>' +
-              '<input type="checkbox" class="toggle toggle-primary" data-toggle-module="' + esc(item.key) + '"' + (item.enabled ? ' checked' : '') + '>' +
-            '</div>' +
-            '<div class="card-actions mt-1 justify-between">' +
-              '<button class="btn btn-outline btn-sm gap-2" type="button" data-open-upload="' + esc(item.key) + '"' + (item.package_upload_enabled ? '' : ' disabled') + '><i class="fa-solid fa-file-import"></i>Importar</button>' +
-              (item.route ? '<a class="btn btn-primary btn-sm gap-2" href="' + esc(item.route) + '"><i class="fa-solid fa-arrow-up-right-from-square"></i>Abrir</a>' : '<button class="btn btn-disabled btn-sm">Sin ruta</button>') +
+              '<div class="gov-app-actions">' +
+                '<button class="gov-app-action-btn btn btn-sm' + actionClass + '" type="button"' + actionState + ' data-toggle-module-action="' + esc(item.key) + '">' + actionLabel + '</button>' +
+                '<button class="gov-app-action-btn btn btn-sm btn-outline" type="button" data-show-audit="' + esc(item.key) + '">Aprenda más</button>' +
+              '</div>' +
             '</div>' +
           '</div>' +
         '</article>';
@@ -400,16 +400,22 @@
     });
   });
 
-  document.getElementById("apps-search-input").addEventListener("input", function (event) {
-    state.term = String(event.target.value || "").trim().toLowerCase();
-    render();
-  });
+  var searchInput = document.getElementById("apps-search-input");
+  if (searchInput) {
+    searchInput.addEventListener("input", function (event) {
+      state.term = String(event.target.value || "").trim().toLowerCase();
+      render();
+    });
+  }
 
-  document.getElementById("apps-select-all").addEventListener("change", function (event) {
-    state.selected = event.target.checked ? visibleModules().map(function (item) { return item.key; }) : [];
-    if (!state.focusedKey && state.selected.length) state.focusedKey = state.selected[0];
-    render();
-  });
+  var selectAllControl = document.getElementById("apps-select-all");
+  if (selectAllControl) {
+    selectAllControl.addEventListener("change", function (event) {
+      state.selected = event.target.checked ? visibleModules().map(function (item) { return item.key; }) : [];
+      if (!state.focusedKey && state.selected.length) state.focusedKey = state.selected[0];
+      render();
+    });
+  }
 
   async function exportExcel() {
     var btn = document.getElementById("apps-export-excel");
@@ -444,19 +450,31 @@
   document.getElementById("apps-bulk-enable").addEventListener("click", function () { bulkUpdate(true); });
   document.getElementById("apps-bulk-disable").addEventListener("click", function () { bulkUpdate(false); });
   document.getElementById("apps-export-excel").addEventListener("click", exportExcel);
+  if (refreshButton) {
+    refreshButton.addEventListener("click", function () {
+      refreshModules()
+        .then(function () { toast("Lista de aplicaciones actualizada.", "alert-success"); })
+        .catch(function (error) { toast(error.message || "No se pudo actualizar la lista.", "alert-error"); });
+    });
+  }
+  if (importShortcut) {
+    importShortcut.addEventListener("click", function () {
+      var candidate = modules.find(function (item) { return item.package_upload_enabled; }) || modules[0];
+      if (!candidate) {
+        toast("No hay modulos disponibles para importar.", "alert-warning");
+        return;
+      }
+      if (!candidate.package_upload_enabled) {
+        toast("El modulo seleccionado no admite importacion por ZIP.", "alert-warning");
+        return;
+      }
+      state.focusedKey = candidate.key;
+      renderAuditPanel();
+      openUploadModal(candidate.key);
+    });
+  }
 
   grid.addEventListener("change", function (event) {
-    var selectBox = event.target.closest("[data-select-module]");
-    if (selectBox) {
-      var moduleKey = selectBox.getAttribute("data-select-module") || "";
-      var selected = selectedSet();
-      if (selectBox.checked) selected.add(moduleKey);
-      else selected.delete(moduleKey);
-      state.selected = Array.from(selected);
-      if (moduleKey) state.focusedKey = moduleKey;
-      render();
-      return;
-    }
     var input = event.target.closest("[data-toggle-module]");
     if (!input) return;
     input.disabled = true;
@@ -464,6 +482,32 @@
   });
 
   grid.addEventListener("click", function (event) {
+    var auditButton = event.target.closest("[data-show-audit]");
+    if (auditButton) {
+      state.focusedKey = auditButton.getAttribute("data-show-audit") || "";
+      renderAuditPanel();
+      return;
+    }
+    var selectCardButton = event.target.closest("[data-select-card-module]");
+    if (selectCardButton) {
+      var selectedKey = selectCardButton.getAttribute("data-select-card-module") || "";
+      var selectedModules = selectedSet();
+      if (selectedModules.has(selectedKey)) selectedModules.delete(selectedKey);
+      else selectedModules.add(selectedKey);
+      state.selected = Array.from(selectedModules);
+      if (selectedKey) state.focusedKey = selectedKey;
+      render();
+      return;
+    }
+    var toggleActionButton = event.target.closest("[data-toggle-module-action]");
+    if (toggleActionButton) {
+      var actionKey = toggleActionButton.getAttribute("data-toggle-module-action") || "";
+      var current = modules.find(function (item) { return item.key === actionKey; });
+      if (!current) return;
+      toggleActionButton.disabled = true;
+      updateModule(actionKey, !current.enabled, toggleActionButton);
+      return;
+    }
     var uploadButton = event.target.closest("[data-open-upload]");
     if (uploadButton && !uploadButton.disabled) {
       openUploadModal(uploadButton.getAttribute("data-open-upload") || "");
@@ -476,16 +520,18 @@
     }
   });
 
-  uploadInput.addEventListener("change", function () {
-    var file = uploadInput.files && uploadInput.files[0];
-    if (!file || !activeUploadModule) return;
-    if (!/\.zip$/i.test(file.name || "")) {
-      toast("Selecciona un archivo ZIP.", "alert-warning");
-      resetUploadState();
-      return;
-    }
-    inspectModulePackage(activeUploadModule, file);
-  });
+  if (uploadInput) {
+    uploadInput.addEventListener("change", function () {
+      var file = uploadInput.files && uploadInput.files[0];
+      if (!file || !activeUploadModule) return;
+      if (!/\.zip$/i.test(file.name || "")) {
+        toast("Selecciona un archivo ZIP.", "alert-warning");
+        resetUploadState();
+        return;
+      }
+      inspectModulePackage(activeUploadModule, file);
+    });
+  }
 
   if (uploadApplyButton) {
     uploadApplyButton.addEventListener("click", function () {
@@ -500,5 +546,8 @@
     });
   }
 
-  render();
+  refreshModules().catch(function (error) {
+    render();
+    toast(error.message || "No se pudieron cargar los modulos.", "alert-error");
+  });
 }());

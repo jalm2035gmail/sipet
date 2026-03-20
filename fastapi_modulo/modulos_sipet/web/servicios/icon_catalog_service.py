@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from fastapi_modulo.modulos_sipet.web.servicios.access_service import normalize_role_name
@@ -7,7 +8,7 @@ from fastapi_modulo.modulos_sipet.web.servicios.access_service import normalize_
 MODULE_ICON_MAP = {
     "crm": "fa-solid fa-users-rectangle",
     "auditoria": "fa-solid fa-clipboard-check",
-    "activo_fijo": "fa-solid fa-building-circle-check",
+    "activo_fijo": "fa-solid fa-building-columns",
     "control_interno": "fa-solid fa-list-check",
     "control_seguimiento": "fa-solid fa-shield-check",
     "capacitacion": "fa-solid fa-book-open",
@@ -44,9 +45,41 @@ ACTION_ICON_MAP = {
 DEFAULT_MODULE_ICON = "fa-regular fa-circle"
 
 
+def _normalize_icon_class(icon_value: str) -> str:
+    raw = str(icon_value or "").strip()
+    if not raw:
+        return ""
+    normalized = re.sub(r"\s+", " ", raw).strip()
+    if normalized.startswith("fafa-"):
+        normalized = f"fa fa-{normalized[5:]}"
+    elif normalized.startswith("fa-") and " " not in normalized:
+        normalized = f"fa {normalized}"
+    elif normalized.startswith("fas fa-"):
+        normalized = normalized.replace("fas ", "fa-solid ", 1)
+    elif normalized.startswith("far fa-"):
+        normalized = normalized.replace("far ", "fa-regular ", 1)
+    elif normalized.startswith("fab fa-"):
+        normalized = normalized.replace("fab ", "fa-brands ", 1)
+    elif normalized.startswith("fal fa-"):
+        normalized = normalized.replace("fal ", "fa-light ", 1)
+    elif normalized.startswith("fat fa-"):
+        normalized = normalized.replace("fat ", "fa-thin ", 1)
+    elif normalized.startswith("fa-duotone fa-"):
+        return normalized
+    elif normalized.startswith("fa ") and " fa-" in normalized:
+        return normalized
+    elif normalized.startswith("fa") and "fa-" in normalized and " " not in normalized:
+        normalized = normalized.replace("fa", "fa ", 1)
+    return normalized
+
+
 def resolve_module_icon(module_key: str, fallback_icon: str = "") -> str:
     key = str(module_key or "").strip().lower()
-    return MODULE_ICON_MAP.get(key) or str(fallback_icon or "").strip() or DEFAULT_MODULE_ICON
+    return (
+        MODULE_ICON_MAP.get(key)
+        or _normalize_icon_class(fallback_icon)
+        or DEFAULT_MODULE_ICON
+    )
 
 
 def resolve_role_icon(role_name: str) -> str:
@@ -54,7 +87,7 @@ def resolve_role_icon(role_name: str) -> str:
 
 
 def resolve_action_icon(action_name: str) -> str:
-    return ACTION_ICON_MAP.get(str(action_name or "").strip().lower(), DEFAULT_MODULE_ICON)
+    return _normalize_icon_class(ACTION_ICON_MAP.get(str(action_name or "").strip().lower(), DEFAULT_MODULE_ICON)) or DEFAULT_MODULE_ICON
 
 
 def build_icon_catalog_context() -> dict[str, Any]:

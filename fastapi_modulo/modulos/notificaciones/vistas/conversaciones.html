@@ -1,0 +1,328 @@
+<section class="wa-page" data-wa-avatar="/templates/imagenes/lobo.jpg">
+  <link rel="stylesheet" href="/notificaciones/assets/conversaciones.css">
+
+  <article class="content-section">
+    <header class="content-section-head">
+      <h2 class="content-section-title">Conversaciones</h2>
+    </header>
+
+    <div class="content-section-body wa-shell">
+
+      <!-- ================================================================
+           Barra lateral: lista de conversaciones
+           ================================================================ -->
+      <aside class="wa-sidebar" aria-label="Lista de conversaciones">
+
+        <!-- Perfil + acciones -->
+        <div class="wa-sidebar-head">
+          <div class="wa-profile">
+            <img src="/templates/imagenes/lobo.jpg" alt="Avatar de usuario" width="44" height="44">
+            <div>
+              <strong id="wa-me-name">Yo</strong>
+              <small id="wa-me-role">conectado</small>
+            </div>
+          </div>
+
+          <div class="wa-head-actions view-buttons" role="toolbar" aria-label="Acciones de conversación">
+            <button
+              id="wa-new-btn"
+              class="wa-icon-btn view-pill boton_vista"
+              type="button"
+              title="Nueva conversación"
+              aria-label="Nueva conversación"
+            >
+              <i class="fa-solid fa-plus boton_vista-icono view-pill-fa" aria-hidden="true"></i>
+            </button>
+
+            <button
+              id="wa-new-group-btn"
+              class="wa-icon-btn view-pill boton_vista"
+              type="button"
+              title="Nuevo grupo"
+              aria-label="Nuevo grupo"
+              style="display:none"
+            >
+              <i class="fa-solid fa-user-group boton_vista-icono view-pill-fa" aria-hidden="true"></i>
+            </button>
+
+            <button
+              id="wa-index-btn"
+              class="wa-icon-btn view-pill boton_vista"
+              type="button"
+              title="Indexar documentos para AVAN"
+              aria-label="Indexar documentos para AVAN"
+            >
+              <i class="fa-solid fa-rotate-right boton_vista-icono view-pill-fa" aria-hidden="true"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Estado del índice RAG -->
+        <p
+          id="wa-index-status"
+          class="wa-index-status"
+          role="status"
+          aria-live="polite"
+          style="display:none"
+        >Cargando índice…</p>
+
+        <!-- Búsqueda -->
+        <div class="wa-search-wrap">
+          <label for="wa-search" class="sr-only">Buscar conversación</label>
+          <input
+            type="search"
+            id="wa-search"
+            placeholder="Buscar conversación…"
+            autocomplete="off"
+            spellcheck="false"
+          >
+        </div>
+
+        <!-- Lista de conversaciones -->
+        <div
+          class="wa-list"
+          id="wa-list"
+          role="list"
+          aria-label="Conversaciones"
+          aria-live="polite"
+        >
+          <div class="wa-empty" role="status">Cargando…</div>
+        </div>
+
+      </aside>
+
+      <!-- ================================================================
+           Panel de chat
+           ================================================================ -->
+      <section class="wa-chat" aria-label="Chat activo">
+
+        <!-- Cabecera del chat -->
+        <header class="wa-chat-head">
+          <div class="wa-chat-contact">
+            <div
+              class="wa-chat-avatar"
+              id="wa-chat-avatar-el"
+              aria-hidden="true"
+            >AV</div>
+            <div>
+              <strong id="wa-chat-title">Selecciona una conversación</strong>
+              <small id="wa-chat-subtitle">—</small>
+            </div>
+          </div>
+
+          <!-- Control de fuentes RAG (solo visible en chat AVAN) -->
+          <div class="wa-chat-tools" id="wa-topk-wrap" aria-label="Número de fuentes RAG">
+            <label for="wa-topk">Fuentes</label>
+            <select id="wa-topk" aria-label="Número de fuentes para RAG">
+              <option value="4">4</option>
+              <option value="6" selected>6</option>
+              <option value="8">8</option>
+            </select>
+          </div>
+
+          <!-- Alcance de notificaciones (solo visible si tiene permiso) -->
+          <div
+            class="wa-chat-tools"
+            id="wa-notify-scope-wrap"
+            style="display:none"
+            aria-label="Alcance de la notificación"
+          >
+            <label for="wa-notify-scope">Alcance</label>
+            <select id="wa-notify-scope" aria-label="Alcance de la notificación">
+              <option value="conversation">Conversación</option>
+              <option value="department">Departamento</option>
+              <option value="company">Empresa</option>
+            </select>
+          </div>
+
+          <!-- Acciones del chat -->
+          <div class="wa-chat-actions view-buttons" role="toolbar" aria-label="Acciones del chat">
+            <button
+              id="wa-notify-btn"
+              class="wa-icon-btn view-pill boton_vista"
+              type="button"
+              title="Enviar notificación"
+              aria-label="Enviar notificación"
+              style="display:none"
+            >
+              <i class="fa-regular fa-bell boton_vista-icono view-pill-fa" aria-hidden="true"></i>
+            </button>
+
+            <button
+              id="wa-del-conv"
+              class="wa-icon-btn view-pill boton_vista"
+              type="button"
+              title="Eliminar conversación"
+              aria-label="Eliminar conversación"
+              style="display:none"
+            >
+              <i class="fa-regular fa-trash-can boton_vista-icono view-pill-fa" aria-hidden="true"></i>
+            </button>
+          </div>
+        </header>
+
+        <!-- Área de mensajes -->
+        <div
+          class="wa-messages"
+          id="wa-messages"
+          role="log"
+          aria-live="polite"
+          aria-label="Mensajes de la conversación"
+          tabindex="0"
+        >
+          <div class="wa-msg wa-msg--in">
+            <div class="wa-msg-body">Bienvenido a Conversaciones. Selecciona un chat o inicia uno nuevo.</div>
+            <div class="wa-msg-meta">Sistema</div>
+          </div>
+        </div>
+
+        <!-- Formulario de envío -->
+        <form id="wa-form" class="wa-input" autocomplete="off" novalidate>
+          <label for="wa-input" class="sr-only">Escribe un mensaje</label>
+          <input
+            id="wa-input"
+            type="text"
+            placeholder="Escribe un mensaje…"
+            autocomplete="off"
+            spellcheck="true"
+            maxlength="4000"
+            required
+          >
+          <button
+            type="submit"
+            class="wa-send-btn"
+            id="wa-send-btn"
+            aria-label="Enviar mensaje"
+          >Enviar</button>
+        </form>
+
+      </section>
+    </div>
+  </article>
+
+  <!-- ==================================================================
+       Modal: nueva conversación directa
+       ================================================================== -->
+  <div
+    id="wa-modal"
+    class="wa-modal-backdrop"
+    style="display:none"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="wa-modal-title"
+  >
+    <div class="wa-modal">
+      <header class="wa-modal-head">
+        <span id="wa-modal-title">Nueva conversación con usuario</span>
+        <button
+          id="wa-modal-close"
+          class="wa-icon-btn"
+          type="button"
+          aria-label="Cerrar modal"
+        >
+          <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+        </button>
+      </header>
+
+      <div class="wa-modal-search-wrap">
+        <label for="wa-modal-search" class="sr-only">Buscar usuario</label>
+        <input
+          type="search"
+          id="wa-modal-search"
+          placeholder="Buscar usuario…"
+          autocomplete="off"
+          spellcheck="false"
+        >
+      </div>
+
+      <ul
+        class="wa-modal-list"
+        id="wa-modal-list"
+        role="listbox"
+        aria-label="Usuarios disponibles"
+      >
+        <li class="wa-empty" role="status">Cargando usuarios…</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ==================================================================
+       Modal: nuevo grupo
+       ================================================================== -->
+  <div
+    id="wa-group-modal"
+    class="wa-modal-backdrop"
+    style="display:none"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="wa-group-modal-title"
+  >
+    <div class="wa-modal">
+      <header class="wa-modal-head">
+        <span id="wa-group-modal-title">Nuevo grupo</span>
+        <button
+          id="wa-group-modal-close"
+          class="wa-icon-btn"
+          type="button"
+          aria-label="Cerrar modal de grupo"
+        >
+          <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+        </button>
+      </header>
+
+      <div class="wa-modal-search-wrap">
+        <label for="wa-group-name" class="sr-only">Nombre del grupo</label>
+        <input
+          type="text"
+          id="wa-group-name"
+          placeholder="Nombre del grupo"
+          maxlength="120"
+          autocomplete="off"
+          required
+        >
+      </div>
+
+      <div class="wa-modal-search-wrap">
+        <label for="wa-group-search" class="sr-only">Buscar usuario para agregar</label>
+        <input
+          type="search"
+          id="wa-group-search"
+          placeholder="Buscar usuario para agregar…"
+          autocomplete="off"
+          spellcheck="false"
+        >
+      </div>
+
+      <ul
+        class="wa-modal-list"
+        id="wa-group-list"
+        role="listbox"
+        aria-label="Usuarios para agregar al grupo"
+        aria-multiselectable="true"
+      >
+        <li class="wa-empty" role="status">Cargando usuarios…</li>
+      </ul>
+
+      <div class="wa-modal-head">
+        <span id="wa-group-selected" aria-live="polite" aria-atomic="true">0 seleccionados</span>
+        <button
+          id="wa-group-create"
+          class="wa-send-btn"
+          type="button"
+          aria-label="Crear grupo con los usuarios seleccionados"
+        >Crear grupo</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pila de notificaciones flotantes (SSE / toast) -->
+  <div
+    id="wa-floating-stack"
+    role="region"
+    aria-label="Notificaciones"
+    aria-live="polite"
+    aria-atomic="false"
+  ></div>
+
+  <script src="/notificaciones/assets/conversaciones.js" defer></script>
+</section>

@@ -1,16 +1,18 @@
 MANIFEST = {
     "name": "web",
+    "label": "Configuración",
     "summary": "Servicios web compartidos para modulos SIPET.",
     "description": (
-        "Modulo tecnico inspirado en Odoo para centralizar logica compartida "
+        "Modulo tecnico para centralizar logica compartida "
         "de acceso, render backend y entrega de assets entre modulos SIPET."
     ),
     "version": "1.0.0",
     "category": "Base",
     "author": "SIPET",
-    "sequence": "100",
+    "sequence": "9999",
+    "icon": "fa-solid fa-gear",
     "website": "https://avancoop.org",
-    "depends": ["main"],
+    "depends": [],
     "data": [
         "README.md",
         "vistas/backend_nav_catalog.html",

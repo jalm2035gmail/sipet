@@ -47,3 +47,29 @@ def test_decorate_modules_payload_uses_cached_catalog(monkeypatch) -> None:
     payload = catalog_service.decorate_modules_payload()
 
     assert payload == [{"key": "cached"}]
+
+
+def test_decorate_modules_payload_filters_uninstalled_modules(monkeypatch) -> None:
+    monkeypatch.setattr(
+        catalog_service,
+        "list_catalog_modules",
+        lambda tenant_key=None: [
+            {"key": "crm", "label": "CRM", "enabled": True, "description": "demo"},
+            {"key": "fantasma", "label": "Fantasma", "enabled": True, "description": "demo"},
+        ],
+    )
+    monkeypatch.setattr(catalog_service, "get_cached_catalog", lambda: None)
+    monkeypatch.setattr(catalog_service, "cache_catalog", lambda payload: None)
+    monkeypatch.setattr(catalog_service, "list_registry_state", lambda tenant_id=None: {})
+    monkeypatch.setattr(catalog_service, "get_protocol_audit_map", lambda: {})
+    monkeypatch.setattr(
+        catalog_service,
+        "get_module_upload_root",
+        lambda key: "/tmp/project/fastapi_modulo/modulos/crm" if key == "crm" else None,
+    )
+    monkeypatch.setattr(catalog_service, "get_module_catalog_image_url", lambda key: None)
+    monkeypatch.setattr(catalog_service, "get_latest_package_upload", lambda key: None)
+
+    payload = catalog_service.decorate_modules_payload()
+
+    assert [item["key"] for item in payload] == ["crm"]

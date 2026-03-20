@@ -140,6 +140,21 @@ def request_host(request: Request) -> str:
     )
 
 
+def _is_local_loopback_host(value: str) -> bool:
+    normalized = normalize_host_identifier(value)
+    return normalized in {"127.0.0.1", "localhost", "::1"}
+
+
+def _hosts_match(session_host: str, request_host_value: str) -> bool:
+    normalized_session_host = normalize_host_identifier(session_host)
+    normalized_request_host = normalize_host_identifier(request_host_value)
+    if normalized_session_host == normalized_request_host:
+        return True
+    if _is_local_loopback_host(normalized_session_host) and _is_local_loopback_host(normalized_request_host):
+        return True
+    return False
+
+
 def is_session_bound_to_request(request: Request, session_data: Optional[dict[str, str]]) -> bool:
     if not isinstance(session_data, dict):
         return False
@@ -153,7 +168,7 @@ def is_session_bound_to_request(request: Request, session_data: Optional[dict[st
     session_host = normalize_host_identifier(str(session_data.get("host", "")).strip())
     if session_tenant != request_tenant:
         return False
-    if session_host and request_host_value and session_host != request_host_value:
+    if session_host and request_host_value and not _hosts_match(session_host, request_host_value):
         return False
     return True
 

@@ -1,0 +1,14 @@
+[
+  {
+    "nombre": "sucursal 1",
+    "region": "Region 1",
+    "codigo": "s1",
+    "descripcion": ""
+  },
+  {
+    "nombre": "Sucursal 2",
+    "region": "Region 2",
+    "codigo": "s2",
+    "descripcion": ""
+  }
+]

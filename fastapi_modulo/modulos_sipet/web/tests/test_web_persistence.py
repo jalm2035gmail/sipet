@@ -17,7 +17,14 @@ from fastapi_modulo.modulos_sipet.web.modelos.db_models import (
 )
 from fastapi_modulo.modulos_sipet.web.repositorios import core_repository
 from fastapi_modulo.modulos_sipet.web.servicios import ui_shell_service
-from fastapi_modulo.modulos_sipet.web.servicios.session_service import build_password_fingerprint, build_session_cookie, read_session_cookie
+from starlette.requests import Request
+
+from fastapi_modulo.modulos_sipet.web.servicios.session_service import (
+    build_password_fingerprint,
+    build_session_cookie,
+    is_session_bound_to_request,
+    read_session_cookie,
+)
 
 
 def test_web_models_create_tables() -> None:
@@ -45,7 +52,7 @@ def test_session_cookie_roundtrip_includes_jti() -> None:
         "usuario",
         "administrador",
         "default",
-        "abc123",
+        session_jti="abc123",
         password_fingerprint=build_password_fingerprint("hash-demo"),
     )
     original_module = sys.modules.get("fastapi_modulo.modulos_sipet.web.repositorios.security_repository")
@@ -62,6 +69,33 @@ def test_session_cookie_roundtrip_includes_jti() -> None:
     assert payload is not None
     assert payload["session_jti"] == "abc123"
     assert payload["password_fingerprint"] == build_password_fingerprint("hash-demo")
+
+
+def test_is_session_bound_to_request_accepts_local_loopback_aliases() -> None:
+    request = Request(
+        {
+            "type": "http",
+            "method": "GET",
+            "path": "/inicio",
+            "headers": [(b"host", b"localhost:8000")],
+            "scheme": "http",
+            "server": ("localhost", 8000),
+            "client": ("127.0.0.1", 12345),
+        }
+    )
+    request.state.tenant_id = "default"
+
+    assert is_session_bound_to_request(
+        request,
+        {
+            "username": "0konomiyaki",
+            "role": "superadministrador",
+            "tenant_id": "default",
+            "host": "127.0.0.1",
+            "session_jti": "abc123",
+            "password_fingerprint": "fingerprint",
+        },
+    ) is True
 
 
 def test_find_user_by_login_returns_none_when_schema_is_unavailable() -> None:

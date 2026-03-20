@@ -7,20 +7,29 @@ from typing import Any, Optional
 
 from redis import Redis
 
+APP_ENV = (os.environ.get("APP_ENV") or os.environ.get("ENVIRONMENT") or "development").strip().lower()
 REDIS_URL = (
     os.environ.get("WEB_SECURITY_REDIS_URL")
     or os.environ.get("REDIS_URL")
     or "redis://localhost:6379/0"
 ).strip()
-REDIS_ENABLED = (os.environ.get("WEB_SECURITY_REDIS_ENABLED") or "true").strip().lower() in {
-    "1",
-    "true",
-    "yes",
-    "on",
-}
 REDIS_PREFIX = (os.environ.get("WEB_SECURITY_REDIS_PREFIX") or "web:security").strip() or "web:security"
 _REDIS_CLIENT: Optional[Redis] = None
 _REDIS_UNAVAILABLE = False
+
+
+def _resolve_redis_enabled() -> bool:
+    raw_value = (os.environ.get("WEB_SECURITY_REDIS_ENABLED") or "").strip().lower()
+    if raw_value:
+        return raw_value in {"1", "true", "yes", "on"}
+    if APP_ENV in {"development", "dev", "local"}:
+        # In local development, avoid enabling auth/session Redis implicitly
+        # from a generic REDIS_URL inherited from the shell or another project.
+        return bool((os.environ.get("WEB_SECURITY_REDIS_URL") or "").strip())
+    return True
+
+
+REDIS_ENABLED = _resolve_redis_enabled()
 
 
 def get_redis_client() -> Optional[Redis]:

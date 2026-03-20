@@ -1,0 +1,6 @@
+# Plantilla de Importación de Presupuesto
+# Formato: CSV (valores separados por coma)
+# Las columnas obligatorias están marcadas con *
+codigo_actividad*,nombre_actividad*,descripcion,departamento_id,objetivo_estrategico_id,fecha_inicio,fecha_fin,presupuesto*
+ACT-001,Capacitación interna,Capacitación anual de personal,2,5,2026-03-01,2026-03-10,15000
+ACT-002,Compra de equipos,Adquisición de computadoras,3,7,2026-04-15,2026-04-20,25000
