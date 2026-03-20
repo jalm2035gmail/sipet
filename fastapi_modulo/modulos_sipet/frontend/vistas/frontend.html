@@ -1311,7 +1311,29 @@
   }
 
   function registerBlocks(bm){
-    bm = bm.BlockManager;
+    var editor = bm;
+    var dc = editor.DomComponents;
+    bm = editor.BlockManager;
+
+    function addTypedBlock(id, config){
+      var typeId = 'builder-block-' + id;
+      dc.addType(typeId, {
+        model: { defaults: {
+          tagName: config.tagName || 'section',
+          attributes: config.attributes || {},
+          droppable: config.droppable !== false,
+          script: config.script,
+          components: config.components || '',
+        }},
+        view: {}
+      });
+      bm.add(id, {
+        label: config.label,
+        category: config.category,
+        media: config.media,
+        content: { type: typeId }
+      });
+    }
 
     /* ══════════════════════════════════════════════════
        1. MENU — variantes de barra de navegación
@@ -1367,9 +1389,9 @@
       content:'<div style="background:var(--sidebar-bottom,#3b82f6);color:#fff;padding:10px 5%;text-align:center;font-size:.9rem;font-weight:500;display:flex;align-items:center;justify-content:center;gap:12px;">🎉 <strong>Oferta especial:</strong>&nbsp;Abre tu DPF antes del 31 de marzo y gana el doble de intereses.&nbsp;<a href="#" style="color:#fff;font-weight:700;text-decoration:underline;">Ver más →</a></div>'
     });
 
-    bm.add('header-fullphoto', { label:'Foto completa', category:'Header', media:'🌅',
-      content: `<section data-sipet-bg-image="1" style="position:relative;min-height:92vh;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#0f172a;">
-  <!-- Foto de fondo full-bleed -->
+    addTypedBlock('header-fullphoto', { label:'Foto completa', category:'Header', media:'🌅',
+      attributes: { 'data-sipet-bg-image':'1', style:'position:relative;min-height:92vh;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#0f172a;' },
+      components: `<!-- Foto de fondo full-bleed -->
   <img src="https://placehold.co/1600x900/1e3a5f/60a5fa?text=Tu+fotografía+aquí" alt="Fondo"
        style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;opacity:.55;">
   <!-- Gradiente elegante sobre la foto -->
@@ -1401,13 +1423,12 @@
     <span style="font-size:.7rem;font-weight:600;color:#fff;text-transform:uppercase;letter-spacing:.1em;">Explorar</span>
     <svg width="20" height="12" viewBox="0 0 20 12" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 1 10 11 19 1"/></svg>
   </a>
-  <style>@keyframes bounce{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(6px)}}</style>
-</section>`
+  <style>@keyframes bounce{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(6px)}}</style>`
     });
 
-    bm.add('header-parallax-photo', { label:'Foto fija + scroll', category:'Header', media:'🧲',
-      content: `<section data-sipet-bg-image="1" style="position:relative;min-height:180vh;background:#0f172a;">
-  <div style="position:sticky;top:0;height:100vh;overflow:hidden;">
+    addTypedBlock('header-parallax-photo', { label:'Foto fija + scroll', category:'Header', media:'🧲',
+      attributes: { 'data-sipet-bg-image':'1', style:'position:relative;min-height:180vh;background:#0f172a;' },
+      components: `<div style="position:sticky;top:0;height:100vh;overflow:hidden;">
     <img src="https://placehold.co/1600x1100/0f172a/93c5fd?text=Foto+de+portada" alt="Foto fija"
          style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;opacity:.78;">
     <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(15,23,42,.24) 0%,rgba(15,23,42,.46) 38%,rgba(15,23,42,.82) 100%);"></div>
@@ -1446,12 +1467,12 @@
       </div>
     </div>
   </div>
-</section>`
+`
     });
 
-    bm.add('header-collage', { label:'Collage premium', category:'Header', media:'🖼️',
-      content: `<section style="display:grid;grid-template-columns:1fr 1fr;min-height:100vh;background:#0f172a;overflow:hidden;">
-  <!-- Columna izquierda: texto + badges -->
+    addTypedBlock('header-collage', { label:'Collage premium', category:'Header', media:'🖼️',
+      attributes: { style:'display:grid;grid-template-columns:1fr 1fr;min-height:100vh;background:#0f172a;overflow:hidden;' },
+      components: `<!-- Columna izquierda: texto + badges -->
   <div style="display:flex;flex-direction:column;justify-content:center;padding:80px 5% 80px 7%;position:relative;z-index:1;">
     <!-- Borde decorativo izquierdo -->
     <div style="position:absolute;left:0;top:0;bottom:0;width:3px;background:linear-gradient(180deg,transparent,#3b82f6 40%,#818cf8 75%,transparent);"></div>
@@ -1512,8 +1533,7 @@
       <div style="position:absolute;inset:0;background:linear-gradient(180deg,transparent 40%,rgba(124,45,18,.85));"></div>
       <div style="position:absolute;bottom:12px;left:14px;"><div style="font-size:.65rem;color:#fed7aa;text-transform:uppercase;letter-spacing:.06em;font-weight:600;">Sucursales</div><div style="font-size:.95rem;font-weight:700;color:#fff;">8 puntos de atención</div></div>
     </div>
-  </div>
-</section>`
+  </div>`
     });
 
     bm.add('header-slider', { label:'Slider hero', category:'Header', media:'🎞',
@@ -1523,48 +1543,59 @@
     /* ══════════════════════════════════════════════════
        3. SECCIÓN PRINCIPAL — bloques de contenido mayor
     ══════════════════════════════════════════════════ */
-    bm.add('sec-features', { label:'Características', category:'Secci\u00f3n principal', media:'⭐',
-      content:'<section style="padding:72px 5%;background:#fff;"><div style="text-align:center;margin-bottom:44px;"><h2 style="font-size:2rem;font-weight:800;color:#0f172a;margin:0 0 12px;">Nuestros servicios</h2><p style="color:#64748b;font-size:1rem;max-width:500px;margin:0 auto;">Descubre todo lo que podemos ofrecerte para tu bienestar financiero.</p></div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:24px;max-width:1100px;margin:0 auto;"><div style="background:#f8fafc;border-radius:14px;padding:32px 24px;text-align:center;"><div style="font-size:2.4rem;margin-bottom:14px;">💳</div><h3 style="font-size:1.05rem;font-weight:700;color:#0f172a;margin:0 0 8px;">Ahorro</h3><p style="color:#64748b;font-size:.9rem;line-height:1.65;">Haz crecer tu dinero con nuestras cuentas.</p></div><div style="background:#f8fafc;border-radius:14px;padding:32px 24px;text-align:center;"><div style="font-size:2.4rem;margin-bottom:14px;">🏦</div><h3 style="font-size:1.05rem;font-weight:700;color:#0f172a;margin:0 0 8px;">Creditos</h3><p style="color:#64748b;font-size:.9rem;line-height:1.65;">Prestamos con las mejores tasas del mercado.</p></div><div style="background:#f8fafc;border-radius:14px;padding:32px 24px;text-align:center;"><div style="font-size:2.4rem;margin-bottom:14px;">📱</div><h3 style="font-size:1.05rem;font-weight:700;color:#0f172a;margin:0 0 8px;">Digital</h3><p style="color:#64748b;font-size:.9rem;line-height:1.65;">Gestiona tu cuenta desde cualquier dispositivo.</p></div><div style="background:#f8fafc;border-radius:14px;padding:32px 24px;text-align:center;"><div style="font-size:2.4rem;margin-bottom:14px;">🔒</div><h3 style="font-size:1.05rem;font-weight:700;color:#0f172a;margin:0 0 8px;">Seguridad</h3><p style="color:#64748b;font-size:.9rem;line-height:1.65;">Fondos supervisados y auditados cada año.</p></div></div></section>'
+    addTypedBlock('sec-features', { label:'Características', category:'Secci\u00f3n principal', media:'⭐',
+      attributes:{style:'padding:72px 5%;background:#fff;'},
+      components:'<div style="text-align:center;margin-bottom:44px;"><h2 style="font-size:2rem;font-weight:800;color:#0f172a;margin:0 0 12px;">Nuestros servicios</h2><p style="color:#64748b;font-size:1rem;max-width:500px;margin:0 auto;">Descubre todo lo que podemos ofrecerte para tu bienestar financiero.</p></div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:24px;max-width:1100px;margin:0 auto;"><div style="background:#f8fafc;border-radius:14px;padding:32px 24px;text-align:center;"><div style="font-size:2.4rem;margin-bottom:14px;">💳</div><h3 style="font-size:1.05rem;font-weight:700;color:#0f172a;margin:0 0 8px;">Ahorro</h3><p style="color:#64748b;font-size:.9rem;line-height:1.65;">Haz crecer tu dinero con nuestras cuentas.</p></div><div style="background:#f8fafc;border-radius:14px;padding:32px 24px;text-align:center;"><div style="font-size:2.4rem;margin-bottom:14px;">🏦</div><h3 style="font-size:1.05rem;font-weight:700;color:#0f172a;margin:0 0 8px;">Creditos</h3><p style="color:#64748b;font-size:.9rem;line-height:1.65;">Prestamos con las mejores tasas del mercado.</p></div><div style="background:#f8fafc;border-radius:14px;padding:32px 24px;text-align:center;"><div style="font-size:2.4rem;margin-bottom:14px;">📱</div><h3 style="font-size:1.05rem;font-weight:700;color:#0f172a;margin:0 0 8px;">Digital</h3><p style="color:#64748b;font-size:.9rem;line-height:1.65;">Gestiona tu cuenta desde cualquier dispositivo.</p></div><div style="background:#f8fafc;border-radius:14px;padding:32px 24px;text-align:center;"><div style="font-size:2.4rem;margin-bottom:14px;">🔒</div><h3 style="font-size:1.05rem;font-weight:700;color:#0f172a;margin:0 0 8px;">Seguridad</h3><p style="color:#64748b;font-size:.9rem;line-height:1.65;">Fondos supervisados y auditados cada año.</p></div></div>'
     });
 
-    bm.add('sec-cards', { label:'Cards productos', category:'Secci\u00f3n principal', media:'🃏',
-      content:'<section style="padding:72px 5%;background:#f8fafc;"><div style="text-align:center;margin-bottom:40px;"><h2 style="font-size:1.9rem;font-weight:800;color:#0f172a;margin:0 0 10px;">Nuestros productos</h2><p style="color:#64748b;font-size:1rem;">Elige el que mejor se adapta a tus necesidades.</p></div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:24px;max-width:1100px;margin:0 auto;"><div style="background:#fff;border-radius:14px;padding:28px 24px;box-shadow:0 2px 16px rgba(0,0,0,.07);border-top:4px solid #3b82f6;"><div style="font-size:2rem;margin-bottom:14px;">💳</div><h3 style="font-size:1.05rem;font-weight:700;color:#0f172a;margin:0 0 8px;">Cuenta de Ahorro</h3><p style="color:#64748b;font-size:.9rem;line-height:1.65;margin:0 0 20px;">Haz crecer tu dinero con rendimientos competitivos y sin comisiones.</p><a href="#" style="display:inline-block;padding:9px 20px;background:#0f172a;color:#fff;border-radius:7px;font-size:.875rem;font-weight:700;text-decoration:none;">Saber mas</a></div><div style="background:#fff;border-radius:14px;padding:28px 24px;box-shadow:0 2px 16px rgba(0,0,0,.07);border-top:4px solid #10b981;"><div style="font-size:2rem;margin-bottom:14px;">🏦</div><h3 style="font-size:1.05rem;font-weight:700;color:#0f172a;margin:0 0 8px;">Credito Personal</h3><p style="color:#64748b;font-size:.9rem;line-height:1.65;margin:0 0 20px;">Financiamiento rapido con tasas preferenciales para socios.</p><a href="#" style="display:inline-block;padding:9px 20px;background:#0f172a;color:#fff;border-radius:7px;font-size:.875rem;font-weight:700;text-decoration:none;">Saber mas</a></div><div style="background:#fff;border-radius:14px;padding:28px 24px;box-shadow:0 2px 16px rgba(0,0,0,.07);border-top:4px solid #f59e0b;"><div style="font-size:2rem;margin-bottom:14px;">🏠</div><h3 style="font-size:1.05rem;font-weight:700;color:#0f172a;margin:0 0 8px;">Credito Hipotecario</h3><p style="color:#64748b;font-size:.9rem;line-height:1.65;margin:0 0 20px;">Adquiere tu vivienda con plazos flexibles y cuotas accesibles.</p><a href="#" style="display:inline-block;padding:9px 20px;background:#0f172a;color:#fff;border-radius:7px;font-size:.875rem;font-weight:700;text-decoration:none;">Saber mas</a></div></div></section>'
+    addTypedBlock('sec-cards', { label:'Cards productos', category:'Secci\u00f3n principal', media:'🃏',
+      attributes:{style:'padding:72px 5%;background:#f8fafc;'},
+      components:'<div style="text-align:center;margin-bottom:40px;"><h2 style="font-size:1.9rem;font-weight:800;color:#0f172a;margin:0 0 10px;">Nuestros productos</h2><p style="color:#64748b;font-size:1rem;">Elige el que mejor se adapta a tus necesidades.</p></div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:24px;max-width:1100px;margin:0 auto;"><div style="background:#fff;border-radius:14px;padding:28px 24px;box-shadow:0 2px 16px rgba(0,0,0,.07);border-top:4px solid #3b82f6;"><div style="font-size:2rem;margin-bottom:14px;">💳</div><h3 style="font-size:1.05rem;font-weight:700;color:#0f172a;margin:0 0 8px;">Cuenta de Ahorro</h3><p style="color:#64748b;font-size:.9rem;line-height:1.65;margin:0 0 20px;">Haz crecer tu dinero con rendimientos competitivos y sin comisiones.</p><a href="#" style="display:inline-block;padding:9px 20px;background:#0f172a;color:#fff;border-radius:7px;font-size:.875rem;font-weight:700;text-decoration:none;">Saber mas</a></div><div style="background:#fff;border-radius:14px;padding:28px 24px;box-shadow:0 2px 16px rgba(0,0,0,.07);border-top:4px solid #10b981;"><div style="font-size:2rem;margin-bottom:14px;">🏦</div><h3 style="font-size:1.05rem;font-weight:700;color:#0f172a;margin:0 0 8px;">Credito Personal</h3><p style="color:#64748b;font-size:.9rem;line-height:1.65;margin:0 0 20px;">Financiamiento rapido con tasas preferenciales para socios.</p><a href="#" style="display:inline-block;padding:9px 20px;background:#0f172a;color:#fff;border-radius:7px;font-size:.875rem;font-weight:700;text-decoration:none;">Saber mas</a></div><div style="background:#fff;border-radius:14px;padding:28px 24px;box-shadow:0 2px 16px rgba(0,0,0,.07);border-top:4px solid #f59e0b;"><div style="font-size:2rem;margin-bottom:14px;">🏠</div><h3 style="font-size:1.05rem;font-weight:700;color:#0f172a;margin:0 0 8px;">Credito Hipotecario</h3><p style="color:#64748b;font-size:.9rem;line-height:1.65;margin:0 0 20px;">Adquiere tu vivienda con plazos flexibles y cuotas accesibles.</p><a href="#" style="display:inline-block;padding:9px 20px;background:#0f172a;color:#fff;border-radius:7px;font-size:.875rem;font-weight:700;text-decoration:none;">Saber mas</a></div></div>'
     });
 
-    bm.add('sec-stats', { label:'Estadisticas', category:'Secci\u00f3n principal', media:'📊',
-      content:'<section style="padding:56px 5%;background:#0f172a;color:#fff;text-align:center;"><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:24px;max-width:960px;margin:0 auto;"><div><div style="font-size:2.6rem;font-weight:800;color:#3b82f6;">12,000+</div><div style="color:#94a3b8;font-size:.875rem;margin-top:4px;">Socios activos</div></div><div><div style="font-size:2.6rem;font-weight:800;color:#3b82f6;">25 anos</div><div style="color:#94a3b8;font-size:.875rem;margin-top:4px;">De experiencia</div></div><div><div style="font-size:2.6rem;font-weight:800;color:#3b82f6;">Q450M</div><div style="color:#94a3b8;font-size:.875rem;margin-top:4px;">En cartera</div></div><div><div style="font-size:2.6rem;font-weight:800;color:#3b82f6;">8</div><div style="color:#94a3b8;font-size:.875rem;margin-top:4px;">Sucursales</div></div></div></section>'
+    addTypedBlock('sec-stats', { label:'Estadisticas', category:'Secci\u00f3n principal', media:'📊',
+      attributes:{style:'padding:56px 5%;background:#0f172a;color:#fff;text-align:center;'},
+      components:'<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:24px;max-width:960px;margin:0 auto;"><div><div style="font-size:2.6rem;font-weight:800;color:#3b82f6;">12,000+</div><div style="color:#94a3b8;font-size:.875rem;margin-top:4px;">Socios activos</div></div><div><div style="font-size:2.6rem;font-weight:800;color:#3b82f6;">25 anos</div><div style="color:#94a3b8;font-size:.875rem;margin-top:4px;">De experiencia</div></div><div><div style="font-size:2.6rem;font-weight:800;color:#3b82f6;">Q450M</div><div style="color:#94a3b8;font-size:.875rem;margin-top:4px;">En cartera</div></div><div><div style="font-size:2.6rem;font-weight:800;color:#3b82f6;">8</div><div style="color:#94a3b8;font-size:.875rem;margin-top:4px;">Sucursales</div></div></div>'
     });
 
-    bm.add('sec-cta', { label:'Call to Action', category:'Secci\u00f3n principal', media:'📣',
-      content:'<section style="background:#3b82f6;color:#fff;padding:72px 24px;text-align:center;"><h2 style="font-size:2.1rem;font-weight:800;margin:0 0 14px;">Listo para comenzar?</h2><p style="opacity:.87;margin:0 0 32px;font-size:1.05rem;max-width:520px;margin-left:auto;margin-right:auto;line-height:1.7;">Unete a miles de socios que ya confian en nosotros.</p><div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;"><a href="#" style="display:inline-block;padding:14px 36px;background:#fff;color:#3b82f6;border-radius:8px;font-weight:700;text-decoration:none;font-size:1rem;">Asociarme ahora</a><a href="#" style="display:inline-block;padding:14px 36px;background:transparent;color:#fff;border:2px solid rgba(255,255,255,.5);border-radius:8px;font-weight:700;text-decoration:none;font-size:1rem;">Conocer mas</a></div></section>'
+    addTypedBlock('sec-cta', { label:'Call to Action', category:'Secci\u00f3n principal', media:'📣',
+      attributes:{style:'background:#3b82f6;color:#fff;padding:72px 24px;text-align:center;'},
+      components:'<h2 style="font-size:2.1rem;font-weight:800;margin:0 0 14px;">Listo para comenzar?</h2><p style="opacity:.87;margin:0 0 32px;font-size:1.05rem;max-width:520px;margin-left:auto;margin-right:auto;line-height:1.7;">Unete a miles de socios que ya confian en nosotros.</p><div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;"><a href="#" style="display:inline-block;padding:14px 36px;background:#fff;color:#3b82f6;border-radius:8px;font-weight:700;text-decoration:none;font-size:1rem;">Asociarme ahora</a><a href="#" style="display:inline-block;padding:14px 36px;background:transparent;color:#fff;border:2px solid rgba(255,255,255,.5);border-radius:8px;font-weight:700;text-decoration:none;font-size:1rem;">Conocer mas</a></div>'
     });
 
-    bm.add('sec-cta-dark', { label:'CTA oscuro', category:'Secci\u00f3n principal', media:'🎯',
-      content:'<section style="background:#0f172a;color:#fff;padding:72px 24px;text-align:center;"><h2 style="font-size:2rem;font-weight:800;margin:0 0 12px;">Listo para crecer?</h2><p style="opacity:.72;margin:0 0 28px;font-size:1.05rem;max-width:520px;margin-left:auto;margin-right:auto;">Contactanos y un asesor se comunicara contigo en menos de 24 horas.</p><a href="#" style="display:inline-block;padding:14px 36px;background:#3b82f6;color:#fff;border-radius:8px;font-weight:700;text-decoration:none;font-size:1rem;">Contactar asesor</a></section>'
+    addTypedBlock('sec-cta-dark', { label:'CTA oscuro', category:'Secci\u00f3n principal', media:'🎯',
+      attributes:{style:'background:#0f172a;color:#fff;padding:72px 24px;text-align:center;'},
+      components:'<h2 style="font-size:2rem;font-weight:800;margin:0 0 12px;">Listo para crecer?</h2><p style="opacity:.72;margin:0 0 28px;font-size:1.05rem;max-width:520px;margin-left:auto;margin-right:auto;">Contactanos y un asesor se comunicara contigo en menos de 24 horas.</p><a href="#" style="display:inline-block;padding:14px 36px;background:#3b82f6;color:#fff;border-radius:8px;font-weight:700;text-decoration:none;font-size:1rem;">Contactar asesor</a>'
     });
 
-    bm.add('sec-tasas', { label:'Tasas de interes', category:'Secci\u00f3n principal', media:'📈',
-      content:'<section style="padding:64px 5%;background:#fff;"><div style="max-width:900px;margin:0 auto;"><div style="text-align:center;margin-bottom:36px;"><h2 style="font-size:1.9rem;font-weight:800;color:#0f172a;margin:0 0 10px;">Tasas de interes vigentes</h2><p style="color:#64748b;">Actualizadas al '+new Date().toLocaleDateString('es-GT',{year:'numeric',month:'long',day:'numeric'})+'</p></div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;"><div style="background:#f8fafc;border-radius:12px;padding:24px;border-left:4px solid #3b82f6;"><div style="font-size:.73rem;font-weight:700;color:#3b82f6;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Ahorro a la vista</div><div style="font-size:2.2rem;font-weight:800;color:#0f172a;line-height:1;">3.5%</div><div style="font-size:.82rem;color:#64748b;margin-top:4px;">Tasa anual</div></div><div style="background:#f8fafc;border-radius:12px;padding:24px;border-left:4px solid #10b981;"><div style="font-size:.73rem;font-weight:700;color:#10b981;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">DPF 6 meses</div><div style="font-size:2.2rem;font-weight:800;color:#0f172a;line-height:1;">6.25%</div><div style="font-size:.82rem;color:#64748b;margin-top:4px;">Tasa anual</div></div><div style="background:#f8fafc;border-radius:12px;padding:24px;border-left:4px solid #f59e0b;"><div style="font-size:.73rem;font-weight:700;color:#f59e0b;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Credito personal</div><div style="font-size:2.2rem;font-weight:800;color:#0f172a;line-height:1;">14%</div><div style="font-size:.82rem;color:#64748b;margin-top:4px;">Tasa anual</div></div><div style="background:#f8fafc;border-radius:12px;padding:24px;border-left:4px solid #8b5cf6;"><div style="font-size:.73rem;font-weight:700;color:#8b5cf6;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Credito hipotecario</div><div style="font-size:2.2rem;font-weight:800;color:#0f172a;line-height:1;">10%</div><div style="font-size:.82rem;color:#64748b;margin-top:4px;">Tasa anual</div></div></div><p style="text-align:center;font-size:.77rem;color:#94a3b8;margin-top:20px;">Las tasas pueden cambiar sin previo aviso. Consulte en sucursal.</p></div></section>'
+    addTypedBlock('sec-tasas', { label:'Tasas de interes', category:'Secci\u00f3n principal', media:'📈',
+      attributes:{style:'padding:64px 5%;background:#fff;'},
+      components:'<div style="max-width:900px;margin:0 auto;"><div style="text-align:center;margin-bottom:36px;"><h2 style="font-size:1.9rem;font-weight:800;color:#0f172a;margin:0 0 10px;">Tasas de interes vigentes</h2><p style="color:#64748b;">Actualizadas al '+new Date().toLocaleDateString('es-GT',{year:'numeric',month:'long',day:'numeric'})+'</p></div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;"><div style="background:#f8fafc;border-radius:12px;padding:24px;border-left:4px solid #3b82f6;"><div style="font-size:.73rem;font-weight:700;color:#3b82f6;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Ahorro a la vista</div><div style="font-size:2.2rem;font-weight:800;color:#0f172a;line-height:1;">3.5%</div><div style="font-size:.82rem;color:#64748b;margin-top:4px;">Tasa anual</div></div><div style="background:#f8fafc;border-radius:12px;padding:24px;border-left:4px solid #10b981;"><div style="font-size:.73rem;font-weight:700;color:#10b981;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">DPF 6 meses</div><div style="font-size:2.2rem;font-weight:800;color:#0f172a;line-height:1;">6.25%</div><div style="font-size:.82rem;color:#64748b;margin-top:4px;">Tasa anual</div></div><div style="background:#f8fafc;border-radius:12px;padding:24px;border-left:4px solid #f59e0b;"><div style="font-size:.73rem;font-weight:700;color:#f59e0b;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Credito personal</div><div style="font-size:2.2rem;font-weight:800;color:#0f172a;line-height:1;">14%</div><div style="font-size:.82rem;color:#64748b;margin-top:4px;">Tasa anual</div></div><div style="background:#f8fafc;border-radius:12px;padding:24px;border-left:4px solid #8b5cf6;"><div style="font-size:.73rem;font-weight:700;color:#8b5cf6;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Credito hipotecario</div><div style="font-size:2.2rem;font-weight:800;color:#0f172a;line-height:1;">10%</div><div style="font-size:.82rem;color:#64748b;margin-top:4px;">Tasa anual</div></div></div><p style="text-align:center;font-size:.77rem;color:#94a3b8;margin-top:20px;">Las tasas pueden cambiar sin previo aviso. Consulte en sucursal.</p></div>'
     });
 
-    bm.add('sec-testimonios', { label:'Testimonios', category:'Secci\u00f3n principal', media:'💬',
-      content:'<section style="padding:72px 5%;background:#f8fafc;"><div style="text-align:center;margin-bottom:44px;"><h2 style="font-size:1.9rem;font-weight:800;color:#0f172a;margin:0 0 10px;">Lo que dicen nuestros socios</h2><p style="color:#64748b;">Historias de exito de personas como tu.</p></div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:24px;max-width:1000px;margin:0 auto;"><div style="background:#fff;border-radius:14px;padding:28px;box-shadow:0 2px 12px rgba(0,0,0,.06);"><p style="color:#475569;font-style:italic;font-size:.95rem;line-height:1.7;margin:0 0 20px;">&ldquo;Gracias a la cooperativa pude comprar mi casa y darle a mi familia una vida mejor.&rdquo;</p><div style="display:flex;align-items:center;gap:12px;"><div style="width:40px;height:40px;border-radius:50%;background:#e2e8f0;display:flex;align-items:center;justify-content:center;font-size:18px;">👤</div><div><strong style="display:block;font-size:.9rem;color:#0f172a;">Maria Lopez</strong><span style="font-size:.8rem;color:#94a3b8;">Socia desde 2015</span></div></div></div><div style="background:#fff;border-radius:14px;padding:28px;box-shadow:0 2px 12px rgba(0,0,0,.06);"><p style="color:#475569;font-style:italic;font-size:.95rem;line-height:1.7;margin:0 0 20px;">&ldquo;El proceso para obtener mi credito fue muy sencillo. Excelente atencion y muy buenas tasas.&rdquo;</p><div style="display:flex;align-items:center;gap:12px;"><div style="width:40px;height:40px;border-radius:50%;background:#e2e8f0;display:flex;align-items:center;justify-content:center;font-size:18px;">👤</div><div><strong style="display:block;font-size:.9rem;color:#0f172a;">Carlos Mendez</strong><span style="font-size:.8rem;color:#94a3b8;">Socio desde 2019</span></div></div></div><div style="background:#fff;border-radius:14px;padding:28px;box-shadow:0 2px 12px rgba(0,0,0,.06);"><p style="color:#475569;font-style:italic;font-size:.95rem;line-height:1.7;margin:0 0 20px;">&ldquo;Nunca pense que ahorrar seria tan facil. La app es intuitiva y siempre hay un asesor disponible.&rdquo;</p><div style="display:flex;align-items:center;gap:12px;"><div style="width:40px;height:40px;border-radius:50%;background:#e2e8f0;display:flex;align-items:center;justify-content:center;font-size:18px;">👤</div><div><strong style="display:block;font-size:.9rem;color:#0f172a;">Ana Ramirez</strong><span style="font-size:.8rem;color:#94a3b8;">Socia desde 2021</span></div></div></div></div></section>'
+    addTypedBlock('sec-testimonios', { label:'Testimonios', category:'Secci\u00f3n principal', media:'💬',
+      attributes:{style:'padding:72px 5%;background:#f8fafc;'},
+      components:'<div style="text-align:center;margin-bottom:44px;"><h2 style="font-size:1.9rem;font-weight:800;color:#0f172a;margin:0 0 10px;">Lo que dicen nuestros socios</h2><p style="color:#64748b;">Historias de exito de personas como tu.</p></div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:24px;max-width:1000px;margin:0 auto;"><div style="background:#fff;border-radius:14px;padding:28px;box-shadow:0 2px 12px rgba(0,0,0,.06);"><p style="color:#475569;font-style:italic;font-size:.95rem;line-height:1.7;margin:0 0 20px;">&ldquo;Gracias a la cooperativa pude comprar mi casa y darle a mi familia una vida mejor.&rdquo;</p><div style="display:flex;align-items:center;gap:12px;"><div style="width:40px;height:40px;border-radius:50%;background:#e2e8f0;display:flex;align-items:center;justify-content:center;font-size:18px;">👤</div><div><strong style="display:block;font-size:.9rem;color:#0f172a;">Maria Lopez</strong><span style="font-size:.8rem;color:#94a3b8;">Socia desde 2015</span></div></div></div><div style="background:#fff;border-radius:14px;padding:28px;box-shadow:0 2px 12px rgba(0,0,0,.06);"><p style="color:#475569;font-style:italic;font-size:.95rem;line-height:1.7;margin:0 0 20px;">&ldquo;El proceso para obtener mi credito fue muy sencillo. Excelente atencion y muy buenas tasas.&rdquo;</p><div style="display:flex;align-items:center;gap:12px;"><div style="width:40px;height:40px;border-radius:50%;background:#e2e8f0;display:flex;align-items:center;justify-content:center;font-size:18px;">👤</div><div><strong style="display:block;font-size:.9rem;color:#0f172a;">Carlos Mendez</strong><span style="font-size:.8rem;color:#94a3b8;">Socio desde 2019</span></div></div></div><div style="background:#fff;border-radius:14px;padding:28px;box-shadow:0 2px 12px rgba(0,0,0,.06);"><p style="color:#475569;font-style:italic;font-size:.95rem;line-height:1.7;margin:0 0 20px;">&ldquo;Nunca pense que ahorrar seria tan facil. La app es intuitiva y siempre hay un asesor disponible.&rdquo;</p><div style="display:flex;align-items:center;gap:12px;"><div style="width:40px;height:40px;border-radius:50%;background:#e2e8f0;display:flex;align-items:center;justify-content:center;font-size:18px;">👤</div><div><strong style="display:block;font-size:.9rem;color:#0f172a;">Ana Ramirez</strong><span style="font-size:.8rem;color:#94a3b8;">Socia desde 2021</span></div></div></div></div>'
     });
 
-    bm.add('sec-faq', { label:'Preguntas frecuentes', category:'Secci\u00f3n principal', media:'❓',
-      content:'<section style="padding:72px 5%;background:#fff;"><div style="max-width:720px;margin:0 auto;"><div style="text-align:center;margin-bottom:44px;"><h2 style="font-size:1.9rem;font-weight:800;color:#0f172a;margin:0 0 10px;">Preguntas frecuentes</h2><p style="color:#64748b;">Respuestas a las dudas mas comunes sobre nuestros servicios.</p></div><div style="display:flex;flex-direction:column;gap:12px;"><details style="background:#f8fafc;border-radius:10px;padding:0;border:1px solid #e2e8f0;overflow:hidden;"><summary style="padding:16px 20px;font-weight:600;color:#0f172a;cursor:pointer;font-size:.95rem;list-style:none;">¿Como puedo abrir una cuenta?</summary><div style="padding:0 20px 16px;color:#64748b;font-size:.9rem;line-height:1.7;">Puedes abrir tu cuenta en cualquiera de nuestras sucursales con tu DPI vigente y un deposito inicial de Q100. Tambien puedes iniciar el proceso en linea.</div></details><details style="background:#f8fafc;border-radius:10px;padding:0;border:1px solid #e2e8f0;overflow:hidden;"><summary style="padding:16px 20px;font-weight:600;color:#0f172a;cursor:pointer;font-size:.95rem;list-style:none;">¿Cuales son los requisitos para un credito?</summary><div style="padding:0 20px 16px;color:#64748b;font-size:.9rem;line-height:1.7;">Necesitas ser socio activo, tener al menos 6 meses de antiguedad, presentar DPI, recibos de salario o declaracion de ingresos, y garantia dependiendo del monto.</div></details><details style="background:#f8fafc;border-radius:10px;padding:0;border:1px solid #e2e8f0;overflow:hidden;"><summary style="padding:16px 20px;font-weight:600;color:#0f172a;cursor:pointer;font-size:.95rem;list-style:none;">¿Mis fondos estan seguros?</summary><div style="padding:0 20px 16px;color:#64748b;font-size:.9rem;line-height:1.7;">Si. Nuestra cooperativa esta supervisada por el BANGUAT y auditada anualmente por firmas independientes. Los depositos estan protegidos hasta Q100,000.</div></details><details style="background:#f8fafc;border-radius:10px;padding:0;border:1px solid #e2e8f0;overflow:hidden;"><summary style="padding:16px 20px;font-weight:600;color:#0f172a;cursor:pointer;font-size:.95rem;list-style:none;">¿Tienen banca en linea?</summary><div style="padding:0 20px 16px;color:#64748b;font-size:.9rem;line-height:1.7;">Si, contamos con app movil y portal backend donde puedes consultar saldos, realizar transferencias y pagar servicios las 24 horas del dia.</div></details></div></div></section>'
+    addTypedBlock('sec-faq', { label:'Preguntas frecuentes', category:'Secci\u00f3n principal', media:'❓',
+      attributes:{style:'padding:72px 5%;background:#fff;'},
+      components:'<div style="max-width:720px;margin:0 auto;"><div style="text-align:center;margin-bottom:44px;"><h2 style="font-size:1.9rem;font-weight:800;color:#0f172a;margin:0 0 10px;">Preguntas frecuentes</h2><p style="color:#64748b;">Respuestas a las dudas mas comunes sobre nuestros servicios.</p></div><div style="display:flex;flex-direction:column;gap:12px;"><details style="background:#f8fafc;border-radius:10px;padding:0;border:1px solid #e2e8f0;overflow:hidden;"><summary style="padding:16px 20px;font-weight:600;color:#0f172a;cursor:pointer;font-size:.95rem;list-style:none;">¿Como puedo abrir una cuenta?</summary><div style="padding:0 20px 16px;color:#64748b;font-size:.9rem;line-height:1.7;">Puedes abrir tu cuenta en cualquiera de nuestras sucursales con tu DPI vigente y un deposito inicial de Q100. Tambien puedes iniciar el proceso en linea.</div></details><details style="background:#f8fafc;border-radius:10px;padding:0;border:1px solid #e2e8f0;overflow:hidden;"><summary style="padding:16px 20px;font-weight:600;color:#0f172a;cursor:pointer;font-size:.95rem;list-style:none;">¿Cuales son los requisitos para un credito?</summary><div style="padding:0 20px 16px;color:#64748b;font-size:.9rem;line-height:1.7;">Necesitas ser socio activo, tener al menos 6 meses de antiguedad, presentar DPI, recibos de salario o declaracion de ingresos, y garantia dependiendo del monto.</div></details><details style="background:#f8fafc;border-radius:10px;padding:0;border:1px solid #e2e8f0;overflow:hidden;"><summary style="padding:16px 20px;font-weight:600;color:#0f172a;cursor:pointer;font-size:.95rem;list-style:none;">¿Mis fondos estan seguros?</summary><div style="padding:0 20px 16px;color:#64748b;font-size:.9rem;line-height:1.7;">Si. Nuestra cooperativa esta supervisada por el BANGUAT y auditada anualmente por firmas independientes. Los depositos estan protegidos hasta Q100,000.</div></details><details style="background:#f8fafc;border-radius:10px;padding:0;border:1px solid #e2e8f0;overflow:hidden;"><summary style="padding:16px 20px;font-weight:600;color:#0f172a;cursor:pointer;font-size:.95rem;list-style:none;">¿Tienen banca en linea?</summary><div style="padding:0 20px 16px;color:#64748b;font-size:.9rem;line-height:1.7;">Si, contamos con app movil y portal backend donde puedes consultar saldos, realizar transferencias y pagar servicios las 24 horas del dia.</div></details></div></div>'
     });
 
-    bm.add('sec-mapa', { label:'Mapa / Sucursal', category:'Secci\u00f3n principal', media:'📍',
-      content:'<section style="padding:64px 5%;background:#f8fafc;"><div style="max-width:1100px;margin:0 auto;"><div style="text-align:center;margin-bottom:36px;"><h2 style="font-size:1.9rem;font-weight:800;color:#0f172a;margin:0 0 10px;">Donde encontrarnos</h2><p style="color:#64748b;">Visita cualquiera de nuestras sucursales.</p></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:start;"><div style="background:#fff;border-radius:14px;padding:28px;box-shadow:0 2px 12px rgba(0,0,0,.06);"><h3 style="font-size:1rem;font-weight:700;color:#0f172a;margin:0 0 16px;">Sucursal Central</h3><div style="display:flex;flex-direction:column;gap:12px;font-size:.9rem;color:#475569;"><div style="display:flex;gap:10px;align-items:flex-start;"><span>📍</span><span>4a Avenida 12-34, Zona 1, Guatemala</span></div><div style="display:flex;gap:10px;align-items:center;"><span>📞</span><span>(502) 2222-3333</span></div><div style="display:flex;gap:10px;align-items:center;"><span>🕐</span><span>Lunes a Viernes: 8:00 - 17:00 hrs</span></div><div style="display:flex;gap:10px;align-items:center;"><span>✉</span><span>info@cooperativa.com</span></div></div></div><div style="border-radius:14px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.1);min-height:280px;background:#e2e8f0;"><iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3860.3!2d-90.5069!3d14.6349!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMTTCsDM4JzA1LjYiTiA5MMKwMzAnMjQuOCJX!5e0!3m2!1ses!2sgt!4v1000000000000" width="100%" height="280" style="border:none;display:block;" allowfullscreen loading="lazy"></iframe></div></div></div></section>'
+    addTypedBlock('sec-mapa', { label:'Mapa / Sucursal', category:'Secci\u00f3n principal', media:'📍',
+      attributes:{style:'padding:64px 5%;background:#f8fafc;'},
+      components:'<div style="max-width:1100px;margin:0 auto;"><div style="text-align:center;margin-bottom:36px;"><h2 style="font-size:1.9rem;font-weight:800;color:#0f172a;margin:0 0 10px;">Donde encontrarnos</h2><p style="color:#64748b;">Visita cualquiera de nuestras sucursales.</p></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:start;"><div style="background:#fff;border-radius:14px;padding:28px;box-shadow:0 2px 12px rgba(0,0,0,.06);"><h3 style="font-size:1rem;font-weight:700;color:#0f172a;margin:0 0 16px;">Sucursal Central</h3><div style="display:flex;flex-direction:column;gap:12px;font-size:.9rem;color:#475569;"><div style="display:flex;gap:10px;align-items:flex-start;"><span>📍</span><span>4a Avenida 12-34, Zona 1, Guatemala</span></div><div style="display:flex;gap:10px;align-items:center;"><span>📞</span><span>(502) 2222-3333</span></div><div style="display:flex;gap:10px;align-items:center;"><span>🕐</span><span>Lunes a Viernes: 8:00 - 17:00 hrs</span></div><div style="display:flex;gap:10px;align-items:center;"><span>✉</span><span>info@cooperativa.com</span></div></div></div><div style="border-radius:14px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.1);min-height:280px;background:#e2e8f0;"><iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3860.3!2d-90.5069!3d14.6349!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMTTCsDM4JzA1LjYiTiA5MMKwMzAnMjQuOCJX!5e0!3m2!1ses!2sgt!4v1000000000000" width="100%" height="280" style="border:none;display:block;" allowfullscreen loading="lazy"></iframe></div></div></div>'
     });
 
-    bm.add('sec-contacto', { label:'Formulario contacto', category:'Secci\u00f3n principal', media:'📬',
-      content:'<section style="padding:72px 5%;background:#fff;"><div style="max-width:560px;margin:0 auto;text-align:center;"><h2 style="font-size:2rem;font-weight:800;color:#0f172a;margin:0 0 12px;">Como podemos ayudarte?</h2><p style="color:#64748b;margin:0 0 32px;">Escribenos y nos pondremos en contacto contigo.</p><form style="display:flex;flex-direction:column;gap:14px;text-align:left;" onsubmit="return false;"><input type="text" placeholder="Nombre completo" style="padding:12px 16px;border:1px solid #e2e8f0;border-radius:8px;font-size:.95rem;outline:none;"><input type="email" placeholder="Correo electronico" style="padding:12px 16px;border:1px solid #e2e8f0;border-radius:8px;font-size:.95rem;outline:none;"><textarea placeholder="Tu mensaje..." rows="4" style="padding:12px 16px;border:1px solid #e2e8f0;border-radius:8px;font-size:.95rem;outline:none;resize:vertical;"></textarea><button type="submit" style="padding:13px;background:#0f172a;color:#fff;border:none;border-radius:8px;font-size:1rem;font-weight:700;cursor:pointer;">Enviar mensaje</button></form></div></section>'
+    addTypedBlock('sec-contacto', { label:'Formulario contacto', category:'Secci\u00f3n principal', media:'📬',
+      attributes:{style:'padding:72px 5%;background:#fff;'},
+      components:'<div style="max-width:560px;margin:0 auto;text-align:center;"><h2 style="font-size:2rem;font-weight:800;color:#0f172a;margin:0 0 12px;">Como podemos ayudarte?</h2><p style="color:#64748b;margin:0 0 32px;">Escribenos y nos pondremos en contacto contigo.</p><form style="display:flex;flex-direction:column;gap:14px;text-align:left;" onsubmit="return false;"><input type="text" placeholder="Nombre completo" style="padding:12px 16px;border:1px solid #e2e8f0;border-radius:8px;font-size:.95rem;outline:none;"><input type="email" placeholder="Correo electronico" style="padding:12px 16px;border:1px solid #e2e8f0;border-radius:8px;font-size:.95rem;outline:none;"><textarea placeholder="Tu mensaje..." rows="4" style="padding:12px 16px;border:1px solid #e2e8f0;border-radius:8px;font-size:.95rem;outline:none;resize:vertical;"></textarea><button type="submit" style="padding:13px;background:#0f172a;color:#fff;border:none;border-radius:8px;font-size:1rem;font-weight:700;cursor:pointer;">Enviar mensaje</button></form></div>'
     });
 
-    bm.add('sec-precios', { label:'Tabla de precios', category:'Secci\u00f3n principal', media:'💰',
-      content:'<section style="padding:72px 5%;background:#f8fafc;"><div style="text-align:center;margin-bottom:44px;"><h2 style="font-size:1.9rem;font-weight:800;color:#0f172a;margin:0 0 10px;">Nuestros planes</h2><p style="color:#64748b;">Elige el plan ideal para tus necesidades.</p></div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:24px;max-width:960px;margin:0 auto;"><div style="background:#fff;border-radius:14px;padding:32px 24px;box-shadow:0 2px 12px rgba(0,0,0,.07);border:1px solid #e2e8f0;text-align:center;"><h3 style="font-size:1rem;font-weight:700;color:#0f172a;margin:0 0 8px;">Basico</h3><div style="font-size:2.4rem;font-weight:800;color:#0f172a;margin:12px 0;"><sup style="font-size:1rem;">Q</sup>0</div><div style="font-size:.8rem;color:#94a3b8;margin-bottom:20px;">/ mes</div><ul style="list-style:none;text-align:left;display:flex;flex-direction:column;gap:10px;margin:0 0 24px;font-size:.9rem;color:#475569;"><li>✅ Hasta 5 transacciones</li><li>✅ Cuenta de ahorro</li><li>❌ Creditos</li><li>❌ App movil</li></ul><a href="#" style="display:block;padding:11px;border:2px solid #e2e8f0;border-radius:8px;font-weight:700;text-decoration:none;color:#0f172a;">Comenzar gratis</a></div><div style="background:#0f172a;border-radius:14px;padding:32px 24px;box-shadow:0 8px 32px rgba(15,23,42,.3);text-align:center;transform:scale(1.03);"><div style="font-size:.7rem;background:#3b82f6;color:#fff;padding:3px 10px;border-radius:20px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;display:inline-block;margin-bottom:12px;">Mas popular</div><h3 style="font-size:1rem;font-weight:700;color:#fff;margin:0 0 8px;">Pro</h3><div style="font-size:2.4rem;font-weight:800;color:#fff;margin:12px 0;"><sup style="font-size:1rem;">Q</sup>50</div><div style="font-size:.8rem;color:#94a3b8;margin-bottom:20px;">/ mes</div><ul style="list-style:none;text-align:left;display:flex;flex-direction:column;gap:10px;margin:0 0 24px;font-size:.9rem;color:#94a3b8;"><li>✅ Transacciones ilimitadas</li><li>✅ Cuenta de ahorro</li><li>✅ Creditos preaprobados</li><li>✅ App movil premium</li></ul><a href="#" style="display:block;padding:11px;background:#3b82f6;border-radius:8px;font-weight:700;text-decoration:none;color:#fff;">Suscribirme</a></div><div style="background:#fff;border-radius:14px;padding:32px 24px;box-shadow:0 2px 12px rgba(0,0,0,.07);border:1px solid #e2e8f0;text-align:center;"><h3 style="font-size:1rem;font-weight:700;color:#0f172a;margin:0 0 8px;">Empresarial</h3><div style="font-size:2.4rem;font-weight:800;color:#0f172a;margin:12px 0;"><sup style="font-size:1rem;">Q</sup>200</div><div style="font-size:.8rem;color:#94a3b8;margin-bottom:20px;">/ mes</div><ul style="list-style:none;text-align:left;display:flex;flex-direction:column;gap:10px;margin:0 0 24px;font-size:.9rem;color:#475569;"><li>✅ Todo en Pro</li><li>✅ Multiples usuarios</li><li>✅ API bancaria</li><li>✅ Asesor dedicado</li></ul><a href="#" style="display:block;padding:11px;border:2px solid #e2e8f0;border-radius:8px;font-weight:700;text-decoration:none;color:#0f172a;">Contactar ventas</a></div></div></section>'
+    addTypedBlock('sec-precios', { label:'Tabla de precios', category:'Secci\u00f3n principal', media:'💰',
+      attributes:{style:'padding:72px 5%;background:#f8fafc;'},
+      components:'<div style="text-align:center;margin-bottom:44px;"><h2 style="font-size:1.9rem;font-weight:800;color:#0f172a;margin:0 0 10px;">Nuestros planes</h2><p style="color:#64748b;">Elige el plan ideal para tus necesidades.</p></div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:24px;max-width:960px;margin:0 auto;"><div style="background:#fff;border-radius:14px;padding:32px 24px;box-shadow:0 2px 12px rgba(0,0,0,.07);border:1px solid #e2e8f0;text-align:center;"><h3 style="font-size:1rem;font-weight:700;color:#0f172a;margin:0 0 8px;">Basico</h3><div style="font-size:2.4rem;font-weight:800;color:#0f172a;margin:12px 0;"><sup style="font-size:1rem;">Q</sup>0</div><div style="font-size:.8rem;color:#94a3b8;margin-bottom:20px;">/ mes</div><ul style="list-style:none;text-align:left;display:flex;flex-direction:column;gap:10px;margin:0 0 24px;font-size:.9rem;color:#475569;"><li>✅ Hasta 5 transacciones</li><li>✅ Cuenta de ahorro</li><li>❌ Creditos</li><li>❌ App movil</li></ul><a href="#" style="display:block;padding:11px;border:2px solid #e2e8f0;border-radius:8px;font-weight:700;text-decoration:none;color:#0f172a;">Comenzar gratis</a></div><div style="background:#0f172a;border-radius:14px;padding:32px 24px;box-shadow:0 8px 32px rgba(15,23,42,.3);text-align:center;transform:scale(1.03);"><div style="font-size:.7rem;background:#3b82f6;color:#fff;padding:3px 10px;border-radius:20px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;display:inline-block;margin-bottom:12px;">Mas popular</div><h3 style="font-size:1rem;font-weight:700;color:#fff;margin:0 0 8px;">Pro</h3><div style="font-size:2.4rem;font-weight:800;color:#fff;margin:12px 0;"><sup style="font-size:1rem;">Q</sup>50</div><div style="font-size:.8rem;color:#94a3b8;margin-bottom:20px;">/ mes</div><ul style="list-style:none;text-align:left;display:flex;flex-direction:column;gap:10px;margin:0 0 24px;font-size:.9rem;color:#94a3b8;"><li>✅ Transacciones ilimitadas</li><li>✅ Cuenta de ahorro</li><li>✅ Creditos preaprobados</li><li>✅ App movil premium</li></ul><a href="#" style="display:block;padding:11px;background:#3b82f6;border-radius:8px;font-weight:700;text-decoration:none;color:#fff;">Suscribirme</a></div><div style="background:#fff;border-radius:14px;padding:32px 24px;box-shadow:0 2px 12px rgba(0,0,0,.07);border:1px solid #e2e8f0;text-align:center;"><h3 style="font-size:1rem;font-weight:700;color:#0f172a;margin:0 0 8px;">Empresarial</h3><div style="font-size:2.4rem;font-weight:800;color:#0f172a;margin:12px 0;"><sup style="font-size:1rem;">Q</sup>200</div><div style="font-size:.8rem;color:#94a3b8;margin-bottom:20px;">/ mes</div><ul style="list-style:none;text-align:left;display:flex;flex-direction:column;gap:10px;margin:0 0 24px;font-size:.9rem;color:#475569;"><li>✅ Todo en Pro</li><li>✅ Multiples usuarios</li><li>✅ API bancaria</li><li>✅ Asesor dedicado</li></ul><a href="#" style="display:block;padding:11px;border:2px solid #e2e8f0;border-radius:8px;font-weight:700;text-decoration:none;color:#0f172a;">Contactar ventas</a></div></div>'
     });
 
     /* ══════════════════════════════════════════════════
@@ -1579,7 +1610,7 @@
     });
 
     bm.add('shop-product-card', { label:'Tarjeta producto', category:'Tienda', media:'🏷',
-      content:'<article style="max-width:320px;background:#fff;border:1px solid #e5e7eb;border-radius:20px;overflow:hidden;box-shadow:0 10px 30px rgba(17,24,39,.07);"><div style="position:relative;"><img src="https://placehold.co/640x520/e5e7eb/6b7280?text=Producto" alt="Producto" style="width:100%;aspect-ratio:1/1;object-fit:cover;"><span style="position:absolute;top:14px;left:14px;padding:6px 10px;border-radius:999px;background:#111827;color:#fff;font-size:.72rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;">Nuevo</span></div><div style="padding:18px;"><div style="font-size:.75rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#2563eb;margin-bottom:8px;">Accesorios</div><h3 style="font-size:1.05rem;font-weight:800;color:#111827;margin:0 0 8px;">Nombre del producto</h3><p style="font-size:.92rem;line-height:1.7;color:#6b7280;margin:0 0 16px;">Breve texto comercial para explicar el beneficio principal del producto.</p><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;"><div style="display:flex;align-items:MAINline;gap:8px;"><span style="font-size:1.25rem;font-weight:900;color:#111827;">Q249</span><span style="font-size:.85rem;color:#9ca3af;text-decoration:line-through;">Q299</span></div><a href="#" style="display:inline-flex;align-items:center;justify-content:center;padding:11px 14px;border-radius:10px;background:#111827;color:#fff;text-decoration:none;font-weight:700;font-size:.88rem;">Agregar al carrito</a></div></div></article>'
+      content:'<article style="max-width:320px;background:#fff;border:1px solid #e5e7eb;border-radius:20px;overflow:hidden;box-shadow:0 10px 30px rgba(17,24,39,.07);"><div style="position:relative;"><img src="https://placehold.co/640x520/e5e7eb/6b7280?text=Producto" alt="Producto" style="width:100%;aspect-ratio:1/1;object-fit:cover;"><span style="position:absolute;top:14px;left:14px;padding:6px 10px;border-radius:999px;background:#111827;color:#fff;font-size:.72rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;">Nuevo</span></div><div style="padding:18px;"><div style="font-size:.75rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#2563eb;margin-bottom:8px;">Accesorios</div><h3 style="font-size:1.05rem;font-weight:800;color:#111827;margin:0 0 8px;">Nombre del producto</h3><p style="font-size:.92rem;line-height:1.7;color:#6b7280;margin:0 0 16px;">Breve texto comercial para explicar el beneficio principal del producto.</p><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;"><div style="display:flex;align-items:center;gap:8px;"><span style="font-size:1.25rem;font-weight:900;color:#111827;">Q249</span><span style="font-size:.85rem;color:#9ca3af;text-decoration:line-through;">Q299</span></div><a href="#" style="display:inline-flex;align-items:center;justify-content:center;padding:11px 14px;border-radius:10px;background:#111827;color:#fff;text-decoration:none;font-weight:700;font-size:.88rem;">Agregar al carrito</a></div></div></article>'
     });
 
     bm.add('shop-categories', { label:'Categorías tienda', category:'Tienda', media:'🗂',
@@ -1771,9 +1802,10 @@
         +'</div></div>'
     });
 
-    bm.add('menu-dropdown-preview', { label:'Men\u00fa desplegable', category:'Men\u00fa', media:'▾',
-      content:'<nav style="display:flex;align-items:center;gap:0;padding:0 5%;background:#fff;box-shadow:0 1px 8px rgba(0,0,0,.07);height:52px;position:sticky;top:0;z-index:100;">'
-        +'<a href="#" data-sipet-logo="1" style="font-size:1.2rem;font-weight:800;color:#0f172a;text-decoration:none;margin-right:24px;">MiEmpresa</a>'
+    addTypedBlock('menu-dropdown-preview', { label:'Men\u00fa desplegable', category:'Men\u00fa', media:'▾',
+      tagName:'nav',
+      attributes:{style:'display:flex;align-items:center;gap:0;padding:0 5%;background:#fff;box-shadow:0 1px 8px rgba(0,0,0,.07);height:52px;position:sticky;top:0;z-index:100;'},
+      components:'<a href="#" data-sipet-logo="1" style="font-size:1.2rem;font-weight:800;color:#0f172a;text-decoration:none;margin-right:24px;">MiEmpresa</a>'
         +'<div style="display:flex;gap:0;height:100%;align-items:stretch;">'
         +'<a href="#" style="display:flex;align-items:center;padding:0 14px;color:#475569;text-decoration:none;font-size:.875rem;font-weight:500;border-bottom:2px solid transparent;">Inicio</a>'
         +'<details style="position:relative;height:100%;">'
@@ -1789,12 +1821,12 @@
         +'<a href="#" style="display:flex;align-items:center;padding:0 14px;color:#475569;text-decoration:none;font-size:.875rem;font-weight:500;border-bottom:2px solid transparent;">Contacto</a>'
         +'</div><div style="flex:1;"></div>'
         +'<a href="#" style="padding:8px 18px;background:#0f172a;color:#fff;border-radius:7px;font-size:.85rem;font-weight:700;text-decoration:none;">Ingresar</a>'
-        +'</nav>'
     });
 
-    bm.add('menu-mega', { label:'Mega men\u00fa', category:'Men\u00fa', media:'🗺',
-      content: `<nav style="display:flex;align-items:center;justify-content:space-between;padding:0 5%;background:#fff;box-shadow:0 1px 8px rgba(0,0,0,.07);height:56px;position:sticky;top:0;z-index:100;">
-  <a href="#" data-sipet-logo="1" style="font-size:1.2rem;font-weight:800;color:#0f172a;text-decoration:none;">MiEmpresa</a>
+    addTypedBlock('menu-mega', { label:'Mega men\u00fa', category:'Men\u00fa', media:'🗺',
+      tagName:'nav',
+      attributes:{style:'display:flex;align-items:center;justify-content:space-between;padding:0 5%;background:#fff;box-shadow:0 1px 8px rgba(0,0,0,.07);height:56px;position:sticky;top:0;z-index:100;'},
+      components:`<a href="#" data-sipet-logo="1" style="font-size:1.2rem;font-weight:800;color:#0f172a;text-decoration:none;">MiEmpresa</a>
   <details style="position:relative;">
     <summary style="display:flex;align-items:center;gap:5px;padding:8px 14px;color:#0f172a;background:#fff;text-decoration:none;font-size:.875rem;font-weight:600;border:1px solid #e2e8f0;border-radius:8px;cursor:pointer;list-style:none;">
       Categorías <span style="font-size:10px;">▾</span>
@@ -1811,90 +1843,103 @@
   <div style="display:flex;gap:8px;">
     <a href="#" style="padding:8px 16px;border:1px solid #e2e8f0;color:#475569;border-radius:7px;font-size:.875rem;font-weight:600;text-decoration:none;">Registrarse</a>
     <a href="#" style="padding:8px 18px;background:#0f172a;color:#fff;border-radius:7px;font-size:.875rem;font-weight:700;text-decoration:none;">Ingresar</a>
-  </div>
-</nav>`
+  </div>`
     });
 
+    dc.addType('menu-sidenav-widget', {
+      model: { defaults: {
+        tagName: 'section',
+        attributes: {
+          'data-menu-sidenav': '1',
+          style: 'display:block;position:relative;'
+        },
+        droppable: false,
+        script: function(){
+          var root = this;
+          var aside = root.querySelector('[data-snav-aside]');
+          var toggle = root.querySelector('[data-snav-toggle]');
+          if(!aside || !toggle) return;
+          root.classList.add('snav-open');
+          aside.classList.remove('snav-hidden');
+          toggle.addEventListener('click', function(){
+            var open = root.classList.toggle('snav-open');
+            aside.classList.toggle('snav-hidden', !open);
+          });
+        },
+        components: `<style>
+  [data-menu-sidenav="1"] {
+    position: relative;
+  }
+  [data-menu-sidenav="1"] [data-snav-aside] {
+    width: min(232px, calc(100vw - 48px));
+    position: fixed; left: 24px; top: 88px;
+    transition: transform .28s cubic-bezier(.4,0,.2,1), opacity .25s;
+    z-index: 120;
+  }
+  [data-menu-sidenav="1"] [data-snav-aside].snav-hidden {
+    transform: translateX(calc(-100% - 18px));
+    opacity: 0;
+    pointer-events: none;
+  }
+  [data-menu-sidenav="1"] [data-snav-main] {
+    min-width: 0;
+    padding: 32px 40px;
+  }
+  [data-menu-sidenav="1"] [data-snav-toggle] {
+    position: fixed; left: 24px; top: 32px; z-index: 121;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 5px;
+    width: 40px; height: 40px; flex-shrink: 0; cursor: pointer;
+    border: 1px solid #e2e8f0; border-radius: 9px;
+    background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.07);
+    transition: background .15s, box-shadow .15s;
+  }
+  [data-menu-sidenav="1"] [data-snav-toggle]:hover { background: #f1f5f9; box-shadow: 0 4px 14px rgba(0,0,0,.1); }
+  [data-menu-sidenav="1"] [data-snav-toggle] .snav-bar {
+    width: 18px; height: 2px; border-radius: 2px;
+    background: #475569; transition: transform .25s, opacity .2s;
+  }
+  [data-menu-sidenav="1"].snav-open [data-snav-toggle] .snav-bar:nth-child(1){ transform: translateY(7px) rotate(45deg); }
+  [data-menu-sidenav="1"].snav-open [data-snav-toggle] .snav-bar:nth-child(2){ opacity: 0; }
+  [data-menu-sidenav="1"].snav-open [data-snav-toggle] .snav-bar:nth-child(3){ transform: translateY(-7px) rotate(-45deg); }
+  @media (max-width: 640px) {
+    [data-menu-sidenav="1"] [data-snav-toggle] {
+      left: 14px; top: 14px;
+    }
+    [data-menu-sidenav="1"] [data-snav-aside] {
+      left: 14px; top: 66px;
+      width: min(232px, calc(100vw - 28px));
+    }
+    [data-menu-sidenav="1"] [data-snav-main] {
+      padding: 24px 18px;
+    }
+  }
+</style>
+<button data-snav-toggle type="button" aria-label="Mostrar/ocultar menú">
+  <span class="snav-bar"></span>
+  <span class="snav-bar"></span>
+  <span class="snav-bar"></span>
+</button>
+<aside data-snav-aside>
+  <nav style="background:#f8fafc;border-radius:13px;padding:16px 12px;border:1px solid #e2e8f0;margin-top:32px;box-shadow:0 2px 12px rgba(0,0,0,.05);">
+    <p style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#94a3b8;margin:0 0 10px;padding:0 8px;">Navegación</p>
+    <a href="#" style="display:flex;align-items:center;gap:9px;padding:10px 11px;border-radius:9px;background:#0f172a;color:#fff;text-decoration:none;font-size:.875rem;font-weight:600;margin-bottom:3px;">🏠 Inicio</a>
+    <a href="#" style="display:flex;align-items:center;gap:9px;padding:10px 11px;border-radius:9px;color:#475569;text-decoration:none;font-size:.875rem;font-weight:500;margin-bottom:3px;transition:background .12s;">💳 Servicios</a>
+    <a href="#" style="display:flex;align-items:center;gap:9px;padding:10px 11px;border-radius:9px;color:#475569;text-decoration:none;font-size:.875rem;font-weight:500;margin-bottom:3px;">📞 Contacto</a>
+    <a href="#" style="display:flex;align-items:center;gap:9px;padding:10px 11px;border-radius:9px;color:#475569;text-decoration:none;font-size:.875rem;font-weight:500;margin-bottom:3px;">🏦 Nosotros</a>
+    <a href="#" style="display:flex;align-items:center;gap:9px;padding:10px 11px;border-radius:9px;color:#475569;text-decoration:none;font-size:.875rem;font-weight:500;">📰 Blog</a>
+    <a href="/backend/login" style="display:flex;align-items:center;justify-content:center;gap:9px;padding:11px 14px;border-radius:10px;background:#0f172a;color:#fff;text-decoration:none;font-size:.875rem;font-weight:700;margin-top:14px;">🔐 Ingresar</a>
+  </nav>
+</aside>
+<main data-snav-main>
+  <h2 style="font-size:1.5rem;font-weight:800;color:#0f172a;margin:0 0 14px;">Contenido principal</h2>
+  <p style="color:#64748b;line-height:1.8;">El contenido de la página va aquí. Puedes arrastrar cualquier bloque dentro de esta área. El panel lateral se puede ocultar con el botón ☰ de la izquierda.</p>
+</main>`
+      }},
+      view: {}
+    });
     bm.add('menu-sidenav', { label:'Nav lateral sticky', category:'Men\u00fa', media:'📌',
-      content: `<div id="snav-wrap" style="display:flex;gap:0;align-items:flex-start;position:relative;">
-
-  <style>
-    #snav-aside {
-      width: 232px; flex-shrink: 0;
-      position: sticky; top: 72px;
-      transition: transform .28s cubic-bezier(.4,0,.2,1), opacity .25s;
-      z-index: 10;
-    }
-    #snav-aside.snav-hidden {
-      transform: translateX(-260px);
-      opacity: 0;
-      pointer-events: none;
-      position: absolute;
-    }
-    #snav-main {
-      flex: 1; min-width: 0;
-      padding: 32px 40px;
-      transition: margin-left .28s cubic-bezier(.4,0,.2,1);
-    }
-    #snav-toggle {
-      position: sticky; top: 72px; z-index: 20;
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      gap: 5px;
-      width: 40px; height: 40px; flex-shrink: 0; cursor: pointer;
-      border: 1px solid #e2e8f0; border-radius: 9px;
-      background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.07);
-      margin: 32px 12px 0 0; align-self: flex-start;
-      transition: background .15s, box-shadow .15s;
-    }
-    #snav-toggle:hover { background: #f1f5f9; box-shadow: 0 4px 14px rgba(0,0,0,.1); }
-    #snav-toggle .snav-bar {
-      width: 18px; height: 2px; border-radius: 2px;
-      background: #475569; transition: transform .25s, opacity .2s;
-    }
-    /* Estado abierto → líneas en X */
-    #snav-wrap.snav-open #snav-toggle .snav-bar:nth-child(1){ transform: translateY(7px) rotate(45deg); }
-    #snav-wrap.snav-open #snav-toggle .snav-bar:nth-child(2){ opacity: 0; }
-    #snav-wrap.snav-open #snav-toggle .snav-bar:nth-child(3){ transform: translateY(-7px) rotate(-45deg); }
-  <\/style>
-
-  <!-- Botón hamburguesa -->
-  <button id="snav-toggle" aria-label="Mostrar/ocultar menú" onclick="
-    (function(){
-      var w = document.getElementById('snav-wrap');
-      var a = document.getElementById('snav-aside');
-      var open = w.classList.toggle('snav-open');
-      if(open){ a.classList.remove('snav-hidden'); }
-      else { a.classList.add('snav-hidden'); }
-    })()
-  ">
-    <span class="snav-bar"></span>
-    <span class="snav-bar"></span>
-    <span class="snav-bar"></span>
-  </button>
-
-  <!-- Panel lateral -->
-  <aside id="snav-aside">
-    <nav style="background:#f8fafc;border-radius:13px;padding:16px 12px;border:1px solid #e2e8f0;margin-top:32px;box-shadow:0 2px 12px rgba(0,0,0,.05);">
-      <p style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#94a3b8;margin:0 0 10px;padding:0 8px;">Navegación</p>
-      <a href="#" style="display:flex;align-items:center;gap:9px;padding:10px 11px;border-radius:9px;background:#0f172a;color:#fff;text-decoration:none;font-size:.875rem;font-weight:600;margin-bottom:3px;">🏠 Inicio</a>
-      <a href="#" style="display:flex;align-items:center;gap:9px;padding:10px 11px;border-radius:9px;color:#475569;text-decoration:none;font-size:.875rem;font-weight:500;margin-bottom:3px;transition:background .12s;">💳 Servicios</a>
-      <a href="#" style="display:flex;align-items:center;gap:9px;padding:10px 11px;border-radius:9px;color:#475569;text-decoration:none;font-size:.875rem;font-weight:500;margin-bottom:3px;">📞 Contacto</a>
-      <a href="#" style="display:flex;align-items:center;gap:9px;padding:10px 11px;border-radius:9px;color:#475569;text-decoration:none;font-size:.875rem;font-weight:500;margin-bottom:3px;">🏦 Nosotros</a>
-      <a href="#" style="display:flex;align-items:center;gap:9px;padding:10px 11px;border-radius:9px;color:#475569;text-decoration:none;font-size:.875rem;font-weight:500;">📰 Blog</a>
-    </nav>
-  </aside>
-
-  <!-- Contenido principal -->
-  <main id="snav-main">
-    <h2 style="font-size:1.5rem;font-weight:800;color:#0f172a;margin:0 0 14px;">Contenido principal</h2>
-    <p style="color:#64748b;line-height:1.8;">El contenido de la página va aquí. Puedes arrastrar cualquier bloque dentro de esta área. El panel lateral se puede ocultar con el botón ☰ de la izquierda.</p>
-  </main>
-
-  <script>
-    /* Abierto por defecto */
-    document.getElementById('snav-wrap').classList.add('snav-open');
-  <\/script>
-</div>`
+      content: { type:'menu-sidenav-widget' }
     });
 
     bm.add('menu-mobile-bar', { label:'Barra movil inferior', category:'Men\u00fa', media:'📲',
