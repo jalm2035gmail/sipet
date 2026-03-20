@@ -1,13 +1,13 @@
 MANIFEST = {'name': 'frontend',
- 'label': 'Frontend',
- 'summary': 'Sitio backend y constructor frontend.',
- 'description': 'Sitio backend y constructor frontend.',
+ 'label': 'Web',
+ 'summary': 'Sitio web público y constructor.',
+ 'description': 'Sitio web público y constructor.',
  'version': '1.0.0',
  'category': 'Operaciones',
  'author': 'SIPET',
  'sequence': '',
  'website': 'https://avancoop.org',
- 'route': '/web',
+ 'route': '/frontend/builder',
  'icon': 'fa-solid fa-globe',
  'fafa': 'fa-solid fa-globe',
  'depends': ['web'],
@@ -19,7 +19,7 @@ MANIFEST = {'name': 'frontend',
  'screen_access_levels': {
      'Frontend': {
          'screen_key': 'Frontend',
-         'label': 'Frontend',
+         'label': 'Web',
          'levels': {
              'full_access': {
                  'label': 'Administrador',
@@ -37,7 +37,7 @@ MANIFEST = {'name': 'frontend',
      },
      'frontend.builder': {
          'screen_key': 'frontend.builder',
-         'label': 'Constructor frontend',
+         'label': 'Constructor web',
          'levels': {
              'full_access': {
                  'label': 'Administrador',

@@ -20,6 +20,28 @@ window.sipetWidgets = function sipetWidgets(editor, opts) {
     }
   }
 
+  function addScriptedBlock(id, config) {
+    var typeId = 'sipet-widget-' + id;
+    dc.addType(typeId, {
+      model: {
+        defaults: {
+          tagName: config.tagName || 'section',
+          attributes: config.attributes || {},
+          droppable: false,
+          script: config.script,
+          components: config.components || '',
+        },
+      },
+      view: {},
+    });
+    bm.add(id, {
+      category: config.category,
+      label: config.label,
+      media: config.media,
+      content: { type: typeId },
+    });
+  }
+
   // ============ MAIN CSS (premium SaaS) ============
   addStyle([
     ':root{',
@@ -168,48 +190,57 @@ window.sipetWidgets = function sipetWidgets(editor, opts) {
     ].join('\n');
   }).join('\n');
 
-  bm.add('sipet-portfolio', {
+  addScriptedBlock('sipet-portfolio', {
     category: 'SIPET - Secciones',
     label: 'Portfolio filtrable',
-    content: [
-      '<section class="sipet-section" style="background:var(--sipet-bg);">',
-      '  <div class="sipet-container">',
-      '    <span class="sipet-badge">Casos / M\u00f3dulos</span>',
-      '    <h2 class="sipet-h2" style="margin-top:10px;">Widgets del tablero</h2>',
-      '    <p class="sipet-p">Filtra ejemplos: presupuesto, metas, evidencias, reportes.</p>',
-      '    <div class="sipet-filters" data-sipet-filters>',
-      '      <button class="sipet-btn sipet-filter" aria-pressed="true"  data-filter="all">Todos</button>',
-      '      <button class="sipet-btn sipet-filter" aria-pressed="false" data-filter="presupuesto">Presupuesto</button>',
-      '      <button class="sipet-btn sipet-filter" aria-pressed="false" data-filter="metas">Metas</button>',
-      '      <button class="sipet-btn sipet-filter" aria-pressed="false" data-filter="evidencias">Evidencias</button>',
-      '      <button class="sipet-btn sipet-filter" aria-pressed="false" data-filter="reportes">Reportes</button>',
-      '    </div>',
-      '    <div class="sipet-portfolio" data-sipet-portfolio>',
-      portfolioCards,
-      '    </div>',
+    attributes: { class: 'sipet-section', style: 'background:var(--sipet-bg);' },
+    components: [
+      '<div class="sipet-container">',
+      '  <span class="sipet-badge">Casos / M\u00f3dulos</span>',
+      '  <h2 class="sipet-h2" style="margin-top:10px;">Widgets del tablero</h2>',
+      '  <p class="sipet-p">Filtra ejemplos: presupuesto, metas, evidencias, reportes.</p>',
+      '  <div class="sipet-filters" data-sipet-filters>',
+      '    <button class="sipet-btn sipet-filter" aria-pressed="true" data-filter="all">Todos</button>',
+      '    <button class="sipet-btn sipet-filter" aria-pressed="false" data-filter="presupuesto">Presupuesto</button>',
+      '    <button class="sipet-btn sipet-filter" aria-pressed="false" data-filter="metas">Metas</button>',
+      '    <button class="sipet-btn sipet-filter" aria-pressed="false" data-filter="evidencias">Evidencias</button>',
+      '    <button class="sipet-btn sipet-filter" aria-pressed="false" data-filter="reportes">Reportes</button>',
       '  </div>',
-      '  <script>',
-      '  (function(){',
-      '    var root = document.currentScript && document.currentScript.parentElement;',
-      '    if(!root) return;',
-      '    var filters = root.querySelector("[data-sipet-filters]");',
-      '    var grid    = root.querySelector("[data-sipet-portfolio]");',
-      '    if(!filters || !grid) return;',
-      '    var buttons = Array.prototype.slice.call(filters.querySelectorAll("[data-filter]"));',
-      '    var items   = Array.prototype.slice.call(grid.querySelectorAll("[data-cat]"));',
-      '    function setActive(btn){ buttons.forEach(function(b){ b.setAttribute("aria-pressed", b===btn?"true":"false"); }); }',
-      '    function apply(f){ items.forEach(function(it){ var ok=(f==="all")||(it.getAttribute("data-cat")===f); it.classList.toggle("sipet-hidden",!ok); }); }',
-      '    buttons.forEach(function(btn){ btn.addEventListener("click", function(){ setActive(btn); apply(btn.getAttribute("data-filter")); }); });',
-      '  })();',
-      '  <\/script>',
-      '</section>',
-    ].join('\n')
+      '  <div class="sipet-portfolio" data-sipet-portfolio>',
+      portfolioCards,
+      '  </div>',
+      '</div>',
+    ].join('\n'),
+    script: function() {
+      var filters = this.querySelector('[data-sipet-filters]');
+      var grid = this.querySelector('[data-sipet-portfolio]');
+      if (!filters || !grid) return;
+      var buttons = Array.prototype.slice.call(filters.querySelectorAll('[data-filter]'));
+      var items = Array.prototype.slice.call(grid.querySelectorAll('[data-cat]'));
+      function setActive(btn) {
+        buttons.forEach(function(button) {
+          button.setAttribute('aria-pressed', button === btn ? 'true' : 'false');
+        });
+      }
+      function apply(filterName) {
+        items.forEach(function(item) {
+          var visible = filterName === 'all' || item.getAttribute('data-cat') === filterName;
+          item.classList.toggle('sipet-hidden', !visible);
+        });
+      }
+      buttons.forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          setActive(btn);
+          apply(btn.getAttribute('data-filter'));
+        });
+      });
+    },
   });
 
   // ============ 4) PROGRESS BARS ============
   addStyle([
     '.sipet-progress{margin-top:12px;}',
-    '.sipet-progress__row{display:flex; justify-content:space-between; gap:12px; align-items:MAINline;}',
+    '.sipet-progress__row{display:flex; justify-content:space-between; gap:12px; align-items:center;}',
     '.sipet-progress__bar{height:10px; border-radius:999px; background:rgba(255,255,255,.08); overflow:hidden; border:1px solid var(--sipet-border);}',
     '.sipet-progress__fill{height:100%; width:0%; background:rgba(79,142,247,.55); transition:width 900ms ease;}',
   ].join('\n'));
@@ -231,49 +262,50 @@ window.sipetWidgets = function sipetWidgets(editor, opts) {
     ].join('\n');
   }).join('\n');
 
-  bm.add('sipet-progress', {
+  addScriptedBlock('sipet-progress', {
     category: 'SIPET - Widgets',
     label: 'Progress / Skills',
-    content: [
-      '<section class="sipet-section" style="background:var(--sipet-bg);">',
-      '  <div class="sipet-container">',
-      '    <div class="sipet-grid" style="grid-template-columns:1fr 1fr;">',
-      '      <div class="sipet-card" style="padding:20px;">',
-      '        <h2 class="sipet-h2">Madurez del seguimiento</h2>',
-      '        <p class="sipet-p">Barras animadas cuando entran en pantalla.</p>',
+    attributes: { class: 'sipet-section', style: 'background:var(--sipet-bg);' },
+    components: [
+      '<div class="sipet-container">',
+      '  <div class="sipet-grid" style="grid-template-columns:1fr 1fr;">',
+      '    <div class="sipet-card" style="padding:20px;">',
+      '      <h2 class="sipet-h2">Madurez del seguimiento</h2>',
+      '      <p class="sipet-p">Barras animadas cuando entran en pantalla.</p>',
       progressRows,
-      '      </div>',
-      '      <div class="sipet-card" style="padding:20px;">',
-      '        <h2 class="sipet-h2">Qu\u00e9 mejora</h2>',
-      '        <p class="sipet-p">Transparencia, control y velocidad en la gesti\u00f3n municipal.</p>',
-      '        <div class="sipet-divider"></div>',
-      '        <div class="sipet-grid" style="grid-template-columns:1fr 1fr;">',
-      '          <div class="sipet-card" style="padding:14px; border-radius:14px;"><p class="sipet-kpi" style="font-size:26px;">-35%</p><p class="sipet-small">tiempo de armado de reportes</p></div>',
-      '          <div class="sipet-card" style="padding:14px; border-radius:14px;"><p class="sipet-kpi" style="font-size:26px;">+25%</p><p class="sipet-small">cumplimiento de metas</p></div>',
-      '        </div>',
+      '    </div>',
+      '    <div class="sipet-card" style="padding:20px;">',
+      '      <h2 class="sipet-h2">Qu\u00e9 mejora</h2>',
+      '      <p class="sipet-p">Transparencia, control y velocidad en la gesti\u00f3n municipal.</p>',
+      '      <div class="sipet-divider"></div>',
+      '      <div class="sipet-grid" style="grid-template-columns:1fr 1fr;">',
+      '        <div class="sipet-card" style="padding:14px; border-radius:14px;"><p class="sipet-kpi" style="font-size:26px;">-35%</p><p class="sipet-small">tiempo de armado de reportes</p></div>',
+      '        <div class="sipet-card" style="padding:14px; border-radius:14px;"><p class="sipet-kpi" style="font-size:26px;">+25%</p><p class="sipet-small">cumplimiento de metas</p></div>',
       '      </div>',
       '    </div>',
       '  </div>',
-      '  <script>',
-      '  (function(){',
-      '    var root = document.currentScript && document.currentScript.parentElement;',
-      '    if(!root) return;',
-      '    var bars = Array.prototype.slice.call(root.querySelectorAll("[data-sipet-progress]"));',
-      '    var io = new IntersectionObserver(function(entries){',
-      '      entries.forEach(function(e){',
-      '        if(!e.isIntersecting) return;',
-      '        var el  = e.target;',
-      '        var val = parseInt(el.getAttribute("data-sipet-progress")||"0",10);',
-      '        var fill = el.querySelector(".sipet-progress__fill");',
-      '        if(fill) fill.style.width = Math.max(0,Math.min(100,val)) + "%";',
-      '        io.unobserve(el);',
-      '      });',
-      '    },{threshold:.35});',
-      '    bars.forEach(function(b){ io.observe(b); });',
-      '  })();',
-      '  <\/script>',
-      '</section>',
-    ].join('\n')
+      '</div>',
+    ].join('\n'),
+    script: function() {
+      var bars = Array.prototype.slice.call(this.querySelectorAll('[data-sipet-progress]'));
+      function paint(el) {
+        var value = parseInt(el.getAttribute('data-sipet-progress') || '0', 10);
+        var fill = el.querySelector('.sipet-progress__fill');
+        if (fill) fill.style.width = Math.max(0, Math.min(100, value)) + '%';
+      }
+      if (typeof IntersectionObserver !== 'function') {
+        bars.forEach(paint);
+        return;
+      }
+      var io = new IntersectionObserver(function(entries) {
+        entries.forEach(function(entry) {
+          if (!entry.isIntersecting) return;
+          paint(entry.target);
+          io.unobserve(entry.target);
+        });
+      }, { threshold: 0.35 });
+      bars.forEach(function(bar) { io.observe(bar); });
+    },
   });
 
   // ============ 5) STEPS ============
@@ -335,48 +367,51 @@ window.sipetWidgets = function sipetWidgets(editor, opts) {
     ].join('\n');
   }).join('\n');
 
-  bm.add('sipet-testimonials', {
+  addScriptedBlock('sipet-testimonials', {
     category: 'SIPET - Widgets',
     label: 'Testimonials (simple)',
-    content: [
-      '<section class="sipet-section" style="background:var(--sipet-bg);">',
-      '  <div class="sipet-container">',
-      '    <div class="sipet-row">',
-      '      <div>',
-      '        <span class="sipet-badge">Testimonios</span>',
-      '        <h2 class="sipet-h2" style="margin-top:10px;">Lo que dicen los equipos</h2>',
-      '      </div>',
-      '      <div class="sipet-nav">',
-      '        <button class="sipet-btn" data-prev>&larr;</button>',
-      '        <button class="sipet-btn" data-next>&rarr;</button>',
-      '      </div>',
+    attributes: { class: 'sipet-section', style: 'background:var(--sipet-bg);' },
+    components: [
+      '<div class="sipet-container">',
+      '  <div class="sipet-row">',
+      '    <div>',
+      '      <span class="sipet-badge">Testimonios</span>',
+      '      <h2 class="sipet-h2" style="margin-top:10px;">Lo que dicen los equipos</h2>',
       '    </div>',
-      '    <div class="sipet-card sipet-carousel" style="padding:18px; margin-top:14px;" data-carousel>',
-      '      <div class="sipet-track" data-track>',
-      slides,
-      '      </div>',
+      '    <div class="sipet-nav">',
+      '      <button class="sipet-btn" data-prev>&larr;</button>',
+      '      <button class="sipet-btn" data-next>&rarr;</button>',
       '    </div>',
       '  </div>',
-      '  <script>',
-      '  (function(){',
-      '    var root = document.currentScript && document.currentScript.parentElement;',
-      '    if(!root) return;',
-      '    var c     = root.querySelector("[data-carousel]");',
-      '    var track = root.querySelector("[data-track]");',
-      '    var prev  = root.querySelector("[data-prev]");',
-      '    var next  = root.querySelector("[data-next]");',
-      '    if(!c||!track||!prev||!next) return;',
-      '    var slides = Array.prototype.slice.call(track.children);',
-      '    var i = 0;',
-      '    function render(){ track.style.transform = "translateX(" + (-i * c.clientWidth) + "px)"; }',
-      '    prev.addEventListener("click", function(){ i=(i-1+slides.length)%slides.length; render(); });',
-      '    next.addEventListener("click", function(){ i=(i+1)%slides.length; render(); });',
-      '    window.addEventListener("resize", render);',
-      '    render();',
-      '  })();',
-      '  <\/script>',
-      '</section>',
-    ].join('\n')
+      '  <div class="sipet-card sipet-carousel" style="padding:18px; margin-top:14px;" data-carousel>',
+      '    <div class="sipet-track" data-track>',
+      slides,
+      '    </div>',
+      '  </div>',
+      '</div>',
+    ].join('\n'),
+    script: function() {
+      var carousel = this.querySelector('[data-carousel]');
+      var track = this.querySelector('[data-track]');
+      var prev = this.querySelector('[data-prev]');
+      var next = this.querySelector('[data-next]');
+      if (!carousel || !track || !prev || !next) return;
+      var slideNodes = Array.prototype.slice.call(track.children);
+      var index = 0;
+      function render() {
+        track.style.transform = 'translateX(' + (-index * carousel.clientWidth) + 'px)';
+      }
+      prev.addEventListener('click', function() {
+        index = (index - 1 + slideNodes.length) % slideNodes.length;
+        render();
+      });
+      next.addEventListener('click', function() {
+        index = (index + 1) % slideNodes.length;
+        render();
+      });
+      window.addEventListener('resize', render);
+      render();
+    },
   });
 
   // ============ 7) TEAM ============
