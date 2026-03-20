@@ -3,7 +3,7 @@
   <div class="card-body">
     <div class="modulo-base-card-head">
       <span class="badge badge-outline modulo-base-badge">{{ label }}</span>
-      <i class="{{ icon }} text-{{ tone }}"></i>
+      <i class="{{ icon }} {% if tone == 'success' %}text-success{% elif tone == 'warning' %}text-warning{% elif tone == 'error' %}text-error{% elif tone == 'info' %}text-info{% elif tone == 'secondary' %}text-secondary{% elif tone == 'accent' %}text-accent{% elif tone == 'neutral' %}text-neutral{% else %}text-primary{% endif %}"></i>
     </div>
     <strong class="modulo-base-stat"{% if element_id %} id="{{ element_id }}"{% endif %}>{{ value }}</strong>
   </div>
@@ -22,7 +22,7 @@
 {%- endmacro %}
 
 {% macro action_button(label, icon, tone="primary", button_id="", kind="button") -%}
-<button class="btn btn-{{ tone }} modulo-base-btn"{% if button_id %} id="{{ button_id }}"{% endif %} type="{{ kind }}">
+<button class="btn {% if tone == 'success' %}btn-success{% elif tone == 'warning' %}btn-warning{% elif tone == 'error' %}btn-error{% elif tone == 'info' %}btn-info{% elif tone == 'secondary' %}btn-secondary{% elif tone == 'accent' %}btn-accent{% elif tone == 'neutral' %}btn-neutral{% else %}btn-primary{% endif %} modulo-base-btn"{% if button_id %} id="{{ button_id }}"{% endif %} type="{{ kind }}">
   <i class="{{ icon }}"></i>
   <span>{{ label }}</span>
 </button>

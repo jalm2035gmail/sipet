@@ -103,6 +103,7 @@ from fastapi_modulo.modulos_sipet.web.servicios.template_context_service import 
 from fastapi_modulo.modulos_sipet.web.servicios.ui_shell_service import (
     build_view_buttons_html,
 )
+from fastapi_modulo.modulos_sipet.frontend.modelos.frontend_store import run_startup_migration as run_frontend_startup_migration
 from fastapi import Form, Body
 from fastapi.responses import JSONResponse, RedirectResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -1519,6 +1520,17 @@ def _register_startup_routers() -> None:
     register_enabled_routers(app, phase="startup")
     app.state.startup_routers_registered = True
     print("[startup] register startup routers done", flush=True)
+
+
+@app.on_event("startup")
+def _run_frontend_legacy_migration() -> None:
+    if getattr(app.state, "database_setup_required", False):
+        return
+    try:
+        run_frontend_startup_migration()
+        print("[startup] frontend legacy migration done", flush=True)
+    except Exception as exc:
+        print(f"[startup] frontend legacy migration failed: {exc}", flush=True)
 
 
 def _ensure_ia_config_columns():

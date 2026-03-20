@@ -18,27 +18,33 @@ import logging
 import os
 import re
 import uuid as _uuid
-from datetime import datetime
 from functools import lru_cache
 from typing import Any, Dict, List, Optional
 
 import redis
 from fastapi import APIRouter, File, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
-from jinja2 import Environment, FileSystemLoader, select_autoescape
 from pydantic import BaseModel, Field, field_validator
 
 from fastapi_modulo.core import db as core_db
 from fastapi_modulo.modulos_sipet.frontend.modelos.frontend_store import (
+    create_contact as store_create_contact,
     delete_page as store_delete_page,
     get_page as store_get_page,
     get_page_by_slug as store_get_page_by_slug,
+    get_brand as store_get_brand,
+    list_contacts as store_list_contacts,
     list_pages as store_list_pages,
+    list_tasas as store_list_tasas,
     list_versions as store_list_versions,
+    mark_contact_read as store_mark_contact_read,
     publish_page as store_publish_page,
     restore_version as store_restore_version,
+    save_brand as store_save_brand,
+    save_tasas as store_save_tasas,
     upsert_page as store_upsert_page,
 )
+from fastapi_modulo.modulos_sipet.frontend.servicios.render_service import render_page as render_public_page
 from fastapi_modulo.modulos_sipet.web.servicios.access_service import (
     get_user_app_access_level,
     get_user_backend_roles,
@@ -60,14 +66,9 @@ router = APIRouter()
 
 # ── Constantes de rutas ───────────────────────────────────────────────────────
 _BUILDER_TEMPLATE = os.path.join("fastapi_modulo", "modulos_sipet", "frontend", "vistas", "frontend.html")
-_TASAS_PATH       = os.path.join("fastapi_modulo", "modulos_sipet", "frontend", "tasas_store.json")
-_CONTACT_PATH     = os.path.join("fastapi_modulo", "modulos_sipet", "frontend", "contact_store.json")
-_BRAND_PATH       = os.path.join("fastapi_modulo", "modulos_sipet", "frontend", "brand_store.json")
 _GALLERY_DIR      = os.path.join("static", "gallery")
-_TEMPLATES_DIR    = os.path.join("fastapi_modulo", "modulos_sipet", "frontend", "vistas")
 
 _GALLERY_MAX_MB   = 5
-_MAX_VERSIONS     = 5
 
 _FRONTEND_APP_NAME       = "Frontend"
 _FRONTEND_BUILDER_SCREEN = "frontend.builder"
@@ -75,14 +76,6 @@ _FRONTEND_BUILDER_SCREEN = "frontend.builder"
 _RESERVED_SLUGS = {"", "descripcion", "funcionalidades", "login", "404", "passkey"}
 _ALLOWED_IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg"}
 _EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
-
-_TASAS_DEFAULT: List[Dict[str, str]] = [
-    {"id": "ahorro_vista",  "label": "Ahorro a la vista",   "rate": "3.50",  "color": "#3b82f6", "unit": "% anual"},
-    {"id": "dpf_6m",        "label": "DPF 6 meses",         "rate": "6.25",  "color": "#10b981", "unit": "% anual"},
-    {"id": "credito_per",   "label": "Crédito personal",    "rate": "14.00", "color": "#f59e0b", "unit": "% anual"},
-    {"id": "credito_hip",   "label": "Crédito hipotecario", "rate": "10.00", "color": "#8b5cf6", "unit": "% anual"},
-]
-
 
 # ══════════════════════════════════════════════════════════════════════════════
 # SECCIÓN 1 — PYDANTIC SCHEMAS
@@ -227,90 +220,7 @@ def clear_all_page_cache() -> None:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# SECCIÓN 3 — JINJA2: RENDERIZADO DE PÁGINAS PÚBLICAS
-# ══════════════════════════════════════════════════════════════════════════════
-
-@lru_cache(maxsize=1)
-def _get_jinja_env() -> Environment:
-    """
-    Entorno Jinja2 con autoescape desactivado para HTML crudo de GrapesJS.
-    Se marca autoescape=False porque el HTML viene del builder y ya fue
-    procesado/escapado en el guardado.
-    """
-    return Environment(
-        loader=FileSystemLoader(_TEMPLATES_DIR),
-        autoescape=select_autoescape(enabled_extensions=()),  # sin autoescape en HTML de builder
-        trim_blocks=True,
-        lstrip_blocks=True,
-    )
-
-
-def _render_page_html(page: dict) -> HTMLResponse:
-    """
-    Renderiza una página usando el template Jinja2 `page_render.html`.
-    Si el template no existe, usa el renderer inline de respaldo.
-    """
-    title     = _esc(page.get("title", ""))
-    meta      = page.get("meta") or {}
-    meta_title = _esc(meta.get("title") or page.get("title") or "")
-    meta_desc  = _esc(meta.get("description") or "")
-    og_image   = _esc(meta.get("og_image") or "")
-    gjs_html   = page.get("gjs_html") or ""
-    gjs_css    = page.get("gjs_css") or ""
-
-    body_content = _inject_frontend_logo(gjs_html if gjs_html else _render_blocks(page.get("blocks", [])))
-    extra_style  = f"<style>{gjs_css}</style>" if gjs_css else ""
-    has_forms    = "sipet-form-widget" in (gjs_html or body_content)
-    form_script  = _FORM_WIDGET_SCRIPT if has_forms else ""
-    brand_vars   = _brand_css_vars()
-    menu_position = _frontend_menu_position()
-    bottom_menu   = _mobile_bottom_menu_html() if menu_position == "abajo" else ""
-
-    context = {
-        "title":        title,
-        "meta_title":   meta_title,
-        "meta_desc":    meta_desc,
-        "og_image":     og_image,
-        "body_content": body_content,
-        "extra_style":  extra_style,
-        "form_script":  form_script,
-        "brand_vars":   brand_vars,
-        "bottom_menu":  bottom_menu,
-    }
-
-    # Intentar Jinja2 template primero
-    try:
-        env  = _get_jinja_env()
-        tmpl = env.get_template("page_render.html")
-        return HTMLResponse(tmpl.render(**context))
-    except Exception:
-        # Fallback: render inline si el template no existe aún
-        pass
-
-    # ── Render inline (respaldo) ──────────────────────────────────────────────
-    og_image_tag = f'<meta property="og:image" content="{og_image}">' if og_image else ""
-    return HTMLResponse(f"""<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>{meta_title or title}</title>
-  {f'<meta name="description" content="{meta_desc}">' if meta_desc else ''}
-  {og_image_tag}
-  <meta property="og:title" content="{meta_title or title}">
-  <meta property="og:type" content="website">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
-  {brand_vars}
-  <style>*{{box-sizing:border-box;margin:0;padding:0}}body{{font-family:system-ui,sans-serif;color:#1e293b}}</style>
-  {extra_style}
-</head>
-<body>{body_content}{bottom_menu}{form_script}</body>
-</html>""")
-
-
-# ══════════════════════════════════════════════════════════════════════════════
-# SECCIÓN 4 — HELPERS DE ACCESO Y PERMISOS
+# SECCIÓN 3 — HELPERS DE ACCESO Y PERMISOS
 # ══════════════════════════════════════════════════════════════════════════════
 
 def _frontend_builder_access_level(request: Request) -> str:
@@ -444,7 +354,7 @@ def web_inicio(request: Request):
         return RedirectResponse(url=f"/web/{target_slug}", status_code=307)
     page = store_get_page_by_slug("inicio", published_only=True)
     if page:
-        return _render_page_html(page)
+        return render_public_page(page)
     login_identity = get_login_identity_context(request)
     return get_templates(request).TemplateResponse(
         "frontend/web_blank.html",
@@ -645,7 +555,7 @@ def public_page(slug: str):
     page = store_get_page_by_slug(slug, published_only=True)
     if not page:
         return HTMLResponse(_404_HTML, status_code=404)
-    response = _render_page_html(page)
+    response = render_public_page(page)
     _cache_set(slug, response.body.decode("utf-8"))
     return response
 
@@ -665,7 +575,7 @@ def public_page_web_alias(slug: str):
     page = store_get_page_by_slug(slug, published_only=True)
     if not page:
         return HTMLResponse(_404_HTML, status_code=404)
-    response = _render_page_html(page)
+    response = render_public_page(page)
     _cache_set(cache_key, response.body.decode("utf-8"))
     return response
 
@@ -676,7 +586,7 @@ def preview_page(slug: str):
     page = store_get_page_by_slug(slug, published_only=False)
     if not page:
         return HTMLResponse(_404_HTML, status_code=404)
-    return _render_page_html(page)
+    return render_public_page(page)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -686,24 +596,10 @@ def preview_page(slug: str):
 _tasas_router = APIRouter(prefix="/api/frontend", tags=["Tasas"])
 
 
-def _load_tasas() -> List[Dict]:
-    try:
-        with open(_TASAS_PATH, "r", encoding="utf-8") as fh:
-            data = json.load(fh)
-            return data if isinstance(data, list) else list(_TASAS_DEFAULT)
-    except (OSError, json.JSONDecodeError):
-        return list(_TASAS_DEFAULT)
-
-
-def _save_tasas(tasas: List[Dict]) -> None:
-    with open(_TASAS_PATH, "w", encoding="utf-8") as fh:
-        json.dump(tasas, fh, ensure_ascii=False, indent=2)
-
-
 @_tasas_router.get("/tasas")
 def api_tasas_list(request: Request):
     require_screen_access(request, _FRONTEND_BUILDER_SCREEN, detail="Sin acceso al constructor frontend.")
-    return {"success": True, "data": _load_tasas()}
+    return {"success": True, "data": store_list_tasas()}
 
 
 @_tasas_router.post("/tasas")
@@ -714,8 +610,7 @@ async def api_tasas_save(request: Request, tasas: List[TasaItem]):
     """
     _require_write(request)
     data = [t.model_dump() for t in tasas]
-    _save_tasas(data)
-    return {"success": True, "data": data}
+    return {"success": True, "data": store_save_tasas(data)}
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -725,21 +620,6 @@ async def api_tasas_save(request: Request, tasas: List[TasaItem]):
 _contact_router = APIRouter(prefix="/api/frontend", tags=["Contact"])
 
 
-def _load_contacts() -> List[Dict]:
-    try:
-        with open(_CONTACT_PATH, "r", encoding="utf-8") as fh:
-            data = json.load(fh)
-            return data if isinstance(data, list) else []
-    except (OSError, json.JSONDecodeError):
-        return []
-
-
-def _save_contacts(contacts: List[Dict]) -> None:
-    os.makedirs(os.path.dirname(_CONTACT_PATH), exist_ok=True)
-    with open(_CONTACT_PATH, "w", encoding="utf-8") as fh:
-        json.dump(contacts, fh, ensure_ascii=False, indent=2)
-
-
 @_contact_router.post("/contact")
 async def api_contact_submit(payload: ContactPayload):
     """
@@ -747,35 +627,26 @@ async def api_contact_submit(payload: ContactPayload):
     Pydantic valida name, email (formato) y message automáticamente.
     No requiere autenticación — es un endpoint público.
     """
-    entry = {
-        "id":         str(_uuid.uuid4()),
-        "name":       payload.name,
-        "email":      payload.email,
-        "message":    payload.message,
-        "created_at": datetime.utcnow().isoformat() + "Z",
-        "read":       False,
-    }
-    contacts = _load_contacts()
-    contacts.insert(0, entry)
-    _save_contacts(contacts)
+    store_create_contact(
+        id=str(_uuid.uuid4()),
+        name=payload.name,
+        email=payload.email,
+        message=payload.message,
+    )
     return {"success": True, "message": "Mensaje recibido, gracias."}
 
 
 @_contact_router.get("/contact")
 def api_contact_list(request: Request):
     require_screen_access(request, _FRONTEND_BUILDER_SCREEN, detail="Sin acceso al constructor frontend.")
-    return {"success": True, "data": _load_contacts()}
+    return {"success": True, "data": store_list_contacts()}
 
 
 @_contact_router.post("/contact/{contact_id}/read")
 def api_contact_mark_read(request: Request, contact_id: str):
     _require_write(request)
-    contacts = _load_contacts()
-    for c in contacts:
-        if c.get("id") == contact_id:
-            c["read"] = True
-            break
-    _save_contacts(contacts)
+    if not store_mark_contact_read(contact_id):
+        return JSONResponse({"success": False, "error": "Mensaje no encontrado"}, status_code=404)
     return {"success": True}
 
 
@@ -848,20 +719,6 @@ def api_gallery_delete(request: Request, filename: str):
 _brand_router = APIRouter(prefix="/api/frontend", tags=["Brand"])
 
 
-def _load_brand() -> Dict:
-    try:
-        with open(_BRAND_PATH, "r", encoding="utf-8") as fh:
-            return json.load(fh)
-    except (OSError, json.JSONDecodeError):
-        return {}
-
-
-def _save_brand(data: Dict) -> None:
-    os.makedirs(os.path.dirname(_BRAND_PATH), exist_ok=True)
-    with open(_BRAND_PATH, "w", encoding="utf-8") as fh:
-        json.dump(data, fh, ensure_ascii=False, indent=2)
-
-
 def _resolve_identidad_logo_url() -> str:
     """
     Prioridad de logo:
@@ -898,15 +755,10 @@ def _resolve_identidad_logo_url() -> str:
     return ""
 
 
-def _resolve_frontend_logo_url() -> str:
-    brand_logo = str(_load_brand().get("logo_url") or "").strip()
-    return brand_logo or _resolve_identidad_logo_url()
-
-
 @_brand_router.get("/brand")
 def api_brand_get(request: Request):
     require_screen_access(request, _FRONTEND_BUILDER_SCREEN, detail="Sin acceso al constructor frontend.")
-    brand = _load_brand()
+    brand = store_get_brand()
     brand["identidad_logo_url"] = _resolve_identidad_logo_url()
     return {"success": True, "data": brand}
 
@@ -918,9 +770,7 @@ async def api_brand_save(request: Request):
         body = await request.json()
     except Exception:
         return JSONResponse({"success": False, "error": "JSON inválido"}, status_code=400)
-    brand = _load_brand()
-    brand.update({k: v for k, v in body.items() if isinstance(v, str)})
-    _save_brand(brand)
+    brand = store_save_brand({k: v for k, v in body.items() if isinstance(v, str)})
     clear_all_page_cache()
     return {"success": True, "data": brand}
 
@@ -939,175 +789,7 @@ router.include_router(_brand_router)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# SECCIÓN 13 — HELPERS DE RENDERIZADO (usados por _render_page_html)
-# ══════════════════════════════════════════════════════════════════════════════
-
-def _esc(s: str) -> str:
-    """Escapa caracteres HTML para uso en atributos y texto."""
-    return str(s or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
-
-
-def _inject_frontend_logo(html: str) -> str:
-    logo_url = _resolve_frontend_logo_url()
-    if not logo_url or "data-sipet-logo" not in (html or ""):
-        return html
-    logo_markup = (
-        f'<img src="{_esc(logo_url)}" '
-        'style="height:38px;width:auto;object-fit:contain;display:block;" '
-        'alt="Logo" data-sipet-logo="1">'
-    )
-    pattern = re.compile(r'(<[^>]*data-sipet-logo="1"[^>]*>)(.*?)(</[^>]+>)', re.IGNORECASE | re.DOTALL)
-    return pattern.sub(lambda m: f"{m.group(1)}{logo_markup}{m.group(3)}", html)
-
-
-def _brand_css_vars() -> str:
-    """Genera un bloque <style>:root{...}</style> con los colores de marca."""
-    try:
-        data = get_colores_context()
-        if not data:
-            return ""
-        rules = "".join(f"--{k.replace(' ', '-')}:{v};" for k, v in data.items() if isinstance(v, str))
-        return f"<style>:root{{{rules}}}</style>" if rules else ""
-    except Exception:
-        return ""
-
-
-def _frontend_menu_position() -> str:
-    try:
-        data  = _load_login_identity()
-        value = str(data.get("menu_position") or "arriba").strip().lower()
-        return value if value in {"arriba", "abajo"} else "arriba"
-    except Exception:
-        return "arriba"
-
-
-def _mobile_bottom_menu_html() -> str:
-    return """
-<style>
-.sipet-mobile-bottom-nav{
-  position:fixed;bottom:0;left:0;right:0;display:flex;z-index:2000;
-  background:#fff;border-top:1px solid #e2e8f0;box-shadow:0 -4px 16px rgba(0,0,0,.08)
-}
-body.sipet-menu-bottom{padding-bottom:76px}
-.sipet-mobile-bottom-nav a{
-  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
-  gap:3px;padding:10px 4px;text-decoration:none;color:#94a3b8;font-family:system-ui,sans-serif
-}
-.sipet-mobile-bottom-nav a.is-active{color:#3b82f6}
-.sipet-mobile-bottom-nav__icon{font-size:1.3rem;line-height:1}
-.sipet-mobile-bottom-nav__label{font-size:.65rem;font-weight:600;line-height:1.1}
-@media (min-width: 901px){
-  .sipet-mobile-bottom-nav{
-    left:50%;right:auto;bottom:20px;transform:translateX(-50%);
-    width:min(680px,calc(100vw - 32px));border:1px solid #e2e8f0;border-radius:18px;
-    box-shadow:0 20px 50px rgba(15,23,42,.18)
-  }
-  body.sipet-menu-bottom{padding-bottom:96px}
-  .sipet-mobile-bottom-nav a{padding:12px 8px}
-}
-</style>
-<nav class="sipet-mobile-bottom-nav" aria-label="Menú móvil inferior">
-  <a href="/web/inicio"><span class="sipet-mobile-bottom-nav__icon">🏠</span><span class="sipet-mobile-bottom-nav__label">Inicio</span></a>
-  <a href="/web/funcionalidades"><span class="sipet-mobile-bottom-nav__icon">💳</span><span class="sipet-mobile-bottom-nav__label">Servicios</span></a>
-  <a href="/web/descripcion"><span class="sipet-mobile-bottom-nav__icon">🔍</span><span class="sipet-mobile-bottom-nav__label">Buscar</span></a>
-  <a href="/backend/login"><span class="sipet-mobile-bottom-nav__icon">👤</span><span class="sipet-mobile-bottom-nav__label">Perfil</span></a>
-</nav>
-<script>
-(function(){
-  var path=(window.location.pathname||'').replace(/\/+$/,'')||'/';
-  document.body.classList.add('sipet-menu-bottom');
-  document.querySelectorAll('.sipet-mobile-bottom-nav a[href]').forEach(function(link){
-    var href=(link.getAttribute('href')||'').replace(/\/+$/,'')||'/';
-    if(href===path || (href!=='/' && path.indexOf(href + '/')===0)){ link.classList.add('is-active'); }
-  });
-})();
-</script>
-"""
-
-
-def _render_blocks(blocks: list) -> str:
-    """Renderiza la lista de bloques legacy al HTML equivalente."""
-    html = ""
-    for b in blocks:
-        btype = b.get("type", "")
-        p     = b.get("props", {})
-
-        if btype == "hero":
-            align = p.get("align", "center")
-            btn   = (f'<a href="{_esc(p.get("btn_url","#"))}" style="display:inline-block;padding:14px 32px;'
-                     f'background:{_esc(p.get("btn_bg","#3b82f6"))};color:#fff;border-radius:8px;'
-                     f'text-decoration:none;font-weight:700;">{_esc(p.get("btn_label",""))}</a>'
-                     if p.get("btn_label") else "")
-            html += (f'<section style="background:{_esc(p.get("bg","#1e293b"))};color:{_esc(p.get("color","#ffffff"))};'
-                     f'padding:80px 24px;text-align:{align};">'
-                     f'<h1 style="font-size:2.5rem;font-weight:800;margin-bottom:16px;">{_esc(p.get("title",""))}</h1>'
-                     f'<p style="font-size:1.2rem;opacity:.8;margin-bottom:32px;">{_esc(p.get("subtitle",""))}</p>'
-                     f'{btn}</section>')
-
-        elif btype == "text":
-            html += (f'<section style="max-width:{_esc(p.get("max_width","760px"))};margin:0 auto;'
-                     f'padding:{_esc(p.get("padding","48px 24px"))};">'
-                     f'<div style="font-size:{_esc(p.get("font_size","1rem"))};line-height:1.7;'
-                     f'color:{_esc(p.get("color","#1e293b"))};">{p.get("content","")}</div></section>')
-
-        elif btype == "image":
-            caption = (f'<p style="margin-top:10px;color:#64748b;font-size:.9rem;">{_esc(p.get("caption",""))}</p>'
-                       if p.get("caption") else "")
-            html += (f'<section style="padding:{_esc(p.get("padding","32px 24px"))};'
-                     f'text-align:{_esc(p.get("align","center"))};">'
-                     f'<img src="{_esc(p.get("src",""))}" alt="{_esc(p.get("alt",""))}" '
-                     f'style="max-width:{_esc(p.get("max_width","100%"))};'
-                     f'border-radius:{_esc(p.get("radius","0px"))};">{caption}</section>')
-
-        elif btype in ("columns2", "columns3"):
-            n    = 3 if btype == "columns3" else 2
-            cols = (p.get("columns", []) + [{}, {}, {}])[:n]
-            tpl  = "1fr " * n
-            html += (f'<section style="padding:{_esc(p.get("padding","48px 24px"))};max-width:1100px;margin:0 auto;">'
-                     f'<div style="display:grid;grid-template-columns:{tpl.strip()};gap:{"24" if n==3 else "32"}px;">'
-                     + "".join(f'<div>{c.get("content","")}</div>' for c in cols)
-                     + "</div></section>")
-
-        elif btype == "cta":
-            btn = (f'<a href="{_esc(p.get("btn_url","#"))}" style="display:inline-block;padding:14px 36px;'
-                   f'background:{_esc(p.get("btn_bg","#3b82f6"))};color:#fff;border-radius:8px;'
-                   f'text-decoration:none;font-weight:700;">{_esc(p.get("btn_label",""))}</a>'
-                   if p.get("btn_label") else "")
-            html += (f'<section style="background:{_esc(p.get("bg","#0f172a"))};color:{_esc(p.get("color","#fff"))};'
-                     f'padding:60px 24px;text-align:center;">'
-                     f'<h2 style="font-size:2rem;font-weight:700;margin-bottom:12px;">{_esc(p.get("title",""))}</h2>'
-                     f'<p style="opacity:.8;margin-bottom:28px;">{_esc(p.get("subtitle",""))}</p>'
-                     f'{btn}</section>')
-
-        elif btype == "cards":
-            cards_html = "".join(
-                f'<div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:24px;">'
-                f'<h3 style="font-size:1.1rem;font-weight:700;margin-bottom:8px;">{_esc(c.get("title",""))}</h3>'
-                f'<p style="color:#64748b;font-size:.9rem;">{_esc(c.get("body",""))}</p></div>'
-                for c in p.get("cards", [])
-            )
-            title_html = (f'<h2 style="text-align:center;font-size:1.8rem;font-weight:700;margin-bottom:32px;">'
-                          f'{_esc(p.get("title",""))}</h2>' if p.get("title") else "")
-            html += (f'<section style="padding:{_esc(p.get("padding","48px 24px"))};max-width:1100px;margin:0 auto;">'
-                     f'{title_html}'
-                     f'<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px;">'
-                     f'{cards_html}</div></section>')
-
-        elif btype == "divider":
-            html += (f'<hr style="border:none;border-top:{_esc(p.get("thickness","1px"))} solid '
-                     f'{_esc(p.get("color","#e2e8f0"))};margin:{_esc(p.get("margin","0"))};">')
-
-        elif btype == "spacer":
-            html += f'<div style="height:{_esc(p.get("height","48px"))};"></div>'
-
-        elif btype == "html":
-            html += p.get("content", "")
-
-    return html
-
-
-# ══════════════════════════════════════════════════════════════════════════════
-# SECCIÓN 14 — SCRIPT DE WIDGET DE FORMULARIO (inyectado en páginas públicas)
+# SECCIÓN 12 — SCRIPT DE WIDGET DE FORMULARIO (inyectado en páginas públicas)
 # ══════════════════════════════════════════════════════════════════════════════
 
 _FORM_WIDGET_SCRIPT = """

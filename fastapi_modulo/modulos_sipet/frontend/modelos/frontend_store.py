@@ -30,6 +30,7 @@ from fastapi_modulo.modulos_sipet.frontend.modelos.frontend_db_models import (
     FrontendContact,
     FrontendPage,
     FrontendPageVersion,
+    FrontendTasa,
 )
 
 logger = logging.getLogger(__name__)
@@ -39,8 +40,15 @@ _STORE_PATH    = os.path.join("fastapi_modulo", "modulos_sipet", "frontend", "pa
 _VERSIONS_PATH = os.path.join("fastapi_modulo", "modulos_sipet", "frontend", "versions_store.json")
 _CONTACT_PATH  = os.path.join("fastapi_modulo", "modulos_sipet", "frontend", "contact_store.json")
 _BRAND_PATH    = os.path.join("fastapi_modulo", "modulos_sipet", "frontend", "brand_store.json")
+_TASAS_PATH    = os.path.join("fastapi_modulo", "modulos_sipet", "frontend", "tasas_store.json")
 
 _MAX_VERSIONS = 5
+_TASAS_DEFAULT: List[Dict[str, str]] = [
+    {"id": "ahorro_vista", "label": "Ahorro a la vista", "rate": "3.50", "color": "#3b82f6", "unit": "% anual"},
+    {"id": "dpf_6m", "label": "DPF 6 meses", "rate": "6.25", "color": "#10b981", "unit": "% anual"},
+    {"id": "credito_per", "label": "Crédito personal", "rate": "14.00", "color": "#f59e0b", "unit": "% anual"},
+    {"id": "credito_hip", "label": "Crédito hipotecario", "rate": "10.00", "color": "#8b5cf6", "unit": "% anual"},
+]
 
 # ── Flag de migración: se ejecuta como máximo una vez por proceso ─────────────
 _migration_done = False
@@ -54,7 +62,7 @@ _migration_lock = threading.Lock()
 def ensure_frontend_schema() -> None:
     """
     Crea todas las tablas del módulo si no existen.
-    Incluye las nuevas tablas FrontendContact y FrontendBrand.
+    Incluye las nuevas tablas FrontendContact, FrontendBrand y FrontendTasa.
     Se llama una sola vez al importar el módulo.
     """
     engine = core_db.get_engine_for_host(core_db.get_request_host())
@@ -65,6 +73,7 @@ def ensure_frontend_schema() -> None:
             FrontendPageVersion.__table__,
             FrontendContact.__table__,
             FrontendBrand.__table__,
+            FrontendTasa.__table__,
         ],
         checkfirst=True,
     )
@@ -157,6 +166,16 @@ def _brand_dict(rows: List[FrontendBrand]) -> Dict[str, str]:
     return {row.key: row.value for row in rows}
 
 
+def _tasa_dict(row: FrontendTasa) -> Dict[str, str]:
+    return {
+        "id": row.id,
+        "label": row.label,
+        "rate": row.rate,
+        "color": row.color,
+        "unit": row.unit,
+    }
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 # SECCIÓN 3 — MIGRACIÓN LEGACY (one-shot, invocada desde run_startup_migration)
 # ══════════════════════════════════════════════════════════════════════════════
@@ -169,6 +188,7 @@ def _migrate_all_legacy_files(db: Session) -> None:
     _migrate_pages_and_versions(db)
     _migrate_contacts(db)
     _migrate_brand(db)
+    _migrate_tasas(db)
 
 
 def _migrate_pages_and_versions(db: Session) -> None:
@@ -255,6 +275,33 @@ def _migrate_brand(db: Session) -> None:
             db.add(FrontendBrand(key=key, value=value))
     db.commit()
     logger.info("Migración de brand completada.")
+
+
+def _migrate_tasas(db: Session) -> None:
+    """Migra tasas_store.json → tabla frontend_tasas."""
+    has_tasas = db.query(FrontendTasa.id).first() is not None
+    if has_tasas:
+        return
+
+    tasas = _load_legacy_json(_TASAS_PATH, list(_TASAS_DEFAULT))
+    if not tasas:
+        tasas = list(_TASAS_DEFAULT)
+
+    logger.info("Migrando %d tasas desde JSON a BD…", len(tasas))
+    for position, tasa in enumerate(tasas):
+        tasa_id = str(tasa.get("id") or "").strip()
+        if not tasa_id:
+            continue
+        db.add(FrontendTasa(
+            id=tasa_id,
+            label=str(tasa.get("label") or tasa_id).strip(),
+            rate=str(tasa.get("rate") or "").strip(),
+            color=str(tasa.get("color") or "#3b82f6").strip(),
+            unit=str(tasa.get("unit") or "% anual").strip(),
+            position=position,
+        ))
+    db.commit()
+    logger.info("Migración de tasas completada.")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -542,6 +589,57 @@ def save_brand(updates: Dict[str, str]) -> Dict[str, str]:
         db.commit()
         rows = db.query(FrontendBrand).all()
         return _brand_dict(rows)
+    except SQLAlchemyError:
+        db.rollback()
+        raise
+    finally:
+        db.close()
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SECCIÓN 8 — TASAS (migrado desde JSON)
+# ══════════════════════════════════════════════════════════════════════════════
+
+def list_tasas() -> List[Dict[str, str]]:
+    """Devuelve las tasas en el orden configurado."""
+    db = _db()
+    try:
+        rows = (
+            db.query(FrontendTasa)
+            .order_by(FrontendTasa.position.asc(), FrontendTasa.id.asc())
+            .all()
+        )
+        if rows:
+            return [_tasa_dict(row) for row in rows]
+        return list(_TASAS_DEFAULT)
+    finally:
+        db.close()
+
+
+def save_tasas(items: List[Dict[str, Any]]) -> List[Dict[str, str]]:
+    """Reemplaza la lista completa de tasas preservando el orden recibido."""
+    db = _db()
+    try:
+        db.query(FrontendTasa).delete()
+        for position, item in enumerate(items):
+            tasa_id = str(item.get("id") or "").strip()
+            if not tasa_id:
+                continue
+            db.add(FrontendTasa(
+                id=tasa_id,
+                label=str(item.get("label") or tasa_id).strip(),
+                rate=str(item.get("rate") or "").strip(),
+                color=str(item.get("color") or "#3b82f6").strip(),
+                unit=str(item.get("unit") or "% anual").strip(),
+                position=position,
+            ))
+        db.commit()
+        rows = (
+            db.query(FrontendTasa)
+            .order_by(FrontendTasa.position.asc(), FrontendTasa.id.asc())
+            .all()
+        )
+        return [_tasa_dict(row) for row in rows]
     except SQLAlchemyError:
         db.rollback()
         raise

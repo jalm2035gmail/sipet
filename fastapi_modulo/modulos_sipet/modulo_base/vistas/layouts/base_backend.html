@@ -28,7 +28,7 @@
     {% if messages %}
       <div id="flash-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-sm">
         {% for category, message in messages %}
-          <div class="alert alert-{{ 'success' if category == 'success' else 'error' if category == 'error' else 'warning' if category == 'warning' else 'info' }} shadow-lg">
+          <div class="alert {% if category == 'success' %}alert-success{% elif category == 'error' %}alert-error{% elif category == 'warning' %}alert-warning{% else %}alert-info{% endif %} shadow-lg">
             <i class="fa-solid {{ 'fa-circle-check' if category == 'success' else 'fa-circle-xmark' if category == 'error' else 'fa-triangle-exclamation' if category == 'warning' else 'fa-circle-info' }}"></i>
             <span>{{ message }}</span>
             <button class="btn btn-ghost btn-xs" onclick="this.closest('.alert').remove()">

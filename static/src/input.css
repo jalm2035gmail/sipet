@@ -1,6 +1,15 @@
 @import "tailwindcss";
 @plugin "daisyui";
 
+@theme inline {
+  --color-MAIN-100: var(--content-bg, #ffffff);
+  --color-MAIN-200: var(--page-bg, #f4f6fb);
+  --color-MAIN-300: color-mix(in srgb, var(--body-text, #0f172a) 14%, #ffffff 86%);
+  --color-MAIN-content: var(--body-text, #0f172a);
+  --text-MAIN: 1rem;
+  --text-MAIN--line-height: 1.5rem;
+}
+
 /* ── Fuentes de clases para Tailwind v4 ──────────────────────────
    Rutas relativas a este archivo (static/src/input.css).
    Tailwind escaneará estos archivos en busca de clases utilitarias
@@ -11,17 +20,14 @@
 @source "../../templates/**/*.html";
 @source "../../fastapi_modulo/templates/**/*.html";
 
-/* Módulos del backend (HTML parciales que se inyectan en MAIN.html) */
+/* Módulos: cada uno puede aportar HTML desde vistas, JS o controladores */
 @source "../../fastapi_modulo/modulos/**/*.html";
-
-/* Archivos Python con HTML embebido (runtime_app.py, módulos con f-strings HTML) */
+@source "../../fastapi_modulo/modulos/**/*.js";
 @source "../../fastapi_modulo/modulos/**/*.py";
-@source "../../fastapi_modulo/modulos_sipet/modulo_base/runtime_app.py";
+@source "../../fastapi_modulo/modulos_sipet/**/*.html";
+@source "../../fastapi_modulo/modulos_sipet/**/*.js";
+@source "../../fastapi_modulo/modulos_sipet/**/*.py";
 @source "../../fastapi_modulo/*.html";
-
-/* JS y CSS custom del proyecto */
-@source "../../static/js/**/*.js";
-@source "../../static/css/**/*.css";
 
 /* ── Puente DaisyUI: clases legado → componentes DaisyUI ──────────
    Cada regla mantiene el nombre de clase original del HTML pero
@@ -34,20 +40,9 @@
 
   /* ── Cards ────────────────────────────────────────────────────── */
   .emp-card          { @apply card bg-MAIN-100 border border-MAIN-300 rounded-2xl p-4 shadow-sm; }
-  .reporte-card      { @apply card bg-MAIN-100 border border-MAIN-300 rounded-xl p-3 cursor-pointer text-left; }
-  .kpi-sipet-card    { @apply card bg-MAIN-100 border border-MAIN-300 rounded-xl p-3; }
-  .reporte-detalle   { @apply card bg-MAIN-100 border border-MAIN-300 rounded-xl p-4; }
-  .alertas-box       { @apply card bg-MAIN-100 border border-MAIN-300 rounded-xl p-3 mb-3; }
-  .cp-card           { @apply card bg-MAIN-100 border border-MAIN-300 rounded-xl p-3; }
-  .cp-panel          { @apply card bg-MAIN-100 border border-MAIN-300 rounded-xl p-3 overflow-hidden; }
-  .reporte-kpi       { @apply card bg-MAIN-200 border border-MAIN-300 rounded-xl p-2; }
-  .reporte-bar-chart { @apply card bg-MAIN-100 border border-MAIN-300 rounded-xl p-3; }
-  .line-chart-wrap   { @apply card bg-MAIN-100 border border-MAIN-300 rounded-xl p-3; }
 
   /* ── Tables ───────────────────────────────────────────────────── */
   .emp-table       { @apply table table-zebra w-full text-sm; }
-  .cp-desv-table   { @apply table table-xs w-full; }
-  .cp-heat         { @apply table table-xs w-full text-center; }
 
   /* ── Scrollable table wrappers ───────────────────────────────── */
   .emp-table-wrap  { @apply overflow-auto rounded-xl w-full; }
@@ -92,11 +87,6 @@
   .emp-empty               { @apply text-MAIN-content/50 text-sm; }
   .emp-kanban-name         { @apply m-0 text-MAIN font-bold leading-tight; }
   .emp-kanban-puesto       { @apply m-0 text-sm font-medium leading-snug; }
-  .reporte-card-title      { @apply m-0 text-sm font-bold leading-tight; }
-  .alertas-title           { @apply m-0 mb-2 text-MAIN font-black; }
-  .cp-head                 { @apply text-center font-black py-3 px-4; }
-  .cp-panel-title          { @apply m-0 mb-2 font-black; }
-  .cp-card-title           { @apply m-0 font-bold; }
 
   /* ── Status dots (kanban) ────────────────────────────────────── */
   .emp-kanban-status-dot           { @apply absolute top-3 right-3 w-4 h-4 rounded-full bg-warning; }
@@ -105,13 +95,8 @@
   .emp-kanban-status-dot.pendiente { @apply bg-warning; }
 
   /* ── Grid layouts ────────────────────────────────────────────── */
-  .reportes-grid     { @apply grid gap-3 mb-4; }
-  .reporte-kpis      { @apply grid gap-2 my-3; }
-  .kpi-sipet-grid    { @apply grid gap-3; }
-  .alertas-list      { @apply grid gap-2; }
   .emp-list-actions  { @apply inline-flex items-center gap-2; }
   .emp-form-grid     { @apply grid grid-cols-2 gap-3; }
   .emp-org-node-data { @apply min-w-0 grid gap-0.5; }
   .emp-kanban-actions { @apply mt-auto flex justify-end items-center gap-4; }
-  .control-mensual-actions { @apply flex justify-end mb-3; }
 }
