@@ -10,9 +10,8 @@ def test_decorate_modules_payload_marks_upload_root_and_state(monkeypatch) -> No
     monkeypatch.setattr(
         catalog_service,
         "list_catalog_modules",
-        lambda tenant_key=None: [{"key": "crm", "label": "CRM", "enabled": False, "description": "demo"}],
+        lambda tenant_key=None: [{"key": "crm", "label": "CRM", "enabled": False, "description": "demo", "icon": "fa-solid fa-address-card"}],
     )
-    monkeypatch.setattr(catalog_service, "get_cached_catalog", lambda: None)
     captured: list[list[dict]] = []
     monkeypatch.setattr(catalog_service, "cache_catalog", lambda payload: captured.append(payload))
     monkeypatch.setattr(
@@ -22,6 +21,12 @@ def test_decorate_modules_payload_marks_upload_root_and_state(monkeypatch) -> No
     )
     monkeypatch.setattr(catalog_service, "get_protocol_audit_map", lambda: {"crm": {"ok": True, "has_init": True, "has_manifest": True, "missing": [], "module_dir": "/tmp/crm"}})
     monkeypatch.setattr(catalog_service, "get_module_upload_root", lambda key: "/tmp/project/fastapi_modulo/modulos/crm")
+    monkeypatch.setattr(
+        catalog_service,
+        "get_module_architecture_report",
+        lambda key, target_root=None: {"architecture_ok": False, "architecture_errors": [{"code": "db.raw_engine", "message": "bad", "path": "/tmp/crm/a.py"}], "architecture_warnings": []},
+    )
+    monkeypatch.setattr(catalog_service, "get_module_image_path", lambda key: "/tmp/project/fastapi_modulo/modulos/crm/static/img/icon.png")
     monkeypatch.setattr(catalog_service, "get_module_catalog_image_url", lambda key: "/api/aplicaciones/assets/crm/preview.png?variant=card")
     monkeypatch.setattr(
         catalog_service,
@@ -37,16 +42,30 @@ def test_decorate_modules_payload_marks_upload_root_and_state(monkeypatch) -> No
     assert payload[0]["package_target_label"].endswith("fastapi_modulo/modulos/crm")
     assert payload[0]["image_url"].endswith("preview.png?variant=card")
     assert payload[0]["uploaded_filename"] == "crm.zip"
+    assert payload[0]["architecture_ok"] is False
+    assert payload[0]["architecture_errors"][0]["code"] == "db.raw_engine"
     assert captured
 
 
-def test_decorate_modules_payload_uses_cached_catalog(monkeypatch) -> None:
-    monkeypatch.setattr(catalog_service, "get_cached_catalog", lambda: [{"key": "cached"}])
-    monkeypatch.setattr(catalog_service, "list_catalog_modules", lambda tenant_key=None: (_ for _ in ()).throw(AssertionError("cache missed")))
+def test_decorate_modules_payload_prefers_icon_when_module_has_no_uploaded_image(monkeypatch) -> None:
+    monkeypatch.setattr(
+        catalog_service,
+        "list_catalog_modules",
+        lambda tenant_key=None: [{"key": "web", "label": "Web", "enabled": True, "description": "demo", "icon": "fa-solid fa-globe"}],
+    )
+    monkeypatch.setattr(catalog_service, "cache_catalog", lambda payload: None)
+    monkeypatch.setattr(catalog_service, "list_registry_state", lambda tenant_id=None: {})
+    monkeypatch.setattr(catalog_service, "get_protocol_audit_map", lambda: {})
+    monkeypatch.setattr(catalog_service, "get_module_architecture_report", lambda key, target_root=None: {"architecture_ok": True, "architecture_errors": [], "architecture_warnings": []})
+    monkeypatch.setattr(catalog_service, "get_module_upload_root", lambda key: "/tmp/project/fastapi_modulo/modulos_sipet/web")
+    monkeypatch.setattr(catalog_service, "get_module_image_path", lambda key: "")
+    monkeypatch.setattr(catalog_service, "get_module_catalog_image_url", lambda key: "/api/aplicaciones/assets/web/preview.png?variant=card")
+    monkeypatch.setattr(catalog_service, "get_latest_package_upload", lambda key: None)
 
     payload = catalog_service.decorate_modules_payload()
 
-    assert payload == [{"key": "cached"}]
+    assert payload[0]["icon"] == "fa-solid fa-globe"
+    assert payload[0]["image_url"] is None
 
 
 def test_decorate_modules_payload_filters_uninstalled_modules(monkeypatch) -> None:
@@ -58,15 +77,47 @@ def test_decorate_modules_payload_filters_uninstalled_modules(monkeypatch) -> No
             {"key": "fantasma", "label": "Fantasma", "enabled": True, "description": "demo"},
         ],
     )
-    monkeypatch.setattr(catalog_service, "get_cached_catalog", lambda: None)
     monkeypatch.setattr(catalog_service, "cache_catalog", lambda payload: None)
     monkeypatch.setattr(catalog_service, "list_registry_state", lambda tenant_id=None: {})
     monkeypatch.setattr(catalog_service, "get_protocol_audit_map", lambda: {})
+    monkeypatch.setattr(catalog_service, "get_module_architecture_report", lambda key, target_root=None: {"architecture_ok": True, "architecture_errors": [], "architecture_warnings": []})
     monkeypatch.setattr(
         catalog_service,
         "get_module_upload_root",
         lambda key: "/tmp/project/fastapi_modulo/modulos/crm" if key == "crm" else None,
     )
+    monkeypatch.setattr(catalog_service, "get_module_image_path", lambda key: "")
+    monkeypatch.setattr(catalog_service, "get_module_catalog_image_url", lambda key: None)
+    monkeypatch.setattr(catalog_service, "get_latest_package_upload", lambda key: None)
+
+    payload = catalog_service.decorate_modules_payload()
+
+    assert [item["key"] for item in payload] == ["crm"]
+
+
+def test_decorate_modules_payload_hides_config_only_modules(monkeypatch) -> None:
+    monkeypatch.setattr(
+        catalog_service,
+        "list_catalog_modules",
+        lambda tenant_key=None: [
+            {"key": "crm", "label": "CRM", "enabled": True, "description": "demo"},
+            {"key": "bsc", "label": "Gobierno de Aplicaciones", "enabled": True, "description": "demo", "always_enabled": True},
+            {"key": "instalacion_core", "label": "Instalación", "enabled": True, "description": "demo", "always_enabled": True},
+            {"key": "modulo_base", "label": "Modulo base", "enabled": True, "description": "demo", "always_enabled": True},
+            {"key": "ajustes_core", "label": "Ajustes", "enabled": True, "description": "demo", "always_enabled": True},
+            {"key": "ajustes_ia_core", "label": "IA", "enabled": True, "description": "demo", "always_enabled": True},
+            {"key": "predictivo_core", "label": "Analisis predictivo", "enabled": True, "description": "demo", "always_enabled": True},
+            {"key": "personalizacion_core", "label": "Colores", "enabled": True, "description": "demo", "always_enabled": True},
+            {"key": "roles_core", "label": "Roles", "enabled": True, "description": "demo", "always_enabled": True},
+            {"key": "membresia_core", "label": "Membresia", "enabled": True, "description": "demo", "always_enabled": True},
+        ],
+    )
+    monkeypatch.setattr(catalog_service, "cache_catalog", lambda payload: None)
+    monkeypatch.setattr(catalog_service, "list_registry_state", lambda tenant_id=None: {})
+    monkeypatch.setattr(catalog_service, "get_protocol_audit_map", lambda: {})
+    monkeypatch.setattr(catalog_service, "get_module_architecture_report", lambda key, target_root=None: {"architecture_ok": True, "architecture_errors": [], "architecture_warnings": []})
+    monkeypatch.setattr(catalog_service, "get_module_upload_root", lambda key: "/tmp/project/fastapi_modulo/modulos/crm" if key == "crm" else None)
+    monkeypatch.setattr(catalog_service, "get_module_image_path", lambda key: "")
     monkeypatch.setattr(catalog_service, "get_module_catalog_image_url", lambda key: None)
     monkeypatch.setattr(catalog_service, "get_latest_package_upload", lambda key: None)
 

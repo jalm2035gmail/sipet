@@ -9,9 +9,9 @@ from importlib.util import module_from_spec, spec_from_file_location
 from typing import Any, Dict, Iterable, List, Optional
 
 from fastapi import FastAPI
-from sqlalchemy import text
+from sqlalchemy import bindparam, text
 
-from fastapi_modulo.core.db import SessionLocal, TenantInstalledApp, engine
+from fastapi_modulo.core.db import TenantInstalledApp, get_admin_engine, get_admin_session_factory
 from fastapi_modulo.core.tenant_context import get_tenant_context
 
 
@@ -41,6 +41,14 @@ class ModuleDefinition:
     router_specs: List[RouterSpec] = field(default_factory=list)
 
 
+LEGACY_MODULES_ENABLED = (os.environ.get("ENABLE_LEGACY_MODULES") or "").strip().lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
+
+
 MODULE_DEFINITIONS: List[ModuleDefinition] = [
     ModuleDefinition(
         key="backend",
@@ -48,7 +56,6 @@ MODULE_DEFINITIONS: List[ModuleDefinition] = [
         description="Módulo web principal — ajustes de sistema y configuración.",
         route="/ajustes/configuracion",
         icon="fa-solid fa-gear",
-        manifest_file="fastapi_modulo/modulos_sipet/web/__manifest__.py",
         sidebar_visible=True,
         manageable=False,
         always_enabled=True,
@@ -109,13 +116,14 @@ MODULE_DEFINITIONS: List[ModuleDefinition] = [
         description="Usuarios, empleados, regiones y departamentos.",
         route="/inicio/departamentos",
         icon="fa-solid fa-sitemap",
+        manifest_file="fastapi_modulo/modulos_sipet/empleados/__manifest__.py",
         app_access_name="Organización",
         sidebar_visible=True,
         manageable=True,
         router_specs=[
-            RouterSpec("fastapi_modulo.modulos.empleados.controladores.empleados"),
-            RouterSpec("fastapi_modulo.modulos.empleados.controladores.regiones"),
-            RouterSpec("fastapi_modulo.modulos.empleados.controladores.departamentos"),
+            RouterSpec("fastapi_modulo.modulos_sipet.empleados.controladores.empleados"),
+            RouterSpec("fastapi_modulo.modulos_sipet.empleados.controladores.regiones"),
+            RouterSpec("fastapi_modulo.modulos_sipet.empleados.controladores.departamentos"),
         ],
     ),
     ModuleDefinition(
@@ -265,12 +273,12 @@ MODULE_DEFINITIONS: List[ModuleDefinition] = [
         description="Tablero principal institucional.",
         route="/inicio",
         icon="fa-regular fa-circle-dot",
-        manifest_file="fastapi_modulo/modulos/main/__manifest__.py",
+        manifest_file="fastapi_modulo/modulos_sipet/aplicaciones/__manifest__.py",
         app_access_name="BSC",
-        sidebar_visible=True,
+        sidebar_visible=False,
         manageable=True,
         boot_strategy="builtin",
-        router_specs=[RouterSpec("fastapi_modulo.modulos.main.controladores.inicio")],
+        router_specs=[RouterSpec("fastapi_modulo.modulos_sipet.aplicaciones.controladores.pages")],
     ),
     ModuleDefinition(
         key="control_seguimiento",
@@ -470,7 +478,7 @@ MODULE_DEFINITIONS: List[ModuleDefinition] = [
         sidebar_visible=False,
         manageable=False,
         always_enabled=True,
-        router_specs=[RouterSpec("fastapi_modulo.modulos.main.controladores.ajustes")],
+        router_specs=[RouterSpec("fastapi_modulo.modulos_sipet.modulo_base.controladores.settings")],
     ),
     ModuleDefinition(
         key="ia_core",
@@ -514,12 +522,71 @@ APP_ACCESS_TO_MODULE = {
 }
 
 
+def is_legacy_module(module: ModuleDefinition) -> bool:
+    if str(module.manifest_file or "").startswith("fastapi_modulo/modulos/"):
+        return True
+    if str(module.metadata_file or "").startswith("fastapi_modulo/modulos/"):
+        return True
+    return any(str(spec.module_path or "").startswith("fastapi_modulo.modulos.") for spec in module.router_specs)
+
+
+def is_supported_module(module: ModuleDefinition) -> bool:
+    if LEGACY_MODULES_ENABLED:
+        return True
+    return not is_legacy_module(module)
+
+
 def list_system_app_access_options() -> List[str]:
-    return [module.app_access_name for module in MODULE_DEFINITIONS if module.app_access_name]
+    return [
+        module.app_access_name
+        for module in MODULE_DEFINITIONS
+        if module.app_access_name and is_supported_module(module)
+    ]
+
+
+def _unsupported_module_keys() -> list[str]:
+    return [module.key for module in MODULE_DEFINITIONS if not is_supported_module(module)]
+
+
+def _disable_unsupported_modules() -> None:
+    unsupported_keys = _unsupported_module_keys()
+    if not unsupported_keys:
+        return
+    with get_admin_engine().begin() as conn:
+        conn.execute(
+            text(
+                """
+                UPDATE system_module_settings
+                SET enabled = 0,
+                    updated_at = :updated_at
+                WHERE module_key IN :module_keys
+                """
+            ).bindparams(bindparam("module_keys", expanding=True)),
+            {
+                "updated_at": datetime.utcnow(),
+                "module_keys": unsupported_keys,
+            },
+        )
+    session = get_admin_session_factory()()
+    try:
+        (
+            session.query(TenantInstalledApp)
+            .filter(TenantInstalledApp.app_key.in_(unsupported_keys))
+            .update(
+                {
+                    TenantInstalledApp.is_enabled: 0,
+                    TenantInstalledApp.install_status: "disabled",
+                },
+                synchronize_session=False,
+            )
+        )
+        session.commit()
+    finally:
+        session.close()
 
 
 def _ensure_module_settings_table() -> None:
-    with engine.begin() as conn:
+    with get_admin_engine().begin() as conn:
         conn.execute(
             text(
                 """
@@ -548,11 +615,12 @@ def _ensure_module_settings_table() -> None:
                     "updated_at": datetime.utcnow(),
                 },
             )
+    _disable_unsupported_modules()
 
 
 def _read_module_state_map() -> Dict[str, bool]:
     _ensure_module_settings_table()
-    with engine.begin() as conn:
+    with get_admin_engine().begin() as conn:
         rows = conn.execute(text("SELECT module_key, enabled FROM system_module_settings")).mappings().all()
     return {str(row["module_key"]): bool(row["enabled"]) for row in rows}
 
@@ -570,7 +638,7 @@ def _read_installed_app_keys_for_tenant(tenant_key: str) -> Optional[set[str]]:
     resolved_tenant_key = str(tenant_key or "").strip()
     if not resolved_tenant_key:
         return None
-    session = SessionLocal()
+    session = get_admin_session_factory()()
     try:
         rows = (
             session.query(TenantInstalledApp.app_key)
@@ -591,6 +659,8 @@ def is_module_enabled(module_key: str, tenant_key: Optional[str] = None) -> bool
     module = MODULES_BY_KEY.get(str(module_key or "").strip())
     if not module:
         return True
+    if not is_supported_module(module):
+        return False
     if module.always_enabled:
         return True
     states = _read_module_state_map()
@@ -617,14 +687,18 @@ def is_app_access_enabled(app_access_name: str, tenant_key: Optional[str] = None
 
 
 def get_active_module_keys(tenant_key: Optional[str] = None) -> List[str]:
-    return [module.key for module in MODULE_DEFINITIONS if is_module_enabled(module.key, tenant_key=tenant_key)]
+    return [
+        module.key
+        for module in MODULE_DEFINITIONS
+        if is_supported_module(module) and is_module_enabled(module.key, tenant_key=tenant_key)
+    ]
 
 
 def get_active_app_access_names(tenant_key: Optional[str] = None) -> List[str]:
     return [
         module.app_access_name
         for module in MODULE_DEFINITIONS
-        if module.app_access_name and is_module_enabled(module.key, tenant_key=tenant_key)
+        if module.app_access_name and is_supported_module(module) and is_module_enabled(module.key, tenant_key=tenant_key)
     ]
 
 
@@ -717,6 +791,8 @@ def list_modules_payload(tenant_key: Optional[str] = None) -> List[Dict[str, Any
     resolved_tenant_key = _resolve_tenant_key(tenant_key)
     payload: List[Dict[str, Any]] = []
     for index, module in enumerate(MODULE_DEFINITIONS):
+        if not is_supported_module(module):
+            continue
         metadata = _load_module_metadata(module)
         manifest = metadata.get("manifest", {}) if isinstance(metadata.get("manifest"), dict) else {}
         sequence_value = manifest.get("sequence", "")
@@ -756,10 +832,12 @@ def set_module_enabled(module_key: str, enabled: bool) -> Dict[str, Any]:
     module = MODULES_BY_KEY.get(str(module_key or "").strip())
     if not module:
         raise KeyError("Módulo no encontrado.")
+    if not is_supported_module(module):
+        raise ValueError("Este módulo legacy está deshabilitado hasta ser migrado a modulos_sipet.")
     if module.always_enabled or not module.manageable:
         raise ValueError("Este módulo no se puede desactivar.")
     _ensure_module_settings_table()
-    with engine.begin() as conn:
+    with get_admin_engine().begin() as conn:
         conn.execute(
             text(
                 """
@@ -784,6 +862,8 @@ def register_enabled_routers(app: FastAPI, phase: str = "startup", tenant_key: O
     _ensure_module_settings_table()
     registered: List[str] = []
     for module in MODULE_DEFINITIONS:
+        if not is_supported_module(module):
+            continue
         if module.registration_phase != phase:
             continue
         if not module.router_specs or not is_module_enabled(module.key, tenant_key=tenant_key):
@@ -811,4 +891,4 @@ def register_enabled_routers(app: FastAPI, phase: str = "startup", tenant_key: O
 
 
 def iter_manageable_modules() -> Iterable[ModuleDefinition]:
-    return (module for module in MODULE_DEFINITIONS if module.manageable)
+    return (module for module in MODULE_DEFINITIONS if module.manageable and is_supported_module(module))

@@ -12,6 +12,7 @@
   var uploadModal = document.getElementById("apps-upload-modal");
   var uploadApplyButton = document.getElementById("apps-upload-apply");
   var uploadSummary = document.getElementById("apps-upload-summary");
+  var uploadArchitecture = document.getElementById("apps-upload-architecture");
   var uploadWarnings = document.getElementById("apps-upload-warnings");
   var uploadPreview = document.getElementById("apps-upload-preview");
   var refreshButton = document.getElementById("apps-refresh-list");
@@ -56,6 +57,10 @@
     if (uploadInput) uploadInput.value = "";
     if (uploadApplyButton) uploadApplyButton.disabled = true;
     if (uploadSummary) uploadSummary.classList.add("hidden");
+    if (uploadArchitecture) {
+      uploadArchitecture.classList.add("hidden");
+      uploadArchitecture.innerHTML = "";
+    }
     if (uploadWarnings) {
       uploadWarnings.classList.add("hidden");
       uploadWarnings.textContent = "";
@@ -97,6 +102,7 @@
       uploadWarnings.textContent = warnings.join(" ");
       uploadWarnings.classList.toggle("hidden", !warnings.length);
     }
+    renderArchitectureBox(data, uploadArchitecture);
     if (uploadPreview) {
       uploadPreview.innerHTML = (Array.isArray(data.preview_files) ? data.preview_files : []).map(function (item) {
         var status = String(item.status || "");
@@ -105,6 +111,43 @@
       }).join("");
     }
     if (uploadApplyButton) uploadApplyButton.disabled = !pendingUploadFile || !pendingUploadInspection;
+  }
+
+  function architectureFindingsMarkup(data) {
+    var errors = Array.isArray(data && data.architecture_errors) ? data.architecture_errors : [];
+    var warnings = Array.isArray(data && data.architecture_warnings) ? data.architecture_warnings : [];
+    if (!errors.length && !warnings.length) return "";
+    return [
+      '<div class="space-y-3">',
+      '<div class="text-xs font-bold uppercase tracking-[0.18em] text-base-content/60">Cumplimiento de arquitectura</div>',
+      errors.length ? '<div><div class="mb-2 text-sm font-semibold text-error">Errores</div><ul class="space-y-2">' + errors.map(function (item) {
+        return '<li class="rounded-xl border border-error/20 bg-base-100 px-3 py-2 text-sm"><div class="font-semibold">' + esc(item.code || "error") + '</div><div>' + esc(item.message || "") + '</div></li>';
+      }).join("") + '</ul></div>' : '',
+      warnings.length ? '<div><div class="mb-2 text-sm font-semibold text-warning">Advertencias</div><ul class="space-y-2">' + warnings.map(function (item) {
+        return '<li class="rounded-xl border border-warning/20 bg-base-100 px-3 py-2 text-sm"><div class="font-semibold">' + esc(item.code || "warning") + '</div><div>' + esc(item.message || "") + '</div></li>';
+      }).join("") + '</ul></div>' : '',
+      '</div>'
+    ].join("");
+  }
+
+  function renderArchitectureBox(data, node) {
+    if (!node) return;
+    var markup = architectureFindingsMarkup(data);
+    node.innerHTML = markup;
+    node.classList.toggle("hidden", !markup);
+  }
+
+  function parseApiError(data, fallback) {
+    if (data && typeof data.detail === "object" && data.detail !== null) {
+      return {
+        message: data.detail.message || data.detail.summary || fallback,
+        detail: data.detail
+      };
+    }
+    return {
+      message: (data && (data.detail || data.message)) || fallback,
+      detail: null
+    };
   }
 
   function selectedSet() {
@@ -185,6 +228,7 @@
         (item.protocol_missing || []).concat(item.issues || []).map(function (tag) { return '<span class="badge badge-outline">' + esc(tag) + '</span>'; }).join("") +
         (((item.protocol_missing || []).length || (item.issues || []).length) ? '' : '<span class="badge badge-success">Sin hallazgos</span>') +
       '</div></div>',
+      architectureFindingsMarkup(item),
       '</div>'
     ].join("");
   }
@@ -219,6 +263,7 @@
               '<ul tabindex="0" class="menu dropdown-content z-[20] mt-2 w-60 rounded-box border border-base-300 bg-base-100 p-2 shadow-lg">' +
                 '<li><button type="button" data-show-audit="' + esc(item.key) + '"><i class="fa-regular fa-circle-info"></i>Información del módulo</button></li>' +
                 (item.package_upload_enabled ? '<li><button type="button" data-open-upload="' + esc(item.key) + '"><i class="fa-solid fa-file-import"></i>Importar módulo</button></li>' : '') +
+                (item.package_upload_enabled ? '<li><button type="button" class="text-error" data-uninstall-module="' + esc(item.key) + '"><i class="fa-solid fa-trash-can"></i>Desinstalar módulo</button></li>' : '') +
                 '<li><button type="button" data-select-card-module="' + esc(item.key) + '"><i class="fa-regular fa-square-check"></i>' + (selected.has(item.key) ? 'Quitar de lote' : 'Agregar a lote') + '</button></li>' +
               '</ul>' +
             '</div>' +
@@ -231,6 +276,7 @@
               '<div class="gov-app-actions">' +
                 '<button class="gov-app-action-btn btn btn-sm' + actionClass + '" type="button"' + actionState + ' data-toggle-module-action="' + esc(item.key) + '">' + actionLabel + '</button>' +
                 '<button class="gov-app-action-btn btn btn-sm btn-outline" type="button" data-show-audit="' + esc(item.key) + '">Aprenda más</button>' +
+                (item.package_upload_enabled ? '<button class="gov-app-action-btn btn btn-sm btn-error btn-outline" type="button" data-uninstall-module="' + esc(item.key) + '">Desinstalar</button>' : '') +
               '</div>' +
             '</div>' +
           '</div>' +
@@ -240,7 +286,15 @@
 
   async function refreshModules() {
     var res = await fetch("/api/aplicaciones/modulos");
-    modules = await res.json();
+    var data = await res.json();
+    if (!res.ok) {
+      var refreshError = parseApiError(data, "No se pudo actualizar la lista.");
+      throw refreshError;
+    }
+    if (!Array.isArray(data)) {
+      throw new Error("La respuesta del catálogo no es válida.");
+    }
+    modules = data;
     state.selected = state.selected.filter(function (key) {
       return modules.some(function (item) { return item.key === key; });
     });
@@ -258,7 +312,10 @@
         body: JSON.stringify({ enabled: !!enabled })
       });
       var data = await res.json();
-      if (!res.ok) throw new Error(data.detail || "No se pudo actualizar.");
+      if (!res.ok) {
+        var stateError = parseApiError(data, "No se pudo actualizar.");
+        throw stateError;
+      }
       modules = modules.map(function (item) {
         return item.key === key ? Object.assign({}, item, data) : item;
       });
@@ -267,6 +324,16 @@
     } catch (error) {
       if (input) input.checked = !enabled;
       toast(error.message || "No se pudo actualizar.", "alert-error");
+      if (error.detail) {
+        var current = modules.find(function (item) { return item.key === key; });
+        if (current) {
+          current.architecture_ok = false;
+          current.architecture_errors = error.detail.architecture_errors || [];
+          current.architecture_warnings = error.detail.architecture_warnings || [];
+          state.focusedKey = key;
+          render();
+        }
+      }
     } finally {
       if (input) input.disabled = false;
     }
@@ -336,12 +403,19 @@
         body: formData
       });
       var data = await res.json();
-      if (!res.ok) throw new Error(data.detail || "No se pudo inspeccionar el módulo.");
+      if (!res.ok) {
+        var inspectError = parseApiError(data, "No se pudo inspeccionar el módulo.");
+        throw inspectError;
+      }
       pendingUploadFile = file;
       renderUploadInspection(data);
       toast("ZIP inspeccionado. Revisa el resumen antes de aplicar.", "alert-success");
     } catch (error) {
       resetUploadState();
+      if (error.detail) {
+        if (uploadSummary) uploadSummary.classList.remove("hidden");
+        renderArchitectureBox(error.detail, uploadArchitecture);
+      }
       toast(error.message || "No se pudo inspeccionar el módulo.", "alert-error");
     }
   }
@@ -374,7 +448,10 @@
         body: formData
       });
       var data = await res.json();
-      if (!res.ok) throw new Error(data.detail || "No se pudo importar el módulo.");
+      if (!res.ok) {
+        var applyError = parseApiError(data, "No se pudo importar el módulo.");
+        throw applyError;
+      }
       if (data.status === "queued" && data.task_id) {
         toast("Importación encolada. Esperando resultado...", "alert-info");
         data = await pollTask(String(data.task_name || "package_apply"), String(data.task_id || ""));
@@ -383,10 +460,47 @@
       await refreshModules();
       toast("Paquete aplicado en " + String(data.updated_files || 0) + " archivo(s).", "alert-success");
     } catch (error) {
+      if (error.detail) {
+        if (uploadSummary) uploadSummary.classList.remove("hidden");
+        renderArchitectureBox(error.detail, uploadArchitecture);
+      }
       toast(error.message || "No se pudo importar el módulo.", "alert-error");
     } finally {
       activeUploadModule = "";
       resetUploadState();
+    }
+  }
+
+  async function uninstallModule(key) {
+    var current = modules.find(function (item) { return item.key === key; });
+    if (!current) return;
+    var confirmed = window.confirm("Se desinstalará el módulo y se eliminarán sus archivos y dependencias registradas. Esta acción no se puede deshacer. ¿Deseas continuar?");
+    if (!confirmed) return;
+    var uninstallPassword = window.prompt("Confirma tu contraseña para desinstalar el módulo:");
+    if (!uninstallPassword) {
+      toast("Confirmación cancelada.", "alert-warning");
+      return;
+    }
+    try {
+      var challengeRes = await fetch("/api/aplicaciones/security/challenge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "package_uninstall", password: uninstallPassword, module_key: key })
+      });
+      var challengeData = await challengeRes.json();
+      if (!challengeRes.ok) throw new Error(challengeData.detail || "No se pudo confirmar la operación.");
+      var res = await fetch("/api/aplicaciones/modulos/" + encodeURIComponent(key) + "?challenge_token=" + encodeURIComponent(challengeData.token || ""), {
+        method: "DELETE"
+      });
+      var data = await res.json();
+      if (!res.ok) {
+        var uninstallError = parseApiError(data, "No se pudo desinstalar el módulo.");
+        throw uninstallError;
+      }
+      await refreshModules();
+      toast("Módulo desinstalado. Se eliminaron " + String(data.removed_files || 0) + " archivo(s).", "alert-success");
+    } catch (error) {
+      toast(error.message || "No se pudo desinstalar el módulo.", "alert-error");
     }
   }
 
@@ -452,9 +566,15 @@
   document.getElementById("apps-export-excel").addEventListener("click", exportExcel);
   if (refreshButton) {
     refreshButton.addEventListener("click", function () {
+      refreshButton.disabled = true;
+      refreshButton.classList.add("is-loading");
       refreshModules()
         .then(function () { toast("Lista de aplicaciones actualizada.", "alert-success"); })
-        .catch(function (error) { toast(error.message || "No se pudo actualizar la lista.", "alert-error"); });
+        .catch(function (error) { toast(error.message || "No se pudo actualizar la lista.", "alert-error"); })
+        .finally(function () {
+          refreshButton.disabled = false;
+          refreshButton.classList.remove("is-loading");
+        });
     });
   }
   if (importShortcut) {
@@ -511,6 +631,11 @@
     var uploadButton = event.target.closest("[data-open-upload]");
     if (uploadButton && !uploadButton.disabled) {
       openUploadModal(uploadButton.getAttribute("data-open-upload") || "");
+      return;
+    }
+    var uninstallButton = event.target.closest("[data-uninstall-module]");
+    if (uninstallButton && !uninstallButton.disabled) {
+      uninstallModule(uninstallButton.getAttribute("data-uninstall-module") || "");
       return;
     }
     var article = event.target.closest("[data-focus-module]");

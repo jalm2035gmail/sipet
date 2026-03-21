@@ -6,6 +6,7 @@ from typing import Any
 from fastapi_modulo.modulos_sipet.aplicaciones.repositorios.app_repository import list_catalog_modules
 from fastapi_modulo.modulos_sipet.aplicaciones.repositorios.package_repository import (
     PROJECT_ROOT,
+    get_module_architecture_report,
     get_module_image_path,
     get_module_upload_root,
 )
@@ -15,7 +16,19 @@ from fastapi_modulo.modulos_sipet.aplicaciones.repositorios.persistence_reposito
 )
 from fastapi_modulo.modulos_sipet.aplicaciones.servicios.audit_service import get_protocol_audit_map
 from fastapi_modulo.modulos_sipet.aplicaciones.servicios.image_branding_service import get_module_catalog_image_url
-from fastapi_modulo.modulos_sipet.aplicaciones.servicios.redis_service import cache_catalog, get_cached_catalog
+from fastapi_modulo.modulos_sipet.aplicaciones.servicios.redis_service import cache_catalog
+
+CONFIG_ONLY_MODULE_KEYS = {
+    "bsc",
+    "instalacion_core",
+    "modulo_base",
+    "ajustes_core",
+    "ajustes_ia_core",
+    "predictivo_core",
+    "personalizacion_core",
+    "roles_core",
+    "membresia_core",
+}
 
 
 def _is_installed_module(item: dict[str, Any], target_root: str | None) -> bool:
@@ -25,16 +38,14 @@ def _is_installed_module(item: dict[str, Any], target_root: str | None) -> bool:
 
 
 def decorate_modules_payload(items: list[dict[str, Any]] | None = None, tenant_key: str | None = None) -> list[dict[str, Any]]:
-    if items is None:
-        cached = get_cached_catalog()
-        if cached is not None:
-            return cached
     source_payload = list_catalog_modules(tenant_key=tenant_key) if items is None else items
     protocol_map = get_protocol_audit_map()
     persisted_state = list_registry_state(tenant_key)
     payload: list[dict[str, Any]] = []
     for item in source_payload:
         key = str(item.get("key") or "").strip()
+        if key in CONFIG_ONLY_MODULE_KEYS:
+            continue
         target_root = get_module_upload_root(key)
         if not _is_installed_module(item, target_root):
             continue
@@ -43,9 +54,12 @@ def decorate_modules_payload(items: list[dict[str, Any]] | None = None, tenant_k
             item["enabled"] = bool(state_row.enabled)
             if state_row.installed_version:
                 item["installed_version"] = state_row.installed_version
+        module_icon = str(item.get("icon") or "").strip()
+        module_image_path = get_module_image_path(key)
         item["package_upload_enabled"] = bool(target_root)
         item["package_target_label"] = os.path.relpath(target_root, PROJECT_ROOT) if target_root else ""
-        item["image_url"] = get_module_catalog_image_url(key)
+        item["image_url"] = get_module_catalog_image_url(key) if module_image_path else None
+        item["icon"] = module_icon
         upload_row = get_latest_package_upload(key)
         if upload_row is not None:
             item["uploaded_at"] = upload_row.uploaded_at.isoformat() if upload_row.uploaded_at else ""
@@ -56,6 +70,12 @@ def decorate_modules_payload(items: list[dict[str, Any]] | None = None, tenant_k
         item["protocol_has_manifest"] = bool(status.get("has_manifest"))
         item["protocol_missing"] = list(status.get("missing", []))
         item["module_dir"] = str(status.get("module_dir", ""))
+        item["has_readme"] = bool(status.get("has_readme"))
+        item["has_controladores_dir"] = bool(status.get("has_controladores_dir"))
+        item["has_tests_dir"] = bool(status.get("has_tests_dir"))
+        item["routers_importable"] = bool(status.get("routers_importable"))
+        item["issues"] = list(status.get("issues", []))
+        item.update(get_module_architecture_report(key, target_root))
         payload.append(item)
     if items is None and not tenant_key:
         cache_catalog(payload)
