@@ -37,8 +37,18 @@ def _is_installed_module(item: dict[str, Any], target_root: str | None) -> bool:
     return bool(item.get("always_enabled"))
 
 
-def decorate_modules_payload(items: list[dict[str, Any]] | None = None, tenant_key: str | None = None) -> list[dict[str, Any]]:
-    source_payload = list_catalog_modules(tenant_key=tenant_key) if items is None else items
+def decorate_modules_payload(
+    items: list[dict[str, Any]] | None = None,
+    tenant_key: str | None = None,
+    *,
+    refresh: bool = False,
+    include_legacy: bool = False,
+) -> list[dict[str, Any]]:
+    source_payload = (
+        list_catalog_modules(tenant_key=tenant_key, refresh=refresh, include_legacy=include_legacy)
+        if items is None
+        else items
+    )
     protocol_map = get_protocol_audit_map()
     persisted_state = list_registry_state(tenant_key)
     payload: list[dict[str, Any]] = []

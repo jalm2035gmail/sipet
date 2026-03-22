@@ -285,7 +285,7 @@
   }
 
   async function refreshModules() {
-    var res = await fetch("/api/aplicaciones/modulos");
+    var res = await fetch("/api/aplicaciones/modulos?refresh=1");
     var data = await res.json();
     if (!res.ok) {
       var refreshError = parseApiError(data, "No se pudo actualizar la lista.");

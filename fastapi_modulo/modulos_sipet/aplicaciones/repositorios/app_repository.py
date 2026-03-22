@@ -10,8 +10,13 @@ def _admin_session():
     return core_db.get_session_factory_for_host("")()
 
 
-def list_catalog_modules(tenant_key: str | None = None) -> list[dict[str, Any]]:
-    return list_modules_payload(tenant_key=tenant_key)
+def list_catalog_modules(
+    tenant_key: str | None = None,
+    *,
+    refresh: bool = False,
+    include_legacy: bool = False,
+) -> list[dict[str, Any]]:
+    return list_modules_payload(tenant_key=tenant_key, refresh=refresh, include_legacy=include_legacy)
 
 
 def _set_tenant_module_enabled(module_key: str, enabled: bool, tenant_key: str) -> dict[str, Any]:

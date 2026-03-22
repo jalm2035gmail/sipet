@@ -18,7 +18,12 @@ router = APIRouter()
 def aplicaciones_list(request: Request):
     require_applications_permission(request, APPLICATIONS_PERMISSION_VIEW)
     actor = request_actor_context(request)
-    return decorate_modules_payload(tenant_key=actor["tenant_key"] or actor["tenant_id"] or None)
+    refresh = str(request.query_params.get("refresh") or "").strip().lower() in {"1", "true", "yes", "on"}
+    return decorate_modules_payload(
+        tenant_key=actor["tenant_key"] or actor["tenant_id"] or None,
+        refresh=refresh,
+        include_legacy=True,
+    )
 
 
 @router.put("/api/system/modules/{module_key}", response_model=ModuleCatalogItem, include_in_schema=False)

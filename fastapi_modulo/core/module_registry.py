@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from importlib import import_module
 from importlib.util import module_from_spec, spec_from_file_location
+from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
 
 from fastapi import FastAPI
@@ -522,6 +523,103 @@ APP_ACCESS_TO_MODULE = {
 }
 
 
+def _iter_discoverable_manifest_files() -> list[tuple[str, str]]:
+    candidates: list[tuple[str, str]] = []
+    roots = (
+        ("fastapi_modulo.modulos", Path(_PROJECT_ROOT) / "modulos"),
+        ("fastapi_modulo.modulos_sipet", Path(_PROJECT_ROOT) / "modulos_sipet"),
+    )
+    for package_prefix, root in roots:
+        if not root.is_dir():
+            continue
+        for child in sorted(root.iterdir()):
+            if not child.is_dir() or child.name.startswith(".") or child.name.startswith("__"):
+                continue
+            manifest_path = child / "__manifest__.py"
+            if manifest_path.is_file():
+                candidates.append((package_prefix, str(manifest_path)))
+    return candidates
+
+
+def _load_manifest_payload_from_path(module_key: str, manifest_path: str) -> dict[str, Any]:
+    try:
+        spec = spec_from_file_location(f"{module_key}__discovered_manifest__", manifest_path)
+        if spec and spec.loader:
+            manifest_module = module_from_spec(spec)
+            spec.loader.exec_module(manifest_module)
+            payload = getattr(manifest_module, "MANIFEST", {})
+            if isinstance(payload, dict):
+                return payload
+    except Exception:
+        return {}
+    return {}
+
+
+def _guess_router_specs_from_manifest(package_prefix: str, module_dir_name: str, manifest: dict[str, Any]) -> list[RouterSpec]:
+    structure = manifest.get("structure") if isinstance(manifest, dict) else {}
+    router_entries = structure.get("router") if isinstance(structure, dict) else None
+    module_dir = Path(_PROJECT_ROOT) / package_prefix.split(".")[-1] / module_dir_name
+    candidates: list[str] = []
+    if isinstance(router_entries, list):
+        for entry in router_entries:
+            entry_value = str(entry or "").strip().replace("\\", "/")
+            if entry_value.startswith("controladores/") and entry_value.endswith(".py"):
+                candidates.append(Path(entry_value).stem)
+    default_controller = module_dir / "controladores" / f"{module_dir_name}.py"
+    if default_controller.is_file():
+        candidates.append(module_dir_name)
+    deduped: list[RouterSpec] = []
+    seen: set[str] = set()
+    for candidate in candidates:
+        module_path = f"{package_prefix}.{module_dir_name}.controladores.{candidate}"
+        if module_path in seen:
+            continue
+        seen.add(module_path)
+        deduped.append(RouterSpec(module_path))
+    return deduped
+
+
+def _build_module_definition_from_manifest(package_prefix: str, manifest_path: str) -> ModuleDefinition | None:
+    module_dir = Path(manifest_path).parent
+    module_key = str(module_dir.name).strip()
+    if not module_key:
+        return None
+    manifest = _load_manifest_payload_from_path(module_key, manifest_path)
+    label = str(manifest.get("label") or manifest.get("name") or module_key.replace("_", " ").title()).strip()
+    description = str(manifest.get("description") or manifest.get("summary") or "").strip()
+    route = str(manifest.get("route") or "").strip()
+    icon = str(manifest.get("icon") or manifest.get("fafa") or "").strip()
+    relative_manifest_path = os.path.relpath(manifest_path, _REPO_ROOT).replace(os.sep, "/")
+    return ModuleDefinition(
+        key=module_key,
+        label=label or module_key,
+        description=description or f"Módulo detectado automáticamente desde {module_key}.",
+        route=route,
+        icon=icon,
+        manifest_file=relative_manifest_path,
+        app_access_name=label or module_key,
+        sidebar_visible=bool(route),
+        manageable=True,
+        always_enabled=False,
+        default_enabled=bool(manifest.get("installable", True)),
+        router_specs=_guess_router_specs_from_manifest(package_prefix, module_dir.name, manifest),
+    )
+
+
+def refresh_module_registry_from_disk() -> list[str]:
+    discovered_keys: list[str] = []
+    for package_prefix, manifest_path in _iter_discoverable_manifest_files():
+        definition = _build_module_definition_from_manifest(package_prefix, manifest_path)
+        if definition is None or definition.key in MODULES_BY_KEY:
+            continue
+        MODULE_DEFINITIONS.append(definition)
+        MODULES_BY_KEY[definition.key] = definition
+        if definition.app_access_name:
+            APP_ACCESS_TO_MODULE[definition.app_access_name] = definition
+        discovered_keys.append(definition.key)
+    return discovered_keys
+
+
 def is_legacy_module(module: ModuleDefinition) -> bool:
     if str(module.manifest_file or "").startswith("fastapi_modulo/modulos/"):
         return True
@@ -788,12 +886,19 @@ def _normalize_manifest_sequence(raw_value: Any, fallback_index: int) -> tuple[i
         return (fallback_index + 1000, value)
 
 
-def list_modules_payload(tenant_key: Optional[str] = None) -> List[Dict[str, Any]]:
+def list_modules_payload(
+    tenant_key: Optional[str] = None,
+    *,
+    refresh: bool = False,
+    include_legacy: bool = False,
+) -> List[Dict[str, Any]]:
+    if refresh:
+        refresh_module_registry_from_disk()
     states = _read_module_state_map()
     resolved_tenant_key = _resolve_tenant_key(tenant_key)
     payload: List[Dict[str, Any]] = []
     for index, module in enumerate(MODULE_DEFINITIONS):
-        if not is_supported_module(module):
+        if not include_legacy and not is_supported_module(module):
             continue
         metadata = _load_module_metadata(module)
         manifest = metadata.get("manifest", {}) if isinstance(metadata.get("manifest"), dict) else {}
