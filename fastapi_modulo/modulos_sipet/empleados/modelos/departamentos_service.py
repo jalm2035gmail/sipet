@@ -4,10 +4,11 @@ import pathlib
 from typing import Any, Dict, List, Set
 
 from fastapi import HTTPException
+from sqlalchemy import func
 
 from fastapi_modulo.core import db as core_db
 from fastapi_modulo.core.db import DepartamentoOrganizacional, MAIN
-from fastapi_modulo.modulos.empleados.modelos.puestos_laborales_store import load_puestos
+from fastapi_modulo.modulos_sipet.empleados.modelos.puestos_laborales_store import load_puestos
 from fastapi_modulo.modulos_sipet.web.modelos.core_models import Usuario
 
 
@@ -25,9 +26,6 @@ _DEP_FUNCIONES_PATH = os.path.join(
 def ensure_departamentos_schema() -> None:
     engine = core_db.get_engine_for_host(core_db.get_request_host())
     MAIN.metadata.create_all(bind=engine, tables=[DepartamentoOrganizacional.__table__], checkfirst=True)
-
-
-ensure_departamentos_schema()
 
 
 def normalize_funciones_payload(raw: Any) -> Dict[str, List[str]]:
@@ -81,16 +79,20 @@ def save_departamentos_funciones_map(data: Dict[str, Dict[str, List[str]]]) -> N
 def build_empleados_count_map(rows: List[DepartamentoOrganizacional]) -> Dict[str, int]:
     db = core_db.get_session_factory_for_host(core_db.get_request_host())()
     try:
-        all_users = db.query(Usuario).all()
+        grouped_rows = (
+            db.query(Usuario.departamento, func.count(Usuario.id))
+            .group_by(Usuario.departamento)
+            .all()
+        )
     finally:
         db.close()
 
     buckets: Dict[str, int] = {}
-    for user in all_users:
-        dep = str(getattr(user, "departamento", "") or "").strip().lower()
+    for departamento, total in grouped_rows:
+        dep = str(departamento or "").strip().lower()
         if not dep:
             continue
-        buckets[dep] = buckets.get(dep, 0) + 1
+        buckets[dep] = int(total or 0)
 
     counts: Dict[str, int] = {}
     for row in rows:

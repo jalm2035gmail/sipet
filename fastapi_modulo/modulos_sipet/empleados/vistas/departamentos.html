@@ -218,6 +218,7 @@
     </div>
   </div>
 </section>
+<script src="/modulos/empleados/org_chart_loader.js"></script>
 <script>
 (function () {
   var rows = [];
@@ -263,7 +264,6 @@
   var filterQuery = "";
   var treeOpen = {};
   var currentView = "list";
-  var orgLibPromise = null;
   var depOrgChart = null;
   var orgExpandedNodeId = "";
   var funcionesDraft = { misionales: [], apoyo: [], proyectos_especiales: [] };
@@ -681,32 +681,9 @@
     }).join("");
   }
 
-  function loadScript(src) {
-    return new Promise(function (resolve, reject) {
-      if (document.querySelector('script[src="' + src + '"]')) {
-        resolve();
-        return;
-      }
-      var script = document.createElement("script");
-      script.src = src;
-      script.async = true;
-      script.onload = function () { resolve(); };
-      script.onerror = function () { reject(new Error("No se pudo cargar " + src)); };
-      document.head.appendChild(script);
-    });
-  }
-
   async function ensureOrgLibrary() {
-    if (window.d3 && window.d3.OrgChart) return true;
-    if (!orgLibPromise) {
-      orgLibPromise = (async function () {
-        await loadScript("/static/vendor/d3.min.js");
-        await loadScript("/static/vendor/d3-flextree.min.js");
-        await loadScript("/static/vendor/d3-org-chart.min.js");
-      })().catch(function () { return false; });
-    }
-    var result = await orgLibPromise;
-    return result !== false && !!(window.d3 && window.d3.OrgChart);
+    if (!window.SIPETOrgChartLoader || typeof window.SIPETOrgChartLoader.ensure !== "function") return false;
+    return window.SIPETOrgChartLoader.ensure();
   }
 
   async function renderOrganigrama() {

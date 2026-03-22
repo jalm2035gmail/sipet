@@ -4,31 +4,30 @@ import json
 # Módulo inicial para endpoints y lógica de departamentos
 from fastapi import APIRouter, Request, Body
 from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse
-from typing import List, Dict, Any
 from fastapi_modulo.modulos_sipet.web.controladores.backend_shell import render_backend_page
 from fastapi_modulo.modulos_sipet.web.servicios.access_service import require_admin_or_superadmin
-from fastapi_modulo.modulos.empleados.modelos.puestos_laborales_store import (
+from fastapi_modulo.modulos_sipet.empleados.modelos.puestos_laborales_store import (
     delete_puesto,
     load_puestos,
     update_puesto_notebook,
     upsert_puesto,
 )
-from fastapi_modulo.modulos.empleados.modelos.departamentos_service import (
+from fastapi_modulo.modulos_sipet.empleados.modelos.departamentos_service import (
     delete_departamento_payload,
-    ensure_departamentos_schema,
     get_departamentos_catalog,
     list_departamentos_payload,
     save_departamentos_payload,
 )
 
 router = APIRouter()
-DEPARTAMENTOS_TEMPLATE_PATH = os.path.join("fastapi_modulo", "modulos", "empleados", "vistas", "departamentos.html")
-PUESTOS_LABORALES_TEMPLATE_PATH = os.path.join("fastapi_modulo", "modulos", "empleados", "vistas", "puestos_laborales.html")
-PUESTOS_LABORALES_JS_PATH = os.path.join("fastapi_modulo", "modulos", "empleados", "static", "js", "puestos_laborales.js")
-PUESTOS_LABORALES_CSS_PATH = os.path.join("fastapi_modulo", "modulos", "empleados", "static", "css", "puestos_laborales.css")
+DEPARTAMENTOS_TEMPLATE_PATH = os.path.join("fastapi_modulo", "modulos_sipet", "empleados", "vistas", "departamentos.html")
+PUESTOS_LABORALES_TEMPLATE_PATH = os.path.join("fastapi_modulo", "modulos_sipet", "empleados", "vistas", "puestos_laborales.html")
+PUESTOS_LABORALES_JS_PATH = os.path.join("fastapi_modulo", "modulos_sipet", "empleados", "static", "js", "puestos_laborales.js")
+PUESTOS_LABORALES_CSS_PATH = os.path.join("fastapi_modulo", "modulos_sipet", "empleados", "static", "css", "puestos_laborales.css")
+ORG_CHART_LOADER_JS_PATH = os.path.join("fastapi_modulo", "modulos_sipet", "empleados", "static", "js", "org_chart_loader.js")
 EMPLEADOS_PLACEHOLDER_TEMPLATE_PATH = os.path.join(
     "fastapi_modulo",
-    "modulos",
+    "modulos_sipet",
     "empleados",
     "vistas",
     "placeholder_no_access.html",
@@ -36,6 +35,14 @@ EMPLEADOS_PLACEHOLDER_TEMPLATE_PATH = os.path.join(
 DEPARTAMENTOS_PUBLIC_ACCESS = str(
     os.getenv("DEPARTAMENTOS_PUBLIC_ACCESS", "0")
 ).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _ensure_departamentos_runtime() -> None:
+    from fastapi_modulo.modulos_sipet.empleados.modelos.departamentos_service import ensure_departamentos_schema
+
+    ensure_departamentos_schema()
+
+
 def _enforce_departamentos_write_permission(request: Request) -> None:
     # Temporal: permitir operación abierta del módulo de departamentos.
     if DEPARTAMENTOS_PUBLIC_ACCESS:
@@ -44,6 +51,7 @@ def _enforce_departamentos_write_permission(request: Request) -> None:
 
 
 def _render_departamentos_page(request: Request) -> HTMLResponse:
+    _ensure_departamentos_runtime()
     try:
         with open(DEPARTAMENTOS_TEMPLATE_PATH, "r", encoding="utf-8") as fh:
             areas_content = fh.read()
@@ -100,6 +108,11 @@ def puestos_laborales_js():
     return FileResponse(PUESTOS_LABORALES_JS_PATH, media_type="application/javascript")
 
 
+@router.get("/modulos/empleados/org_chart_loader.js")
+def org_chart_loader_js():
+    return FileResponse(ORG_CHART_LOADER_JS_PATH, media_type="application/javascript")
+
+
 @router.get("/modulos/empleados/puestos_laborales.css")
 def puestos_laborales_css():
     return FileResponse(PUESTOS_LABORALES_CSS_PATH, media_type="text/css")
@@ -107,11 +120,13 @@ def puestos_laborales_css():
 
 @router.get("/api/puestos-laborales")
 def api_puestos_laborales_list():
+    _ensure_departamentos_runtime()
     return {"success": True, "data": load_puestos()}
 
 
 @router.post("/api/puestos-laborales")
 async def api_puestos_laborales_save(request: Request):
+    _ensure_departamentos_runtime()
     try:
         body = await request.json()
         if not isinstance(body, dict):
@@ -137,6 +152,7 @@ async def api_puestos_laborales_save(request: Request):
 
 @router.get("/inicio/departamentos/puestos-laborales", response_class=HTMLResponse)
 def puestos_laborales_page(request: Request):
+    _ensure_departamentos_runtime()
     initial_areas = get_departamentos_catalog()
     try:
         with open(PUESTOS_LABORALES_TEMPLATE_PATH, "r", encoding="utf-8") as fh:
@@ -179,15 +195,18 @@ def areas_organizacionales_page(request: Request):
 
 @router.get("/api/inicio/departamentos")
 def listar_departamentos():
+    _ensure_departamentos_runtime()
     return list_departamentos_payload()
 
 @router.post("/api/inicio/departamentos")
 async def guardar_departamentos(request: Request, data: dict = Body(...)):
+    _ensure_departamentos_runtime()
     _enforce_departamentos_write_permission(request)
     return save_departamentos_payload(data.get("data", []))
 
 
 @router.delete("/api/inicio/departamentos/{code}")
 def eliminar_departamento(request: Request, code: str):
+    _ensure_departamentos_runtime()
     _enforce_departamentos_write_permission(request)
     return delete_departamento_payload(code)

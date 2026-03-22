@@ -1,7 +1,6 @@
 (function() {
     var puestos = [];
     var areas = (window.__PUESTOS_INIT__ && window.__PUESTOS_INIT__.areas) || [];
-    var plOrgLibPromise = null;
     var plOrgChart = null;
     var plCurrentView = 'form';
     var plLastSavedId = '';
@@ -294,32 +293,9 @@
         });
     }
 
-    function loadPlScript(src) {
-        return new Promise(function(resolve, reject) {
-            if (document.querySelector('script[src="' + src + '"]')) {
-                resolve();
-                return;
-            }
-            var script = document.createElement('script');
-            script.src = src;
-            script.async = true;
-            script.onload = function() { resolve(); };
-            script.onerror = function() { reject(new Error('No se pudo cargar ' + src)); };
-            document.head.appendChild(script);
-        });
-    }
-
     async function ensurePlOrgLibrary() {
-        if (window.d3 && window.d3.OrgChart) return true;
-        if (!plOrgLibPromise) {
-            plOrgLibPromise = (async function() {
-                await loadPlScript('/static/vendor/d3.min.js');
-                await loadPlScript('/static/vendor/d3-flextree.min.js');
-                await loadPlScript('/static/vendor/d3-org-chart.min.js');
-            })().catch(function() { return false; });
-        }
-        var result = await plOrgLibPromise;
-        return result !== false && !!(window.d3 && window.d3.OrgChart);
+        if (!window.SIPETOrgChartLoader || typeof window.SIPETOrgChartLoader.ensure !== 'function') return false;
+        return window.SIPETOrgChartLoader.ensure();
     }
 
     function renderOrganigramaView() {

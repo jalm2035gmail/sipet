@@ -8,16 +8,12 @@ from fastapi_modulo.core.db import MAIN, RegionOrganizacional
 from fastapi_modulo.modulos_sipet.web.controladores.backend_shell import render_backend_page
 
 router = APIRouter()
-REGIONES_TEMPLATE_PATH = os.path.join("fastapi_modulo", "modulos", "empleados", "vistas", "regiones.html")
+REGIONES_TEMPLATE_PATH = os.path.join("fastapi_modulo", "modulos_sipet", "empleados", "vistas", "regiones.html")
 
 
 def _ensure_regiones_schema() -> None:
     engine = core_db.get_engine_for_host(core_db.get_request_host())
     MAIN.metadata.create_all(bind=engine, tables=[RegionOrganizacional.__table__], checkfirst=True)
-
-
-_ensure_regiones_schema()
-
 
 def _serialize_regiones(rows: List[RegionOrganizacional]) -> List[Dict[str, str]]:
     return [
@@ -40,6 +36,7 @@ def _load_regiones_template() -> str:
 
 @router.get("/inicio/regiones", response_class=HTMLResponse)
 def inicio_regiones_page(request: Request):
+    _ensure_regiones_schema()
     return render_backend_page(
         request,
         title="Regiones",
@@ -57,6 +54,7 @@ def inicio_regiones_page(request: Request):
 
 @router.get("/api/inicio/regiones")
 def listar_regiones():
+    _ensure_regiones_schema()
     db = core_db.get_session_factory_for_host(core_db.get_request_host())()
     try:
         rows = (
@@ -71,6 +69,7 @@ def listar_regiones():
 
 @router.post("/api/inicio/regiones")
 async def guardar_regiones(data: dict = Body(...)):
+    _ensure_regiones_schema()
     incoming = data.get("data", [])
     if not isinstance(incoming, list):
         raise HTTPException(status_code=400, detail="Formato inválido")
