@@ -459,7 +459,7 @@
                 if (text === 'empresa' || route === '/identidad-institucional' || route.startsWith('/empresa/')) return 'fa-solid fa-building';
                 if (text.includes('identidad institucional')) return 'fa-solid fa-id-card-clip';
                 if (text.includes('usuarios') || route.includes('/empresa/usuarios')) return 'fa-solid fa-users';
-                if (text.includes('main de datos') || route.includes('/empresa/main-datos')) return 'fa-solid fa-database';
+                if (text.includes('main de datos') || text.includes('base de datos') || route.includes('/empresa/main-datos') || route.includes('/empresa/base-datos')) return 'fa-solid fa-database';
                 if (text.includes('multiempresa') || route === '/multiempresa' || route.startsWith('/multiempresa/')) return 'fa-solid fa-layer-group';
                 if (text === 'módulos' || text === 'modulos' || route === '/aplicaciones' || route.startsWith('/aplicaciones/')) return 'fa-solid fa-cubes';
                 if (text.includes('temas y colores') || text.includes('colores') || route === '/personalizar') return 'fa-solid fa-palette';

@@ -318,14 +318,7 @@ _PLACEHOLDER_CONTENT = """
 @router.get("/empresa/MAIN-datos", response_class=HTMLResponse)
 def empresa_main_datos_page(request: Request):
     _require_empresa_permission(request, "ver_datos")
-    content = _PLACEHOLDER_CONTENT.format(icon="fa-solid fa-database", label="MAIN de datos")
-    return render_backend_page(
-        request,
-        title="MAIN de datos",
-        description="Gestión de estructura de datos de la empresa.",
-        content=content,
-        show_page_header=True,
-    )
+    return RedirectResponse(url="/empresa/base-datos", status_code=307)
 
 
 @router.get("/plantillas", response_class=HTMLResponse)
