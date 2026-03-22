@@ -663,19 +663,21 @@ def is_module_enabled(module_key: str, tenant_key: Optional[str] = None) -> bool
         return False
     if module.always_enabled:
         return True
+    installed_app_keys = _read_installed_app_keys_for_tenant(_resolve_tenant_key(tenant_key))
+    if installed_app_keys is not None:
+        if module.key in installed_app_keys:
+            return True
+        if module.app_access_name and module.app_access_name.lower().replace(" ", "_") in installed_app_keys:
+            return True
+        if module.manageable:
+            return False
+
     states = _read_module_state_map()
     enabled = bool(states.get(module.key, module.default_enabled))
     if not enabled:
         return False
-    installed_app_keys = _read_installed_app_keys_for_tenant(_resolve_tenant_key(tenant_key))
     if installed_app_keys is None:
-        return enabled
-    if module.key in installed_app_keys:
         return True
-    if module.app_access_name and module.app_access_name.lower().replace(" ", "_") in installed_app_keys:
-        return True
-    if module.manageable:
-        return False
     return enabled
 
 
