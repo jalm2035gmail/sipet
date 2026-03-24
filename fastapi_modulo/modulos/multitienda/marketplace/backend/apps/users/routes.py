@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Security
 from sqlalchemy.orm import Session
-from sqlalchemy import select, or_, text
+from sqlalchemy import Column, DateTime, Integer, MetaData, String, Table, Text, func, or_, select, text
 from apps.users import models, schemas
+from apps.vendors.models import VendorStore
 from core.db import SessionLocal
 from jose import jwt, JWTError
 from datetime import datetime, timedelta
@@ -20,6 +21,17 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/users/login")
 security = HTTPBearer()
 
 router = APIRouter()
+_NOTIFICATIONS_METADATA = MetaData()
+_USER_NOTIFICATIONS_TABLE = Table(
+    "user_notifications",
+    _NOTIFICATIONS_METADATA,
+    Column("id", Integer, primary_key=True, autoincrement=True),
+    Column("user_id", Integer, nullable=False),
+    Column("title", String(120), nullable=False),
+    Column("message", Text, nullable=False),
+    Column("is_read", Integer, nullable=False, server_default=text("0")),
+    Column("created_at", DateTime, nullable=False, server_default=func.current_timestamp()),
+)
 
 MAX_FREE_ATTEMPTS = 3
 INITIAL_LOCK_SECONDS = 5 * 60
@@ -122,27 +134,56 @@ def _as_user_namespace(user_row) -> SimpleNamespace:
 
 
 def _ensure_notifications_table(db: Session) -> None:
-    db.execute(
-        text(
-            """
-            CREATE TABLE IF NOT EXISTS user_notifications (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER NOT NULL,
-                title VARCHAR(120) NOT NULL,
-                message TEXT NOT NULL,
-                is_read BOOLEAN NOT NULL DEFAULT 0,
-                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-            )
-            """
-        )
-    )
+    bind = db.get_bind()
+    if bind is None:
+        raise RuntimeError("No hay engine asociado a la sesión actual.")
+    _USER_NOTIFICATIONS_TABLE.create(bind=bind, checkfirst=True)
     db.commit()
+
+
+def _coerce_limit(value) -> int:
+    try:
+        return max(0, int(value or 0))
+    except (TypeError, ValueError):
+        return 0
+
+
+def _extract_store_limits(store: VendorStore) -> tuple[int, int]:
+    theme = store.store_theme if isinstance(store.store_theme, dict) else {}
+    return (
+        _coerce_limit(theme.get("max_internal_users")),
+        _coerce_limit(theme.get("max_portal_users")),
+    )
+
+
+def _enforce_store_user_limit(db: Session, user: schemas.UserCreate) -> None:
+    if not user.vendor_profile_id:
+        return
+    store = db.query(VendorStore).filter(VendorStore.id == int(user.vendor_profile_id)).first()
+    if not store:
+        raise HTTPException(status_code=404, detail="Store not found")
+    max_internal_users, max_portal_users = _extract_store_limits(store)
+    if user.user_type == schemas.UserType.vendor and max_internal_users > 0:
+        internal_count = db.query(models.User).filter(
+            models.User.vendor_profile_id == int(store.id),
+            models.User.user_type == models.UserType.vendor,
+        ).count()
+        if internal_count >= max_internal_users:
+            raise HTTPException(status_code=422, detail="La tienda alcanzo el limite de usuarios internos.")
+    if user.user_type == schemas.UserType.customer and max_portal_users > 0:
+        portal_count = db.query(models.User).filter(
+            models.User.vendor_profile_id == int(store.id),
+            models.User.user_type == models.UserType.customer,
+        ).count()
+        if portal_count >= max_portal_users:
+            raise HTTPException(status_code=422, detail="La tienda alcanzo el limite de usuarios de portal.")
 
 @router.post("/register", response_model=schemas.UserRead)
 def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
     db_user = db.query(models.User).filter((models.User.username == user.username) | (models.User.email == user.email)).first()
     if db_user:
         raise HTTPException(status_code=400, detail="Username or email already registered")
+    _enforce_store_user_limit(db, user)
     hashed_password = get_password_hash(user.password)
     db_user = models.User(
         username=user.username,

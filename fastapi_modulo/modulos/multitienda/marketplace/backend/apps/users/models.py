@@ -15,5 +15,6 @@ class User(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
     user_type = Column(Enum(UserType), nullable=False)
+    vendor_profile_id = Column(Integer, ForeignKey("vendors.id"), nullable=True, index=True)
     two_factor_enabled = Column(Boolean, nullable=False, default=False)
     vendor_profile = relationship("VendorStore", back_populates="vendor", uselist=False)

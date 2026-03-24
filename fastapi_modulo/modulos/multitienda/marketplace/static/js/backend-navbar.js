@@ -2,7 +2,7 @@
   if (window.__backendNavbarInitialized) return;
   window.__backendNavbarInitialized = true;
 
-  const DEFAULT_AVATAR = "/static/imagenes/tu-negocio.png";
+  const DEFAULT_AVATAR = "/multitienda/static/imagenes/cc.png";
   const NAVBAR_STYLE_STORAGE_KEY = "backend_navbar_style_settings";
   const TEMPLATE_STATE_KEY_PREFIX = "backend_template_state:";
   const TEMPLATE_VIEW_KEY_PREFIX = "backend_template_view:";
@@ -14,6 +14,8 @@
   };
 
   function detectPrefix(pathname) {
+    if (pathname.startsWith("/multitienda/")) return "/multitienda";
+    if (pathname === "/multitienda") return "/multitienda";
     if (pathname.startsWith("/avan/")) return "/avan";
     if (pathname === "/avan") return "/avan";
     return "";
@@ -696,7 +698,11 @@
   const pathText = window.location.pathname || "/";
   const isTemplateScreen = pathText === `${prefix}/template` || pathText === "/template";
   const isVendorScreen = pathText === `${prefix}/agregar-usuario` || pathText === "/agregar-usuario";
-  const isStoreScreen = pathText === `${prefix}/gestion` || pathText === "/gestion";
+  const isStoreScreen =
+    pathText === `${prefix}` ||
+    pathText === `${prefix}/` ||
+    pathText === `${prefix}/gestion` ||
+    pathText === "/gestion";
   const screenStateKey = `${TEMPLATE_STATE_KEY_PREFIX}${pathText}`;
   const templateRoot = document.querySelector(".backend-template");
   const defaultTemplateHTML = templateRoot ? templateRoot.innerHTML : "";
@@ -720,6 +726,16 @@
     "#store-type",
     "#store-admin",
     "#store-membership",
+    "#store-is-active",
+    "#store-is-featured",
+    "#store-inventory-enabled",
+    "#store-validity",
+    "#store-referrals",
+    "#store-appointments",
+    "#store-coupons",
+    "#store-whatsapp",
+    "#max-internal-users",
+    "#max-portal-users",
     "#store-logo",
     "#logoImage"
   ];
@@ -834,6 +850,8 @@
       if (!field.id) return;
       if (field.id === "logoImage") {
         state[field.id] = field.getAttribute("src") || "";
+      } else if (field.type === "checkbox") {
+        state[field.id] = Boolean(field.checked);
       } else if (field.type === "file") {
         state[field.id] = "";
       } else {
@@ -851,6 +869,8 @@
         if (state[field.id]) {
           field.setAttribute("src", state[field.id]);
         }
+      } else if (field.type === "checkbox") {
+        field.checked = Boolean(state[field.id]);
       } else if (field.type === "file") {
         field.value = "";
       } else {
@@ -866,12 +886,109 @@
       if ("readOnly" in field && field.tagName === "INPUT") {
         field.readOnly = !enabled;
       }
-      if (field.tagName === "SELECT") {
+      if (field.tagName === "SELECT" || field.type === "checkbox") {
         field.disabled = !enabled;
       }
       field.style.outline = enabled ? "1px dashed #9ca3af" : "";
       field.style.outlineOffset = enabled ? "2px" : "";
     });
+  }
+
+  function readFieldValue(selector) {
+    const node = document.querySelector(selector);
+    return node ? String(node.value || "").trim() : "";
+  }
+
+  function readCheckboxValue(selector) {
+    const node = document.querySelector(selector);
+    return Boolean(node && node.checked);
+  }
+
+  function normalizeLimitValue(selector) {
+    const raw = readFieldValue(selector);
+    const parsed = parseInt(raw || "0", 10);
+    if (Number.isNaN(parsed) || parsed < 0) return 0;
+    return parsed;
+  }
+
+  function extractErrorMessage(data, fallback) {
+    if (data && typeof data.detail === "string" && data.detail.trim()) {
+      return data.detail.trim();
+    }
+    return fallback;
+  }
+
+  async function saveStoreToBackend() {
+    const payload = {
+      store_name: readFieldValue("#store-name"),
+      store_type: readFieldValue("#store-type"),
+      admin_user_id: readFieldValue("#store-admin"),
+      membership: readFieldValue("#store-membership"),
+      is_active: readCheckboxValue("#store-is-active"),
+      is_featured: readCheckboxValue("#store-is-featured"),
+      inventory_enabled: readCheckboxValue("#store-inventory-enabled"),
+      validity: readFieldValue("#store-validity"),
+      referrals: readFieldValue("#store-referrals"),
+      appointments: readFieldValue("#store-appointments"),
+      coupons: readFieldValue("#store-coupons"),
+      whatsapp: readFieldValue("#store-whatsapp"),
+      max_internal_users: normalizeLimitValue("#max-internal-users"),
+      max_portal_users: normalizeLimitValue("#max-portal-users")
+    };
+    const response = await fetch(`${prefix}/admin/store-settings`, {
+      method: "POST",
+      headers: {
+        ...buildAuthHeaders(),
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload)
+    });
+    let data = null;
+    try {
+      data = await response.json();
+    } catch (_error) {}
+    if (!response.ok) {
+      throw new Error(extractErrorMessage(data, "No se pudo guardar la tienda."));
+    }
+    return data || {};
+  }
+
+  function mapRoleToUserType(roleValue) {
+    if (roleValue === "superadministrador") return "superadmin";
+    return "vendor";
+  }
+
+  async function saveVendorToBackend() {
+    const roleValue = readFieldValue("#user-role");
+    const userType = mapRoleToUserType(roleValue);
+    const vendorProfileId = readFieldValue("#user-store");
+    if (userType === "vendor" && !vendorProfileId) {
+      throw new Error("Selecciona una tienda para el usuario.");
+    }
+    const payload = {
+      username: readFieldValue("#user-username"),
+      email: readFieldValue("#user-email"),
+      password: readFieldValue("#user-password"),
+      user_type: userType,
+      vendor_profile_id: userType === "vendor" ? parseInt(vendorProfileId, 10) : null,
+      two_factor_enabled: readCheckboxValue("#user-two-factor")
+    };
+    const response = await fetch(`${prefix}/users/register`, {
+      method: "POST",
+      headers: {
+        ...buildAuthHeaders(),
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload)
+    });
+    let data = null;
+    try {
+      data = await response.json();
+    } catch (_error) {}
+    if (!response.ok) {
+      throw new Error(extractErrorMessage(data, "No se pudo guardar el usuario."));
+    }
+    return data || {};
   }
 
   if (isStoreScreen) {
@@ -1312,7 +1429,7 @@
   });
 
   toolButtons.forEach(function (button) {
-    button.addEventListener("click", function () {
+    button.addEventListener("click", async function () {
       if (!isTemplateScreen && !isVendorScreen && !isStoreScreen) return;
       const action = button.dataset.action;
 
@@ -1322,13 +1439,18 @@
             localStorage.setItem(screenStateKey, templateRoot.innerHTML);
           } else if (isVendorScreen) {
             localStorage.setItem(screenStateKey, JSON.stringify(collectVendorState()));
+            await saveVendorToBackend();
+            showActionMessage("Usuario guardado correctamente.", "success");
           } else if (isStoreScreen) {
             localStorage.setItem(screenStateKey, JSON.stringify(collectStoreState()));
+            await saveStoreToBackend();
             showActionMessage("Tienda guardada correctamente.", "success");
           }
-        } catch (_error) {
+        } catch (error) {
           if (isStoreScreen) {
-            showActionMessage("No se pudo guardar la tienda. Intenta nuevamente.", "error");
+            showActionMessage(error && error.message ? error.message : "No se pudo guardar la tienda. Intenta nuevamente.", "error");
+          } else if (isVendorScreen) {
+            showActionMessage(error && error.message ? error.message : "No se pudo guardar el usuario. Intenta nuevamente.", "error");
           }
         }
         return;
@@ -1356,7 +1478,7 @@
         } else if (isVendorScreen) {
           vendorFields.forEach(function (field) {
             if (field.id === "photoImage") {
-              field.setAttribute("src", "/static/imagenes/tu-negocio.png");
+              field.setAttribute("src", "/multitienda/static/imagenes/cc.png");
             } else if (field.type === "checkbox") {
               field.checked = false;
             } else if (field.type === "file") {
@@ -1371,7 +1493,9 @@
         } else if (isStoreScreen) {
           storeFields.forEach(function (field) {
             if (field.id === "logoImage") {
-              field.setAttribute("src", "/static/imagenes/tu-negocio.png");
+              field.setAttribute("src", "/multitienda/static/imagenes/cc.png");
+            } else if (field.type === "checkbox") {
+              field.checked = false;
             } else if (field.type === "file") {
               field.value = "";
             } else if ("value" in field) {
@@ -1394,7 +1518,7 @@
           localStorage.removeItem(screenStateKey);
           vendorFields.forEach(function (field) {
             if (field.id === "photoImage") {
-              field.setAttribute("src", "/static/imagenes/tu-negocio.png");
+              field.setAttribute("src", "/multitienda/static/imagenes/cc.png");
             } else if (field.type === "checkbox") {
               field.checked = false;
             } else if (field.type === "file") {
@@ -1412,7 +1536,9 @@
           localStorage.removeItem(screenStateKey);
           storeFields.forEach(function (field) {
             if (field.id === "logoImage") {
-              field.setAttribute("src", "/static/imagenes/tu-negocio.png");
+              field.setAttribute("src", "/multitienda/static/imagenes/cc.png");
+            } else if (field.type === "checkbox") {
+              field.checked = false;
             } else if (field.type === "file") {
               field.value = "";
             } else if ("value" in field) {

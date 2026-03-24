@@ -1,11 +1,11 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, field_validator
 from typing import Optional, Dict, List
 from datetime import datetime
 from enum import Enum
 
 class VendorRegistrationRequest(BaseModel):
     username: str
-    email: EmailStr
+    email: str
     password: str
     two_factor_enabled: bool = False
     first_name: Optional[str] = ""
@@ -14,6 +14,14 @@ class VendorRegistrationRequest(BaseModel):
     phone: str
     address: str
     country: str
+
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, value: str) -> str:
+        normalized = str(value or "").strip()
+        if "@" not in normalized or "." not in normalized.rsplit("@", 1)[-1]:
+            raise ValueError("Correo electrónico inválido.")
+        return normalized
 
 class VendorStatus(str, Enum):
     pending = "pending"

@@ -48,12 +48,13 @@
     const panel = document.getElementById("menuPanel");
     const personalizarItem = document.getElementById("personalizarItem");
     const configuracionItem = document.getElementById("configuracionItem");
+    const userType = getUserType();
 
     if (personalizarItem) {
-      personalizarItem.style.display = isSuperadmin() ? "" : "none";
+      personalizarItem.style.display = !userType || isSuperadmin() ? "" : "none";
     }
     if (configuracionItem) {
-      configuracionItem.style.display = isAdminOrSuperadmin() ? "" : "none";
+      configuracionItem.style.display = !userType || isAdminOrSuperadmin() ? "" : "none";
     }
 
     if (!btn || !panel) return;
@@ -82,6 +83,10 @@
         setOpen(false);
       }
     });
+
+    if (window.matchMedia("(min-width: 1024px)").matches) {
+      setOpen(true);
+    }
   }
 
   window.initBackendSidebarCore = initBackendSidebarCore;

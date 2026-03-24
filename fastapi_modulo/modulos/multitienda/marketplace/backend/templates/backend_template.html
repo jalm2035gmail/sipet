@@ -306,11 +306,443 @@
   }
 
   .config-shell {
-    display: grid;
-    grid-template-columns: 260px 1fr;
-    gap: 18px;
-    align-items: start;
+    display: block;
   }
+
+  /* Config notebook */
+  .cfg-notebook {
+    border: 1px solid #e6e8ee;
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .cfg-notebook-tabs {
+    display: flex;
+    background: #f7f8fa;
+    border-bottom: 1px solid #e6e8ee;
+  }
+  .cfg-notebook-tab {
+    padding: 10px 20px;
+    font-size: 0.88rem;
+    font-weight: 500;
+    color: #6b7280;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .cfg-notebook-tab:hover { color: #111827; }
+  .cfg-notebook-tab.active {
+    color: #1a6b3c;
+    border-bottom-color: #1a6b3c;
+    background: #fff;
+  }
+  .cfg-notebook-panel { padding: 20px; }
+  .cfg-notebook-panel[hidden] { display: none !important; }
+
+  /* Horario */
+  .horario-table {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    border: 1px solid #e6e8ee;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .horario-header,
+  .horario-row {
+    display: grid;
+    grid-template-columns: 120px 1fr 1fr 80px;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+  }
+  .horario-header {
+    background: #f7f8fa;
+    border-bottom: 1px solid #e6e8ee;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .horario-row {
+    border-bottom: 1px solid #f0f1f4;
+  }
+  .horario-row:last-child { border-bottom: none; }
+  .horario-row:hover { background: #fafbfc; }
+  .horario-dia {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #1f2937;
+  }
+  .horario-time {
+    width: 100%;
+    padding: 6px 10px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    color: #374151;
+    outline: none;
+  }
+  .horario-time:focus { border-color: #1a6b3c; }
+  .horario-check {
+    width: 18px;
+    height: 18px;
+    accent-color: #1a6b3c;
+    cursor: pointer;
+    justify-self: center;
+  }
+
+  /* Landing page — banners */
+  .lp-section-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1f2937;
+    margin: 0 0 16px;
+  }
+  .lp-banners {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+  }
+  .lp-banner-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+  .lp-banner-preview {
+    width: 100%;
+    background: #f0f4f8;
+    border: 1px dashed #c5cdd8;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+    cursor: pointer;
+  }
+  .lp-banner-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .lp-banner-empty {
+    font-size: 2rem;
+    color: #9ca3af;
+    user-select: none;
+  }
+  .lp-banner-label {
+    font-size: 0.82rem;
+    color: #6b7280;
+    margin: 0;
+    text-align: center;
+  }
+  .lp-banner-btn {
+    font-size: 0.8rem;
+    padding: 5px 14px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    background: #fff;
+    color: #374151;
+    cursor: pointer;
+  }
+  .lp-banner-btn:hover { background: #f3f4f6; }
+  .lp-textarea {
+    width: 100%;
+    min-height: 90px;
+    padding: 10px 14px;
+    border: 1px solid #cfd5df;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    color: #1f2937;
+    background: #fff;
+    resize: vertical;
+    font-family: inherit;
+    line-height: 1.5;
+    outline: none;
+  }
+  .lp-textarea:focus { border-color: #1a6b3c; }
+  @media (max-width: 640px) {
+    .lp-banners { grid-template-columns: 1fr; }
+  }
+
+  /* Datos fiscales */
+  .fiscal-form { display: flex; flex-direction: column; gap: 0; }
+  .fiscal-grid { display: flex; flex-direction: column; }
+  .fiscal-row {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    align-items: center;
+    gap: 16px;
+    padding: 10px 0;
+    border-bottom: 1px solid #f0f1f4;
+  }
+  .fiscal-row:last-child { border-bottom: none; }
+  .fiscal-label {
+    font-size: 0.9rem;
+    color: #374151;
+  }
+  .fiscal-input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #e8eaf0;
+    border-radius: 20px;
+    background: #fdf0f0;
+    font-size: 0.9rem;
+    color: #374151;
+    outline: none;
+  }
+  .fiscal-input:focus { border-color: #1a6b3c; background: #fff; }
+  .fiscal-input-sm { max-width: 160px; }
+  .fiscal-pair {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+  @media (max-width: 600px) {
+    .fiscal-row { grid-template-columns: 1fr; }
+    .fiscal-pair { flex-direction: column; }
+  }
+
+  /* Productos */
+  .prod-table-header {
+    display: grid;
+    grid-template-columns: 50px 1fr 100px 90px 70px 50px;
+    gap: 10px;
+    padding: 8px 14px;
+    background: #f7f8fa;
+    border-bottom: 1px solid #e6e8ee;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #6b7280;
+  }
+  .prod-list-row {
+    display: grid;
+    grid-template-columns: 50px 1fr 100px 90px 70px 50px;
+    gap: 10px;
+    align-items: center;
+    padding: 8px 14px;
+    border-bottom: 1px solid #f0f1f4;
+    font-size: 0.88rem;
+  }
+  .prod-list-row:last-child { border-bottom: none; }
+  .prod-list-row:hover { background: #fafbfc; }
+  .prod-thumb {
+    width: 38px; height: 38px;
+    border-radius: 6px;
+    object-fit: cover;
+    background: #e5e7eb;
+  }
+
+  /* Visibilidad */
+  .vis-form { display: flex; flex-direction: column; }
+  .vis-grid { display: flex; flex-direction: column; }
+  .vis-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 11px 4px;
+    border-bottom: 1px solid #f0f1f4;
+    cursor: pointer;
+    gap: 12px;
+  }
+  .vis-row:last-child { border-bottom: none; }
+  .vis-row:hover { background: #fafbfc; }
+  .vis-label {
+    font-size: 0.92rem;
+    color: #374151;
+    flex: 1;
+  }
+  .vis-hint {
+    font-size: 0.78rem;
+    color: #1f9bb8;
+    font-weight: 600;
+    margin-left: 4px;
+  }
+  .vis-check {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    accent-color: #1a6b3c;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  /* Políticas de la tienda */
+  .politicas-list { display: flex; flex-direction: column; gap: 24px; }
+  .politica-block { display: flex; flex-direction: column; gap: 6px; }
+  .politica-label {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #1f2937;
+  }
+  .rte-toolbar {
+    display: flex;
+    gap: 4px;
+    padding: 6px 8px;
+    background: #f7f8fa;
+    border: 1px solid #e6e8ee;
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
+  }
+  .rte-toolbar button {
+    min-width: 30px; height: 30px;
+    padding: 0 6px;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    background: #fff;
+    font-size: 0.85rem;
+    color: #374151;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+  }
+  .rte-toolbar button:hover { background: #e5e7eb; }
+  .rte-toolbar button:active { background: #d1d5db; }
+  .rte-editor {
+    min-height: 120px;
+    border: 1px solid #e6e8ee;
+    border-radius: 0 0 8px 8px;
+    padding: 12px 14px;
+    font-size: 0.9rem;
+    color: #374151;
+    line-height: 1.6;
+    outline: none;
+    background: #fff;
+  }
+  .rte-editor:focus { border-color: #1a6b3c; }
+
+  /* Personal de la tienda */
+  .personal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .personal-quota {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.85rem;
+    color: #6b7280;
+  }
+  .personal-quota-sep { color: #9ca3af; }
+  #personalUsed, #personalMax { font-weight: 700; color: #1f2937; }
+  .personal-add-btn {
+    padding: 7px 16px;
+    background: #1a6b3c;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .personal-add-btn:hover { background: #155e34; }
+  .personal-add-btn:disabled { background: #9ca3af; cursor: not-allowed; }
+  .personal-cancel-btn {
+    padding: 7px 16px;
+    background: #f3f4f6;
+    color: #374151;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .personal-cancel-btn:hover { background: #e5e7eb; }
+  .personal-table {
+    border: 1px solid #e6e8ee;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .personal-table-header {
+    display: grid;
+    grid-template-columns: 44px 1fr 1fr 120px 130px 60px;
+    gap: 10px;
+    padding: 8px 14px;
+    background: #f7f8fa;
+    border-bottom: 1px solid #e6e8ee;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #6b7280;
+  }
+  .personal-list-row {
+    display: grid;
+    grid-template-columns: 44px 1fr 1fr 120px 130px 60px;
+    gap: 10px;
+    align-items: center;
+    padding: 8px 14px;
+    border-bottom: 1px solid #f0f1f4;
+    font-size: 0.88rem;
+  }
+  .personal-list-row:last-child { border-bottom: none; }
+  .personal-list-row:hover { background: #fafbfc; }
+  .personal-list-avatar {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: #e5e7eb;
+  }
+  .personal-empty {
+    padding: 24px;
+    text-align: center;
+    font-size: 0.88rem;
+    color: #9ca3af;
+    margin: 0;
+  }
+  /* Formulario personal */
+  .photo-box { display: flex; flex-direction: column; gap: 12px; }
+  .photo-preview-wrap { position: relative; display: inline-block; }
+  .photo-preview {
+    width: 100px; height: 100px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 2px solid #e6e8ee;
+    background: #f3f4f6;
+  }
+  .photo-preview img { width: 100%; height: 100%; object-fit: cover; }
+  .photo-actions {
+    position: absolute; bottom: 0; right: 0;
+    display: flex; gap: 4px;
+  }
+  .photo-action-btn {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    border: 1px solid #d1d5db;
+    background: #fff;
+    font-size: 0.8rem;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .photo-input { display: none; }
+  .right-field { display: flex; flex-direction: column; gap: 4px; }
+  .role-help {
+    margin: 4px 0 0;
+    padding-left: 16px;
+    font-size: 0.78rem;
+    color: #6b7280;
+    line-height: 1.6;
+  }
+  .access-card {
+    border: 1px solid #e6e8ee;
+    border-radius: 8px;
+    padding: 12px;
+    background: #fafbfc;
+  }
+  .access-card h3 { margin: 0 0 8px; font-size: 0.88rem; }
+  .user-check-row { display: flex; align-items: center; gap: 8px; }
+  .user-check { width: 18px; height: 18px; accent-color: #1a6b3c; cursor: pointer; }
 
   .config-side {
     background: #f8fafc;
@@ -328,7 +760,7 @@
     border-bottom: 1px solid #e5e7eb;
     background: transparent;
     color: #4b5563;
-    font-size: 18px;
+    font-size: 15px;
     font-weight: 700;
     text-align: left;
     width: 100%;
@@ -364,14 +796,71 @@
 
   .config-title {
     margin: 0 0 14px;
-    font-size: 44px;
-    line-height: 1.05;
+    font-size: 28px;
+    line-height: 1.2;
     color: #111827;
   }
 
   .config-form {
     display: grid;
     gap: 14px;
+  }
+
+  .config-form-body {
+    display: grid;
+    grid-template-columns: 1fr 200px;
+    gap: 32px;
+    align-items: start;
+  }
+
+  .config-logo-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding-top: 4px;
+  }
+
+  .config-logo-label {
+    font-size: 13px;
+    color: #6b7280;
+    text-align: center;
+    line-height: 1.4;
+  }
+
+  .config-logo-img {
+    width: 160px;
+    height: 160px;
+    object-fit: contain;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    background: #f9fafb;
+    padding: 8px;
+    cursor: pointer;
+  }
+
+  .config-logo-img:hover {
+    border-color: #2d7bb5;
+  }
+
+  .config-logo-change-btn {
+    font-size: .8rem;
+    color: #2d7bb5;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    text-decoration: underline;
+  }
+
+  @media (max-width: 860px) {
+    .config-form-body {
+      grid-template-columns: 1fr;
+    }
+    .config-logo-col {
+      flex-direction: row;
+      align-items: center;
+    }
   }
 
   .config-row {
@@ -386,7 +875,7 @@
   }
 
   .config-field label {
-    font-size: 18px;
+    font-size: 14px;
     font-weight: 700;
     color: #374151;
   }
@@ -397,7 +886,7 @@
     border: 1px solid #cfd5df;
     border-radius: 14px;
     padding: 0 16px;
-    font-size: 42px;
+    font-size: 16px;
     color: #1f2937;
     background: #ffffff;
   }
@@ -405,6 +894,15 @@
   .config-separator {
     margin: 8px 0;
     border-top: 1px solid #e5e7eb;
+  }
+
+  .config-section-label {
+    margin: 4px 0 2px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #9ca3af;
   }
 
   .config-days {
@@ -419,7 +917,7 @@
     padding: 10px 16px;
     background: #2563eb;
     color: #ffffff;
-    font-size: 30px;
+    font-size: 14px;
     font-weight: 700;
     cursor: pointer;
   }
@@ -434,12 +932,12 @@
     }
 
     .config-title {
-      font-size: 34px;
+      font-size: 24px;
     }
 
     .config-field input,
     .config-field select {
-      font-size: 28px;
+      font-size: 16px;
     }
   }
 </style>
@@ -497,10 +995,6 @@
     <button id="closeSidebarEditor" class="editor-close" type="button" aria-label="Cerrar editor">x</button>
   </div>
   <div class="editor-field">
-    <label for="sidebarLogoInput">Logo</label>
-    <input id="sidebarLogoInput" type="file" accept="image/*" />
-  </div>
-  <div class="editor-field">
     <label for="sidebarTextColor">Color de texto</label>
     <input id="sidebarTextColor" type="color" value="#164723" />
   </div>
@@ -533,70 +1027,532 @@
 <main class="backend-template">
   {% if is_config_shell %}
   <section class="config-shell">
-    <aside class="config-side" aria-label="Secciones de configuración">
-      <button class="config-side-item active" type="button"><span class="config-side-icon" aria-hidden="true"></span>Mi Negocio</button>
-      <button class="config-side-item" type="button"><span class="config-side-icon" aria-hidden="true"></span>Tickets</button>
-      <button class="config-side-item" type="button"><span class="config-side-icon" aria-hidden="true"></span>Impresora</button>
-      <button class="config-side-item" type="button"><span class="config-side-icon" aria-hidden="true"></span>Impuestos</button>
-      <button class="config-side-item" type="button"><span class="config-side-icon" aria-hidden="true"></span>Inventario</button>
-      <button class="config-side-item" type="button"><span class="config-side-icon" aria-hidden="true"></span>Caja</button>
-      <button class="config-side-item" type="button"><span class="config-side-icon" aria-hidden="true"></span>Alertas</button>
-      <button class="config-side-item" type="button"><span class="config-side-icon" aria-hidden="true"></span>Datos Fiscales</button>
-      <button class="config-side-item" type="button"><span class="config-side-icon" aria-hidden="true"></span>Preferencias</button>
-    </aside>
     <section class="config-panel">
       <h1 class="config-title">Información del Negocio</h1>
       <div class="config-form">
-        <div class="config-row">
-          <div class="config-field">
-            <label>Nombre del Negocio *</label>
-            <input type="text" value="Abarrotes Don Pepe" />
-          </div>
-          <div class="config-field">
-            <label>Giro o Tipo de Negocio</label>
-            <select>
-              <option>Abarrotes y Miscelánea</option>
-            </select>
-          </div>
-        </div>
-        <div class="config-field">
-          <label>Dirección</label>
-          <input type="text" value="Av. Juárez #123, Col. Centro, CP 06000" />
-        </div>
-        <div class="config-row">
-          <div class="config-field">
-            <label>Teléfono</label>
-            <input type="text" value="55 1234 5678" />
-          </div>
-          <div class="config-field">
-            <label>Email</label>
-            <input type="text" value="contacto@abarrotesdonpepe.com" />
-          </div>
-        </div>
-        <div class="config-separator"></div>
-        <div class="config-row">
-          <div class="config-field">
-            <label>Hora de Apertura</label>
-            <input type="text" value="07:00" />
-          </div>
-          <div class="config-field">
-            <label>Hora de Cierre</label>
-            <input type="text" value="21:00" />
-          </div>
-        </div>
-        <div class="config-field">
-          <label>Días Laborales</label>
-          <div class="config-days">
-            <button class="config-day" type="button">Lun</button>
-            <button class="config-day" type="button">Mar</button>
-            <button class="config-day" type="button">Mié</button>
-            <button class="config-day" type="button">Jue</button>
-            <button class="config-day" type="button">Vie</button>
-            <button class="config-day" type="button">Sáb</button>
-            <button class="config-day" type="button">Dom</button>
-          </div>
-        </div>
+        <div class="config-form-body">
+
+          <!-- Columna de campos -->
+          <div class="config-fields-col">
+            <div class="config-row">
+              <div class="config-field">
+                <label>Nombre del Negocio *</label>
+                <input type="text" value="Abarrotes Don Pepe" />
+              </div>
+              <div class="config-field">
+                <label>Giro o Tipo de Negocio</label>
+                <select>
+                  <option>Abarrotes y Miscelánea</option>
+                </select>
+              </div>
+            </div>
+            <div class="config-row" style="margin-top:14px;">
+              <div class="config-field">
+                <label>Teléfono</label>
+                <input type="text" value="55 1234 5678" />
+              </div>
+              <div class="config-field">
+                <label>Email</label>
+                <input type="text" value="contacto@abarrotesdonpepe.com" />
+              </div>
+            </div>
+            <div class="config-field" style="margin-top:14px;">
+              <label>Página web</label>
+              <input type="url" placeholder="https://www.ejemplo.com" />
+            </div>
+
+            <div class="config-separator"></div>
+            <p class="config-section-label">Dirección</p>
+            <div class="config-row">
+              <div class="config-field">
+                <label>Calle</label>
+                <input type="text" placeholder="Nombre de la calle y número" />
+              </div>
+              <div class="config-field">
+                <label>Entre calles</label>
+                <input type="text" placeholder="Entre calle A y calle B" />
+              </div>
+            </div>
+            <div class="config-row" style="margin-top:14px;">
+              <div class="config-field">
+                <label>Colonia</label>
+                <input type="text" placeholder="Colonia" />
+              </div>
+              <div class="config-field">
+                <label>Código postal</label>
+                <input type="text" placeholder="CP" />
+              </div>
+            </div>
+            <div class="config-row" style="margin-top:14px;">
+              <div class="config-field">
+                <label>Localidad</label>
+                <input type="text" placeholder="Localidad" />
+              </div>
+              <div class="config-field">
+                <label>Municipio</label>
+                <input type="text" placeholder="Municipio" />
+              </div>
+            </div>
+            <div class="config-row" style="margin-top:14px;">
+              <div class="config-field">
+                <label>Estado</label>
+                <input type="text" placeholder="Estado" />
+              </div>
+              <div class="config-field">
+                <label>País</label>
+                <input type="text" placeholder="País" value="México" />
+              </div>
+            </div>
+
+            <div class="config-separator"></div>
+            <p class="config-section-label">Ubicación</p>
+            <div class="config-row">
+              <div class="config-field">
+                <label>Latitud</label>
+                <input type="text" placeholder="Ej. 19.432608" />
+              </div>
+              <div class="config-field">
+                <label>Longitud</label>
+                <input type="text" placeholder="Ej. -99.133209" />
+              </div>
+            </div>
+          </div><!-- /config-fields-col -->
+
+          <!-- Columna de logo -->
+          <div class="config-logo-col">
+            <span class="config-logo-label">Logotipo<br />(256×256px)</span>
+            <img id="sidebarLogoPreview"
+                 src="/static/imagenes/logo_vale.png"
+                 alt="Logo de la tienda"
+                 class="config-logo-img"
+                 title="Haz clic para cambiar el logo" />
+            <button class="config-logo-change-btn" type="button" id="configLogoChangeBtn">Cambiar logo</button>
+            <input id="sidebarLogoInput" type="file" accept="image/*" style="display:none;" />
+          </div><!-- /config-logo-col -->
+
+        </div><!-- /config-form-body -->
       </div>
+
+      <div class="cfg-notebook" style="margin-top:24px;">
+        <div class="cfg-notebook-tabs" role="tablist">
+          <button class="cfg-notebook-tab active" role="tab" aria-selected="true"  aria-controls="cfg-panel-1" id="cfg-tab-1" type="button">Horario</button>
+          <button class="cfg-notebook-tab"        role="tab" aria-selected="false" aria-controls="cfg-panel-2" id="cfg-tab-2" type="button">Landing page</button>
+          <button class="cfg-notebook-tab"        role="tab" aria-selected="false" aria-controls="cfg-panel-3" id="cfg-tab-3" type="button">Datos fiscales</button>
+          <button class="cfg-notebook-tab"        role="tab" aria-selected="false" aria-controls="cfg-panel-4" id="cfg-tab-4" type="button">Personal de la tienda</button>
+          <button class="cfg-notebook-tab"        role="tab" aria-selected="false" aria-controls="cfg-panel-5" id="cfg-tab-5" type="button">Políticas de la tienda</button>
+          <button class="cfg-notebook-tab"        role="tab" aria-selected="false" aria-controls="cfg-panel-7" id="cfg-tab-7" type="button">Visibilidad</button>
+        </div>
+
+        <div class="cfg-notebook-panel" id="cfg-panel-1" role="tabpanel" aria-labelledby="cfg-tab-1">
+          <div class="horario-table">
+            <div class="horario-header">
+              <span>Día</span>
+              <span>Inicio</span>
+              <span>Cierre</span>
+              <span>Descanso</span>
+            </div>
+            <div class="horario-row">
+              <span class="horario-dia">Lunes</span>
+              <input class="horario-time" type="time" value="07:00" />
+              <input class="horario-time" type="time" value="21:00" />
+              <input class="horario-check" type="checkbox" />
+            </div>
+            <div class="horario-row">
+              <span class="horario-dia">Martes</span>
+              <input class="horario-time" type="time" value="07:00" />
+              <input class="horario-time" type="time" value="21:00" />
+              <input class="horario-check" type="checkbox" />
+            </div>
+            <div class="horario-row">
+              <span class="horario-dia">Miércoles</span>
+              <input class="horario-time" type="time" value="07:00" />
+              <input class="horario-time" type="time" value="21:00" />
+              <input class="horario-check" type="checkbox" />
+            </div>
+            <div class="horario-row">
+              <span class="horario-dia">Jueves</span>
+              <input class="horario-time" type="time" value="07:00" />
+              <input class="horario-time" type="time" value="21:00" />
+              <input class="horario-check" type="checkbox" />
+            </div>
+            <div class="horario-row">
+              <span class="horario-dia">Viernes</span>
+              <input class="horario-time" type="time" value="07:00" />
+              <input class="horario-time" type="time" value="21:00" />
+              <input class="horario-check" type="checkbox" />
+            </div>
+            <div class="horario-row">
+              <span class="horario-dia">Sábado</span>
+              <input class="horario-time" type="time" value="09:00" />
+              <input class="horario-time" type="time" value="18:00" />
+              <input class="horario-check" type="checkbox" />
+            </div>
+            <div class="horario-row">
+              <span class="horario-dia">Domingo</span>
+              <input class="horario-time" type="time" value="09:00" />
+              <input class="horario-time" type="time" value="15:00" />
+              <input class="horario-check" type="checkbox" />
+            </div>
+          </div>
+        </div>
+
+        <div class="cfg-notebook-panel" id="cfg-panel-2" role="tabpanel" aria-labelledby="cfg-tab-2" hidden>
+          <div class="config-form" style="margin-bottom:20px;">
+            <div class="config-field">
+              <label>Slogan</label>
+              <input type="text" placeholder="Escribe el slogan de tu tienda" />
+            </div>
+          </div>
+          <div class="config-form" style="margin-bottom:20px;">
+            <div class="config-field">
+              <label>Misión de la tienda</label>
+              <textarea class="lp-textarea" placeholder="Describe la misión de tu tienda..."></textarea>
+            </div>
+            <div class="config-field">
+              <label>Visión de la tienda</label>
+              <textarea class="lp-textarea" placeholder="Describe la visión de tu tienda..."></textarea>
+            </div>
+            <div class="config-field">
+              <label id="lp-ofertas-label">Ofertas y beneficios para los socios de <span id="lp-coop-name" style="font-style:italic;color:#1a6b3c;">tu cooperativa</span></label>
+              <textarea class="lp-textarea" placeholder="Describe las ofertas y beneficios para los socios..."></textarea>
+            </div>
+          </div>
+          <h3 class="lp-section-title">Imagen</h3>
+          <div class="lp-banners">
+
+            <div class="lp-banner-item">
+              <div class="lp-banner-preview" style="aspect-ratio:1024/300;">
+                <img id="lp-img-banner" src="/static/imagenes/banner.png" alt="Banner" />
+                <span class="lp-banner-empty" style="display:none;">+</span>
+              </div>
+              <p class="lp-banner-label">Banner (1024x300px)</p>
+              <input id="lp-input-banner" type="file" accept="image/*" hidden />
+              <button class="lp-banner-btn" type="button" onclick="document.getElementById('lp-input-banner').click()">Seleccionar imagen</button>
+            </div>
+
+            <div class="lp-banner-item">
+              <div class="lp-banner-preview" style="aspect-ratio:600/300;">
+                <img id="lp-img-movil" src="/static/imagenes/banner.png" alt="Banner móvil" />
+                <span class="lp-banner-empty" style="display:none;">+</span>
+              </div>
+              <p class="lp-banner-label">Banner móvil (600x300px)</p>
+              <input id="lp-input-movil" type="file" accept="image/*" hidden />
+              <button class="lp-banner-btn" type="button" onclick="document.getElementById('lp-input-movil').click()">Seleccionar imagen</button>
+            </div>
+
+            <div class="lp-banner-item">
+              <div class="lp-banner-preview" style="aspect-ratio:512/200;">
+                <img id="lp-img-lista" src="/static/imagenes/banner.png" alt="Banner lista" />
+                <span class="lp-banner-empty" style="display:none;">+</span>
+              </div>
+              <p class="lp-banner-label">Banner lista (512x200px)</p>
+              <input id="lp-input-lista" type="file" accept="image/*" hidden />
+              <button class="lp-banner-btn" type="button" onclick="document.getElementById('lp-input-lista').click()">Seleccionar imagen</button>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="cfg-notebook-panel" id="cfg-panel-3" role="tabpanel" aria-labelledby="cfg-tab-3" hidden>
+          <div class="fiscal-form">
+
+            <p class="config-section-label">Datos fiscales</p>
+            <div class="config-separator"></div>
+            <div class="fiscal-grid">
+              <div class="fiscal-row">
+                <span class="fiscal-label">Razón social</span>
+                <input class="fiscal-input" type="text" placeholder="Razón social" />
+              </div>
+              <div class="fiscal-row">
+                <span class="fiscal-label">RFC</span>
+                <input class="fiscal-input" type="text" placeholder="RFC" />
+              </div>
+              <div class="fiscal-row">
+                <span class="fiscal-label">Régimen fiscal</span>
+                <input class="fiscal-input" type="text" placeholder="Régimen fiscal" />
+              </div>
+              <div class="fiscal-row">
+                <span class="fiscal-label">Código postal fiscal</span>
+                <input class="fiscal-input" type="text" placeholder="CP fiscal" />
+              </div>
+              <div class="fiscal-row">
+                <span class="fiscal-label">Email para facturación</span>
+                <input class="fiscal-input" type="email" placeholder="correo@empresa.com" />
+              </div>
+            </div>
+
+            <p class="config-section-label" style="margin-top:20px;">Domicilio fiscal</p>
+            <div class="config-separator"></div>
+            <div class="fiscal-grid">
+              <div class="fiscal-row">
+                <span class="fiscal-label">Calle fiscal</span>
+                <div class="fiscal-pair">
+                  <input class="fiscal-input" type="text" placeholder="Calle fiscal" />
+                  <input class="fiscal-input fiscal-input-sm" type="text" placeholder="Núm. exterior" />
+                </div>
+              </div>
+              <div class="fiscal-row">
+                <span class="fiscal-label">Número interior fiscal</span>
+                <input class="fiscal-input fiscal-input-sm" type="text" placeholder="Núm. interior" />
+              </div>
+              <div class="fiscal-row">
+                <span class="fiscal-label">Colonia fiscal</span>
+                <div class="fiscal-pair">
+                  <input class="fiscal-input" type="text" placeholder="Colonia fiscal" />
+                  <input class="fiscal-input" type="text" placeholder="Municipio/Alcaldía fiscal" />
+                </div>
+              </div>
+              <div class="fiscal-row">
+                <span class="fiscal-label">Estado fiscal</span>
+                <input class="fiscal-input" type="text" placeholder="Estado fiscal" />
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="cfg-notebook-panel" id="cfg-panel-4" role="tabpanel" aria-labelledby="cfg-tab-4" hidden>
+
+          <!-- Vista: lista -->
+          <div id="personal-list-view">
+            <div class="personal-header">
+              <div class="personal-quota">
+                <span class="personal-quota-label">Personal registrado:</span>
+                <span id="personalUsed">0</span>
+                <span class="personal-quota-sep">/</span>
+                <span id="personalMax">—</span>
+              </div>
+              <button class="personal-add-btn" id="personalAddBtn" type="button">+ Agregar nuevo</button>
+            </div>
+            <div class="personal-table">
+              <div class="personal-table-header">
+                <span>Foto</span>
+                <span>Nombre</span>
+                <span>Email</span>
+                <span>Rol</span>
+                <span>Acceso</span>
+                <span></span>
+              </div>
+              <div id="personalListRows"></div>
+              <p class="personal-empty" id="personalEmpty">Sin personal registrado.</p>
+            </div>
+          </div>
+
+          <!-- Vista: formulario -->
+          <div id="personal-form-view" hidden>
+            <div class="personal-header">
+              <h3 style="margin:0;font-size:1rem;font-weight:600;">Nuevo vendedor</h3>
+              <button class="personal-cancel-btn" id="personalCancelBtn" type="button">✕ Cancelar</button>
+            </div>
+            <div class="section-grid" style="margin-top:16px;">
+              <div>
+                <div class="field">
+                  <label for="user-name">Nombre</label>
+                  <input class="field-input" id="user-name" type="text" placeholder="Nombre completo" />
+                </div>
+                <div class="field">
+                  <label for="user-email">Correo electrónico</label>
+                  <input class="field-input" id="user-email" type="email" placeholder="correo@ejemplo.com" />
+                </div>
+                <div class="field">
+                  <label for="user-store">Tienda</label>
+                  <select class="field-input field-select" id="user-store">
+                    <option value="">Cargando tiendas...</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="user-username">Usuario</label>
+                  <input class="field-input" id="user-username" type="text" placeholder="Nombre de usuario" />
+                </div>
+                <div class="field">
+                  <label for="user-password">Contraseña</label>
+                  <input class="field-input" id="user-password" type="password" placeholder="********" />
+                </div>
+                <div class="field">
+                  <label for="user-two-factor">Habilitar identificación por dos factores</label>
+                  <div class="user-check-row">
+                    <input class="user-check" id="user-two-factor" type="checkbox" />
+                  </div>
+                </div>
+              </div>
+              <div>
+                <label for="user-photo">Foto</label>
+                <div class="photo-box">
+                  <div class="photo-preview-wrap">
+                    <div class="photo-preview" id="photoPreview">
+                      <img id="photoImage" src="/multitienda/static/imagenes/cc.png" alt="Preview" />
+                    </div>
+                    <div class="photo-actions">
+                      <button type="button" class="photo-action-btn" id="editPhotoBtn" title="Editar foto">✎</button>
+                      <button type="button" class="photo-action-btn" id="deletePhotoBtn" title="Eliminar foto">🗑</button>
+                    </div>
+                  </div>
+                  <input class="photo-input" id="user-photo" type="file" accept="image/*" />
+                  <div class="right-field">
+                    <label for="user-phone">Celular</label>
+                    <input class="field-input" id="user-phone" type="tel" placeholder="Ej. 555 123 4567" />
+                  </div>
+                  <div class="right-field">
+                    <label for="user-role">Rol</label>
+                    <select class="field-input field-select" id="user-role">
+                      <option value="">Selecciona un rol</option>
+                      <option value="superadministrador">Superadministrador</option>
+                      <option value="administrador_tienda">Administrador de tienda</option>
+                      <option value="vendedor">Vendedor</option>
+                      <option value="auditor">Auditor</option>
+                    </select>
+                    <ul class="role-help">
+                      <li>Superadministrador = acceso total</li>
+                      <li>Administrador de tienda = solo podrá ver su tienda</li>
+                      <li>Vendedor = acceso operativo a productos y pedidos</li>
+                      <li>Auditor = acceso de consulta y validación</li>
+                    </ul>
+                  </div>
+                  <div class="right-field access-card">
+                    <h3>Usuarios y acceso</h3>
+                    <label for="user-access-level">Nivel de acceso</label>
+                    <select class="field-input field-select" id="user-access-level">
+                      <option value="">Selecciona un nivel</option>
+                      <option value="total">Total</option>
+                      <option value="administrativo">Administrativo</option>
+                      <option value="operativo">Operativo</option>
+                      <option value="consulta">Consulta</option>
+                      <option value="personalizado">Personalizado</option>
+                    </select>
+                    <ul class="role-help">
+                      <li>Total = configuración, usuarios, catálogo y operaciones</li>
+                      <li>Administrativo = gestión de tienda, catálogo y reportes</li>
+                      <li>Operativo = ventas, pedidos e inventario diario</li>
+                      <li>Consulta = solo lectura</li>
+                      <li>Personalizado = permisos definidos manualmente</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div style="margin-top:16px;display:flex;gap:10px;">
+              <button class="personal-add-btn" id="personalSaveBtn" type="button">Guardar</button>
+              <button class="personal-cancel-btn" id="personalCancelBtn2" type="button">Cancelar</button>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="cfg-notebook-panel" id="cfg-panel-5" role="tabpanel" aria-labelledby="cfg-tab-5" hidden>
+          <div class="politicas-list">
+
+            <div class="politica-block">
+              <label class="politica-label">Derechos del consumidor</label>
+              <div class="rte-toolbar" data-target="rte-derechos">
+                <button type="button" data-cmd="bold"               title="Negrita"       style="font-weight:700;">B</button>
+                <button type="button" data-cmd="italic"             title="Cursiva"       style="font-style:italic;">I</button>
+                <button type="button" data-cmd="underline"          title="Subrayado"     style="text-decoration:underline;">U</button>
+                <button type="button" data-cmd="insertUnorderedList" title="Lista"        style="font-size:1rem;line-height:1;">•≡</button>
+                <button type="button" data-cmd="insertOrderedList"   title="Lista numerada" style="font-size:0.75rem;line-height:1;">1.</button>
+                <button type="button" data-cmd="removeFormat"       title="Limpiar formato" style="font-size:0.85rem;color:#6b7280;">✕</button>
+              </div>
+              <div class="rte-editor" id="rte-derechos" contenteditable="true"></div>
+            </div>
+
+            <div class="politica-block">
+              <label class="politica-label">Privacidad de los datos</label>
+              <div class="rte-toolbar" data-target="rte-privacidad">
+                <button type="button" data-cmd="bold"               title="Negrita"       style="font-weight:700;">B</button>
+                <button type="button" data-cmd="italic"             title="Cursiva"       style="font-style:italic;">I</button>
+                <button type="button" data-cmd="underline"          title="Subrayado"     style="text-decoration:underline;">U</button>
+                <button type="button" data-cmd="insertUnorderedList" title="Lista"        style="font-size:1rem;line-height:1;">•≡</button>
+                <button type="button" data-cmd="insertOrderedList"   title="Lista numerada" style="font-size:0.75rem;line-height:1;">1.</button>
+                <button type="button" data-cmd="removeFormat"       title="Limpiar formato" style="font-size:0.85rem;color:#6b7280;">✕</button>
+              </div>
+              <div class="rte-editor" id="rte-privacidad" contenteditable="true"></div>
+            </div>
+
+            <div class="politica-block">
+              <label class="politica-label">Condiciones adicionales</label>
+              <div class="rte-toolbar" data-target="rte-condiciones">
+                <button type="button" data-cmd="bold"               title="Negrita"       style="font-weight:700;">B</button>
+                <button type="button" data-cmd="italic"             title="Cursiva"       style="font-style:italic;">I</button>
+                <button type="button" data-cmd="underline"          title="Subrayado"     style="text-decoration:underline;">U</button>
+                <button type="button" data-cmd="insertUnorderedList" title="Lista"        style="font-size:1rem;line-height:1;">•≡</button>
+                <button type="button" data-cmd="insertOrderedList"   title="Lista numerada" style="font-size:0.75rem;line-height:1;">1.</button>
+                <button type="button" data-cmd="removeFormat"       title="Limpiar formato" style="font-size:0.85rem;color:#6b7280;">✕</button>
+              </div>
+              <div class="rte-editor" id="rte-condiciones" contenteditable="true"></div>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="cfg-notebook-panel" id="cfg-panel-7" role="tabpanel" aria-labelledby="cfg-tab-7" hidden>
+          <div class="vis-form">
+
+            <p class="config-section-label">Configuración de la tienda</p>
+            <div class="config-separator"></div>
+            <div class="vis-grid">
+              <label class="vis-row">
+                <span class="vis-label">Ocultar correo electrónico</span>
+                <input class="vis-check" type="checkbox" />
+              </label>
+              <label class="vis-row">
+                <span class="vis-label">Ocultar teléfono de la tienda</span>
+                <input class="vis-check" type="checkbox" />
+              </label>
+              <label class="vis-row">
+                <span class="vis-label">Ocultar página web</span>
+                <input class="vis-check" type="checkbox" />
+              </label>
+              <label class="vis-row">
+                <span class="vis-label">Ocultar dirección de la tienda</span>
+                <input class="vis-check" type="checkbox" />
+              </label>
+              <label class="vis-row">
+                <span class="vis-label">Ocultar mapa de la tienda</span>
+                <input class="vis-check" type="checkbox" />
+              </label>
+              <label class="vis-row">
+                <span class="vis-label">Ocultar "Ofertas y beneficios" <span class="vis-hint">?</span></span>
+                <input class="vis-check" type="checkbox" />
+              </label>
+              <label class="vis-row">
+                <span class="vis-label">Ocultar "Acerca de la tienda"</span>
+                <input class="vis-check" type="checkbox" />
+              </label>
+              <label class="vis-row">
+                <span class="vis-label">Ocultar políticas de la tienda</span>
+                <input class="vis-check" type="checkbox" />
+              </label>
+              <label class="vis-row">
+                <span class="vis-label">Ocultar botón Ir a tienda</span>
+                <input class="vis-check" type="checkbox" />
+              </label>
+            </div>
+
+            <p class="config-section-label" style="margin-top:24px;">Configuración de elementos de producto</p>
+            <div class="config-separator"></div>
+            <div class="vis-grid">
+              <label class="vis-row">
+                <span class="vis-label">Ocultar precios de productos <span class="vis-hint">?</span></span>
+                <input class="vis-check" type="checkbox" />
+              </label>
+              <label class="vis-row">
+                <span class="vis-label">Ocultar términos y condiciones <span class="vis-hint">?</span></span>
+                <input class="vis-check" type="checkbox" />
+              </label>
+              <label class="vis-row">
+                <span class="vis-label">Ocultar botones de carrito <span class="vis-hint">?</span></span>
+                <input class="vis-check" type="checkbox" />
+              </label>
+              <label class="vis-row">
+                <span class="vis-label">Ocultar checkbox de términos en carrito <span class="vis-hint">?</span></span>
+                <input class="vis-check" type="checkbox" />
+              </label>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+
     </section>
   </section>
   {% else %}
@@ -642,6 +1598,7 @@
     const editor = document.getElementById("sidebarEditor");
 
     const logoInput = document.getElementById("sidebarLogoInput");
+    const logoPreview = document.getElementById("sidebarLogoPreview");
     const textColorInput = document.getElementById("sidebarTextColor");
     const iconColorInput = document.getElementById("sidebarIconColor");
     const topBgInput = document.getElementById("sidebarTopBg");
@@ -734,6 +1691,7 @@
       document.documentElement.style.setProperty("--sidebar-top-bg", settings.topBg);
       document.documentElement.style.setProperty("--sidebar-bottom-bg", settings.bottomBg);
       sidebarLogo.src = settings.logo || DEFAULTS.logo;
+      if (logoPreview) logoPreview.src = settings.logo || DEFAULTS.logo;
       applyAnimation(settings.animation);
 
       textColorInput.value = settings.textColor;
@@ -797,6 +1755,15 @@
       }
     });
 
+    /* click on logo image or change button opens file picker */
+    const configLogoChangeBtn = document.getElementById("configLogoChangeBtn");
+    if (configLogoChangeBtn) {
+      configLogoChangeBtn.addEventListener("click", function () { logoInput.click(); });
+    }
+    if (logoPreview) {
+      logoPreview.addEventListener("click", function () { logoInput.click(); });
+    }
+
     logoInput.addEventListener("change", function () {
       const file = logoInput.files && logoInput.files[0];
       if (!file) return;
@@ -819,4 +1786,184 @@
   })();
 </script>
 <script src="/static/js/backend-navbar.js"></script>
+<script>
+  (function () {
+    var tabs   = document.querySelectorAll(".cfg-notebook-tab");
+    var panels = document.querySelectorAll(".cfg-notebook-panel");
+    tabs.forEach(function (tab, i) {
+      tab.addEventListener("click", function () {
+        tabs.forEach(function (t) { t.classList.remove("active"); t.setAttribute("aria-selected", "false"); });
+        panels.forEach(function (p) { p.hidden = true; });
+        tab.classList.add("active");
+        tab.setAttribute("aria-selected", "true");
+        panels[i].hidden = false;
+      });
+    });
+  })();
+
+  /* Personal de la tienda */
+  (function () {
+    var listView   = document.getElementById("personal-list-view");
+    var formView   = document.getElementById("personal-form-view");
+    var addBtn     = document.getElementById("personalAddBtn");
+    var cancelBtn  = document.getElementById("personalCancelBtn");
+    var cancelBtn2 = document.getElementById("personalCancelBtn2");
+    var usedEl     = document.getElementById("personalUsed");
+    var maxEl      = document.getElementById("personalMax");
+    var listRows   = document.getElementById("personalListRows");
+    var emptyMsg   = document.getElementById("personalEmpty");
+    if (!listView) return;
+
+    var vendors = [];
+    var maxUsers = parseInt(localStorage.getItem("multitienda_max_internal_users") || "0", 10) || null;
+    if (maxEl) maxEl.textContent = maxUsers || "∞";
+
+    function showList() {
+      listView.hidden = false;
+      formView.hidden = true;
+    }
+    function showForm() {
+      listView.hidden = true;
+      formView.hidden = false;
+      loadStores();
+    }
+    function renderList() {
+      listRows.innerHTML = "";
+      if (usedEl) usedEl.textContent = vendors.length;
+      emptyMsg.style.display = vendors.length === 0 ? "" : "none";
+      if (addBtn) addBtn.disabled = maxUsers ? vendors.length >= maxUsers : false;
+      vendors.forEach(function (v, i) {
+        var row = document.createElement("div");
+        row.className = "personal-list-row";
+        row.innerHTML =
+          '<img class="personal-list-avatar" src="' + (v.photo || "/multitienda/static/imagenes/cc.png") + '" alt="" />' +
+          '<span>' + (v.name || "—") + '</span>' +
+          '<span>' + (v.email || "—") + '</span>' +
+          '<span>' + (v.role || "—") + '</span>' +
+          '<span>' + (v.access || "—") + '</span>' +
+          '<button style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:0.9rem;" data-idx="' + i + '" title="Eliminar">✕</button>';
+        row.querySelector("button").addEventListener("click", function () {
+          vendors.splice(parseInt(this.dataset.idx, 10), 1);
+          renderList();
+        });
+        listRows.appendChild(row);
+      });
+    }
+
+    async function loadStores() {
+      var sel = document.getElementById("user-store");
+      if (!sel) return;
+      try {
+        var r = await fetch("/multitienda/vendors/", { headers: { Accept: "application/json" } });
+        if (!r.ok) throw new Error();
+        var stores = await r.json();
+        sel.innerHTML = '<option value="">Selecciona una tienda</option>';
+        (stores || []).forEach(function (s) {
+          var o = document.createElement("option");
+          o.value = s.id || "";
+          o.textContent = s.store_name || ("Tienda #" + s.id);
+          sel.appendChild(o);
+        });
+      } catch (e) {
+        sel.innerHTML = '<option value="">No disponible</option>';
+      }
+    }
+
+    /* Rol → acceso sugerido */
+    document.addEventListener("change", function (e) {
+      if (e.target && e.target.id === "user-role") {
+        var map = { superadministrador: "total", administrador_tienda: "administrativo", vendedor: "operativo", auditor: "consulta" };
+        var acc = document.getElementById("user-access-level");
+        if (acc && map[e.target.value]) acc.value = map[e.target.value];
+      }
+    });
+
+    /* Foto */
+    document.addEventListener("change", function (e) {
+      if (e.target && e.target.id === "user-photo") {
+        var file = e.target.files && e.target.files[0];
+        var img = document.getElementById("photoImage");
+        if (file && img) img.src = URL.createObjectURL(file);
+      }
+    });
+    document.addEventListener("click", function (e) {
+      if (e.target && e.target.id === "editPhotoBtn") document.getElementById("user-photo").click();
+      if (e.target && e.target.id === "deletePhotoBtn") {
+        document.getElementById("user-photo").value = "";
+        document.getElementById("photoImage").src = "/multitienda/static/imagenes/cc.png";
+      }
+    });
+
+    /* Guardar */
+    var saveBtn = document.getElementById("personalSaveBtn");
+    if (saveBtn) saveBtn.addEventListener("click", function () {
+      var name  = document.getElementById("user-name").value.trim();
+      var email = document.getElementById("user-email").value.trim();
+      var role  = document.getElementById("user-role").value;
+      var access = document.getElementById("user-access-level").value;
+      if (!name) { alert("El nombre es requerido."); return; }
+      vendors.push({ name: name, email: email, role: role, access: access });
+      renderList();
+      showList();
+    });
+
+    if (addBtn)    addBtn.addEventListener("click", showForm);
+    if (cancelBtn) cancelBtn.addEventListener("click", showList);
+    if (cancelBtn2) cancelBtn2.addEventListener("click", showList);
+
+    renderList();
+  })();
+
+  (function () {
+    var pairs = [
+      ["lp-input-banner", "lp-img-banner"],
+      ["lp-input-movil",  "lp-img-movil"],
+      ["lp-input-lista",  "lp-img-lista"],
+    ];
+    pairs.forEach(function (pair) {
+      var input = document.getElementById(pair[0]);
+      var img   = document.getElementById(pair[1]);
+      if (!input || !img) return;
+      input.addEventListener("change", function () {
+        var file = input.files && input.files[0];
+        if (!file) return;
+        img.src = URL.createObjectURL(file);
+        img.hidden = false;
+        var empty = img.parentElement.querySelector(".lp-banner-empty");
+        if (empty) empty.style.display = "none";
+      });
+      img.parentElement.addEventListener("click", function () { input.click(); });
+    });
+  })();
+
+
+  /* Nombre cooperativa en Landing page */
+  (function () {
+    var nombreInput = document.querySelector('input[value="Abarrotes Don Pepe"]');
+    var coopSpan    = document.getElementById("lp-coop-name");
+    if (!nombreInput || !coopSpan) return;
+    function sync() {
+      var val = nombreInput.value.trim();
+      coopSpan.textContent = val || "tu cooperativa";
+    }
+    nombreInput.addEventListener("input", sync);
+    sync();
+  })();
+
+  /* RTE — Políticas de la tienda */
+  (function () {
+    document.querySelectorAll(".rte-toolbar").forEach(function (toolbar) {
+      var editorId = toolbar.getAttribute("data-target");
+      var editor   = document.getElementById(editorId);
+      if (!editor) return;
+      toolbar.querySelectorAll("button[data-cmd]").forEach(function (btn) {
+        btn.addEventListener("mousedown", function (e) {
+          e.preventDefault();
+          editor.focus();
+          document.execCommand(btn.getAttribute("data-cmd"), false, null);
+        });
+      });
+    });
+  })();
+</script>
 {% endblock %}
