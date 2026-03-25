@@ -2251,6 +2251,26 @@
     } catch(e){}
   }
 
+  function applyBrandLogoToComp(comp){
+    if(!_brandLogo || !comp || !comp.getAttributes) return;
+    var attrs = comp.getAttributes() || {};
+    if(attrs['data-sipet-logo'] && (comp.get('content') || '').indexOf('<img') === -1){
+      comp.set('content', '<img src="'+_brandLogo+'" style="height:38px;width:auto;object-fit:contain;display:block;" alt="Logo" data-sipet-logo="1">');
+    }
+    if(!comp.components) return;
+    var children = comp.components();
+    if(!children || !children.length) return;
+    for(var i = 0; i < children.length; i++){
+      var child = children.at ? children.at(i) : children[i];
+      applyBrandLogoToComp(child);
+    }
+  }
+
+  function applyBrandLogoToCanvas(){
+    if(!_brandLogo || !_editor || !_editor.getWrapper) return;
+    applyBrandLogoToComp(_editor.getWrapper());
+  }
+
   /* Construye la barra de swatches corporativos en el panel lateral */
   function renderBrandSwatches(){
     var container = document.getElementById('_wb_brand_palette');
@@ -3004,13 +3024,7 @@
   /* Re-inyectar CSS vars al cargar cada página */
   _editor.on('component:add', function(comp){
     injectBrandCSSVars();
-    /* Auto-reemplazar logo slot si hay logo guardado */
-    if(_brandLogo && comp && comp.getAttributes){
-      var attrs = comp.getAttributes();
-      if(attrs['data-sipet-logo'] && (comp.get('content') || '').indexOf('<img') === -1){
-        comp.set('content', '<img src="'+_brandLogo+'" style="height:38px;width:auto;object-fit:contain;display:block;" alt="Logo" data-sipet-logo="1">');
-      }
-    }
+    applyBrandLogoToComp(comp);
   });
 
   /* ── Galería + doble clic en imagen ───────────────────── */
@@ -3184,6 +3198,7 @@
           } else if(j.data.identidad_logo_url){
             _brandLogo = j.data.identidad_logo_url;
           }
+          applyBrandLogoToCanvas();
         }
       });
 
