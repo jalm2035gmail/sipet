@@ -23,31 +23,16 @@
 - `fase_7_pruebas_integracion_regresion.md`
 - `OPERACION_ESTRUCTURA.md`
 
-## Referencia heredada
-
-El codigo de la aplicacion independiente original se conserva en:
-
-- `legacy_source/backend`
-- `legacy_source/frontend`
-- `legacy_source/docs`
-- `legacy_source/data_pipelines`
-- `legacy_source/imagenes`
-- `legacy_source/descripcion.txt`
-- `legacy_source/mineria.txt`
-
-Ese material ya no es el punto de entrada del modulo. Sirve solo como referencia para seguir migrando funcionalidad faltante.
-
 ## Limpieza final
 
-Los restos standalone que estaban fuera del modulo activo fueron retirados en Fase 8.
+Los restos standalone que estaban fuera del modulo activo fueron retirados.
 El unico punto de entrada vigente de Intelicoop en SIPET es `fastapi_modulo/modulos/intelicoop`.
 
 ## Regla de trabajo
 
-Si una funcionalidad ya existe en los archivos activos del modulo SIPET, cualquier cambio nuevo debe hacerse ahi y no en `legacy_source`.
+Si una funcionalidad ya existe en los archivos activos del modulo SIPET, cualquier cambio nuevo debe hacerse ahi.
 
 ## Decision operativa vigente
 
 - Los datos activos del modulo viven en las tablas SQLAlchemy de SIPET.
 - El scoring activo usa `assets/modelo_scoring.pkl` e `intelicoop_scoring.py`.
-- Los pipelines heredados en `legacy_source/data_pipelines` no forman parte del runtime principal; quedan como referencia offline documentada.

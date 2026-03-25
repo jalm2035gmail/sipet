@@ -28,7 +28,7 @@
   - scoring activo del modulo
 - `assets/modelo_scoring.pkl`
   - artefacto ML activo
-- `test_intelicoop_phase7.py`
+- `tests/test_intelicoop_phase7.py`
   - regresion minima del modulo
 
 ## Flujos operativos cubiertos

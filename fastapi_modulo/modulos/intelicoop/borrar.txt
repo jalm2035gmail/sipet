@@ -1,0 +1,257 @@
+🧠 PRINCIPIO CLAVE
+
+No necesitas “muchos datos”.
+Necesitas datos correctos, estructurados y relacionados.
+
+La minería de datos en tu caso debe responder 5 cosas:
+
+¿A quién darle crédito?
+¿Quién va a caer en mora?
+¿Quién va a abandonar?
+¿Qué producto ofrecer?
+¿Cómo crecer captación?
+📊 1. DATOS DEL SOCIO (BASE DEL MODELO)
+
+Estos son obligatorios. Sin esto, no hay minería real.
+
+Campos clave
+✅ socio_id
+✅ fecha_alta
+✅ edad
+✅ genero
+✅ estado_civil
+✅ nivel_educativo
+✅ ocupacion
+✅ sector_economico
+✅ ingreso_mensual
+✅ ubicacion (estado, municipio)
+✅ tipo_socio (activo, inactivo, nuevo)
+✅ antiguedad_meses
+Para minería
+
+Te sirven para:
+
+segmentación
+riesgo por perfil
+análisis territorial
+comportamiento por tipo de socio
+💰 2. DATOS DE CRÉDITO (CORE DEL RIESGO)
+
+Este es el corazón del scoring.
+
+Campos obligatorios
+✅ credito_id
+✅ socio_id
+✅ monto_otorgado
+✅ numero_abonos
+✅ periodicidad
+✅ tasa
+✅ fecha_otorgamiento
+✅ saldo_actual
+✅ estado_credito (vigente, vencido, liquidado)
+✅ dias_mora_actual
+✅ max_dias_mora
+✅ num_reestructuras
+Historial de pagos (CRÍTICO)
+✅ fecha_pago
+✅ monto_pago
+✅ pago_puntual (sí/no)
+✅ dias_atraso
+Features que derivan
+✅ porcentaje_pagado
+frecuencia_pago
+✅ cumplimiento_pago
+mora_promedio
+mora_max
+✅ créditos_activos
+✅ créditos_previos
+
+👉 Esto es lo más importante para riesgo crediticio
+
+🏦 3. DATOS DE AHORRO / CAPTACIÓN
+
+Aquí está la magia para cooperativas (muchas no lo explotan).
+
+Campos clave
+✅ cuenta_id
+✅ socio_id
+✅ saldo_actual
+✅ saldo_promedio_30
+✅ saldo_promedio_90
+✅ fecha_ultima_transaccion
+Transacciones
+✅ tipo (depósito/retiro)
+✅ monto
+✅ fecha
+Features clave
+✅ frecuencia_depositos
+✅ frecuencia_retiros
+✅ captacion_neta
+✅ variabilidad_saldo
+✅ recurrencia_ahorro
+✅ estabilidad_financiera
+
+👉 Esto te ayuda a:
+
+detectar capacidad de pago real
+identificar buenos clientes ocultos
+medir disciplina financiera
+🔁 4. DATOS DE COMPORTAMIENTO TRANSACCIONAL
+
+Esto conecta todo.
+
+Campos
+✅ transaccion_id
+✅ socio_id
+✅ tipo_transaccion
+✅ monto
+✅ canal (sucursal, app, agente)
+✅ fecha
+Features derivados
+✅ transacciones_mes
+ticket_promedio
+uso_canales
+actividad_financiera
+
+👉 Esto te permite:
+
+detectar abandono
+detectar actividad real
+segmentar uso digital vs tradicional
+📢 5. DATOS COMERCIALES (ORO PURO)
+
+Esto casi nadie lo usa bien.
+
+Campos
+✅ campana_id
+✅ socio_id
+✅ tipo_campana
+✅ fecha_envio
+✅ canal (WhatsApp, SMS, email)
+✅ respondio (sí/no)
+✅ convirtio (sí/no)
+Features
+✅ campañas_participadas
+✅ tasa_respuesta
+✅ tasa_conversion
+canal_preferido
+sensibilidad_comercial
+
+👉 Esto te sirve para:
+
+cross-selling
+upselling
+campañas inteligentes
+🧩 6. DATOS DE PRODUCTOS
+Campos
+✅ producto_id
+✅ socio_id
+tipo_producto (ahorro, crédito, inversión)
+fecha_contratacion
+✅ estado
+Features
+✅ num_productos
+✅ diversificacion
+✅ profundidad_relacion
+
+👉 Esto mide qué tan valioso es el socio.
+
+⚠️ 7. DATOS DE RIESGO / ALERTAS
+Campos
+✅ alerta_id
+socio_id
+✅ tipo_alerta
+✅ fecha
+✅ nivel_riesgo
+Features
+✅ numero_alertas
+✅ tendencia_riesgo
+✅ reincidencia
+🧠 8. DATOS DERIVADOS (FEATURES REALES)
+
+Aquí está la verdadera minería.
+
+Estos no vienen en la BD, los construyes tú:
+
+Ejemplos clave
+✅ ratio_deuda_ingreso
+capacidad_pago_estimada
+estabilidad_ingresos
+comportamiento_pago_score
+score_ahorro
+✅ score_comercial
+✅ score_fidelidad
+✅ probabilidad_mora
+✅ probabilidad_compra
+✅ probabilidad_abandono
+
+👉 Estos son los que usa el modelo.
+
+🏗️ ESTRUCTURA IDEAL (MUY IMPORTANTE)
+
+Te recomiendo organizarlo así:
+
+Tablas operativas (lo que ya tienes)
+✅ socios
+✅ creditos
+✅ pagos
+✅ cuentas
+✅ transacciones
+✅ campañas
+Tablas analíticas (lo que debes crear)
+✅ intelicoop_feature_socio
+✅ intelicoop_feature_credito
+✅ intelicoop_feature_ahorro
+intelicoop_feature_comercial
+Tablas de resultados
+✅ scoring
+✅ segmentación
+✅ alertas
+📌 PRIORIDAD REAL (LO MÁS IMPORTANTE)
+
+Si tuvieras que empezar hoy, empieza con estos 10 campos:
+
+✅ ingreso_mensual
+✅ deuda_actual
+✅ antiguedad_meses
+✅ creditos_previos
+dias_mora_promedio
+✅ porcentaje_pagado
+✅ saldo_promedio
+✅ frecuencia_depositos
+✅ transacciones_mes
+✅ num_productos
+
+Con solo eso ya puedes tener un scoring MUCHO mejor.
+
+🚀 NIVEL AVAN (LO QUE TE DIFERENCIA)
+
+Si quieres que Intelicoop sea potente de verdad, agrega:
+
+✅ historial completo de pagos
+✅ comportamiento de ahorro
+✅ respuesta comercial
+✅ segmentación automática
+✅ cohortes por antigüedad
+✅ análisis de abandono
+
+Eso te pone por encima del 90% de cooperativas.
+
+🎯 CONCLUSIÓN
+
+Para minería de datos necesitas 5 bloques:
+
+Socio (perfil)
+Crédito (riesgo)
+Ahorro (capacidad real)
+Transacciones (comportamiento)
+Comercial (intención)
+
+Y luego convertir todo eso en:
+
+👉 features derivadas (ahí está la inteligencia)
+
+Si quieres, en el siguiente paso te construyo:
+
+👉 el diccionario exacto de features (tipo feature_store)
+👉 y el código listo para meterlo en _compute_batch_scoring_inputs()

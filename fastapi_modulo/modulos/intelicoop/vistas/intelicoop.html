@@ -37,6 +37,32 @@
     color: #334155;
     line-height: 1.6;
   }
+  .intelicoop-hero-copy {
+    display: grid;
+    gap: 10px;
+  }
+  .intelicoop-hero-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 2px;
+  }
+  .intelicoop-hero-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    padding: 10px 14px;
+    background: #0f766e;
+    color: #fff;
+    text-decoration: none;
+    font-weight: 600;
+  }
+  .intelicoop-hero-link--ghost {
+    background: #fff;
+    color: #0f172a;
+    border: 1px solid rgba(15, 23, 42, 0.1);
+  }
   .intelicoop-grid {
     display: grid;
     gap: 14px;
@@ -124,7 +150,8 @@
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   }
   .intelicoop-form input,
-  .intelicoop-form select {
+  .intelicoop-form select,
+  .intelicoop-form textarea {
     width: 100%;
     border: 1px solid #cbd5e1;
     border-radius: 10px;
@@ -157,12 +184,17 @@
 <div class="intelicoop-shell" id="intelicoop-root" data-js-url="/api/intelicoop/assets/intelicoop.js">
   <section class="intelicoop-hero">
     <div class="intelicoop-hero-head">
-      <img class="intelicoop-hero-logo" src="/icon/boton/inteligencia.svg" alt="Intelicoop" />
+      <img class="intelicoop-hero-logo" src="/modulos/intelicoop/static/description/inteligencia.svg" alt="Intelicoop" />
       <div class="intelicoop-hero-copy">
         <h1>Intelicoop</h1>
         <p>
         sistema de inteligencia financiera
         </p>
+        <div class="intelicoop-hero-actions">
+          <a class="intelicoop-hero-link" href="/api/intelicoop/importacion/plantillas">Descargar paquete CSV</a>
+          <a class="intelicoop-hero-link intelicoop-hero-link--ghost" href="/api/intelicoop/creditos/importacion/plantilla">Plantilla creditos</a>
+          <a class="intelicoop-hero-link intelicoop-hero-link--ghost" href="#intelicoop-creditos-import-form">Ir a importacion</a>
+        </div>
       </div>
     </div>
     <div class="intelicoop-grid" id="intelicoop-kpis">
@@ -182,6 +214,10 @@
       <button data-panel="campanas" type="button">Campanas</button>
       <button data-panel="prospectos" type="button">Prospectos</button>
       <button data-panel="scoring" type="button">Scoring</button>
+      <button data-panel="segmentacion" type="button">Segmentacion</button>
+      <button data-panel="fundamentos" type="button">Fundamentos</button>
+      <button data-panel="batch" type="button">Batch</button>
+      <button data-panel="gobernanza" type="button">Gobernanza</button>
     </nav>
 
     <div>
@@ -200,6 +236,24 @@
             <input name="email" placeholder="Email" type="email" required />
             <input name="telefono" placeholder="Telefono" />
             <input name="direccion" placeholder="Direccion" />
+            <input name="fecha_nacimiento" type="date" placeholder="Fecha de nacimiento" />
+            <select name="genero">
+              <option value="">Genero</option>
+              <option value="femenino">Femenino</option>
+              <option value="masculino">Masculino</option>
+              <option value="otro">Otro</option>
+            </select>
+            <input name="estado_civil" placeholder="Estado civil" />
+            <input name="nivel_educativo" placeholder="Nivel educativo" />
+            <input name="ocupacion" placeholder="Ocupacion" />
+            <input name="sector_economico" placeholder="Sector economico" />
+            <input name="ubicacion_estado" placeholder="Estado" />
+            <input name="ubicacion_municipio" placeholder="Municipio" />
+            <select name="tipo_socio">
+              <option value="individual">Socio individual</option>
+              <option value="empresarial">Socio empresarial</option>
+              <option value="juvenil">Socio juvenil</option>
+            </select>
             <select name="segmento">
               <option value="inactivo">Inactivo</option>
               <option value="hormiga">Ahorrador Hormiga</option>
@@ -223,14 +277,28 @@
               <option value="">Selecciona un socio</option>
             </select>
             <input name="monto" placeholder="Monto" inputmode="decimal" required />
-            <input name="plazo" placeholder="Plazo en meses" inputmode="numeric" required />
+            <input name="numero_abonos" placeholder="Numero de abonos" inputmode="numeric" required />
+            <select name="periodicidad">
+              <option value="mensual">Mensual</option>
+              <option value="quincenal">Quincenal</option>
+              <option value="semanal">Semanal</option>
+              <option value="bimestral">Bimestral</option>
+            </select>
             <input name="ingreso_mensual" placeholder="Ingreso mensual" inputmode="decimal" value="0" />
             <input name="deuda_actual" placeholder="Deuda actual" inputmode="decimal" value="0" />
             <input name="antiguedad_meses" placeholder="Antiguedad" inputmode="numeric" value="0" />
+            <input name="tasa" placeholder="Tasa" inputmode="decimal" value="0" />
+            <input name="dias_mora_actual" placeholder="Dias mora actual" inputmode="numeric" value="0" />
+            <input name="max_dias_mora" placeholder="Max dias mora" inputmode="numeric" value="0" />
+            <input name="num_reestructuras" placeholder="Reestructuras" inputmode="numeric" value="0" />
             <select name="estado">
               <option value="solicitado">Solicitado</option>
               <option value="aprobado">Aprobado</option>
+              <option value="vigente">Vigente</option>
+              <option value="liquidado">Liquidado</option>
               <option value="rechazado">Rechazado</option>
+              <option value="mora">Mora</option>
+              <option value="reestructurado">Reestructurado</option>
             </select>
           </div>
           <div class="intelicoop-actions">
@@ -238,6 +306,23 @@
           </div>
         </form>
         <div id="intelicoop-creditos-form-result" style="margin:12px 0;"></div>
+        <div class="intelicoop-card" style="margin:16px 0;">
+          <h3 style="margin-top:0;">Importacion de creditos</h3>
+          <p class="intelicoop-status">Carga un CSV con la plantilla oficial para registrar varios creditos de una vez.</p>
+          <div class="intelicoop-actions" style="margin-bottom:12px;">
+            <a href="/api/intelicoop/importacion/plantillas" style="display:inline-flex;align-items:center;justify-content:center;border-radius:10px;padding:10px 14px;background:#0f766e;color:#fff;text-decoration:none;">Descargar paquete CSV</a>
+            <a href="/api/intelicoop/creditos/importacion/plantilla" style="display:inline-flex;align-items:center;justify-content:center;border-radius:10px;padding:10px 14px;background:#fff;color:#0f172a;text-decoration:none;border:1px solid rgba(15,23,42,.12);">Plantilla creditos</a>
+          </div>
+          <form class="intelicoop-form" id="intelicoop-creditos-import-form">
+            <div class="intelicoop-form-grid">
+              <input name="archivo" type="file" accept=".csv,text/csv" required />
+            </div>
+            <div class="intelicoop-actions">
+              <button type="submit">Importar archivo</button>
+            </div>
+          </form>
+          <div id="intelicoop-creditos-import-result" style="margin:12px 0;"></div>
+        </div>
         <div id="intelicoop-creditos-table"></div>
         <div style="margin-top:16px;">
           <h3>Detalle del credito</h3>
@@ -250,6 +335,11 @@
               <option value="">Selecciona un credito</option>
             </select>
             <input name="monto" placeholder="Monto del pago" inputmode="decimal" required />
+            <select name="pago_puntual">
+              <option value="1">Pago puntual</option>
+              <option value="0">Pago con atraso</option>
+            </select>
+            <input name="dias_atraso" placeholder="Dias de atraso" inputmode="numeric" value="0" />
           </div>
           <div class="intelicoop-actions">
             <button type="submit">Registrar pago</button>
@@ -287,6 +377,12 @@
               <option value="retiro">Retiro</option>
             </select>
             <input name="monto" placeholder="Monto" inputmode="decimal" required />
+            <select name="canal">
+              <option value="ventanilla">Ventanilla</option>
+              <option value="app">App</option>
+              <option value="web">Web</option>
+              <option value="cajero">Cajero</option>
+            </select>
           </div>
           <div class="intelicoop-actions">
             <button type="submit">Registrar movimiento</button>
@@ -418,6 +514,49 @@
         </form>
         <div id="intelicoop-scoring-result" style="margin-top:12px;"></div>
       </section>
+
+      <section class="intelicoop-panel intelicoop-card" data-panel-id="segmentacion">
+        <h2 style="margin-top:0;">Segmentacion y propension</h2>
+        <p class="intelicoop-status" id="intelicoop-segmentacion-status">Cargando segmentacion automatica...</p>
+        <div id="intelicoop-segmentacion-content"></div>
+      </section>
+
+      <section class="intelicoop-panel intelicoop-card" data-panel-id="fundamentos">
+        <h2 style="margin-top:0;">Fundamentos de datos</h2>
+        <p class="intelicoop-status" id="intelicoop-foundation-status">Cargando fundamentos del modulo...</p>
+        <div class="intelicoop-actions" style="margin-bottom:16px;">
+          <button id="intelicoop-foundation-materialize" type="button">Materializar corte analitico</button>
+        </div>
+        <div id="intelicoop-foundation-result" style="margin:12px 0;"></div>
+        <div id="intelicoop-foundation-content"></div>
+      </section>
+
+      <section class="intelicoop-panel intelicoop-card" data-panel-id="batch">
+        <h2 style="margin-top:0;">Automatizacion batch</h2>
+        <p class="intelicoop-status" id="intelicoop-batch-status">Cargando automatizacion batch...</p>
+        <div class="intelicoop-actions" style="margin-bottom:16px;">
+          <button id="intelicoop-batch-run-due" type="button">Ejecutar programados</button>
+          <button class="intelicoop-batch-run" data-job-key="foundation_refresh" type="button">Features</button>
+          <button class="intelicoop-batch-run" data-job-key="segmentation_refresh" type="button">Segmentos</button>
+          <button class="intelicoop-batch-run" data-job-key="scoring_refresh" type="button">Scores</button>
+          <button class="intelicoop-batch-run" data-job-key="alerts_refresh" type="button">Alertas</button>
+          <button class="intelicoop-batch-run" data-job-key="governance_refresh" type="button">Gobernanza</button>
+        </div>
+        <div id="intelicoop-batch-result" style="margin:12px 0;"></div>
+        <div id="intelicoop-batch-content"></div>
+      </section>
+
+      <section class="intelicoop-panel intelicoop-card" data-panel-id="gobernanza">
+        <h2 style="margin-top:0;">Gobernanza y mejora continua</h2>
+        <p class="intelicoop-status" id="intelicoop-governance-status">Cargando gobernanza del modelo...</p>
+        <div class="intelicoop-actions" style="margin-bottom:16px;">
+          <button id="intelicoop-governance-refresh" type="button">Actualizar gobernanza</button>
+          <button id="intelicoop-delete-data" type="button" style="background:#991b1b;">Eliminar datos</button>
+        </div>
+        <div id="intelicoop-governance-result" style="margin:12px 0;"></div>
+        <div id="intelicoop-governance-content"></div>
+      </section>
     </div>
   </section>
 </div>
+<script src="/api/intelicoop/assets/intelicoop.js?v=20260323" defer></script>

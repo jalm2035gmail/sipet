@@ -37,7 +37,7 @@ Casos cubiertos:
 
 Archivo de pruebas activo:
 
-- `test_intelicoop_phase7.py`
+- `tests/test_intelicoop_phase7.py`
 
 ## Resultado esperado de Fase 7
 
