@@ -1,0 +1,33 @@
+.o_kanban_view[data-model="avan.citas"] {
+  .oe_kanban_card.state-draft {
+    border-left: 4px solid #d32f2f;
+    color: #d32f2f;
+  }
+
+  .oe_kanban_card.state-confirmed {
+    border-left: 4px solid #111;
+    color: #111;
+  }
+
+  .oe_kanban_card {
+    transition: transform 0.1s ease, box-shadow 0.15s ease;
+  }
+
+  .oe_kanban_card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.08);
+  }
+}
+
+/* Colores en vista lista (incluye móvil) */
+.o_list_view[data-model="avan.citas"] {
+  .o_list_table tbody .o_data_row td {
+    color: #111;
+  }
+  .o_list_table tbody .o_data_row.o_is_danger td {
+    color: #d32f2f;
+  }
+  .o_list_table tbody .o_data_row.o_is_success td {
+    color: #14532d;
+  }
+}

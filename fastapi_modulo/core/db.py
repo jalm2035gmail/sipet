@@ -198,15 +198,50 @@ def get_request_host() -> str:
     return DEFAULT_DATABASE_ROUTER.get_request_host()
 
 
+def get_admin_dataMAIN_url() -> str:
+    return DEFAULT_DATABASE_ROUTER.default_database_url
+
+
+def _should_block_implicit_admin_host(host: Optional[str]) -> bool:
+    if host is None:
+        return False
+    if _normalize_host(host):
+        return False
+    current_host = get_request_host()
+    if not current_host:
+        return False
+    try:
+        from fastapi_modulo.core.tenant_context import get_tenant_context
+
+        context = get_tenant_context()
+    except Exception:
+        context = None
+    if context is None:
+        return False
+    return str(context.access_mode or "").strip().lower() == "tenant"
+
+
+def _enforce_host_argument_safety(host: Optional[str]) -> None:
+    if _should_block_implicit_admin_host(host):
+        raise RuntimeError(
+            "Acceso ambiguo a la BD global desde un request tenant. "
+            "Use get_admin_engine(), get_admin_session_factory() o AdminSessionLocal() "
+            "para tablas globales, o omita el host para usar la BD del sitio actual."
+        )
+
+
 def get_dataMAIN_url_for_host(host: Optional[str] = None) -> str:
+    _enforce_host_argument_safety(host)
     return DEFAULT_DATABASE_ROUTER.get_database_url_for_host(host)
 
 
 def get_engine_for_host(host: Optional[str] = None) -> Engine:
+    _enforce_host_argument_safety(host)
     return DEFAULT_DATABASE_ROUTER.get_engine(host)
 
 
 def get_session_factory_for_host(host: Optional[str] = None) -> sessionmaker:
+    _enforce_host_argument_safety(host)
     return DEFAULT_DATABASE_ROUTER.get_session_factory(host)
 
 
@@ -215,6 +250,7 @@ def get_current_engine() -> Engine:
 
 
 def get_current_dataMAIN_info(host: Optional[str] = None) -> Dict[str, str]:
+    _enforce_host_argument_safety(host)
     target = DEFAULT_DATABASE_ROUTER.get_database_target(host)
     return {
         "host": target.host,
@@ -229,7 +265,27 @@ def get_current_database_info(host: Optional[str] = None) -> Dict[str, str]:
     return get_current_dataMAIN_info(host)
 
 
+def get_admin_engine() -> Engine:
+    return DEFAULT_DATABASE_ROUTER.get_engine("")
+
+
+def get_admin_session_factory() -> sessionmaker:
+    return DEFAULT_DATABASE_ROUTER.get_session_factory("")
+
+
+def get_admin_database_info() -> Dict[str, str]:
+    target = DEFAULT_DATABASE_ROUTER.get_database_target("")
+    return {
+        "host": target.host,
+        "url": target.db_url,
+        "engine": target.engine_name,
+        "path": target.path,
+        "name": target.name,
+    }
+
+
 def dispose_engine_for_host(host: Optional[str] = None) -> None:
+    _enforce_host_argument_safety(host)
     DEFAULT_DATABASE_ROUTER.dispose_engine(host)
 
 
@@ -247,8 +303,14 @@ class _DynamicSessionLocal:
         return get_session_factory_for_host()(**kwargs)
 
 
+class _DynamicAdminSessionLocal:
+    def __call__(self, **kwargs):
+        return get_admin_session_factory()(**kwargs)
+
+
 engine = get_engine_for_host()
 SessionLocal = _DynamicSessionLocal()
+AdminSessionLocal = _DynamicAdminSessionLocal()
 MAIN = declarative_base()
 
 

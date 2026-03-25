@@ -7,13 +7,13 @@ from typing import Callable, Iterable, Sequence
 from sqlalchemy.orm import Session
 
 from fastapi_modulo.core.db import (
-    SessionLocal,
     TenantMigrationRun,
     TenantRegistry,
     create_engine_for_url,
     ensure_ia_config_schema,
     ensure_tenant_admin_schema,
-    get_current_engine,
+    get_admin_engine,
+    get_admin_session_factory,
 )
 
 
@@ -56,9 +56,9 @@ def _log_migration_run(
 
 
 def run_admin_migrations(session: Session | None = None) -> TenantMigrationResult:
-    ensure_tenant_admin_schema(get_current_engine())
+    ensure_tenant_admin_schema(get_admin_engine())
     own_session = session is None
-    db = session or SessionLocal()
+    db = session or get_admin_session_factory()()
     try:
         _log_migration_run(
             db,
@@ -137,8 +137,8 @@ def run_tenant_migration(session: Session, tenant: TenantRegistry) -> list[Tenan
 
 
 def run_migrations_for_tenants(tenant_key: str = "") -> list[TenantMigrationResult]:
-    ensure_tenant_admin_schema(get_current_engine())
-    session = SessionLocal()
+    ensure_tenant_admin_schema(get_admin_engine())
+    session = get_admin_session_factory()()
     try:
         results: list[TenantMigrationResult] = [run_admin_migrations(session)]
         for tenant in list_migration_targets(session, tenant_key=tenant_key):

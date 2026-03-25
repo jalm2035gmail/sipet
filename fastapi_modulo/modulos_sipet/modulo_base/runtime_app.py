@@ -710,7 +710,7 @@ def ensure_default_roles() -> None:
     Rol.__table__.create(bind=engine, checkfirst=True)
     db = SessionLocal()
     try:
-        from fastapi_modulo.modulos_sipet.personalizacion.controladores.roles import DEFAULT_SYSTEM_ROLES
+        from fastapi_modulo.modulos.personalizacion.controladores.roles import DEFAULT_SYSTEM_ROLES
 
         for role_name, role_description in DEFAULT_SYSTEM_ROLES:
             existing = db.query(Rol).filter(Rol.nombre == role_name).first()

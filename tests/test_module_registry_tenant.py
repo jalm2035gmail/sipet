@@ -104,3 +104,10 @@ def test_legacy_module_is_disabled_by_default(monkeypatch) -> None:
 
     assert module_registry.is_supported_module(legacy_module) is False
     assert module_registry.is_module_enabled("legacy_demo", tenant_key="tenant_demo") is False
+
+
+def test_multitienda_is_not_treated_as_unsupported_legacy() -> None:
+    module = module_registry.MODULES_BY_KEY["multitienda"]
+
+    assert module_registry.is_legacy_module(module) is False
+    assert module_registry.is_supported_module(module) is True

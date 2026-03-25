@@ -1,0 +1,512 @@
+{% extends "modulos_sipet/web/vistas/backend_base.html" %}
+
+{% block title %}Referidos{% endblock %}
+
+{% block content %}
+<div class="referidos-container" x-data="referidosApp()" x-init="init()">
+
+  <!-- Header -->
+  <div class="page-header d-flex align-items-center justify-content-between mb-4">
+    <div>
+      <h1 class="h3 mb-0"><i class="fa-solid fa-users me-2 text-primary"></i>Programa de Referidos</h1>
+      <p class="text-muted mb-0">Ciclo de vida de prospectos, incentivos y embajadores</p>
+    </div>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNuevoReferido">
+      <i class="fa-solid fa-plus me-1"></i> Nuevo Referido
+    </button>
+  </div>
+
+  <!-- KPIs -->
+  <div class="row g-3 mb-4">
+    {% set kpi_items = [
+      ("Total Referidos", stats.total, "fa-users", "primary"),
+      ("Generados", stats.by_state.draft, "fa-file-pen", "secondary"),
+      ("Cualificados", stats.by_state.qualified, "fa-user-check", "info"),
+      ("Convertidos", stats.by_state.converted, "fa-circle-check", "success"),
+      ("Liquidados", stats.by_state.paid, "fa-coins", "warning"),
+      ("Rechazados", stats.by_state.rejected, "fa-ban", "danger"),
+    ] %}
+    {% for label, value, icon, color in kpi_items %}
+    <div class="col-6 col-md-4 col-xl-2">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body text-center py-3">
+          <i class="fa-solid {{ icon }} fa-2x text-{{ color }} mb-2"></i>
+          <div class="h4 mb-0 fw-bold">{{ value or 0 }}</div>
+          <small class="text-muted">{{ label }}</small>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Tabs -->
+  <ul class="nav nav-tabs mb-3" id="refTabs">
+    <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#tab-referidos">Referidos</a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-referentes">Referentes</a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-incentivos">Incentivos</a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-embajadores">Embajadores</a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-config">Configuración</a></li>
+  </ul>
+
+  <div class="tab-content">
+
+    <!-- ─── TAB: REFERIDOS ─────────────────────────────────────────── -->
+    <div class="tab-pane fade show active" id="tab-referidos">
+      <!-- Filtros rápidos -->
+      <div class="d-flex gap-2 mb-3 flex-wrap">
+        {% for state, label, color in [
+          ('', 'Todos', 'secondary'),
+          ('draft', 'Generados', 'secondary'),
+          ('qualified', 'Cualificados', 'info'),
+          ('converted', 'Convertidos', 'success'),
+          ('paid', 'Liquidados', 'warning'),
+          ('rejected', 'Rechazados', 'danger'),
+        ] %}
+        <a href="/referidos{% if state %}?state={{ state }}{% endif %}"
+           class="btn btn-sm btn-outline-{{ color }}">{{ label }}</a>
+        {% endfor %}
+      </div>
+
+      <div class="table-responsive">
+        <table class="table table-hover align-middle">
+          <thead class="table-light">
+            <tr>
+              <th>Código</th>
+              <th>Prospecto</th>
+              <th>Referente / MIU</th>
+              <th>Estado</th>
+              <th>Conversión</th>
+              <th>Incentivo</th>
+              <th>Fraude</th>
+              <th>Fecha</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if referidos %}
+            {% for r in referidos %}
+            <tr>
+              <td><code>{{ r.cvr_code }}</code></td>
+              <td>
+                <div class="fw-semibold">{{ r.nombre_prospecto }}</div>
+                {% if r.phone %}<small class="text-muted">{{ r.phone }}</small>{% endif %}
+              </td>
+              <td>
+                <small>{{ r.referente_miu or '—' }}</small>
+              </td>
+              <td>
+                {% set state_classes = {
+                  'draft': 'secondary',
+                  'qualified': 'info',
+                  'converted': 'success',
+                  'paid': 'warning',
+                  'rejected': 'danger'
+                } %}
+                {% set state_labels = {
+                  'draft': 'Generado',
+                  'qualified': 'Cualificado',
+                  'converted': 'Convertido',
+                  'paid': 'Liquidado',
+                  'rejected': 'Rechazado'
+                } %}
+                <span class="badge bg-{{ state_classes.get(r.state, 'secondary') }}">
+                  {{ state_labels.get(r.state, r.state) }}
+                </span>
+                {% if r.is_excluded %}<span class="badge bg-dark ms-1">Excluido</span>{% endif %}
+              </td>
+              <td>
+                {% if r.conversion_amount and r.conversion_amount > 0 %}
+                  Q {{ "%.2f"|format(r.conversion_amount|float) }}
+                {% else %}—{% endif %}
+              </td>
+              <td>
+                {% if r.incentive_amount and r.incentive_amount > 0 %}
+                  <span class="text-success fw-semibold">Q {{ "%.2f"|format(r.incentive_amount|float) }}</span>
+                {% else %}—{% endif %}
+              </td>
+              <td>
+                {% if r.fraud_flag %}
+                  <span class="badge bg-danger" title="{{ r.fraud_reason }}">&#x26A0; {{ r.fraud_score|int }}</span>
+                {% else %}
+                  <span class="text-muted">—</span>
+                {% endif %}
+              </td>
+              <td><small>{{ r.created_at.strftime('%d/%m/%Y') if r.created_at else '—' }}</small></td>
+              <td>
+                <div class="btn-group btn-group-sm">
+                  {% if r.state == 'draft' %}
+                  <button class="btn btn-outline-info" onclick="accion({{ r.id }}, 'cualificar')" title="Cualificar">
+                    <i class="fa-solid fa-user-check"></i>
+                  </button>
+                  {% endif %}
+                  {% if r.state in ('draft', 'qualified') and not r.is_excluded %}
+                  <button class="btn btn-outline-success" onclick="abrirConvertir({{ r.id }})" title="Convertir">
+                    <i class="fa-solid fa-circle-check"></i>
+                  </button>
+                  {% endif %}
+                  {% if r.state == 'converted' %}
+                  <button class="btn btn-outline-warning" onclick="accion({{ r.id }}, 'pagar')" title="Liquidar">
+                    <i class="fa-solid fa-coins"></i>
+                  </button>
+                  {% endif %}
+                  {% if r.state not in ('paid', 'rejected') %}
+                  <button class="btn btn-outline-danger" onclick="abrirRechazar({{ r.id }})" title="Rechazar">
+                    <i class="fa-solid fa-ban"></i>
+                  </button>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+            {% else %}
+            <tr><td colspan="9" class="text-center text-muted py-4">Sin referidos registrados</td></tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ─── TAB: REFERENTES ────────────────────────────────────────── -->
+    <div class="tab-pane fade" id="tab-referentes">
+      <div class="d-flex justify-content-end mb-3">
+        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalNuevoReferente">
+          <i class="fa-solid fa-plus me-1"></i> Nuevo Referente
+        </button>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle">
+          <thead class="table-light">
+            <tr><th>Nombre</th><th>MIU</th><th>Email</th><th>Teléfono</th><th>Link de Referido</th></tr>
+          </thead>
+          <tbody>
+            {% for ref in referentes %}
+            <tr>
+              <td class="fw-semibold">{{ ref.nombre }}</td>
+              <td><code class="bg-light px-2 py-1 rounded">{{ ref.miu_code }}</code></td>
+              <td>{{ ref.email or '—' }}</td>
+              <td>{{ ref.phone or '—' }}</td>
+              <td>
+                <a href="/referral/{{ ref.miu_code }}" target="_blank" class="text-decoration-none">
+                  <i class="fa-solid fa-link me-1"></i>/referral/{{ ref.miu_code }}
+                </a>
+              </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="5" class="text-center text-muted py-4">Sin referentes registrados</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ─── TAB: INCENTIVOS ────────────────────────────────────────── -->
+    <div class="tab-pane fade" id="tab-incentivos">
+      <div class="d-flex justify-content-end mb-3">
+        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalNuevoIncentivo">
+          <i class="fa-solid fa-plus me-1"></i> Nuevo Incentivo
+        </button>
+      </div>
+      <div class="row g-3">
+        {% for inc in incentivos %}
+        <div class="col-md-6 col-lg-4">
+          <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+              <h6 class="card-title fw-bold">{{ inc.name }}</h6>
+              {% if inc.beneficio %}<p class="text-muted small mb-2">{{ inc.beneficio }}</p>{% endif %}
+              <div class="d-flex gap-2 flex-wrap">
+                {% if inc.incentive_type == 'percent' %}
+                <span class="badge bg-success">{{ inc.percentage_value }}%</span>
+                {% elif inc.incentive_type == 'absolute' %}
+                <span class="badge bg-primary">Q {{ inc.fixed_value }}</span>
+                {% else %}
+                <span class="badge bg-info">Social</span>
+                {% endif %}
+                <span class="badge bg-secondary">{{ inc.scenario_type }}</span>
+                {% if inc.max_amount and inc.max_amount > 0 %}
+                <span class="badge bg-warning text-dark">Máx Q{{ inc.max_amount }}</span>
+                {% endif %}
+              </div>
+              {% if inc.min_date or inc.max_date %}
+              <small class="text-muted d-block mt-2">
+                Vigencia: {{ inc.min_date or '—' }} — {{ inc.max_date or '—' }}
+              </small>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        {% else %}
+        <div class="col-12 text-center text-muted py-4">Sin reglas de incentivo</div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- ─── TAB: EMBAJADORES ───────────────────────────────────────── -->
+    <div class="tab-pane fade" id="tab-embajadores">
+      <p class="text-muted">Gestión de embajadores de marca por negocio. Configura desde la API o próximamente aquí.</p>
+    </div>
+
+    <!-- ─── TAB: CONFIGURACION ────────────────────────────────────── -->
+    <div class="tab-pane fade" id="tab-config">
+      {% if configuracion %}
+      <form id="formConfig" class="row g-3" onsubmit="guardarConfig(event)">
+        <div class="col-md-6">
+          <label class="form-label">Nombre</label>
+          <input type="text" class="form-control" name="name" value="{{ configuracion.name }}">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Escenario de negocio</label>
+          <select class="form-select" name="scenario_type">
+            {% for val, lbl in [('generic','Genérico'),('credit','Créditos'),('commerce','Comercios'),('health','Salud')] %}
+            <option value="{{ val }}" {% if configuracion.scenario_type == val %}selected{% endif %}>{{ lbl }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-12">
+          <label class="form-label">Definición de Condición de Activación (CA)</label>
+          <textarea class="form-control" name="ca_description" rows="3">{{ configuracion.ca_description or '' }}</textarea>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Meta de referidos</label>
+          <input type="number" class="form-control" name="kpi_target" value="{{ configuracion.kpi_target }}">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Vigencia desde</label>
+          <input type="date" class="form-control" name="validity_start" value="{{ configuracion.validity_start or '' }}">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Vigencia hasta</label>
+          <input type="date" class="form-control" name="validity_end" value="{{ configuracion.validity_end or '' }}">
+        </div>
+        <div class="col-12">
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" name="use_whatsapp" id="useWA" {% if configuracion.use_whatsapp %}checked{% endif %}>
+            <label class="form-check-label" for="useWA">Conector WhatsApp</label>
+          </div>
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" name="use_email" id="useEmail" {% if configuracion.use_email %}checked{% endif %}>
+            <label class="form-check-label" for="useEmail">Notificaciones Email</label>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Webhook WhatsApp</label>
+          <input type="url" class="form-control" name="whatsapp_webhook_url" value="{{ configuracion.whatsapp_webhook_url or '' }}">
+        </div>
+        <div class="col-12">
+          <button type="submit" class="btn btn-primary">
+            <i class="fa-solid fa-floppy-disk me-1"></i> Guardar
+          </button>
+        </div>
+      </form>
+      {% else %}
+      <div class="alert alert-info">
+        No hay configuración activa.
+        <button class="btn btn-sm btn-primary ms-2" onclick="guardarConfig(null, true)">Crear configuración</button>
+      </div>
+      {% endif %}
+    </div>
+
+  </div><!-- end tab-content -->
+</div><!-- end container -->
+
+<!-- ─── MODALES ─────────────────────────────────────────────────────── -->
+
+<!-- Modal: Nuevo Referido -->
+<div class="modal fade" id="modalNuevoReferido" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Nuevo Referido</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="formNuevoReferido" onsubmit="crearReferido(event)">
+        <div class="modal-body row g-3">
+          <div class="col-12">
+            <label class="form-label">Referente <span class="text-danger">*</span></label>
+            <select class="form-select" name="referente_id" required>
+              <option value="">— Selecciona —</option>
+              {% for ref in referentes %}
+              <option value="{{ ref.id }}">{{ ref.nombre }} ({{ ref.miu_code }})</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-12">
+            <label class="form-label">Nombre del Prospecto <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" name="nombre_prospecto" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Email</label>
+            <input type="email" class="form-control" name="email">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Teléfono</label>
+            <input type="tel" class="form-control" name="phone">
+          </div>
+          <div class="col-12">
+            <label class="form-label">Origen</label>
+            <select class="form-select" name="referral_source">
+              <option value="web">Plataforma Web</option>
+              <option value="app">Aplicación Móvil</option>
+              <option value="manual">Registro Manual</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Crear</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Nuevo Referente -->
+<div class="modal fade" id="modalNuevoReferente" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Nuevo Referente</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="formNuevoReferente" onsubmit="crearReferente(event)">
+        <div class="modal-body row g-3">
+          <div class="col-12">
+            <label class="form-label">Nombre <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" name="nombre" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Email</label>
+            <input type="email" class="form-control" name="email">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Teléfono</label>
+            <input type="tel" class="form-control" name="phone">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Crear (genera MIU)</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Convertir Referido -->
+<div class="modal fade" id="modalConvertir" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Convertir Referido</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="formConvertir" onsubmit="ejecutarConvertir(event)">
+        <input type="hidden" id="convertirId" name="referido_id">
+        <div class="modal-body row g-3">
+          <div class="col-12">
+            <label class="form-label">Monto de Conversión (Q)</label>
+            <input type="number" step="0.01" class="form-control" name="conversion_amount" placeholder="0.00">
+          </div>
+          <div class="col-12">
+            <label class="form-label">Producto adquirido</label>
+            <input type="text" class="form-control" name="product_acquired">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-success">Confirmar Conversión</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Rechazar Referido -->
+<div class="modal fade" id="modalRechazar" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Rechazar Referido</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="formRechazar" onsubmit="ejecutarRechazar(event)">
+        <input type="hidden" id="rechazarId" name="referido_id">
+        <div class="modal-body">
+          <label class="form-label">Motivo de rechazo</label>
+          <textarea class="form-control" name="reason" rows="3" placeholder="Opcional..."></textarea>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-danger">Rechazar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Nuevo Incentivo -->
+<div class="modal fade" id="modalNuevoIncentivo" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Nueva Regla de Incentivo</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="formNuevoIncentivo" onsubmit="crearIncentivo(event)">
+        <div class="modal-body row g-3">
+          <div class="col-12">
+            <label class="form-label">Nombre <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" name="name" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Tipo</label>
+            <select class="form-select" name="incentive_type" onchange="toggleIncentiveFields(this)">
+              <option value="percent">Porcentaje</option>
+              <option value="absolute">Monto Fijo</option>
+              <option value="social">Beneficio Social</option>
+            </select>
+          </div>
+          <div class="col-md-6" id="fieldPercent">
+            <label class="form-label">Porcentaje (%)</label>
+            <input type="number" step="0.01" class="form-control" name="percentage_value" value="0">
+          </div>
+          <div class="col-md-6 d-none" id="fieldFixed">
+            <label class="form-label">Monto Fijo (Q)</label>
+            <input type="number" step="0.01" class="form-control" name="fixed_value" value="0">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Monto Máximo (Q)</label>
+            <input type="number" step="0.01" class="form-control" name="max_amount" value="0">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Vigente desde</label>
+            <input type="date" class="form-control" name="min_date">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Vigente hasta</label>
+            <input type="date" class="form-control" name="max_date">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Crear</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Toast de feedback -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3">
+  <div id="toastRef" class="toast align-items-center text-white border-0" role="alert">
+    <div class="d-flex">
+      <div class="toast-body" id="toastMsg">Operación completada.</div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/referidos/js/referidos.js"></script>
+{% endblock %}

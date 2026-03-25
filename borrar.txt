@@ -1,0 +1,31 @@
+Para intelicoop como módulo de minería de datos, yo lo dividiría en 7 fases:
+
+1. Fundamentos de datos
+definir entidades, relaciones, calidad mínima y cortes de tiempo
+separar datos transaccionales de datos analíticos
+
+2. Feature engineering
+construir variables por socio, crédito, ahorro, campaña y prospecto
+dejar versionadas las features
+
+3. Analítica descriptiva
+KPIs confiables, cohortes, tendencias, semáforos y snapshots
+distinguir métricas observadas vs estimadas
+
+4. Scoring operativo
+mejorar scoring crediticio con trazabilidad, explicación y versionado
+guardar inputs, outputs y razones del score
+
+5. Segmentación y propensión
+segmentación automática de socios
+propensión comercial, riesgo temprano, conversión y abandono
+
+6. Automatización batch
+procesos programados para recalcular features, segmentos, scores y alertas
+bitácora de ejecución y control de calidad
+
+7. Gobernanza y mejora continua
+monitoreo de desempeño
+drift del modelo
+recalibración
+auditoría, explicabilidad y reglas de negocio

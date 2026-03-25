@@ -12,3 +12,4 @@ fastapi_modulo/runtime_store/
 
 node_modules/
 .env
+.deploy-uprocach.env

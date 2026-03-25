@@ -13,7 +13,8 @@ from fastapi_modulo.core.db import (
     TenantProvisionLog,
     TenantRegistry,
     ensure_tenant_admin_schema,
-    get_current_engine,
+    get_admin_engine,
+    get_admin_session_factory,
 )
 
 DEFAULT_CORE_APPS = ("web", "modulo_base")
@@ -195,10 +196,8 @@ def create_tenant_with_default_session(
     plan: str = "base",
     core_apps: Iterable[str] = DEFAULT_CORE_APPS,
 ) -> TenantProvisionResult:
-    from fastapi_modulo.core.db import SessionLocal
-
-    ensure_tenant_admin_schema(get_current_engine())
-    session = SessionLocal()
+    ensure_tenant_admin_schema(get_admin_engine())
+    session = get_admin_session_factory()()
     try:
         return create_tenant(
             session=session,

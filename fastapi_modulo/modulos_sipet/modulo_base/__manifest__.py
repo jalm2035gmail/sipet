@@ -1,5 +1,6 @@
 MANIFEST = {
     "name": "modulo_base",
+    "label": "Modulo base",
     "summary": "Plantilla base reutilizable para modulos SIPET.",
     "description": (
         "Framework interno de modulos SIPET con contratos reutilizables para "
@@ -74,6 +75,7 @@ MANIFEST = {
             "controladores/api.py",
             "controladores/assets.py",
             "controladores/dependencies.py",
+            "controladores/settings.py",
         ],
         "core": [
             "core/audit.py",

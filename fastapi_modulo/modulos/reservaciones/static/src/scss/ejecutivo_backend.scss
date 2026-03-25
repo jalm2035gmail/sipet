@@ -1,0 +1,103 @@
+.o_form_view[data-model="avan.citas.ejecutivo"] {
+  .avan-ejecutivo-citas-btn {
+    font-weight: 700;
+    border-radius: 10px;
+  }
+
+  .avan-horarios-wrapper {
+    overflow-x: auto;
+  }
+
+  .avan-horarios-grid {
+    min-width: 520px;
+    margin-bottom: 0;
+
+    .horario-row:nth-child(even) {
+      background-color: #f8f9fa;
+    }
+    .horario-row:nth-child(odd) {
+      background-color: #fff;
+    }
+    td {
+      padding-top: 4px !important;
+      padding-bottom: 4px !important;
+      height: 32px !important;
+    }
+  }
+
+  /* Botón flotante “Citas” */
+  .avan-citas-fab-wrapper {
+    position: fixed;
+    right: 16px;
+    bottom: 16px;
+    z-index: 1050;
+  }
+
+  .avan-citas-fab {
+    position: fixed;
+    right: 16px;
+    bottom: 16px;
+    z-index: 1050;
+    border-radius: 999px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 16px;
+    font-weight: 600;
+  }
+
+  @media (min-width: 768px) {
+    .avan-citas-fab,
+    .avan-citas-fab-wrapper {
+      display: none;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .o_form_sheet_bg {
+      padding: 8px;
+      margin: 0;
+    }
+
+    .o_group {
+      flex-direction: column !important;
+      gap: 8px;
+    }
+
+    .oe_avatar {
+      max-width: 140px;
+      margin: 0 auto;
+      display: block;
+    }
+
+    .avan-ejecutivo-citas-btn {
+      position: fixed;
+      right: 16px;
+      bottom: 18px;
+      z-index: 1001;
+      box-shadow: 0 10px 26px rgba(20, 90, 50, 0.28);
+      border-radius: 999px;
+      padding: 10px 18px;
+    }
+
+    /* Dejar espacio para el botón flotante y evitar solapado */
+    .o_form_statusbar {
+      padding-right: 96px;
+    }
+
+    .avan-horarios-grid {
+      min-width: 100%;
+      font-size: 13px;
+    }
+
+    .o_notebook {
+      padding-bottom: 64px; // espacio para botón flotante
+    }
+
+    /* Opcional: ocultar smart buttons en móvil para dejar solo el FAB */
+    .oe_button_box {
+      display: none;
+    }
+  }
+}
