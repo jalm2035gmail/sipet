@@ -11,7 +11,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import text
 from fastapi_modulo.core import db as core_db
-from fastapi_modulo.modulos.personalizacion.controladores.roles import ensure_default_roles
+from fastapi_modulo.modulos_sipet.personalizacion.controladores.roles import ensure_default_roles
 from fastapi_modulo.modulos_sipet.modulo_base.runtime_app import POAActivity
 from fastapi_modulo.modulos_sipet.web.controladores.backend_shell import render_backend_page
 from fastapi_modulo.modulos_sipet.web.modelos.core_models import Rol, Usuario
