@@ -692,22 +692,28 @@ def api_gallery_list(request: Request):
 
 
 @_gallery_router.post("/gallery/upload")
-async def api_gallery_upload(request: Request):
+async def api_gallery_upload(
+    request: Request,
+    file: Optional[UploadFile] = File(None),
+    image: Optional[UploadFile] = File(None),
+    files: Optional[UploadFile] = File(None),
+):
     _require_write(request)
-    upload = None
+    upload = file or image or files
     form_error = None
     form_debug: list[str] = []
-    try:
-        form = await request.form()
-        for _, value in form.multi_items():
-            form_debug.append(f"{type(value).__name__}:{getattr(value, 'filename', '') or getattr(value, '__class__', type(value)).__name__}")
-            if getattr(value, "filename", None):
-                upload = value
-                break
-    except Exception as exc:
-        form_error = str(exc) or exc.__class__.__name__
-        logger.exception("frontend gallery upload: failed to parse multipart form")
-        upload = None
+    if upload is None or not getattr(upload, "filename", None):
+        try:
+            form = await request.form()
+            for _, value in form.multi_items():
+                form_debug.append(f"{type(value).__name__}:{getattr(value, 'filename', '') or getattr(value, '__class__', type(value)).__name__}")
+                if getattr(value, "filename", None):
+                    upload = value
+                    break
+        except Exception as exc:
+            form_error = str(exc) or exc.__class__.__name__
+            logger.exception("frontend gallery upload: failed to parse multipart form")
+            upload = None
     if upload is None or not getattr(upload, "filename", None):
         error_message = "No se recibió ninguna imagen multipart en la solicitud."
         if form_error:
