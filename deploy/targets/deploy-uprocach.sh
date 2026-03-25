@@ -18,6 +18,7 @@ LEGACY_DB_PATH="${LEGACY_DB_PATH:-/opt/sipet/sipet.db}"
 LEGACY_DB_FALLBACK_PATH="${LEGACY_DB_FALLBACK_PATH:-/opt/sipet/strategic_planning.db}"
 PREVIOUS_PERSISTENT_DB_PATH="${PREVIOUS_PERSISTENT_DB_PATH:-${PERSISTENT_DB_DIR}/strategic_planning.db}"
 RESTART_CMD="${RESTART_CMD:-/usr/local/bin/sipet-restart}"
+SYSTEMD_SERVICE_NAME="${SYSTEMD_SERVICE_NAME:-sipet}"
 POSTGRES_DB="${POSTGRES_DB:-sipet}"
 POSTGRES_USER="${POSTGRES_USER:-sipet}"
 POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-}"
@@ -49,6 +50,7 @@ echo "  PERSISTENT_DB_DIR=$PERSISTENT_DB_DIR"
 echo "  PERSISTENT_DB_PATH=$PERSISTENT_DB_PATH"
 echo "  REMOTE_IMPORTED_MODULES_DIR=$REMOTE_IMPORTED_MODULES_DIR"
 echo "  RESTART_CMD=$RESTART_CMD"
+echo "  SYSTEMD_SERVICE_NAME=$SYSTEMD_SERVICE_NAME"
 
 echo "Validando directorio remoto de modulos importados..."
 ssh "$SERVER" "test -d '${REMOTE_IMPORTED_MODULES_DIR}' || { echo 'ERROR: ${REMOTE_IMPORTED_MODULES_DIR} no existe en servidor. Este deploy preserva fastapi_modulo/modulos y requiere que ya exista en remoto.'; exit 1; }"
@@ -81,6 +83,7 @@ rsync -az --delete \
   --exclude '*.pyc' \
   --exclude '.env' \
   --exclude 'fastapi_modulo/modulos/' \
+  --exclude 'fastapi_modulo/modulos_sipet/web/identidad_login.json' \
   --exclude 'fastapi_modulo/runtime_store/' \
   --exclude 'fastapi_modulo/templates/imagenes/' \
   --exclude 'fastapi_modulo/identidad_login.json' \
@@ -88,10 +91,11 @@ rsync -az --delete \
   "$LOCAL_DIR" "$SERVER:$REMOTE_DIR"
 
 echo "Reiniciando app..."
+REMOTE_RESTART_SNIPPET="if [ -x '${RESTART_CMD}' ]; then sudo '${RESTART_CMD}'; else sudo systemctl restart '${SYSTEMD_SERVICE_NAME}' && sudo systemctl --no-pager --full status '${SYSTEMD_SERVICE_NAME}' || true; fi"
 if [ "${DATABASE_BACKEND}" = "sqlite" ]; then
-  ssh -tt "$SERVER" "cd '${REMOTE_DIR}' && SQLITE_DB_PATH='${PERSISTENT_DB_PATH}' sudo '${RESTART_CMD}'"
+  ssh -tt "$SERVER" "cd '${REMOTE_DIR}' && SQLITE_DB_PATH='${PERSISTENT_DB_PATH}' bash -lc \"${REMOTE_RESTART_SNIPPET}\""
 else
-  ssh -tt "$SERVER" "cd '${REMOTE_DIR}' && sudo '${RESTART_CMD}'"
+  ssh -tt "$SERVER" "cd '${REMOTE_DIR}' && bash -lc \"${REMOTE_RESTART_SNIPPET}\""
 fi
 
 echo "Deploy completado. Backend=${DATABASE_BACKEND}"

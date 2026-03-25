@@ -64,6 +64,10 @@ rsync -az --delete \
 
 echo "Publicando configuracion dedicada del dominio..."
 REMOTE_DOMAIN_CONF="/tmp/${DOMAIN_NAME}.conf"
+EXISTING_DOMAIN_DB_PASSWORD="$(ssh "$SERVER" "python3 -c \"from configparser import ConfigParser; from pathlib import Path; path = Path('${DOMAIN_CONFIG_DIR}/${DOMAIN_NAME}.conf'); parser = ConfigParser(interpolation=None); parser.read(path, encoding='utf-8'); print(parser.get('options', 'db_password', fallback='')) if path.exists() else print('')\"" | tr -d '\r')"
+if [ -z "${DOMAIN_DB_PASSWORD}" ] && [ -n "${EXISTING_DOMAIN_DB_PASSWORD}" ]; then
+  DOMAIN_DB_PASSWORD="${EXISTING_DOMAIN_DB_PASSWORD}"
+fi
 {
   printf '%s\n' "[options]"
   printf 'domain = %s\n' "${DOMAIN_NAME}"
