@@ -10,7 +10,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from fastapi_modulo.core import db as core_db
 from fastapi_modulo.core.db import MAIN
-from fastapi_modulo.modulos_sipet.multiempresa.modelos.me_db_models import MeEmpresa
+from fastapi_modulo.modulos.multiempresa.modelos.me_db_models import MeEmpresa
 
 _ME_TABLES = [MeEmpresa.__table__]
 

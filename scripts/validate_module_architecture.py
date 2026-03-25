@@ -100,6 +100,23 @@ def _check_manifest(module_path: Path, result: ValidationResult) -> dict[str, An
                 current = module_path / str(rel_path)
                 if not current.exists():
                     result.add_error("manifest.asset_missing", f"No existe el asset declarado '{rel_path}'", current)
+
+    normalized_parts = module_path.parts
+    under_core_dir = "modulos_sipet" in normalized_parts
+    under_apps_dir = "modulos" in normalized_parts and not under_core_dir
+    application_flag = manifest.get("application")
+    if under_core_dir and application_flag is True:
+        result.add_error(
+            "manifest.core_application",
+            "Los modulos ubicados en modulos_sipet son core compartido y no deben declararse como application=True.",
+            manifest_path,
+        )
+    if under_apps_dir and application_flag is False:
+        result.add_warning(
+            "manifest.non_core_application_false",
+            "Los modulos ubicados en modulos suelen ser importables; revisa si application=False es intencional.",
+            manifest_path,
+        )
     return manifest
 
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from fastapi_modulo.modulos_sipet.empleados.modelos import departamentos_service
+from fastapi_modulo.modulos.empleados.modelos import departamentos_service
 
 
 class _FakeQuery:

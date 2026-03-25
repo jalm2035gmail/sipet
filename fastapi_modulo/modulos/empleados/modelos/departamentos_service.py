@@ -8,7 +8,7 @@ from sqlalchemy import func
 
 from fastapi_modulo.core import db as core_db
 from fastapi_modulo.core.db import DepartamentoOrganizacional, MAIN
-from fastapi_modulo.modulos_sipet.empleados.modelos.puestos_laborales_store import load_puestos
+from fastapi_modulo.modulos.empleados.modelos.puestos_laborales_store import load_puestos
 from fastapi_modulo.modulos_sipet.web.modelos.core_models import Usuario
 
 

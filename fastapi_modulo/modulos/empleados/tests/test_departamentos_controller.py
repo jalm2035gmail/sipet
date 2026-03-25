@@ -8,7 +8,7 @@ from pathlib import Path
 from fastapi.responses import HTMLResponse
 from starlette.requests import Request
 
-from fastapi_modulo.modulos_sipet.empleados.controladores import departamentos
+from fastapi_modulo.modulos.empleados.controladores import departamentos
 
 
 def _request(path: str, method: str = "GET") -> Request:

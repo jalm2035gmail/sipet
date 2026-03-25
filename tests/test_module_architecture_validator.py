@@ -77,3 +77,28 @@ def test_validate_module_reports_architecture_violations(tmp_path: Path) -> None
     assert "db.implicit_admin" in codes
     assert "styles.tailwind_cdn" in codes
     assert "styles.dynamic_tailwind" in codes
+
+
+def test_validate_module_rejects_application_true_inside_modulos_sipet(tmp_path: Path) -> None:
+    module_dir = tmp_path / "fastapi_modulo" / "modulos_sipet" / "core_fake"
+    _write(
+        module_dir / "__manifest__.py",
+        """MANIFEST = {
+    "name": "core_fake",
+    "label": "Core Fake",
+    "summary": "Resumen",
+    "version": "1.0.0",
+    "depends": [],
+    "route": "/core-fake",
+    "installable": True,
+    "application": True,
+}
+""",
+    )
+    _write(module_dir / "tests/test_core_fake.py", "def test_smoke():\n    assert True\n")
+
+    result = validate_module(module_dir)
+
+    codes = {finding.code for finding in result.errors}
+    assert result.ok is False
+    assert "manifest.core_application" in codes

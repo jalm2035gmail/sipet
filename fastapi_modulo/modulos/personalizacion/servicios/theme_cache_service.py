@@ -22,7 +22,7 @@ import logging
 import os
 from typing import Optional
 
-from fastapi_modulo.modulos_sipet.personalizacion.modelos.theme_system import build_institutional_theme
+from fastapi_modulo.modulos.personalizacion.modelos.theme_system import build_institutional_theme
 
 logger = logging.getLogger(__name__)
 

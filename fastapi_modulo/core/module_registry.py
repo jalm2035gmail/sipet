@@ -12,7 +12,12 @@ from typing import Any, Dict, Iterable, List, Optional
 from fastapi import FastAPI
 from sqlalchemy import bindparam, text
 
-from fastapi_modulo.core.db import TenantInstalledApp, get_admin_engine, get_admin_session_factory
+from fastapi_modulo.core.db import (
+    TenantInstalledApp,
+    ensure_tenant_admin_schema,
+    get_admin_engine,
+    get_admin_session_factory,
+)
 from fastapi_modulo.core.tenant_context import get_tenant_context
 
 
@@ -48,6 +53,10 @@ LEGACY_MODULES_ENABLED = (os.environ.get("ENABLE_LEGACY_MODULES") or "").strip()
     "yes",
     "on",
 }
+LEGACY_RUNTIME_ALLOWLIST = {
+    "multitienda",
+    "intelicoop",
+}
 
 
 MODULE_DEFINITIONS: List[ModuleDefinition] = [
@@ -57,6 +66,7 @@ MODULE_DEFINITIONS: List[ModuleDefinition] = [
         description="Módulo web principal — ajustes de sistema y configuración.",
         route="/ajustes/configuracion",
         icon="fa-solid fa-gear",
+        manifest_file="fastapi_modulo/modulos_sipet/web/__manifest__.py",
         sidebar_visible=True,
         manageable=False,
         always_enabled=True,
@@ -117,14 +127,14 @@ MODULE_DEFINITIONS: List[ModuleDefinition] = [
         description="Usuarios, empleados, regiones y departamentos.",
         route="/inicio/departamentos",
         icon="fa-solid fa-sitemap",
-        manifest_file="fastapi_modulo/modulos_sipet/empleados/__manifest__.py",
+        manifest_file="fastapi_modulo/modulos/empleados/__manifest__.py",
         app_access_name="Organización",
         sidebar_visible=True,
         manageable=True,
         router_specs=[
-            RouterSpec("fastapi_modulo.modulos_sipet.empleados.controladores.empleados"),
-            RouterSpec("fastapi_modulo.modulos_sipet.empleados.controladores.regiones"),
-            RouterSpec("fastapi_modulo.modulos_sipet.empleados.controladores.departamentos"),
+            RouterSpec("fastapi_modulo.modulos.empleados.controladores.empleados"),
+            RouterSpec("fastapi_modulo.modulos.empleados.controladores.regiones"),
+            RouterSpec("fastapi_modulo.modulos.empleados.controladores.departamentos"),
         ],
     ),
     ModuleDefinition(
@@ -207,6 +217,7 @@ MODULE_DEFINITIONS: List[ModuleDefinition] = [
         description="Analítica e inteligencia institucional.",
         route="/inicio/intelicoop",
         icon="fa-solid fa-microchip",
+        manifest_file="fastapi_modulo/modulos/intelicoop/__manifest__.py",
         app_access_name="Intelicoop",
         sidebar_visible=True,
         manageable=True,
@@ -323,6 +334,18 @@ MODULE_DEFINITIONS: List[ModuleDefinition] = [
         router_specs=[RouterSpec("fastapi_modulo.modulos.reportes.controladores.reportes")],
     ),
     ModuleDefinition(
+        key="referidos",
+        label="Referidos",
+        description="Programa integral de referidos, incentivos y embajadores de marca.",
+        route="/referidos",
+        icon="fa-solid fa-users",
+        manifest_file="fastapi_modulo/modulos/referidos/__manifest__.py",
+        app_access_name="Referidos",
+        sidebar_visible=True,
+        manageable=True,
+        router_specs=[RouterSpec("fastapi_modulo.modulos.referidos.controladores.referidos")],
+    ),
+    ModuleDefinition(
         key="multitienda",
         label="Multitienda",
         description="Marketplace multitienda integrado al runtime de SIPET.",
@@ -353,14 +376,14 @@ MODULE_DEFINITIONS: List[ModuleDefinition] = [
         description="Configuración institucional y estructura MAIN.",
         route="/identidad-institucional",
         icon="fa-solid fa-building",
-        manifest_file="fastapi_modulo/modulos_sipet/identidad_institucional/__manifest__.py",
+        manifest_file="fastapi_modulo/modulos/identidad_institucional/__manifest__.py",
         app_access_name="Empresa",
         sidebar_visible=True,
         manageable=False,
         always_enabled=True,
         boot_strategy="builtin",
         router_specs=[
-            RouterSpec("fastapi_modulo.modulos_sipet.identidad_institucional.controladores.identidad_institucional"),
+            RouterSpec("fastapi_modulo.modulos.identidad_institucional.controladores.identidad_institucional"),
         ],
     ),
     ModuleDefinition(
@@ -381,12 +404,12 @@ MODULE_DEFINITIONS: List[ModuleDefinition] = [
         description="Gestión y aislamiento por empresa.",
         route="/multiempresa",
         icon="fa-solid fa-building-user",
-        manifest_file="fastapi_modulo/modulos_sipet/multiempresa/__manifest__.py",
+        manifest_file="fastapi_modulo/modulos/multiempresa/__manifest__.py",
         app_access_name="Multiempresa",
         sidebar_visible=True,
         manageable=False,
         always_enabled=True,
-        router_specs=[RouterSpec("fastapi_modulo.modulos_sipet.multiempresa.controladores.multiempresa")],
+        router_specs=[RouterSpec("fastapi_modulo.modulos.multiempresa.controladores.multiempresa")],
     ),
     ModuleDefinition(
         key="system_admin",
@@ -409,7 +432,7 @@ MODULE_DEFINITIONS: List[ModuleDefinition] = [
         sidebar_visible=False,
         manageable=False,
         always_enabled=True,
-        router_specs=[RouterSpec("fastapi_modulo.modulos_sipet.personalizacion.controladores.personalizar")],
+        router_specs=[RouterSpec("fastapi_modulo.modulos.personalizacion.controladores.personalizar")],
     ),
     ModuleDefinition(
         key="membresia_core",
@@ -431,7 +454,7 @@ MODULE_DEFINITIONS: List[ModuleDefinition] = [
         sidebar_visible=False,
         manageable=False,
         always_enabled=True,
-        router_specs=[RouterSpec("fastapi_modulo.modulos_sipet.personalizacion.controladores.roles")],
+        router_specs=[RouterSpec("fastapi_modulo.modulos.personalizacion.controladores.roles")],
     ),
     ModuleDefinition(
         key="plantillas_core",
@@ -523,6 +546,17 @@ APP_ACCESS_TO_MODULE = {
 }
 
 
+def _normalize_registry_relpath(path_value: str) -> str:
+    normalized = str(path_value or "").strip()
+    if not normalized:
+        return ""
+    resolved = _resolve_registry_path(normalized)
+    try:
+        return os.path.relpath(resolved, _REPO_ROOT).replace(os.sep, "/")
+    except Exception:
+        return normalized.replace(os.sep, "/")
+
+
 def _iter_discoverable_manifest_files() -> list[tuple[str, str]]:
     candidates: list[tuple[str, str]] = []
     roots = (
@@ -608,19 +642,41 @@ def _build_module_definition_from_manifest(package_prefix: str, manifest_path: s
 
 def refresh_module_registry_from_disk() -> list[str]:
     discovered_keys: list[str] = []
+    known_manifest_paths = {
+        _normalize_registry_relpath(module.manifest_file)
+        for module in MODULE_DEFINITIONS
+        if str(module.manifest_file or "").strip()
+    }
+    known_routes = {
+        str(module.route or "").strip()
+        for module in MODULE_DEFINITIONS
+        if str(module.route or "").strip()
+    }
     for package_prefix, manifest_path in _iter_discoverable_manifest_files():
         definition = _build_module_definition_from_manifest(package_prefix, manifest_path)
-        if definition is None or definition.key in MODULES_BY_KEY:
+        normalized_manifest_path = _normalize_registry_relpath(manifest_path)
+        if (
+            definition is None
+            or definition.key in MODULES_BY_KEY
+            or normalized_manifest_path in known_manifest_paths
+            or (definition.route and definition.route in known_routes)
+        ):
             continue
         MODULE_DEFINITIONS.append(definition)
         MODULES_BY_KEY[definition.key] = definition
         if definition.app_access_name:
             APP_ACCESS_TO_MODULE[definition.app_access_name] = definition
         discovered_keys.append(definition.key)
+        if normalized_manifest_path:
+            known_manifest_paths.add(normalized_manifest_path)
+        if definition.route:
+            known_routes.add(definition.route)
     return discovered_keys
 
 
 def is_legacy_module(module: ModuleDefinition) -> bool:
+    if str(module.key or "").strip() in LEGACY_RUNTIME_ALLOWLIST:
+        return False
     if str(module.manifest_file or "").startswith("fastapi_modulo/modulos/"):
         return True
     if str(module.metadata_file or "").startswith("fastapi_modulo/modulos/"):
@@ -684,6 +740,7 @@ def _disable_unsupported_modules() -> None:
 
 
 def _ensure_module_settings_table() -> None:
+    ensure_tenant_admin_schema(get_admin_engine())
     with get_admin_engine().begin() as conn:
         conn.execute(
             text(
@@ -691,7 +748,7 @@ def _ensure_module_settings_table() -> None:
                 CREATE TABLE IF NOT EXISTS system_module_settings (
                     module_key VARCHAR(120) PRIMARY KEY,
                     enabled INTEGER NOT NULL DEFAULT 1,
-                    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
                 )
                 """
             )
@@ -945,7 +1002,7 @@ def set_module_enabled(module_key: str, enabled: bool) -> Dict[str, Any]:
         raise ValueError("Este módulo no se puede desactivar.")
     _ensure_module_settings_table()
     with get_admin_engine().begin() as conn:
-        conn.execute(
+        update_result = conn.execute(
             text(
                 """
                 UPDATE system_module_settings
@@ -960,6 +1017,20 @@ def set_module_enabled(module_key: str, enabled: bool) -> Dict[str, Any]:
                 "module_key": module.key,
             },
         )
+        if update_result.rowcount == 0:
+            conn.execute(
+                text(
+                    """
+                    INSERT INTO system_module_settings (module_key, enabled, updated_at)
+                    VALUES (:module_key, :enabled, :updated_at)
+                    """
+                ),
+                {
+                    "module_key": module.key,
+                    "enabled": 1 if enabled else 0,
+                    "updated_at": datetime.utcnow(),
+                },
+            )
     result = next(item for item in list_modules_payload() if item["key"] == module.key)
     result["restart_required"] = True
     return result

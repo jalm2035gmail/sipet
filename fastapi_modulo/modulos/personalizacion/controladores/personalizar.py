@@ -13,7 +13,7 @@ from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, field_validator
 
 from fastapi_modulo.core.db import SessionLocal
-from fastapi_modulo.modulos_sipet.personalizacion.modelos.theme_system import (
+from fastapi_modulo.modulos.personalizacion.modelos.theme_system import (
     MAIN_THEME_KEYS,
     build_institutional_theme,
     normalize_hex_color,

@@ -44,7 +44,7 @@ from fastapi_modulo.modulos_sipet.web.servicios.template_service import get_temp
 router = APIRouter()
 
 _MODULE_DIR = Path(__file__).resolve().parent.parent
-_TEMPLATE_NAME = "modulos_sipet/identidad_institucional/vistas/identidad_institucional.html"
+_TEMPLATE_NAME = "modulos/identidad_institucional/vistas/identidad_institucional.html"
 _CSS_PATH = _MODULE_DIR / "static" / "css" / "identidad_institucional.css"
 
 # ── Permisos del módulo Empresa ──────────────────────────────────────────────

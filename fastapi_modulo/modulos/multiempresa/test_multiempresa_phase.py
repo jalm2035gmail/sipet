@@ -56,8 +56,8 @@ sys.modules["fastapi_modulo.main"] = fake_main
 # ── Module imports ────────────────────────────────────────────────────────────
 
 from fastapi_modulo.core.db import MAIN, engine  # noqa: E402
-from fastapi_modulo.modulos_sipet.multiempresa.controladores.multiempresa import router  # noqa: E402
-from fastapi_modulo.modulos_sipet.multiempresa.modelos.me_db_models import MeEmpresa  # noqa: E402
+from fastapi_modulo.modulos.multiempresa.controladores.multiempresa import router  # noqa: E402
+from fastapi_modulo.modulos.multiempresa.modelos.me_db_models import MeEmpresa  # noqa: E402
 
 _ME_TABLES = [MeEmpresa.__table__]
 

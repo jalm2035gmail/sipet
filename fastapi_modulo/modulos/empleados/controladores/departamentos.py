@@ -6,13 +6,13 @@ from fastapi import APIRouter, Request, Body
 from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse
 from fastapi_modulo.modulos_sipet.web.controladores.backend_shell import render_backend_page
 from fastapi_modulo.modulos_sipet.web.servicios.access_service import require_admin_or_superadmin
-from fastapi_modulo.modulos_sipet.empleados.modelos.puestos_laborales_store import (
+from fastapi_modulo.modulos.empleados.modelos.puestos_laborales_store import (
     delete_puesto,
     load_puestos,
     update_puesto_notebook,
     upsert_puesto,
 )
-from fastapi_modulo.modulos_sipet.empleados.modelos.departamentos_service import (
+from fastapi_modulo.modulos.empleados.modelos.departamentos_service import (
     delete_departamento_payload,
     get_departamentos_catalog,
     list_departamentos_payload,
@@ -38,7 +38,7 @@ DEPARTAMENTOS_PUBLIC_ACCESS = str(
 
 
 def _ensure_departamentos_runtime() -> None:
-    from fastapi_modulo.modulos_sipet.empleados.modelos.departamentos_service import ensure_departamentos_schema
+    from fastapi_modulo.modulos.empleados.modelos.departamentos_service import ensure_departamentos_schema
 
     ensure_departamentos_schema()
 

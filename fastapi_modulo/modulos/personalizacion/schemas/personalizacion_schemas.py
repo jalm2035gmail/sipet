@@ -6,7 +6,7 @@ from typing import Annotated, Optional
 
 from pydantic import BaseModel, Field, field_validator
 
-from fastapi_modulo.modulos_sipet.personalizacion.modelos.theme_system import (
+from fastapi_modulo.modulos.personalizacion.modelos.theme_system import (
     MAIN_THEME_KEYS,
     normalize_hex_color,
 )

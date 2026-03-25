@@ -9,8 +9,8 @@ from sqlalchemy.exc import IntegrityError
 
 from fastapi_modulo.modulos_sipet.web.controladores.backend_shell import render_backend_page
 from fastapi_modulo.modulos_sipet.web.servicios.access_service import get_current_role, get_user_app_access
-from fastapi_modulo.modulos_sipet.multiempresa.modelos.me_models import EmpresaCreate, EmpresaUpdate
-from fastapi_modulo.modulos_sipet.multiempresa.modelos.me_store import (
+from fastapi_modulo.modulos.multiempresa.modelos.me_models import EmpresaCreate, EmpresaUpdate
+from fastapi_modulo.modulos.multiempresa.modelos.me_store import (
     create_empresa,
     delete_empresa,
     get_empresa,

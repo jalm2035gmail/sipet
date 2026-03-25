@@ -60,11 +60,69 @@ def test_multitienda_module_is_registered() -> None:
     assert module.router_specs[0].module_path == "fastapi_modulo.modulos.multitienda.controladores.multitienda"
 
 
+def test_intelicoop_module_is_supported() -> None:
+    module = module_registry.MODULES_BY_KEY["intelicoop"]
+
+    assert module_registry.is_supported_module(module) is True
+
+
 def test_multitienda_wrapper_exposes_mount() -> None:
     mod = importlib.import_module("fastapi_modulo.modulos.multitienda.controladores.multitienda")
     paths = [getattr(route, "path", "") for route in mod.router.routes]
 
     assert "/multitienda" in paths
+
+
+def test_set_module_enabled_inserts_missing_setting_row(monkeypatch) -> None:
+    module = module_registry.ModuleDefinition(
+        key="multitienda",
+        label="Multitienda",
+        description="Marketplace multitienda.",
+        route="/multitienda",
+        manageable=True,
+    )
+    monkeypatch.setattr(module_registry, "MODULES_BY_KEY", {"multitienda": module})
+    monkeypatch.setattr(module_registry, "is_supported_module", lambda _: True)
+    monkeypatch.setattr(module_registry, "_ensure_module_settings_table", lambda: None)
+    monkeypatch.setattr(
+        module_registry,
+        "list_modules_payload",
+        lambda: [{"key": "multitienda", "enabled": True}],
+    )
+
+    statements: list[str] = []
+
+    class _Result:
+        def __init__(self, rowcount: int) -> None:
+            self.rowcount = rowcount
+
+    class _Conn:
+        def execute(self, statement, params):
+            sql = str(statement)
+            statements.append(sql)
+            if "UPDATE system_module_settings" in sql:
+                return _Result(0)
+            return _Result(1)
+
+    class _Begin:
+        def __enter__(self):
+            return _Conn()
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+    class _Engine:
+        def begin(self):
+            return _Begin()
+
+    monkeypatch.setattr(module_registry, "get_admin_engine", lambda: _Engine())
+
+    payload = module_registry.set_module_enabled("multitienda", True)
+
+    assert payload["key"] == "multitienda"
+    assert payload["restart_required"] is True
+    assert any("UPDATE system_module_settings" in sql for sql in statements)
+    assert any("INSERT INTO system_module_settings" in sql for sql in statements)
 
 
 def test_list_modules_payload_discovers_new_manifest_on_refresh(monkeypatch, tmp_path) -> None:
@@ -99,3 +157,42 @@ def test_list_modules_payload_discovers_new_manifest_on_refresh(monkeypatch, tmp
     assert [item["key"] for item in payload] == ["nuevo_modulo"]
     assert payload[0]["label"] == "Nuevo modulo"
     assert payload[0]["route"] == "/nuevo-modulo"
+
+
+def test_refresh_module_registry_skips_manifest_already_registered(monkeypatch, tmp_path) -> None:
+    module_dir = tmp_path / "identidad_institucional"
+    module_dir.mkdir()
+    manifest_path = module_dir / "__manifest__.py"
+    manifest_path.write_text(
+        "MANIFEST = {\n"
+        "    'name': 'identidad_institucional',\n"
+        "    'label': 'Empresa',\n"
+        "    'description': 'Duplicado.',\n"
+        "    'route': '/identidad-institucional',\n"
+        "    'icon': 'fa-solid fa-building',\n"
+        "    'installable': True,\n"
+        "}\n",
+        encoding="utf-8",
+    )
+
+    existing = module_registry.ModuleDefinition(
+        key="empresa",
+        label="Empresa",
+        description="Configuración institucional.",
+        route="/identidad-institucional",
+        icon="fa-solid fa-building",
+        manifest_file="fastapi_modulo/modulos/identidad_institucional/__manifest__.py",
+    )
+    monkeypatch.setattr(module_registry, "MODULE_DEFINITIONS", [existing])
+    monkeypatch.setattr(module_registry, "MODULES_BY_KEY", {"empresa": existing})
+    monkeypatch.setattr(module_registry, "APP_ACCESS_TO_MODULE", {})
+    monkeypatch.setattr(
+        module_registry,
+        "_iter_discoverable_manifest_files",
+        lambda: [("fastapi_modulo.modulos", str(manifest_path))],
+    )
+
+    discovered = module_registry.refresh_module_registry_from_disk()
+
+    assert discovered == []
+    assert [module.key for module in module_registry.MODULE_DEFINITIONS] == ["empresa"]
