@@ -76,6 +76,26 @@ class WebUserPreference(MAIN):
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
+class WebLoginIdentity(MAIN):
+    __tablename__ = "web_login_identity"
+    __table_args__ = (
+        Index("ix_web_login_identity_singleton_key", "singleton_key", unique=True),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    singleton_key = Column(String(32), nullable=False, default="default", index=True)
+    favicon_filename = Column(String(255), nullable=False, default="icon.png")
+    logo_filename = Column(String(255), nullable=False, default="icon.png")
+    login_logo_filename = Column(String(255), nullable=False, default="icon.png")
+    desktop_bg_filename = Column(String(255), nullable=False, default="fondo.jpg")
+    mobile_bg_filename = Column(String(255), nullable=False, default="movil.jpg")
+    company_short_name = Column(String(60), nullable=False, default="AVAN")
+    login_message = Column(String(200), nullable=False, default="Incrementando el nivel de eficiencia")
+    menu_position = Column(String(16), nullable=False, default="arriba")
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
 class WebSecurityEvent(MAIN):
     __tablename__ = "web_security_event"
     __table_args__ = (

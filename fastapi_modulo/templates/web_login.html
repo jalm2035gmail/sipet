@@ -433,7 +433,7 @@
     <div class="login-frame">
         <div class="login-header">
             <div class="logo-block">
-                <img src="{{ login_logo_url }}" alt="Logo de la empresa">
+                <img src="{{ login_screen_logo_url | default(login_logo_url, true) }}" alt="Logo de la empresa">
                 <span class="company-name">{{ login_company_short_name }}</span>
             </div>
             <div class="description">
@@ -458,9 +458,9 @@
                         <label for="contrasena">Contraseña</label>
                         <input id="contrasena" name="contrasena" type="password" placeholder="Contraseña" autocomplete="current-password" enterkeyhint="go" required>
                     </div>
-                    <div class="field">
-                        <label for="codigo_autenticador">Código autenticador (opcional)</label>
-                        <input id="codigo_autenticador" name="codigo_autenticador" type="text" inputmode="numeric" pattern="[0-9]{6}" placeholder="000000" autocomplete="one-time-code" maxlength="6">
+                    <div class="field" id="codigo-autenticador-field" hidden>
+                        <label for="codigo_autenticador">Código autenticador</label>
+                        <input id="codigo_autenticador" name="codigo_autenticador" type="text" inputmode="numeric" pattern="[0-9]{6}" placeholder="000000" autocomplete="one-time-code" maxlength="6" disabled>
                     </div>
                     <div class="form-footer">
                         <span>Recuerdame</span>
@@ -484,6 +484,8 @@
         const usuarioInput = document.getElementById("usuario");
         const contrasenaInput = document.getElementById("contrasena");
         const loginError = document.getElementById("login-error");
+        const codigoAutenticadorField = document.getElementById("codigo-autenticador-field");
+        const codigoAutenticadorInput = document.getElementById("codigo_autenticador");
         const passkeyMainBtn = document.getElementById("passkey-main-btn");
         const passkeyStatus = document.getElementById("passkey-status");
         const mobilePortraitQuery = window.matchMedia("(max-width: 900px) and (orientation: portrait)");
@@ -494,6 +496,7 @@
         const mfaRequired = (loginQuery.get("mfa") || "").trim().toLowerCase() === "required";
         const hasLoginPrefill = !!(demoUsuario || demoContrasena);
         let passkeyMode = "register";
+        let mfaHintRequestId = 0;
         const PASSKEY_LABELS = {
             register: "Habilitar biometría",
             login: "Ingresar con biometría",
@@ -514,6 +517,12 @@
         };
         const setPasskeyStatus = (message) => {
             if (passkeyStatus) passkeyStatus.textContent = message || "";
+        };
+        const setAuthenticatorFieldVisible = (visible) => {
+            if (!codigoAutenticadorField || !codigoAutenticadorInput) return;
+            codigoAutenticadorField.hidden = !visible;
+            codigoAutenticadorInput.disabled = !visible;
+            if (!visible) codigoAutenticadorInput.value = "";
         };
         const applyPasskeyMode = (mode) => {
             passkeyMode = mode === "login" ? "login" : "register";
@@ -552,9 +561,31 @@
                 loginError.remove();
             }
         };
+        const refreshAuthenticatorField = async () => {
+            const username = (usuarioInput && usuarioInput.value || "").trim();
+            const requestId = ++mfaHintRequestId;
+            if (!username || isDemoUser(username)) {
+                setAuthenticatorFieldVisible(false);
+                return;
+            }
+            try {
+                const response = await fetch(`/api/backend/login/mfa-hint?usuario=${encodeURIComponent(username)}`, {
+                    headers: { Accept: "application/json" },
+                    credentials: "same-origin",
+                });
+                const payload = await response.json().catch(() => ({}));
+                if (requestId !== mfaHintRequestId) return;
+                setAuthenticatorFieldVisible(!!payload.show_authenticator_code);
+            } catch (err) {
+                if (requestId !== mfaHintRequestId) return;
+                setAuthenticatorFieldVisible(false);
+            }
+        };
 
         usuarioInput && usuarioInput.addEventListener("input", clearLoginError);
         contrasenaInput && contrasenaInput.addEventListener("input", clearLoginError);
+        usuarioInput && usuarioInput.addEventListener("blur", refreshAuthenticatorField);
+        usuarioInput && usuarioInput.addEventListener("change", refreshAuthenticatorField);
         usuarioInput && usuarioInput.addEventListener("keydown", (event) => {
             if (event.key === "Enter") {
                 event.preventDefault();
@@ -693,8 +724,10 @@
         }
 
         syncLoginLayout();
+        setAuthenticatorFieldVisible(false);
         applyPasskeyMode("register");
         refreshPasskeyMode();
+        refreshAuthenticatorField();
         if (mfaRequired) {
             applyPasskeyMode("login");
             setPasskeyStatus("Segundo factor requerido: valida con biometría para completar el ingreso.");

@@ -142,10 +142,11 @@ def _render_identidad_institucional_page(request: Request) -> HTMLResponse:
     identity = _load_login_identity()
     favicon_url = _build_login_asset_url(identity.get("favicon_filename"), DEFAULT_LOGIN_IDENTITY["favicon_filename"])
     logo_url = _build_login_asset_url(identity.get("logo_filename"), DEFAULT_LOGIN_IDENTITY["logo_filename"])
+    login_logo_url = _build_login_asset_url(identity.get("login_logo_filename"), DEFAULT_LOGIN_IDENTITY["login_logo_filename"])
     desktop_bg_url = _build_login_asset_url(identity.get("desktop_bg_filename"), DEFAULT_LOGIN_IDENTITY["desktop_bg_filename"])
     mobile_bg_url = _build_login_asset_url(identity.get("mobile_bg_filename"), DEFAULT_LOGIN_IDENTITY["mobile_bg_filename"])
-    loaded_assets = sum(1 for v in [favicon_url, logo_url, desktop_bg_url, mobile_bg_url] if (v or "").strip())
-    consistency = max(60, min(100, int(round((loaded_assets / 4) * 100)))) if loaded_assets else 60
+    loaded_assets = sum(1 for v in [favicon_url, logo_url, login_logo_url, desktop_bg_url, mobile_bg_url] if (v or "").strip())
+    consistency = max(60, min(100, int(round((loaded_assets / 5) * 100)))) if loaded_assets else 60
 
     template = get_templates().env.get_template(_TEMPLATE_NAME)
     content = template.render(
@@ -155,6 +156,7 @@ def _render_identidad_institucional_page(request: Request) -> HTMLResponse:
         menu_position=(identity.get("menu_position") or DEFAULT_LOGIN_IDENTITY["menu_position"]).strip().lower(),
         favicon_url=favicon_url,
         logo_url=logo_url,
+        login_logo_url=login_logo_url,
         desktop_bg_url=desktop_bg_url,
         mobile_bg_url=mobile_bg_url,
         loaded_assets=loaded_assets,
@@ -215,10 +217,12 @@ async def identidad_institucional_save(
     menu_position: str = Form("arriba"),
     favicon: Optional[UploadFile] = File(None),
     logo_empresa: Optional[UploadFile] = File(None),
+    logo_login: Optional[UploadFile] = File(None),
     fondo_escritorio: Optional[UploadFile] = File(None),
     fondo_movil: Optional[UploadFile] = File(None),
     remove_favicon: str = Form("0"),
     remove_logo: str = Form("0"),
+    remove_login_logo: str = Form("0"),
     remove_desktop: str = Form("0"),
     remove_mobile: str = Form("0"),
 ):
@@ -240,6 +244,9 @@ async def identidad_institucional_save(
     if str(remove_logo).strip() == "1":
         remove_login_image_if_custom(current.get("logo_filename"))
         current["logo_filename"] = DEFAULT_LOGIN_IDENTITY["logo_filename"]
+    if str(remove_login_logo).strip() == "1":
+        remove_login_image_if_custom(current.get("login_logo_filename"))
+        current["login_logo_filename"] = current.get("logo_filename") or DEFAULT_LOGIN_IDENTITY["logo_filename"]
     if str(remove_desktop).strip() == "1":
         remove_login_image_if_custom(current.get("desktop_bg_filename"))
         current["desktop_bg_filename"] = DEFAULT_LOGIN_IDENTITY["desktop_bg_filename"]
@@ -256,6 +263,11 @@ async def identidad_institucional_save(
     if new_logo:
         remove_login_image_if_custom(current.get("logo_filename"))
         current["logo_filename"] = new_logo
+
+    new_login_logo = await store_login_image(logo_login, "logo_login") if logo_login else None
+    if new_login_logo:
+        remove_login_image_if_custom(current.get("login_logo_filename"))
+        current["login_logo_filename"] = new_login_logo
 
     new_desktop = await store_login_image(fondo_escritorio, "fondo_escritorio") if fondo_escritorio else None
     if new_desktop:

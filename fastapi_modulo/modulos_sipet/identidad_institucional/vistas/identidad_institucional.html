@@ -4,11 +4,13 @@
         <form id="identity-form" method="post" action="/identidad-institucional" enctype="multipart/form-data">
             <input type="hidden" id="remove_favicon" name="remove_favicon" value="0">
             <input type="hidden" id="remove_logo" name="remove_logo" value="0">
+            <input type="hidden" id="remove_login_logo" name="remove_login_logo" value="0">
             <input type="hidden" id="remove_desktop" name="remove_desktop" value="0">
             <input type="hidden" id="remove_mobile" name="remove_mobile" value="0">
             <div style="display:none;">
                 <input type="file" id="favicon" name="favicon" accept="image/*">
                 <input type="file" id="logo_empresa" name="logo_empresa" accept="image/*">
+                <input type="file" id="logo_login" name="logo_login" accept="image/*">
                 <input type="file" id="fondo_escritorio" name="fondo_escritorio" accept="image/*">
                 <input type="file" id="fondo_movil" name="fondo_movil" accept="image/*">
             </div>
@@ -158,7 +160,7 @@
                         <p>Administra favicon, logo y fondos para backend y movil.</p>
                     </div>
                     <div class="id-card__tools">
-                        <span class="id-pill">4 recursos</span>
+                        <span class="id-pill">5 recursos</span>
                     </div>
                 </header>
                 <div class="id-assets__grid">
@@ -186,6 +188,19 @@
                         <div class="id-asset__actions identity-asset-actions">
                             <button class="id-btn id-btn--ghost3 identity-asset-edit" data-target-input="logo_empresa" type="button">Editar</button>
                             <button class="id-btn id-btn--danger identity-asset-delete" data-target-remove="remove_logo" type="button">Eliminar</button>
+                        </div>
+                    </article>
+                    <article class="id-asset">
+                        <div class="id-asset__left">
+                            <div class="id-asset__label"><span class="id-dot id-dot--ok"></span><strong>Logo del login</strong></div>
+                            <div class="id-asset__meta">Se mostrará en la pantalla /backend/login</div>
+                        </div>
+                        <div class="id-asset__preview id-asset__preview--logo">
+                            <img src="{{ login_logo_url }}" alt="Logo del login">
+                        </div>
+                        <div class="id-asset__actions identity-asset-actions">
+                            <button class="id-btn id-btn--ghost3 identity-asset-edit" data-target-input="logo_login" type="button">Editar</button>
+                            <button class="id-btn id-btn--danger identity-asset-delete" data-target-remove="remove_login_logo" type="button">Eliminar</button>
                         </div>
                     </article>
                     <article class="id-asset">
@@ -243,6 +258,7 @@
                         var removeId = {
                             favicon: 'remove_favicon',
                             logo_empresa: 'remove_logo',
+                            logo_login: 'remove_login_logo',
                             fondo_escritorio: 'remove_desktop',
                             fondo_movil: 'remove_mobile'
                         }[inputId];
@@ -265,6 +281,7 @@
 
                 bindFileInput('favicon');
                 bindFileInput('logo_empresa');
+                bindFileInput('logo_login');
                 bindFileInput('fondo_escritorio');
                 bindFileInput('fondo_movil');
             })();
