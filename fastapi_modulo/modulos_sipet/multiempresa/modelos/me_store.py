@@ -19,11 +19,11 @@ UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def ensure_me_schema() -> None:
-    MAIN.metadata.create_all(bind=core_db.get_engine_for_host(""), tables=_ME_TABLES, checkfirst=True)
+    MAIN.metadata.create_all(bind=core_db.get_admin_engine(), tables=_ME_TABLES, checkfirst=True)
 
 
 def _db():
-    return core_db.get_session_factory_for_host("")()
+    return core_db.get_admin_session_factory()()
 
 
 ensure_me_schema()
