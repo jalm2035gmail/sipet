@@ -8,7 +8,7 @@ from typing import Any
 from fastapi_modulo.core.module_registry import MODULE_DEFINITIONS, MODULES_BY_KEY, ModuleDefinition
 
 IGNORE_DIRS = {"__pycache__", "static", "templates"}
-TECHNICAL_MODULES = {"main", "backend", "web", "modulo_base", "aplicaciones", "sistema"}
+TECHNICAL_MODULES = {"main", "backend", "web", "modulo_base", "aplicaciones"}
 PROTOCOL_MODE_REPAIR = "repair_missing_only"
 PROTOCOL_MODE_REBUILD = "rebuild_full"
 
@@ -153,9 +153,7 @@ def _collect_structure(module_dir: Path) -> dict[str, list[str]]:
 
 
 def _detect_depends(module_dir: Path) -> list[str]:
-    if module_dir.name == "main":
-        return []
-    depends = ["main"]
+    depends: list[str] = []
     for path in module_dir.rglob("*.py"):
         if "fastapi_modulo.modulos_sipet.web" in path.read_text(encoding="utf-8", errors="ignore"):
             depends.append("web")

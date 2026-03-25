@@ -176,6 +176,7 @@
             <div><div class="text-xs uppercase tracking-[0.18em] text-base-content/50">Modificados</div><div id="apps-upload-changed-files" class="mt-1 font-semibold">0</div></div>
             <div><div class="text-xs uppercase tracking-[0.18em] text-base-content/50">Sin cambio</div><div id="apps-upload-unchanged-files" class="mt-1 font-semibold">0</div></div>
           </div>
+          <div id="apps-upload-architecture" class="mt-4 hidden rounded-2xl border border-warning/30 bg-warning/10 p-4"></div>
           <div id="apps-upload-warnings" class="alert alert-warning mt-4 hidden text-sm"></div>
           <ul id="apps-upload-preview" class="mt-4 divide-y divide-base-300 overflow-hidden rounded-2xl border border-base-300 bg-base-100"></ul>
         </div>
@@ -186,6 +187,31 @@
           <button class="btn btn-ghost" type="submit">Cancelar</button>
         </form>
         <button id="apps-upload-apply" class="btn btn-primary" type="button" disabled>Aplicar ZIP</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="apps-status-modal" class="modal">
+    <div class="modal-box max-w-2xl rounded-[1.75rem]">
+      <form method="dialog">
+        <button class="btn btn-sm btn-circle btn-ghost absolute right-4 top-4" type="submit">✕</button>
+      </form>
+      <div class="space-y-4">
+        <div class="space-y-1">
+          <p id="apps-status-modal-kicker" class="text-xs font-bold uppercase tracking-[0.18em] text-base-content/50">Estado del modulo</p>
+          <h3 id="apps-status-modal-title" class="text-2xl font-black">Actualizacion de modulo</h3>
+        </div>
+        <div id="apps-status-modal-alert" class="alert alert-info">
+          <i class="fa-solid fa-circle-info"></i>
+          <span id="apps-status-modal-message"></span>
+        </div>
+        <div id="apps-status-modal-meta" class="grid gap-3 sm:grid-cols-2"></div>
+        <div id="apps-status-modal-details" class="hidden rounded-3xl border border-base-300 bg-base-200/50 p-4"></div>
+      </div>
+      <div class="modal-action">
+        <form method="dialog">
+          <button class="btn btn-primary" type="submit">Cerrar</button>
+        </form>
       </div>
     </div>
   </dialog>

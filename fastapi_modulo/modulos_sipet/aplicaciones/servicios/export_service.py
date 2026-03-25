@@ -116,7 +116,7 @@ def _list_all_registry_audits() -> list[Any]:
     from fastapi_modulo.modulos_sipet.aplicaciones.modelos.db_models import AppRegistryAudit
 
     try:
-        session_factory = core_db.get_session_factory_for_host("")
+        session_factory = core_db.get_admin_session_factory()
         with session_factory() as db:
             return (
                 db.query(AppRegistryAudit)

@@ -10,6 +10,7 @@ from typing import Any
 
 from fastapi import HTTPException, UploadFile
 from fastapi_modulo.core.module_registry import MODULES_BY_KEY
+from scripts.validate_module_architecture import validate_module
 
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", ".."))
 MAX_UPLOAD_BYTES = 50 * 1024 * 1024
@@ -243,6 +244,61 @@ def _extract_archive_to_staging(
     }
 
 
+def _validate_staged_module_architecture(module_key: str, target_root: str, staging_root: str) -> None:
+    validation_root = tempfile.mkdtemp(prefix=f"apps-validate-{str(module_key or '').strip()}-")
+    try:
+        if os.path.isdir(target_root):
+            shutil.copytree(target_root, validation_root, dirs_exist_ok=True)
+        if os.path.isdir(staging_root):
+            shutil.copytree(staging_root, validation_root, dirs_exist_ok=True)
+        result = validate_module(Path(validation_root))
+        if result.errors:
+            detail_lines = [
+                f"{finding.code}: {finding.message}"
+                for finding in result.errors
+            ]
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "message": "El modulo no cumple las reglas de arquitectura.",
+                    "architecture_ok": False,
+                    "architecture_errors": [
+                        {"code": finding.code, "message": finding.message, "path": finding.path}
+                        for finding in result.errors
+                    ],
+                    "architecture_warnings": [
+                        {"code": finding.code, "message": finding.message, "path": finding.path}
+                        for finding in result.warnings
+                    ],
+                    "summary": " | ".join(detail_lines[:8]),
+                },
+            )
+    finally:
+        shutil.rmtree(validation_root, ignore_errors=True)
+
+
+def get_module_architecture_report(module_key: str, module_root: str | None = None) -> dict[str, Any]:
+    target_root = module_root or get_module_upload_root(module_key)
+    if not target_root or not os.path.isdir(target_root):
+        return {
+            "architecture_ok": True,
+            "architecture_errors": [],
+            "architecture_warnings": [],
+        }
+    result = validate_module(Path(target_root))
+    return {
+        "architecture_ok": result.ok,
+        "architecture_errors": [
+            {"code": finding.code, "message": finding.message, "path": finding.path}
+            for finding in result.errors
+        ],
+        "architecture_warnings": [
+            {"code": finding.code, "message": finding.message, "path": finding.path}
+            for finding in result.warnings
+        ],
+    }
+
+
 def inspect_module_zip(module_key: str, zip_path: str) -> dict[str, Any]:
     target_root = get_module_upload_root(module_key)
     if not target_root:
@@ -253,11 +309,13 @@ def inspect_module_zip(module_key: str, zip_path: str) -> dict[str, Any]:
                 raise HTTPException(status_code=400, detail="El archivo ZIP esta corrupto.")
             staging_root = tempfile.mkdtemp(prefix=f"apps-stage-{str(module_key or '').strip()}-")
             staged = _extract_archive_to_staging(archive, target_root, staging_root=staging_root)
+            _validate_staged_module_architecture(module_key, target_root, staging_root)
             return {
                 "module_key": module_key,
                 "target_root": target_root,
                 "staging_root": staging_root,
                 **staged,
+                **get_module_architecture_report(module_key, staging_root),
             }
     except zipfile.BadZipFile as exc:
         raise HTTPException(status_code=400, detail="El archivo ZIP no es valido.") from exc
@@ -358,14 +416,39 @@ def validate_zip_file(path: str) -> None:
         raise HTTPException(status_code=400, detail="El archivo ZIP no es valido.") from exc
 
 
+def uninstall_module_files(module_key: str) -> dict[str, Any]:
+    target_root = get_module_upload_root(module_key)
+    if not target_root or not os.path.isdir(target_root):
+        raise HTTPException(status_code=404, detail="No existe un directorio instalado para este módulo.")
+    real_target = os.path.realpath(target_root)
+    safe_roots = (
+        os.path.realpath(os.path.join(PROJECT_ROOT, "fastapi_modulo", "modulos_sipet")),
+        os.path.realpath(os.path.join(PROJECT_ROOT, "fastapi_modulo", "modulos")),
+    )
+    if not any(real_target.startswith(root + os.sep) for root in safe_roots):
+        raise HTTPException(status_code=400, detail="La ruta del módulo no es segura para desinstalar.")
+    removed_files = 0
+    for _root, _dirs, files in os.walk(real_target):
+        removed_files += len(files)
+    shutil.rmtree(real_target)
+    return {
+        "module_key": module_key,
+        "status": "success",
+        "removed_path": target_root,
+        "removed_files": removed_files,
+    }
+
+
 __all__ = [
     "apply_module_zip",
     "cleanup_staging_dir",
     "get_module_image_path",
+    "get_module_architecture_report",
     "get_module_upload_root",
     "inspect_module_zip",
     "persist_upload_to_temp",
     "restore_module_snapshot",
+    "uninstall_module_files",
     "validate_upload_metadata",
     "validate_zip_file",
 ]

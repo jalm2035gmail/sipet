@@ -10,6 +10,13 @@
   var toastText = toastNode ? toastNode.querySelector("span") : null;
   var uploadInput = document.getElementById("apps-upload-input");
   var uploadModal = document.getElementById("apps-upload-modal");
+  var statusModal = document.getElementById("apps-status-modal");
+  var statusModalKicker = document.getElementById("apps-status-modal-kicker");
+  var statusModalTitle = document.getElementById("apps-status-modal-title");
+  var statusModalAlert = document.getElementById("apps-status-modal-alert");
+  var statusModalMessage = document.getElementById("apps-status-modal-message");
+  var statusModalMeta = document.getElementById("apps-status-modal-meta");
+  var statusModalDetails = document.getElementById("apps-status-modal-details");
   var uploadApplyButton = document.getElementById("apps-upload-apply");
   var uploadSummary = document.getElementById("apps-upload-summary");
   var uploadArchitecture = document.getElementById("apps-upload-architecture");
@@ -21,6 +28,10 @@
   var pendingUploadFile = null;
   var pendingUploadInspection = null;
 
+  function csrfToken() {
+    return String(window.__sipet_csrf_token || "").trim();
+  }
+
   function toast(message, tone) {
     if (!toastNode || !toastText) return;
     toastText.textContent = message || "";
@@ -29,6 +40,39 @@
     toast._timer = setTimeout(function () {
       toastNode.className = "alert shadow-lg opacity-0 transition-opacity duration-200";
     }, 2800);
+  }
+
+  function modalToneClass(tone) {
+    if (tone === "alert-success") return "alert alert-success";
+    if (tone === "alert-warning") return "alert alert-warning";
+    if (tone === "alert-error") return "alert alert-error";
+    return "alert alert-info";
+  }
+
+  function showStatusModal(options) {
+    if (!statusModal || typeof statusModal.showModal !== "function") return;
+    var config = options || {};
+    var meta = [];
+    if (config.moduleLabel) meta.push({ label: "Modulo", value: config.moduleLabel });
+    if (config.route) meta.push({ label: "Ruta", value: config.route });
+    if (config.restartRequired) meta.push({ label: "Reinicio", value: "Requerido para cargar el modulo" });
+    if (config.statusLabel) meta.push({ label: "Estado", value: config.statusLabel });
+
+    if (statusModalKicker) statusModalKicker.textContent = config.kicker || "Estado del modulo";
+    if (statusModalTitle) statusModalTitle.textContent = config.title || "Actualizacion de modulo";
+    if (statusModalAlert) statusModalAlert.className = modalToneClass(config.tone);
+    if (statusModalMessage) statusModalMessage.textContent = config.message || "";
+    if (statusModalMeta) {
+      statusModalMeta.innerHTML = meta.map(function (item) {
+        return '<div class="rounded-2xl border border-base-300 bg-base-100 px-4 py-3"><div class="text-xs uppercase tracking-[0.18em] text-base-content/50">' + esc(item.label) + '</div><div class="mt-1 font-semibold">' + esc(item.value) + '</div></div>';
+      }).join("");
+    }
+    if (statusModalDetails) {
+      var detailsMarkup = config.detailsMarkup || "";
+      statusModalDetails.innerHTML = detailsMarkup;
+      statusModalDetails.classList.toggle("hidden", !detailsMarkup);
+    }
+    statusModal.showModal();
   }
 
   function esc(value) {
@@ -76,7 +120,9 @@
     var attempts = 0;
     while (attempts < 120) {
       attempts += 1;
-      var res = await fetch("/api/aplicaciones/tareas/" + encodeURIComponent(taskName) + "/" + encodeURIComponent(taskId));
+      var res = await fetch("/api/aplicaciones/tareas/" + encodeURIComponent(taskName) + "/" + encodeURIComponent(taskId), {
+        credentials: "same-origin"
+      });
       var data = await res.json();
       if (!res.ok) throw new Error(data.detail || "No se pudo consultar la tarea.");
       if (data.status === "success") return data.result || {};
@@ -225,8 +271,8 @@
       '<div class="flex items-center justify-between rounded-2xl border border-base-300 px-4 py-3"><span>Routers importables</span><span class="badge ' + (item.routers_importable ? 'badge-success' : 'badge-error') + '">' + (item.routers_importable ? 'Sí' : 'No') + '</span></div>',
       '</div>',
       '<div><div class="mb-2 text-xs uppercase tracking-[0.18em] text-base-content/50">Hallazgos</div><div class="flex flex-wrap gap-2">' +
-        (item.protocol_missing || []).concat(item.issues || []).map(function (tag) { return '<span class="badge badge-outline">' + esc(tag) + '</span>'; }).join("") +
-        (((item.protocol_missing || []).length || (item.issues || []).length) ? '' : '<span class="badge badge-success">Sin hallazgos</span>') +
+        (item.protocol_missing || []).concat(item.issues || []).map(function (tag) { return '<span class="badge badge-outline gov-apps-finding-badge">' + esc(tag) + '</span>'; }).join("") +
+        (((item.protocol_missing || []).length || (item.issues || []).length) ? '' : '<span class="badge badge-success gov-apps-finding-badge gov-apps-finding-badge--success">Sin hallazgos</span>') +
       '</div></div>',
       architectureFindingsMarkup(item),
       '</div>'
@@ -285,7 +331,9 @@
   }
 
   async function refreshModules() {
-    var res = await fetch("/api/aplicaciones/modulos?refresh=1");
+    var res = await fetch("/api/aplicaciones/modulos?refresh=1", {
+      credentials: "same-origin"
+    });
     var data = await res.json();
     if (!res.ok) {
       var refreshError = parseApiError(data, "No se pudo actualizar la lista.");
@@ -308,7 +356,11 @@
     try {
       var res = await fetch("/api/aplicaciones/modulos/" + encodeURIComponent(key), {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        headers: {
+          "Content-Type": "application/json",
+          "x-csrf-token": csrfToken()
+        },
         body: JSON.stringify({ enabled: !!enabled })
       });
       var data = await res.json();
@@ -319,8 +371,23 @@
       modules = modules.map(function (item) {
         return item.key === key ? Object.assign({}, item, data) : item;
       });
+      var updated = modules.find(function (item) { return item.key === key; }) || data || {};
       render();
-      toast("Aplicación actualizada.", "alert-success");
+      var successMessage = data && data.restart_required
+        ? "Aplicacion actualizada. Reinicia el servidor para cargar el modulo."
+        : "Aplicacion actualizada correctamente.";
+      toast(successMessage, "alert-success");
+      showStatusModal({
+        kicker: enabled ? "Modulo activado" : "Modulo desactivado",
+        title: (updated.label || updated.key || "Modulo") + (enabled ? " activado" : " desactivado"),
+        message: successMessage,
+        tone: "alert-success",
+        moduleLabel: updated.label || updated.key || key,
+        route: updated.route || "",
+        restartRequired: !!(data && data.restart_required),
+        statusLabel: enabled ? "Activo" : "Inactivo",
+        detailsMarkup: architectureFindingsMarkup(updated)
+      });
     } catch (error) {
       if (input) input.checked = !enabled;
       toast(error.message || "No se pudo actualizar.", "alert-error");
@@ -332,7 +399,31 @@
           current.architecture_warnings = error.detail.architecture_warnings || [];
           state.focusedKey = key;
           render();
+          showStatusModal({
+            kicker: enabled ? "No se pudo activar" : "No se pudo desactivar",
+            title: (current.label || current.key || "Modulo") + " con errores",
+            message: error.message || "No se pudo actualizar.",
+            tone: "alert-error",
+            moduleLabel: current.label || current.key || key,
+            route: current.route || "",
+            statusLabel: enabled ? "Sigue inactivo" : "Sigue activo",
+            detailsMarkup: architectureFindingsMarkup({
+              architecture_errors: current.architecture_errors,
+              architecture_warnings: current.architecture_warnings
+            })
+          });
         }
+      } else {
+        var failed = modules.find(function (item) { return item.key === key; }) || {};
+        showStatusModal({
+          kicker: enabled ? "No se pudo activar" : "No se pudo desactivar",
+          title: (failed.label || failed.key || "Modulo") + " sin cambios",
+          message: error.message || "No se pudo actualizar.",
+          tone: "alert-error",
+          moduleLabel: failed.label || failed.key || key,
+          route: failed.route || "",
+          statusLabel: failed.enabled ? "Activo" : "Inactivo"
+        });
       }
     } finally {
       if (input) input.disabled = false;
@@ -360,14 +451,22 @@
       }
       var syncChallenge = await fetch("/api/aplicaciones/security/challenge", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        headers: {
+          "Content-Type": "application/json",
+          "x-csrf-token": csrfToken()
+        },
         body: JSON.stringify({ action: "protocol_sync", password: syncPassword, module_key: "" })
       });
       var syncChallengeData = await syncChallenge.json();
       if (!syncChallenge.ok) throw new Error(syncChallengeData.detail || "No se pudo confirmar la operación.");
       var res = await fetch("/api/aplicaciones/protocolo/sync", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        headers: {
+          "Content-Type": "application/json",
+          "x-csrf-token": csrfToken()
+        },
         body: JSON.stringify({ mode: "repair_missing_only", challenge_token: syncChallengeData.token || "" })
       });
       var data = await res.json();
@@ -400,6 +499,7 @@
       formData.append("dry_run", "true");
       var res = await fetch("/api/aplicaciones/modulos/" + encodeURIComponent(key) + "/upload", {
         method: "POST",
+        credentials: "same-origin",
         body: formData
       });
       var data = await res.json();
@@ -433,7 +533,11 @@
       }
       var challengeRes = await fetch("/api/aplicaciones/security/challenge", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        headers: {
+          "Content-Type": "application/json",
+          "x-csrf-token": csrfToken()
+        },
         body: JSON.stringify({ action: "package_upload", password: uploadPassword, module_key: key })
       });
       var challengeData = await challengeRes.json();
@@ -445,6 +549,7 @@
       formData.append("challenge_token", challengeData.token || "");
       var res = await fetch("/api/aplicaciones/modulos/" + encodeURIComponent(key) + "/upload", {
         method: "POST",
+        credentials: "same-origin",
         body: formData
       });
       var data = await res.json();
@@ -484,13 +589,19 @@
     try {
       var challengeRes = await fetch("/api/aplicaciones/security/challenge", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        headers: {
+          "Content-Type": "application/json",
+          "x-csrf-token": csrfToken()
+        },
         body: JSON.stringify({ action: "package_uninstall", password: uninstallPassword, module_key: key })
       });
       var challengeData = await challengeRes.json();
       if (!challengeRes.ok) throw new Error(challengeData.detail || "No se pudo confirmar la operación.");
       var res = await fetch("/api/aplicaciones/modulos/" + encodeURIComponent(key) + "?challenge_token=" + encodeURIComponent(challengeData.token || ""), {
-        method: "DELETE"
+        method: "DELETE",
+        credentials: "same-origin",
+        headers: { "x-csrf-token": csrfToken() }
       });
       var data = await res.json();
       if (!res.ok) {
@@ -535,7 +646,9 @@
     var btn = document.getElementById("apps-export-excel");
     if (btn) { btn.disabled = true; btn.classList.add("loading"); }
     try {
-      var res = await fetch("/api/aplicaciones/modulos/export");
+      var res = await fetch("/api/aplicaciones/modulos/export", {
+        credentials: "same-origin"
+      });
       if (!res.ok) {
         var err = await res.json().catch(function () { return {}; });
         throw new Error(err.detail || "No se pudo generar el exportable.");

@@ -9,11 +9,11 @@ MANIFEST = {
     "version": "1.3.0",
     "category": "Base",
     "author": "SIPET",
-    "sequence": "1999",
+    "sequence": "600",
     "website": "https://avancoop.org",
     "route": "/aplicaciones",
     "icon": "fa-solid fa-cubes",
-    "depends": ["main", "web"],
+    "depends": ["web"],
     "external_dependencies": {
         "python": ["openpyxl", "reportlab", "httpx"],
     },

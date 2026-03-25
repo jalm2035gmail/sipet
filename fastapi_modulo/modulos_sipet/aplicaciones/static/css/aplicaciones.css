@@ -73,6 +73,18 @@
   color: var(--gov-text-soft) !important;
 }
 
+.gov-apps-page .gov-apps-finding-badge {
+  color: #f8fafc !important;
+  border-color: rgba(15, 23, 42, 0.16) !important;
+  background: #334155 !important;
+}
+
+.gov-apps-page .gov-apps-finding-badge--success {
+  color: #f0fdf4 !important;
+  background: #15803d !important;
+  border-color: #15803d !important;
+}
+
 /* =========================================================
    HERO / TOOLBAR
    ========================================================= */
@@ -338,9 +350,9 @@
 /* icono a la izquierda */
 .gov-apps-page .gov-app-icon {
   grid-row: 1 / span 2;
-  width: 6rem;
-  height: 6rem;
-  flex: 0 0 6rem;
+  width: 4.2rem;
+  height: 4.2rem;
+  flex: 0 0 4.2rem;
   display: grid;
   place-items: center;
   border: 0 !important;
@@ -350,14 +362,14 @@
 }
 
 .gov-apps-page .gov-app-icon img {
-  width: 4.9rem;
-  height: 4.9rem;
+  width: 3.43rem;
+  height: 3.43rem;
   object-fit: contain;
 }
 
 .gov-apps-page .gov-app-icon i,
 .gov-apps-page .gov-app-icon span {
-  font-size: 4.5rem !important;
+  font-size: 3.15rem !important;
   line-height: 1;
   color: #111827 !important;
 }
@@ -560,19 +572,19 @@
   }
 
   .gov-apps-page .gov-app-icon {
-    width: 5rem;
-    height: 5rem;
-    flex-basis: 5rem;
+    width: 3.5rem;
+    height: 3.5rem;
+    flex-basis: 3.5rem;
   }
 
   .gov-apps-page .gov-app-icon img {
-    width: 4rem;
-    height: 4rem;
+    width: 2.8rem;
+    height: 2.8rem;
   }
 
   .gov-apps-page .gov-app-icon i,
   .gov-apps-page .gov-app-icon span {
-    font-size: 3.6rem !important;
+    font-size: 2.52rem !important;
   }
 }
 
@@ -582,14 +594,14 @@
   }
 
   .gov-apps-page .gov-app-icon {
-    width: 4.5rem;
-    height: 4.5rem;
+    width: 3.15rem;
+    height: 3.15rem;
     margin-bottom: 0.35rem;
   }
 
   .gov-apps-page .gov-app-icon img {
-    width: 3.5rem;
-    height: 3.5rem;
+    width: 2.45rem;
+    height: 2.45rem;
   }
 
   .gov-apps-page .gov-app-actions {

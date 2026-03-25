@@ -13,15 +13,17 @@ from fastapi_modulo.modulos_sipet.aplicaciones.controladores.dependencies import
     require_applications_permission,
     request_actor_context,
 )
-from fastapi_modulo.modulos_sipet.aplicaciones.modelos.schemas import ModuleRollbackResponse, ModuleUploadResponse
+from fastapi_modulo.modulos_sipet.aplicaciones.modelos.schemas import ModuleRollbackResponse, ModuleUninstallResponse, ModuleUploadResponse
 from fastapi_modulo.modulos_sipet.aplicaciones.servicios.image_branding_service import build_module_image_response
 from fastapi_modulo.modulos_sipet.aplicaciones.servicios.package_service import (
     get_module_image_path,
     import_module_package,
     rollback_module_package_job,
+    uninstall_module_package_job,
 )
 from fastapi_modulo.modulos_sipet.aplicaciones.servicios.security_service import (
     SENSITIVE_ACTION_PACKAGE_ROLLBACK,
+    SENSITIVE_ACTION_PACKAGE_UNINSTALL,
     SENSITIVE_ACTION_PACKAGE_UPLOAD,
     verify_sensitive_action_token,
 )
@@ -107,6 +109,30 @@ def aplicaciones_rollback(
         "restored_files": 0,
         "snapshot_path": "",
     }
+
+
+@router.delete("/api/system/modules/{module_key}", response_model=ModuleUninstallResponse, include_in_schema=False)
+@router.delete("/api/aplicaciones/modulos/{module_key}", response_model=ModuleUninstallResponse)
+def aplicaciones_uninstall(
+    module_key: str,
+    request: Request,
+    challenge_token: str = Query(...),
+):
+    require_applications_permission(request, APPLICATIONS_PERMISSION_PACKAGES_UPLOAD)
+    actor = request_actor_context(request)
+    verify_sensitive_action_token(
+        token=challenge_token,
+        username=actor["user_id"],
+        action=SENSITIVE_ACTION_PACKAGE_UNINSTALL,
+        module_key=module_key,
+    )
+    return uninstall_module_package_job(
+        module_key=module_key,
+        user_id=actor["user_id"],
+        tenant_id=actor["tenant_id"],
+        tenant_key=actor["tenant_key"],
+        ip=actor["ip"],
+    )
 
 
 @router.get("/api/system/modules/assets/{module_key}/{filename}")

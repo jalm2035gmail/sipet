@@ -10,7 +10,7 @@ def test_decorate_modules_payload_marks_upload_root_and_state(monkeypatch) -> No
     monkeypatch.setattr(
         catalog_service,
         "list_catalog_modules",
-        lambda tenant_key=None: [{"key": "crm", "label": "CRM", "enabled": False, "description": "demo", "icon": "fa-solid fa-address-card"}],
+        lambda tenant_key=None, refresh=False, include_legacy=False: [{"key": "crm", "label": "CRM", "enabled": False, "description": "demo", "icon": "fa-solid fa-address-card"}],
     )
     captured: list[list[dict]] = []
     monkeypatch.setattr(catalog_service, "cache_catalog", lambda payload: captured.append(payload))
@@ -51,7 +51,7 @@ def test_decorate_modules_payload_prefers_icon_when_module_has_no_uploaded_image
     monkeypatch.setattr(
         catalog_service,
         "list_catalog_modules",
-        lambda tenant_key=None: [{"key": "web", "label": "Web", "enabled": True, "description": "demo", "icon": "fa-solid fa-globe"}],
+        lambda tenant_key=None, refresh=False, include_legacy=False: [{"key": "web", "label": "Web", "enabled": True, "description": "demo", "icon": "fa-solid fa-globe"}],
     )
     monkeypatch.setattr(catalog_service, "cache_catalog", lambda payload: None)
     monkeypatch.setattr(catalog_service, "list_registry_state", lambda tenant_id=None: {})
@@ -72,7 +72,7 @@ def test_decorate_modules_payload_filters_uninstalled_modules(monkeypatch) -> No
     monkeypatch.setattr(
         catalog_service,
         "list_catalog_modules",
-        lambda tenant_key=None: [
+        lambda tenant_key=None, refresh=False, include_legacy=False: [
             {"key": "crm", "label": "CRM", "enabled": True, "description": "demo"},
             {"key": "fantasma", "label": "Fantasma", "enabled": True, "description": "demo"},
         ],
@@ -99,17 +99,20 @@ def test_decorate_modules_payload_hides_config_only_modules(monkeypatch) -> None
     monkeypatch.setattr(
         catalog_service,
         "list_catalog_modules",
-        lambda tenant_key=None: [
+        lambda tenant_key=None, refresh=False, include_legacy=False: [
             {"key": "crm", "label": "CRM", "enabled": True, "description": "demo"},
             {"key": "bsc", "label": "Gobierno de Aplicaciones", "enabled": True, "description": "demo", "always_enabled": True},
             {"key": "instalacion_core", "label": "Instalación", "enabled": True, "description": "demo", "always_enabled": True},
             {"key": "modulo_base", "label": "Modulo base", "enabled": True, "description": "demo", "always_enabled": True},
             {"key": "ajustes_core", "label": "Ajustes", "enabled": True, "description": "demo", "always_enabled": True},
             {"key": "ajustes_ia_core", "label": "IA", "enabled": True, "description": "demo", "always_enabled": True},
+            {"key": "ia_core", "label": "IA", "enabled": True, "description": "demo", "always_enabled": True},
             {"key": "predictivo_core", "label": "Analisis predictivo", "enabled": True, "description": "demo", "always_enabled": True},
             {"key": "personalizacion_core", "label": "Colores", "enabled": True, "description": "demo", "always_enabled": True},
             {"key": "roles_core", "label": "Roles", "enabled": True, "description": "demo", "always_enabled": True},
             {"key": "membresia_core", "label": "Membresia", "enabled": True, "description": "demo", "always_enabled": True},
+            {"key": "plantillas_core", "label": "Plantillas", "enabled": True, "description": "demo", "always_enabled": True},
+            {"key": "diagnostico_core", "label": "Diagnóstico", "enabled": True, "description": "demo", "always_enabled": True},
         ],
     )
     monkeypatch.setattr(catalog_service, "cache_catalog", lambda payload: None)
@@ -124,3 +127,28 @@ def test_decorate_modules_payload_hides_config_only_modules(monkeypatch) -> None
     payload = catalog_service.decorate_modules_payload()
 
     assert [item["key"] for item in payload] == ["crm"]
+
+
+def test_decorate_modules_payload_dedupes_by_route_and_hides_non_application_entries(monkeypatch) -> None:
+    monkeypatch.setattr(
+        catalog_service,
+        "list_catalog_modules",
+        lambda tenant_key=None, refresh=False, include_legacy=False: [
+            {"key": "system_admin", "label": "Gobierno de Aplicaciones", "enabled": True, "description": "demo", "route": "/aplicaciones", "always_enabled": True},
+            {"key": "aplicaciones", "label": "Gobierno de Aplicaciones", "enabled": True, "description": "demo", "route": "/aplicaciones", "application": False, "always_enabled": True},
+            {"key": "empresa", "label": "Empresa", "enabled": True, "description": "demo", "route": "/identidad-institucional", "always_enabled": True},
+            {"key": "identidad_institucional", "label": "Empresa", "enabled": True, "description": "demo", "route": "/identidad-institucional", "application": True, "always_enabled": True},
+        ],
+    )
+    monkeypatch.setattr(catalog_service, "cache_catalog", lambda payload: None)
+    monkeypatch.setattr(catalog_service, "list_registry_state", lambda tenant_id=None: {})
+    monkeypatch.setattr(catalog_service, "get_protocol_audit_map", lambda: {})
+    monkeypatch.setattr(catalog_service, "get_module_architecture_report", lambda key, target_root=None: {"architecture_ok": True, "architecture_errors": [], "architecture_warnings": []})
+    monkeypatch.setattr(catalog_service, "get_module_upload_root", lambda key: "/tmp/project/fastapi_modulo/modulos_sipet/demo")
+    monkeypatch.setattr(catalog_service, "get_module_image_path", lambda key: "")
+    monkeypatch.setattr(catalog_service, "get_module_catalog_image_url", lambda key: None)
+    monkeypatch.setattr(catalog_service, "get_latest_package_upload", lambda key: None)
+
+    payload = catalog_service.decorate_modules_payload()
+
+    assert [item["key"] for item in payload] == ["system_admin", "empresa"]

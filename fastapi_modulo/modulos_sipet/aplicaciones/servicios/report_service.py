@@ -151,7 +151,7 @@ def _load_registry_audits(module_key: str) -> list[Any]:
     from fastapi_modulo.modulos_sipet.aplicaciones.modelos.db_models import AppRegistryAudit
 
     try:
-        session_factory = core_db.get_session_factory_for_host("")
+        session_factory = core_db.get_admin_session_factory()
         with session_factory() as db:
             return (
                 db.query(AppRegistryAudit)
@@ -171,7 +171,7 @@ def _load_package_uploads(module_key: str) -> list[Any]:
     from fastapi_modulo.modulos_sipet.aplicaciones.modelos.db_models import AppPackageUpload
 
     try:
-        session_factory = core_db.get_session_factory_for_host("")
+        session_factory = core_db.get_admin_session_factory()
         with session_factory() as db:
             return (
                 db.query(AppPackageUpload)

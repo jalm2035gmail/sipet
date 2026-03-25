@@ -24,10 +24,13 @@ CONFIG_ONLY_MODULE_KEYS = {
     "modulo_base",
     "ajustes_core",
     "ajustes_ia_core",
+    "ia_core",
     "predictivo_core",
     "personalizacion_core",
     "roles_core",
     "membresia_core",
+    "plantillas_core",
+    "diagnostico_core",
 }
 
 
@@ -52,9 +55,18 @@ def decorate_modules_payload(
     protocol_map = get_protocol_audit_map()
     persisted_state = list_registry_state(tenant_key)
     payload: list[dict[str, Any]] = []
+    seen_fingerprints: set[tuple[str, str]] = set()
     for item in source_payload:
         key = str(item.get("key") or "").strip()
         if key in CONFIG_ONLY_MODULE_KEYS:
+            continue
+        application_flag = item.get("application")
+        if application_flag is False:
+            continue
+        route = str(item.get("route") or "").strip()
+        label = str(item.get("label") or "").strip().lower()
+        fingerprint = (route, label)
+        if (route or label) and fingerprint in seen_fingerprints:
             continue
         target_root = get_module_upload_root(key)
         if not _is_installed_module(item, target_root):
@@ -87,6 +99,8 @@ def decorate_modules_payload(
         item["issues"] = list(status.get("issues", []))
         item.update(get_module_architecture_report(key, target_root))
         payload.append(item)
+        if route or label:
+            seen_fingerprints.add(fingerprint)
     if items is None and not tenant_key:
         cache_catalog(payload)
     return payload

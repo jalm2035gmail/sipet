@@ -57,6 +57,29 @@ def test_api_update_module_state(monkeypatch) -> None:
     assert response.json()["enabled"] is False
 
 
+def test_api_update_module_state_returns_architecture_report(monkeypatch) -> None:
+    monkeypatch.setattr(api_state, "require_applications_permission", lambda request, permission: None)
+    monkeypatch.setattr(api_state, "request_actor_context", lambda request: {"user_id": "tester", "tenant_id": "default", "tenant_key": "default", "ip": "127.0.0.1"})
+
+    def _raise(*args, **kwargs):
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "message": "Arquitectura inválida.",
+                "architecture_ok": False,
+                "architecture_errors": [{"code": "db.raw_engine", "message": "bad", "path": "/tmp/crm/a.py"}],
+                "architecture_warnings": [],
+            },
+        )
+
+    monkeypatch.setattr(api_state, "update_module_state", _raise)
+
+    response = _client().put("/api/aplicaciones/modulos/crm", json={"enabled": True})
+
+    assert response.status_code == 400
+    assert response.json()["detail"]["architecture_ok"] is False
+
+
 def test_api_sync_protocol_inline(monkeypatch) -> None:
     monkeypatch.setattr(api_protocol, "require_applications_permission", lambda request, permission: None)
     monkeypatch.setattr(api_protocol, "request_actor_context", lambda request: {"user_id": "tester", "tenant_id": "default", "tenant_key": "default", "ip": "127.0.0.1"})
@@ -91,6 +114,9 @@ def test_api_upload_valid_zip(monkeypatch) -> None:
             "unchanged_files": 0,
             "preview_files": [],
             "warnings": [],
+            "architecture_ok": True,
+            "architecture_errors": [],
+            "architecture_warnings": [],
         }
 
     monkeypatch.setattr(api_packages, "require_applications_permission", lambda request, permission: None)
@@ -137,6 +163,22 @@ def test_api_upload_propagates_invalid_module(monkeypatch) -> None:
 
     assert response.status_code == 400
     assert "no admite" in response.json()["detail"]
+
+
+def test_api_uninstall_module(monkeypatch) -> None:
+    monkeypatch.setattr(api_packages, "require_applications_permission", lambda request, permission: None)
+    monkeypatch.setattr(api_packages, "request_actor_context", lambda request: {"user_id": "tester", "tenant_id": "default", "tenant_key": "default", "ip": "127.0.0.1"})
+    monkeypatch.setattr(api_packages, "verify_sensitive_action_token", lambda **kwargs: None)
+    monkeypatch.setattr(
+        api_packages,
+        "uninstall_module_package_job",
+        lambda **kwargs: {"module_key": "crm", "status": "success", "removed_path": "/tmp/crm", "removed_files": 12},
+    )
+
+    response = _client().delete("/api/aplicaciones/modulos/crm?challenge_token=ok")
+
+    assert response.status_code == 200
+    assert response.json()["removed_files"] == 12
 
 
 def test_api_rejects_user_without_permission(monkeypatch) -> None:

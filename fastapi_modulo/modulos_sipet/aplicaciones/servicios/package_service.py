@@ -11,14 +11,18 @@ from fastapi import HTTPException, UploadFile
 from fastapi_modulo.modulos_sipet.aplicaciones.repositorios.package_repository import (
     apply_module_zip,
     cleanup_staging_dir,
+    get_module_architecture_report,
     get_module_image_path,
     get_module_upload_root,
     inspect_module_zip,
     persist_upload_to_temp,
     restore_module_snapshot,
+    uninstall_module_files,
     validate_upload_metadata,
 )
+from fastapi_modulo.modulos_sipet.aplicaciones.repositorios.app_repository import delete_catalog_module_dependencies
 from fastapi_modulo.modulos_sipet.aplicaciones.repositorios.persistence_repository import (
+    clear_module_persistence,
     create_package_upload,
     create_registry_audit,
     get_latest_registry_audit,
@@ -117,6 +121,9 @@ def _build_package_payload(
         "unchanged_files": inspection["unchanged_files"],
         "preview_files": inspection["preview_files"],
         "warnings": inspection["warnings"],
+        "architecture_ok": bool(inspection.get("architecture_ok", True)),
+        "architecture_errors": list(inspection.get("architecture_errors", [])),
+        "architecture_warnings": list(inspection.get("architecture_warnings", [])),
     }
 
 
@@ -307,6 +314,51 @@ def rollback_module_package_job(
         }
 
 
+def uninstall_module_package_job(
+    *,
+    module_key: str,
+    user_id: str | None = None,
+    tenant_id: str | None = None,
+    tenant_key: str | None = None,
+    ip: str | None = None,
+) -> dict:
+    with guarded_lock(
+        f"app_upload:{str(module_key or '').strip()}",
+        ttl_seconds=300,
+        detail="Ya existe una operacion delicada en curso para este modulo.",
+    ):
+        architecture = get_module_architecture_report(module_key)
+        payload = uninstall_module_files(module_key)
+        resolved_tenant_key = str(tenant_key or tenant_id or "").strip() or None
+        delete_catalog_module_dependencies(module_key, tenant_key=resolved_tenant_key)
+        clear_module_persistence(module_key, tenant_id=resolved_tenant_key)
+        create_registry_audit(
+            module_key=module_key,
+            action="uninstall_package",
+            payload={
+                "removed_path": payload.get("removed_path", ""),
+                "removed_files": int(payload.get("removed_files", 0)),
+                "tenant_id": resolved_tenant_key or "",
+                "architecture_before_uninstall": architecture,
+            },
+            result="success",
+            user_id=user_id,
+            ip=ip,
+        )
+        invalidate_catalog_cache()
+        _notify_webhook(
+            "uninstall_package",
+            {
+                "module_key": module_key,
+                "removed_path": payload.get("removed_path", ""),
+                "removed_files": int(payload.get("removed_files", 0)),
+                "user_id": str(user_id or ""),
+                "ip": str(ip or ""),
+            },
+        )
+        return payload
+
+
 async def import_module_package(
     module_key: str,
     package: UploadFile,
@@ -401,4 +453,5 @@ __all__ = [
     "get_module_upload_root",
     "import_module_package",
     "rollback_module_package_job",
+    "uninstall_module_package_job",
 ]

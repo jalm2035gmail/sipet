@@ -47,7 +47,6 @@ def test_build_manifest_payload_detects_web_dependency(tmp_path: Path) -> None:
 
     payload = protocol_service.build_manifest_payload(module_dir)
 
-    assert "main" in payload["depends"]
     assert "web" in payload["depends"]
 
 

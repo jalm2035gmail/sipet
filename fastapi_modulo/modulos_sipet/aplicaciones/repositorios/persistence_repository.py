@@ -21,7 +21,7 @@ def _utc_now() -> datetime:
 
 
 def _admin_session():
-    return core_db.get_session_factory_for_host("")()
+    return core_db.get_admin_session_factory()()
 
 
 def list_registry_state(tenant_id: str | None = None) -> dict[str, AppRegistryState]:
@@ -197,9 +197,25 @@ def get_latest_registry_audit(module_key: str, action: str) -> AppRegistryAudit 
         return None
 
 
+def clear_module_persistence(module_key: str, tenant_id: str | None = None) -> None:
+    try:
+        with _admin_session() as db:
+            state_query = db.query(AppRegistryState).filter(AppRegistryState.module_key == module_key)
+            if tenant_id is not None:
+                state_query = state_query.filter(AppRegistryState.tenant_id == tenant_id)
+            state_query.delete(synchronize_session=False)
+            db.query(AppPackageUpload).filter(AppPackageUpload.module_key == module_key).delete(synchronize_session=False)
+            db.query(AppRegistryAudit).filter(AppRegistryAudit.module_key == module_key).delete(synchronize_session=False)
+            db.query(AppProtocolAudit).filter(AppProtocolAudit.module_key == module_key).delete(synchronize_session=False)
+            db.commit()
+    except (OperationalError, ProgrammingError):
+        return
+
+
 __all__ = [
     "create_package_upload",
     "create_registry_audit",
+    "clear_module_persistence",
     "get_latest_package_upload",
     "get_latest_registry_audit",
     "list_registry_state",

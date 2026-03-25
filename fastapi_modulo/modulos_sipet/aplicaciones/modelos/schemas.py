@@ -34,6 +34,9 @@ class ModuleUploadResponse(BaseModel):
     unchanged_files: int = 0
     preview_files: list[dict[str, str | int]] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
+    architecture_ok: bool = True
+    architecture_errors: list[dict[str, str]] = Field(default_factory=list)
+    architecture_warnings: list[dict[str, str]] = Field(default_factory=list)
 
 
 class SensitiveActionChallengeSchema(BaseModel):
@@ -65,6 +68,16 @@ class ModuleCatalogItem(BaseModel):
     package_target_label: str = ""
     protocol_has_init: bool = False
     protocol_has_manifest: bool = False
+    architecture_ok: bool = True
+    architecture_errors: list[dict[str, str]] = Field(default_factory=list)
+    architecture_warnings: list[dict[str, str]] = Field(default_factory=list)
+
+
+class ModuleUninstallResponse(BaseModel):
+    module_key: str
+    status: str = "success"
+    removed_path: str = ""
+    removed_files: int = 0
 
 
 class ProtocolAuditItem(BaseModel):
@@ -120,6 +133,7 @@ ModuleStateIn = ModuleToggleSchema
 __all__ = [
     "ModuleCatalogItem",
     "ModuleRollbackResponse",
+    "ModuleUninstallResponse",
     "ModuleStateIn",
     "ModuleToggleSchema",
     "ModuleUploadResponse",
