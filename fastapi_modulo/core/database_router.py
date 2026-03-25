@@ -4,6 +4,7 @@ import configparser
 import json
 import os
 import re
+import threading
 from contextvars import ContextVar
 from dataclasses import dataclass
 from pathlib import Path
@@ -15,6 +16,7 @@ from sqlalchemy.engine.url import make_url
 from sqlalchemy.orm import sessionmaker
 
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+PROJECT_DB_DIR = os.path.join(PROJECT_ROOT, "base_datos")
 APP_ENV_DEFAULT = (os.environ.get("APP_ENV") or os.environ.get("ENVIRONMENT") or "development").strip().lower()
 DOMAIN_CONFIG_DIR = Path(os.environ.get("DOMAIN_CONFIG_DIR") or os.path.join(PROJECT_ROOT, "config", "dominios"))
 SIPET_CONFIG_PATH = Path(os.environ.get("SIPET_CONFIG") or os.path.join(PROJECT_ROOT, "sipet.conf"))
@@ -25,6 +27,21 @@ def _domain_config_files() -> list[Path]:
     if not DOMAIN_CONFIG_DIR.exists():
         return []
     return sorted(DOMAIN_CONFIG_DIR.glob("*.conf")) + sorted(DOMAIN_CONFIG_DIR.glob("*.ini"))
+
+
+def _resolve_preferred_host(host: Optional[str] = None) -> str:
+    candidates = (
+        host,
+        _REQUEST_HOST.get(""),
+        os.environ.get("APP_DOMAIN"),
+        os.environ.get("PUBLIC_DOMAIN"),
+        os.environ.get("RAILWAY_PUBLIC_DOMAIN"),
+    )
+    for candidate in candidates:
+        normalized = normalize_host(candidate)
+        if normalized:
+            return normalized
+    return ""
 
 
 def normalize_host(value: Optional[str]) -> str:
@@ -38,6 +55,15 @@ def normalize_host(value: Optional[str]) -> str:
     if ":" in raw and raw.count(":") == 1:
         raw = raw.split(":", 1)[0]
     return raw
+
+
+def is_local_host(host: Optional[str]) -> bool:
+    normalized = normalize_host(host)
+    if not normalized:
+        return True
+    if normalized in {"localhost", "127.0.0.1", "::1"}:
+        return True
+    return normalized.endswith(".local") or normalized.endswith(".test")
 
 
 def normalize_database_url(raw_url: str) -> str:
@@ -65,7 +91,7 @@ def resolve_sqlite_path(raw_path: str) -> str:
     candidate = (raw_path or "").strip()
     if not candidate:
         default_name = f"strategic_planning_{APP_ENV_DEFAULT}.db"
-        return os.path.join(PROJECT_ROOT, default_name)
+        return os.path.join(PROJECT_DB_DIR, default_name)
     if os.path.isabs(candidate):
         return candidate
     return os.path.abspath(os.path.join(PROJECT_ROOT, candidate))
@@ -152,8 +178,26 @@ def _load_conf_options(file_path: Path) -> Optional[configparser.SectionProxy]:
     return parser["options"]
 
 
-def load_sipet_conf_options() -> Optional[configparser.SectionProxy]:
-    return _load_conf_options(SIPET_CONFIG_PATH)
+def resolve_sipet_config_path(host: Optional[str] = None) -> Path:
+    normalized_host = _resolve_preferred_host(host)
+    if normalized_host:
+        domain_path = domain_config_path(normalized_host)
+        if domain_path.exists():
+            return domain_path
+    if SIPET_CONFIG_PATH.exists():
+        return SIPET_CONFIG_PATH
+    domain_files = _domain_config_files()
+    if len(domain_files) == 1:
+        return domain_files[0]
+    return SIPET_CONFIG_PATH
+
+
+def load_sipet_conf_options(host: Optional[str] = None) -> Optional[configparser.SectionProxy]:
+    return _load_conf_options(resolve_sipet_config_path(host))
+
+
+def read_sipet_conf_file(host: Optional[str] = None) -> configparser.ConfigParser:
+    return read_conf_file(resolve_sipet_config_path(host))
 
 
 def read_conf_file(file_path: Path) -> configparser.ConfigParser:
@@ -172,11 +216,12 @@ def write_conf_file(file_path: Path, parser: configparser.ConfigParser) -> None:
         parser.write(fh)
 
 
-def get_sipet_conf_settings() -> Dict[str, Any]:
-    options = load_sipet_conf_options()
+def get_sipet_conf_settings(host: Optional[str] = None) -> Dict[str, Any]:
+    config_path = resolve_sipet_config_path(host)
+    options = load_sipet_conf_options(host)
     data = {
-        "path": str(SIPET_CONFIG_PATH),
-        "exists": SIPET_CONFIG_PATH.exists(),
+        "path": str(config_path),
+        "exists": config_path.exists(),
         "show_db_path": False,
         "db_host": "",
         "db_port": "5432",
@@ -234,8 +279,51 @@ def has_explicit_database_config() -> bool:
     return bool(_domain_config_files())
 
 
-def get_sipet_superadmin_settings() -> Dict[str, str]:
-    parser = read_conf_file(SIPET_CONFIG_PATH)
+def has_complete_database_config(host: Optional[str] = None) -> bool:
+    options = load_sipet_conf_options(host)
+    if options is not None:
+        raw_url = str(
+            options.get("db_url")
+            or options.get("database_url")
+            or options.get("datamain_url")
+            or ""
+        ).strip()
+        if raw_url:
+            return True
+
+        sqlite_path = str(
+            options.get("sqlite_db_path")
+            or options.get("db_path")
+            or ""
+        ).strip()
+        if sqlite_path:
+            return True
+
+        db_engine = str(options.get("db_engine") or options.get("db_type") or "postgresql").strip().lower()
+        db_name = _resolve_db_name_from_options(options, normalize_host(host) or normalize_host(str(options.get("domain") or "")))
+        db_host = str(options.get("db_host") or "").strip()
+        db_port = str(options.get("db_port") or "").strip()
+        db_user = str(options.get("db_user") or "").strip()
+        db_password = str(options.get("db_password") or "").strip()
+
+        if db_engine == "sqlite":
+            return False
+        return bool(db_name and db_host and db_port and db_user and db_password)
+
+    raw_url = (
+        os.environ.get("DATAMAIN_URL")
+        or os.environ.get("MYSQL_URL")
+        or os.environ.get("POSTGRES_URL")
+        or os.environ.get("POSTGRESQL_URL")
+        or ""
+    ).strip()
+    if raw_url:
+        return True
+    return bool((os.environ.get("SQLITE_DB_PATH") or "").strip())
+
+
+def get_sipet_superadmin_settings(host: Optional[str] = None) -> Dict[str, str]:
+    parser = read_sipet_conf_file(host)
     if not parser.has_section("superadmin"):
         return {
             "username": "",
@@ -250,17 +338,22 @@ def get_sipet_superadmin_settings() -> Dict[str, str]:
     }
 
 
-def update_sipet_conf_settings(payload: Mapping[str, Any]) -> Dict[str, Any]:
-    parser = read_conf_file(SIPET_CONFIG_PATH)
+def update_sipet_conf_settings(payload: Mapping[str, Any], host: Optional[str] = None) -> Dict[str, Any]:
+    target_host = str(payload.get("domain") or payload.get("host") or host or "").strip()
+    config_path = resolve_sipet_config_path(target_host)
+    parser = read_conf_file(config_path)
     options = parser["options"]
+    preserve_if_blank = {"db_password", "db_name"}
     for key in ("domain", "db_host", "db_port", "db_user", "db_password", "db_name", "db_engine", "dbfilter", "admin_passwd", "workers", "max_cron_threads", "log_level"):
         if key in payload:
-            options[key] = str(payload.get(key) or "").strip()
+            value = str(payload.get(key) or "").strip()
+            if value or key not in preserve_if_blank:
+                options[key] = value
     for key in ("list_db", "proxy_mode", "show_db_path"):
         if key in payload:
             options[key] = "True" if _coerce_bool(payload.get(key), False) else "False"
-    write_conf_file(SIPET_CONFIG_PATH, parser)
-    return get_sipet_conf_settings()
+    write_conf_file(config_path, parser)
+    return get_sipet_conf_settings(target_host)
 
 
 def get_show_db_path_enabled() -> bool:
@@ -343,7 +436,7 @@ def _resolve_db_name_from_options(options: Mapping[str, str], host: str = "") ->
 
 
 def resolve_database_url_from_sipet_conf(host: Optional[str] = None) -> Optional[str]:
-    options = load_sipet_conf_options()
+    options = load_sipet_conf_options(host)
     if options is None:
         return None
     normalized_host = normalize_host(host) or normalize_host(
@@ -517,11 +610,14 @@ def save_domain_conf_entry(payload: Mapping[str, Any]) -> Dict[str, Any]:
     parser = read_conf_file(file_path)
     options = parser["options"]
     options["domain"] = domain
+    preserve_if_blank = {"db_password", "db_name"}
     for key in ("db_host", "db_port", "db_user", "db_password", "db_name", "db_engine", "db_type", "dbfilter", "db_url", "database_url", "datamain_url", "sqlite_db_path", "db_path"):
         if key in payload:
             value = str(payload.get(key) or "").strip()
             if value:
                 options[key] = value
+            elif key in preserve_if_blank and str(options.get(key) or "").strip():
+                continue
             elif key in options:
                 options.pop(key, None)
     options["enabled"] = "True" if _coerce_bool(payload.get("enabled"), True) else "False"
@@ -738,7 +834,7 @@ def resolve_default_database_url() -> str:
         )
         return f"sqlite:///{fallback_path}"
 
-    return f"sqlite:///{os.path.join(PROJECT_ROOT, default_name)}"
+    return f"sqlite:///{os.path.join(PROJECT_DB_DIR, default_name)}"
 
 
 @dataclass(frozen=True)
@@ -756,6 +852,9 @@ class DatabaseRouter:
         self._session_factory_cache: Dict[str, sessionmaker] = {}
         self._host_database_map = load_host_database_map()
         self.default_database_url = resolve_default_database_url()
+        self._tenant_db_url_cache: Dict[str, Optional[str]] = {}
+        self._tenant_registry_present: Optional[bool] = None
+        self._tenant_cache_lock = threading.Lock()
 
     def refresh_host_map(self) -> None:
         self._host_database_map = load_host_database_map()
@@ -770,6 +869,8 @@ class DatabaseRouter:
         self._session_factory_cache.clear()
         self.refresh_host_map()
         self.default_database_url = resolve_default_database_url()
+        self._tenant_db_url_cache.clear()
+        self._tenant_registry_present = None
 
     def set_request_host(self, host: Optional[str]):
         return _REQUEST_HOST.set(normalize_host(host))
@@ -780,6 +881,123 @@ class DatabaseRouter:
     def get_request_host(self) -> str:
         return _REQUEST_HOST.get("")
 
+    def _resolve_tenant_registry_database_url(self, host: str) -> Optional[str]:
+        normalized_host = normalize_host(host)
+        if not normalized_host:
+            return None
+        if normalized_host in self._tenant_db_url_cache:
+            return self._tenant_db_url_cache[normalized_host]
+
+        with self._tenant_cache_lock:
+            if normalized_host in self._tenant_db_url_cache:
+                return self._tenant_db_url_cache[normalized_host]
+
+            resolved_url: Optional[str] = None
+            admin_db_url = normalize_sqlite_url_for_runtime(self.default_database_url)
+            connect_args = {"check_same_thread": False} if admin_db_url.startswith("sqlite:///") else {}
+            engine = create_engine(admin_db_url, connect_args=connect_args, echo=False)
+            variants = [normalized_host]
+            if normalized_host.startswith("www."):
+                variants.append(normalized_host[4:])
+            else:
+                variants.append(f"www.{normalized_host}")
+
+            try:
+                with engine.connect() as connection:
+                    for candidate in variants:
+                        row = connection.execute(
+                            text(
+                                """
+                                SELECT tr.db_url
+                                FROM tenant_domains td
+                                JOIN tenant_registry tr
+                                  ON tr.tenant_key = td.tenant_key
+                                WHERE td.host = :host
+                                  AND td.is_active = 1
+                                  AND tr.is_active = 1
+                                  AND tr.db_url IS NOT NULL
+                                  AND tr.db_url <> ''
+                                ORDER BY td.id ASC, tr.id ASC
+                                LIMIT 1
+                                """
+                            ),
+                            {"host": candidate},
+                        ).first()
+                        if row and row[0]:
+                            resolved_url = normalize_database_url(str(row[0]).strip())
+                            break
+
+                    if not resolved_url:
+                        for candidate in variants:
+                            row = connection.execute(
+                                text(
+                                    """
+                                    SELECT tr.db_url
+                                    FROM tenant_registry tr
+                                    WHERE tr.primary_host = :host
+                                      AND tr.is_active = 1
+                                      AND tr.db_url IS NOT NULL
+                                      AND tr.db_url <> ''
+                                    ORDER BY tr.id ASC
+                                    LIMIT 1
+                                    """
+                                ),
+                                {"host": candidate},
+                            ).first()
+                            if row and row[0]:
+                                resolved_url = normalize_database_url(str(row[0]).strip())
+                                break
+            except Exception:
+                resolved_url = None
+            finally:
+                engine.dispose()
+
+            for candidate in variants:
+                self._tenant_db_url_cache[candidate] = resolved_url
+            return resolved_url
+
+    def _has_tenant_registry_entries(self) -> bool:
+        if self._tenant_registry_present is not None:
+            return self._tenant_registry_present
+
+        with self._tenant_cache_lock:
+            if self._tenant_registry_present is not None:
+                return self._tenant_registry_present
+
+            present = False
+            admin_db_url = normalize_sqlite_url_for_runtime(self.default_database_url)
+            connect_args = {"check_same_thread": False} if admin_db_url.startswith("sqlite:///") else {}
+            engine = create_engine(admin_db_url, connect_args=connect_args, echo=False)
+            try:
+                with engine.connect() as connection:
+                    row = connection.execute(
+                        text(
+                            """
+                            SELECT 1
+                            FROM tenant_registry
+                            WHERE is_active = 1
+                            LIMIT 1
+                            """
+                        )
+                    ).first()
+                    present = row is not None
+            except Exception:
+                present = False
+            finally:
+                engine.dispose()
+
+            self._tenant_registry_present = present
+            return present
+
+    def _should_block_default_fallback(self, host: str) -> bool:
+        normalized_host = normalize_host(host)
+        if not normalized_host or is_local_host(normalized_host):
+            return False
+        raw_override = str(os.environ.get("ALLOW_DEFAULT_DB_FALLBACK") or "").strip().lower()
+        if raw_override in {"1", "true", "yes", "on", "si", "sí"}:
+            return False
+        return bool(self._host_database_map) or self._has_tenant_registry_entries()
+
     def get_database_url_for_host(self, host: Optional[str] = None) -> str:
         normalized_host = normalize_host(host) or self.get_request_host()
         conf_url = resolve_database_url_from_sipet_conf(normalized_host)
@@ -787,6 +1005,14 @@ class DatabaseRouter:
             return conf_url
         if normalized_host and normalized_host in self._host_database_map:
             return coerce_database_target_to_url(self._host_database_map[normalized_host])
+        tenant_db_url = self._resolve_tenant_registry_database_url(normalized_host)
+        if tenant_db_url:
+            return tenant_db_url
+        if self._should_block_default_fallback(normalized_host):
+            raise RuntimeError(
+                f"No hay una base de datos configurada para el host '{normalized_host}'. "
+                "Configure HOST_DATAMAIN_MAP, archivos de dominio o tenant_registry antes de usar este sitio."
+            )
         return self.default_database_url
 
     def get_database_target(self, host: Optional[str] = None) -> DatabaseTarget:

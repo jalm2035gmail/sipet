@@ -18,12 +18,34 @@ def test_installation_status_requires_setup_when_conf_missing(monkeypatch) -> No
 def test_installation_status_uses_env_database_when_conf_missing(monkeypatch) -> None:
     monkeypatch.setattr(installer_service, "SIPET_CONFIG_PATH", Path("/tmp/nonexistent-sipet.conf"))
     monkeypatch.setattr(installer_service, "has_explicit_database_config", lambda: True)
+    monkeypatch.setattr(installer_service, "has_complete_database_config", lambda: True)
     monkeypatch.setattr(installer_service, "get_sipet_conf_settings", lambda: {"path": "/tmp/nonexistent-sipet.conf"})
     monkeypatch.setattr(installer_service, "can_connect_current_database", lambda: (True, ""))
 
     status = installer_service.get_installation_status()
 
     assert status["required"] is False
+
+
+def test_installation_status_does_not_auto_bootstrap_with_partial_config(monkeypatch) -> None:
+    calls: list[str] = []
+
+    monkeypatch.setattr(installer_service, "SIPET_CONFIG_PATH", Path("/tmp/sipet.conf"))
+    monkeypatch.setattr(installer_service, "has_explicit_database_config", lambda: True)
+    monkeypatch.setattr(installer_service, "has_complete_database_config", lambda: False)
+    monkeypatch.setattr(installer_service, "get_sipet_conf_settings", lambda: {"path": "/tmp/sipet.conf"})
+    monkeypatch.setattr(installer_service, "can_connect_current_database", lambda: (False, "fe_sendauth: no password supplied"))
+    monkeypatch.setattr(
+        installer_service,
+        "initialize_database_from_sipet_conf",
+        lambda payload: calls.append("bootstrap") or {"connected": True, "error": ""},
+    )
+
+    status = installer_service.get_installation_status()
+
+    assert status["required"] is True
+    assert "no password supplied" in status["reason"]
+    assert calls == []
 
 
 def test_list_domain_conf_entries_exposes_runtime_entry_from_env(tmp_path, monkeypatch) -> None:

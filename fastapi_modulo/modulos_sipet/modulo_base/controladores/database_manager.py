@@ -19,7 +19,8 @@ from fastapi_modulo.core.database_router import (
     get_sipet_conf_settings,
     import_domain_conf_text,
     list_domain_conf_entries,
-    read_conf_file,
+    read_sipet_conf_file,
+    resolve_sipet_config_path,
     save_domain_conf_entry,
     update_sipet_conf_settings,
 )
@@ -76,7 +77,8 @@ def _enforce_admin_or_setup(request: Request, *, require_setup_auth: bool = Fals
     require_admin_or_superadmin(request)
 
 
-def _manager_content() -> str:
+def _manager_content(can_manage_db_secrets: bool = False) -> str:
+    can_manage_secrets_js = "true" if can_manage_db_secrets else "false"
     return f"""
 <style>
   .db-btn {{
@@ -219,6 +221,7 @@ def _manager_content() -> str:
   let entries = [];
   let selected = null;
   let mode = null;
+  const canManageDbSecrets = {can_manage_secrets_js};
 
   const $ = (id) => document.getElementById(id);
   const t = (v) => String(v ?? '');
@@ -288,6 +291,8 @@ def _manager_content() -> str:
     $('f-db-password').value = '';
     $('f-db-name').value = t(e?.db_name);
     $('f-sqlite-path').value = t(e?.sqlite_path);
+    $('f-db-password').disabled = !canManageDbSecrets;
+    $('f-db-name').disabled = !canManageDbSecrets;
     showMsg($('form-msg'), '', false);
     $('form-panel').classList.add('open');
     $('form-panel').scrollIntoView({{ behavior:'smooth', block:'nearest' }});
@@ -342,11 +347,13 @@ def _manager_content() -> str:
       db_host: $('f-db-host').value.trim(),
       db_port: $('f-db-port').value.trim(),
       db_user: $('f-db-user').value.trim(),
-      db_password: $('f-db-password').value,
-      db_name: $('f-db-name').value.trim(),
       sqlite_db_path: $('f-sqlite-path').value.trim(),
       enabled: true,
     }};
+    if (canManageDbSecrets) {{
+      payload.db_password = $('f-db-password').value;
+      payload.db_name = $('f-db-name').value.trim();
+    }}
     try {{
       const res = await fetch('/api/base_datos/gestion/save', {{
         method:'POST',
@@ -558,7 +565,7 @@ def database_manager_page(request: Request):
         return _standalone_setup_page("Inicializar base de datos", _setup_login_content())
     else:
         _enforce_admin_or_setup(request, require_setup_auth=_setup_required(request))
-        content = _manager_content()
+        content = _manager_content(is_superadmin(request) or _is_setup_authenticated(request))
     if _setup_required(request):
         return _standalone_setup_page("Gestión de bases de datos", content)
     return render_backend_page(
@@ -600,13 +607,13 @@ def database_setup_page(request: Request):
     if _setup_required(request):
         return _standalone_setup_page(
             "Inicializar base de datos",
-            _setup_login_content() if not _is_setup_authenticated(request) else _manager_content(),
+            _setup_login_content() if not _is_setup_authenticated(request) else _manager_content(True),
         )
     if _is_setup_authenticated(request):
-        return _standalone_setup_page("Gestión de bases de datos", _manager_content())
+        return _standalone_setup_page("Gestión de bases de datos", _manager_content(True))
     if not is_superadmin(request):
         return _forbidden_as_not_found()
-    return _standalone_setup_page("Gestión de bases de datos", _manager_content())
+    return _standalone_setup_page("Gestión de bases de datos", _manager_content(True))
 
 
 @router.get("/api/base_datos/gestion/list")
@@ -620,6 +627,10 @@ def list_database_entries(request: Request):
 async def save_database_entry(request: Request):
     _enforce_admin_or_setup(request, require_setup_auth=_setup_required(request))
     payload = await request.json()
+    if isinstance(payload, dict) and not (is_superadmin(request) or _is_setup_authenticated(request)):
+        payload = dict(payload)
+        payload.pop("db_password", None)
+        payload.pop("db_name", None)
     try:
         entry = save_domain_conf_entry(payload if isinstance(payload, dict) else {})
     except Exception as exc:
@@ -631,6 +642,10 @@ async def save_database_entry(request: Request):
 async def save_sipet_conf(request: Request):
     _enforce_admin_or_setup(request, require_setup_auth=_setup_required(request))
     payload = await request.json()
+    if isinstance(payload, dict) and not (is_superadmin(request) or _is_setup_authenticated(request)):
+        payload = dict(payload)
+        payload.pop("db_password", None)
+        payload.pop("db_name", None)
     try:
         settings = update_sipet_conf_settings(payload if isinstance(payload, dict) else {})
     except Exception as exc:
@@ -658,14 +673,20 @@ def export_domain_conf(request: Request, domain: str):
 @router.get("/api/base_datos/gestion/export/sipet-conf")
 def export_sipet_conf(request: Request):
     _enforce_admin_or_setup(request, require_setup_auth=_setup_required(request))
-    parser = read_conf_file(Path("sipet.conf"))
+    host = str(request.headers.get("host") or "").strip()
+    parser = read_sipet_conf_file(host)
+    config_path = resolve_sipet_config_path(host)
     raw = []
     for section in parser.sections():
         raw.append(f"[{section}]")
         for key, value in parser[section].items():
             raw.append(f"{key} = {value}")
         raw.append("")
-    return HTMLResponse(content="\n".join(raw), media_type="text/plain; charset=utf-8", headers={"Content-Disposition": 'attachment; filename="sipet.conf"'})
+    return HTMLResponse(
+        content="\n".join(raw),
+        media_type="text/plain; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{config_path.name}"'},
+    )
 
 
 @router.get("/api/base_datos/gestion/export/db")

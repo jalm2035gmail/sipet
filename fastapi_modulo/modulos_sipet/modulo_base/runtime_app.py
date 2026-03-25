@@ -48,7 +48,9 @@ from fastapi_modulo.core import db as core_db
 from fastapi_modulo.core import apply_tenant_context_middleware
 from fastapi_modulo.core.db import DepartamentoOrganizacional
 from fastapi_modulo.core.database_router import can_connect_current_database
+from fastapi_modulo.core.database_router import has_complete_database_config
 from fastapi_modulo.core.database_router import has_explicit_database_config
+from fastapi_modulo.core.database_router import initialize_database_from_sipet_conf
 from fastapi_modulo.core.database_router import get_sipet_superadmin_settings
 from fastapi_modulo.core.database_router import SIPET_CONFIG_PATH
 from fastapi_modulo.modulos_sipet.web.controladores.backend_shell import (
@@ -1486,6 +1488,30 @@ def _initialize_core_schema() -> None:
         app.state.core_schema_initialized = False
         print(f"[startup] core_schema setup required: {app.state.database_setup_error}", flush=True)
         return
+
+    def _attempt_automatic_database_bootstrap(exc: Exception) -> bool:
+        if not has_complete_database_config():
+            print("[startup] automatic database bootstrap skipped: incomplete database config", flush=True)
+            return False
+        try:
+            result = initialize_database_from_sipet_conf({})
+        except Exception as bootstrap_exc:
+            print(
+                f"[startup] automatic database bootstrap failed after '{exc}': {bootstrap_exc}",
+                flush=True,
+            )
+            return False
+        if not bool(result.get("connected")):
+            print(
+                f"[startup] automatic database bootstrap incomplete: {result.get('error') or 'unknown error'}",
+                flush=True,
+            )
+            return False
+        core_db.refresh_runtime_database_state()
+        refresh_runtime_database_globals()
+        print("[startup] automatic database bootstrap ok", flush=True)
+        return True
+
     try:
         run_core_schema_bootstrap(force_refresh_database=True)
         print("[startup] create_all ok", flush=True)
@@ -1502,6 +1528,25 @@ def _initialize_core_schema() -> None:
         app.state.core_schema_initialized = True
         print("[startup] core_schema done", flush=True)
     except Exception as exc:
+        if _attempt_automatic_database_bootstrap(exc):
+            try:
+                run_core_schema_bootstrap(force_refresh_database=True)
+                print("[startup] create_all ok", flush=True)
+                print("[startup] documentos ok", flush=True)
+                print("[startup] forms ok", flush=True)
+                print("[startup] unify_users ok", flush=True)
+                print("[startup] roles ok", flush=True)
+                print("[startup] passkey ok", flush=True)
+                print("[startup] strategic_axes ok", flush=True)
+                print("[startup] sensitive_fields ok", flush=True)
+                print("[startup] superadmin ok", flush=True)
+                print("[startup] demo_admin ok", flush=True)
+                print("[startup] strategic_axes_data ok", flush=True)
+                app.state.core_schema_initialized = True
+                print("[startup] core_schema done", flush=True)
+                return
+            except Exception as retry_exc:
+                exc = retry_exc
         ok, error = can_connect_current_database()
         app.state.database_setup_required = not ok
         app.state.database_setup_error = str(error or exc)
@@ -1525,6 +1570,9 @@ def _register_startup_routers() -> None:
 @app.on_event("startup")
 def _run_frontend_legacy_migration() -> None:
     if getattr(app.state, "database_setup_required", False):
+        return
+    if not core_db.get_request_host():
+        print("[startup] frontend legacy migration skipped: no request host", flush=True)
         return
     try:
         run_frontend_startup_migration()
@@ -2423,11 +2471,6 @@ def root_head():
 def configura_imagen():
     # Aquí se usará un template en el futuro
     return "<h2>Configuración de imagen (template)</h2>"
-
-
-@app.get("/ajustes/configuracion", response_class=HTMLResponse)
-def ajustes_configuracion(request: Request):
-    return _render_ajustes_configuracion_page(request)
 
 
 def _render_database_tools_page(request: Request) -> HTMLResponse:

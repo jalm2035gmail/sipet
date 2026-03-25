@@ -103,6 +103,7 @@ def test_enforce_backend_login_redirects_without_session(monkeypatch) -> None:
     )
     monkeypatch.setattr(backend_middleware.tenant_context, "reset_request_tenant_context", lambda binding: None)
     monkeypatch.setattr(backend_middleware, "read_session_cookie", lambda token: None)
+    monkeypatch.setattr(backend_middleware, "can_connect_current_database", lambda host=None: (True, ""))
     async def call_next(_request):
         return HTMLResponse("ok")
 
@@ -120,6 +121,7 @@ def test_enforce_backend_login_allows_database_api_with_setup_cookie(monkeypatch
     monkeypatch.setattr(backend_middleware.tenant_context, "reset_request_tenant_context", lambda binding: None)
     monkeypatch.setattr(backend_middleware, "read_session_cookie", lambda token: None)
     monkeypatch.setattr(backend_middleware, "_is_setup_authenticated_request", lambda request: True)
+    monkeypatch.setattr(backend_middleware, "can_connect_current_database", lambda host=None: (True, ""))
 
     async def call_next(_request):
         return JSONResponse({"ok": True})
@@ -147,6 +149,7 @@ def test_enforce_backend_login_blocks_csrf(monkeypatch) -> None:
         "read_session_cookie",
         lambda token: {"username": "admin", "role": "administrador", "tenant_id": "default", "password_fingerprint": "abc"},
     )
+    monkeypatch.setattr(backend_middleware, "can_connect_current_database", lambda host=None: (True, ""))
     monkeypatch.setattr(backend_middleware, "is_session_bound_to_request", lambda request, session_data: True)
     monkeypatch.setattr(backend_middleware, "validate_csrf_request", lambda request: asyncio.sleep(0, result=False))
     monkeypatch.setattr(backend_middleware, "is_same_origin_request", lambda request: False)
@@ -169,6 +172,48 @@ def test_enforce_backend_login_blocks_csrf(monkeypatch) -> None:
     assert response.status_code == 403
 
 
+def test_enforce_backend_login_skips_csrf_body_validation_for_same_origin(monkeypatch) -> None:
+    _install_frontend_public_path_stub()
+    monkeypatch.setattr(
+        backend_middleware.tenant_context,
+        "bind_request_tenant_context",
+        lambda request: types.SimpleNamespace(context=types.SimpleNamespace(tenant_id="default"), host_token="token", tenant_token="tenant"),
+    )
+    monkeypatch.setattr(backend_middleware.tenant_context, "reset_request_tenant_context", lambda binding: None)
+    monkeypatch.setattr(
+        backend_middleware,
+        "read_session_cookie",
+        lambda token: {"username": "admin", "role": "administrador", "tenant_id": "default", "password_fingerprint": "abc"},
+    )
+    monkeypatch.setattr(backend_middleware, "can_connect_current_database", lambda host=None: (True, ""))
+    monkeypatch.setattr(backend_middleware, "is_session_bound_to_request", lambda request, session_data: True)
+    monkeypatch.setattr(backend_middleware, "is_same_origin_request", lambda request: True)
+
+    async def _csrf_should_not_run(_request):
+        raise AssertionError("validate_csrf_request no debe ejecutarse para requests same-origin")
+
+    monkeypatch.setattr(backend_middleware, "validate_csrf_request", _csrf_should_not_run)
+    fake_auth_service = types.SimpleNamespace(
+        get_session_local=lambda: (lambda: types.SimpleNamespace(close=lambda: None)),
+        is_password_fingerprint_valid=lambda db, username, fingerprint: True,
+    )
+    import fastapi_modulo.modulos_sipet.web.servicios as servicios_pkg
+
+    monkeypatch.setattr(servicios_pkg, "auth_service", fake_auth_service)
+
+    async def call_next(_request):
+        return JSONResponse({"ok": True})
+
+    response = asyncio.run(
+        backend_middleware.enforce_backend_login(
+            _request("/api/frontend/gallery/upload", method="POST"),
+            call_next,
+        )
+    )
+
+    assert response.status_code == 200
+
+
 def test_enforce_backend_login_blocks_screen_access(monkeypatch) -> None:
     _install_frontend_public_path_stub()
     monkeypatch.setattr(
@@ -182,6 +227,7 @@ def test_enforce_backend_login_blocks_screen_access(monkeypatch) -> None:
         "read_session_cookie",
         lambda token: {"username": "admin", "role": "administrador", "tenant_id": "default", "password_fingerprint": "abc"},
     )
+    monkeypatch.setattr(backend_middleware, "can_connect_current_database", lambda host=None: (True, ""))
     monkeypatch.setattr(backend_middleware, "is_session_bound_to_request", lambda request, session_data: True)
     monkeypatch.setattr(backend_middleware, "get_user_screen_access_levels", lambda request: {"/rrhh/privado": {"read_only": False}})
     monkeypatch.setattr(backend_middleware, "has_screen_access", lambda request, screen_name, app_name="": False)
@@ -243,6 +289,7 @@ def test_enforce_backend_login_rejects_session_for_other_tenant(monkeypatch) -> 
         "read_session_cookie",
         lambda token: {"username": "admin", "role": "administrador", "tenant_id": "tenant_b", "host": "otra.midominio.com"},
     )
+    monkeypatch.setattr(backend_middleware, "can_connect_current_database", lambda host=None: (True, ""))
     monkeypatch.setattr(backend_middleware, "is_session_bound_to_request", lambda request, session_data: False)
 
     async def call_next(_request):
@@ -250,3 +297,48 @@ def test_enforce_backend_login_rejects_session_for_other_tenant(monkeypatch) -> 
 
     response = asyncio.run(backend_middleware.enforce_backend_login(_request("/api/secure"), call_next))
     assert response.status_code == 401
+
+
+def test_enforce_backend_login_redirects_public_frontend_to_setup_when_database_is_incomplete(monkeypatch) -> None:
+    _install_frontend_public_path_stub()
+    monkeypatch.setattr(
+        backend_middleware.tenant_context,
+        "bind_request_tenant_context",
+        lambda request: types.SimpleNamespace(context=types.SimpleNamespace(tenant_id="default"), host_token="token", tenant_token="tenant"),
+    )
+    monkeypatch.setattr(backend_middleware.tenant_context, "reset_request_tenant_context", lambda binding: None)
+    monkeypatch.setattr(backend_middleware, "can_connect_current_database", lambda host=None: (False, "fe_sendauth: no password supplied"))
+
+    async def call_next(_request):
+        return HTMLResponse("ok")
+
+    request = _request("/web/inicio", headers=[(b"host", b"oaxaca.tunegociovale.com")])
+    response = asyncio.run(backend_middleware.enforce_backend_login(request, call_next))
+
+    assert response.status_code == 303
+    assert response.headers["location"] == "/base_datos/inicializar"
+    assert request.app.state.database_setup_required is True
+
+
+def test_enforce_backend_login_clears_setup_flag_when_database_is_ready(monkeypatch) -> None:
+    _install_frontend_public_path_stub()
+    monkeypatch.setattr(
+        backend_middleware.tenant_context,
+        "bind_request_tenant_context",
+        lambda request: types.SimpleNamespace(context=types.SimpleNamespace(tenant_id="default"), host_token="token", tenant_token="tenant"),
+    )
+    monkeypatch.setattr(backend_middleware.tenant_context, "reset_request_tenant_context", lambda binding: None)
+    monkeypatch.setattr(backend_middleware, "can_connect_current_database", lambda host=None: (True, ""))
+
+    async def call_next(_request):
+        return HTMLResponse("ok")
+
+    request = _request("/web/inicio", headers=[(b"host", b"oaxaca.tunegociovale.com")])
+    request.app.state.database_setup_required = True
+    request.app.state.database_setup_error = "old error"
+
+    response = asyncio.run(backend_middleware.enforce_backend_login(request, call_next))
+
+    assert response.status_code == 200
+    assert request.app.state.database_setup_required is False
+    assert request.app.state.database_setup_error == ""

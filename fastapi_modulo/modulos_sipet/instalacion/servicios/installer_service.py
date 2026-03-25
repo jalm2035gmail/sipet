@@ -9,6 +9,7 @@ from fastapi_modulo.core import db as core_db
 from fastapi_modulo.core.database_router import (
     SIPET_CONFIG_PATH,
     can_connect_current_database,
+    has_complete_database_config,
     get_sipet_conf_settings,
     has_explicit_database_config,
     initialize_database_from_sipet_conf,
@@ -27,6 +28,15 @@ def get_installation_status() -> Dict[str, Any]:
             "settings": get_sipet_conf_settings(),
         }
     ok, error = can_connect_current_database()
+    if not ok:
+        if has_complete_database_config():
+            try:
+                result = initialize_database_from_sipet_conf({})
+            except Exception:
+                result = {"connected": False, "error": error}
+            if bool(result.get("connected")):
+                _refresh_runtime_after_install()
+                ok, error = can_connect_current_database()
     return {
         "required": not ok,
         "reason": "" if ok else str(error or "No se pudo conectar a la base de datos"),

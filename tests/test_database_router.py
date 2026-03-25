@@ -35,3 +35,88 @@ def test_database_router_uses_mysql_url_env(monkeypatch) -> None:
     router = DatabaseRouter()
 
     assert router.default_database_url == "mysql+pymysql://user:pass@db.railway.internal:3306/railway"
+
+
+def test_resolve_sipet_config_path_prefers_domain_specific_conf(tmp_path, monkeypatch) -> None:
+    domain_dir = tmp_path / "dominios"
+    domain_dir.mkdir(parents=True)
+    global_conf = tmp_path / "sipet.conf"
+    global_conf.write_text("[options]\ndomain = default.local\n", encoding="utf-8")
+    domain_conf = domain_dir / "oaxaca.tunegociovale.com.conf"
+    domain_conf.write_text("[options]\ndomain = oaxaca.tunegociovale.com\n", encoding="utf-8")
+
+    monkeypatch.setattr(database_router_module, "DOMAIN_CONFIG_DIR", domain_dir)
+    monkeypatch.setattr(database_router_module, "SIPET_CONFIG_PATH", global_conf)
+
+    resolved = database_router_module.resolve_sipet_config_path("oaxaca.tunegociovale.com")
+
+    assert resolved == domain_conf
+
+
+def test_get_sipet_superadmin_settings_uses_domain_conf(tmp_path, monkeypatch) -> None:
+    domain_dir = tmp_path / "dominios"
+    domain_dir.mkdir(parents=True)
+    global_conf = tmp_path / "sipet.conf"
+    global_conf.write_text(
+        "[options]\ndomain = default.local\n\n"
+        "[superadmin]\n"
+        "superadmin_user = global\n",
+        encoding="utf-8",
+    )
+    domain_conf = domain_dir / "oaxaca.tunegociovale.com.conf"
+    domain_conf.write_text(
+        "[options]\ndomain = oaxaca.tunegociovale.com\n\n"
+        "[superadmin]\n"
+        "superadmin_user = oaxaca-admin\n"
+        "superadmin_password = secret\n"
+        "superadmin_email = admin@oaxaca.test\n",
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(database_router_module, "DOMAIN_CONFIG_DIR", domain_dir)
+    monkeypatch.setattr(database_router_module, "SIPET_CONFIG_PATH", global_conf)
+
+    settings = database_router_module.get_sipet_superadmin_settings("oaxaca.tunegociovale.com")
+
+    assert settings["username"] == "oaxaca-admin"
+    assert settings["password"] == "secret"
+    assert settings["email"] == "admin@oaxaca.test"
+
+
+def test_has_complete_database_config_requires_password_for_postgresql(tmp_path, monkeypatch) -> None:
+    conf_path = tmp_path / "sipet.conf"
+    conf_path.write_text(
+        "[options]\n"
+        "domain = oaxaca.tunegociovale.com\n"
+        "db_host = 127.0.0.1\n"
+        "db_port = 5432\n"
+        "db_user = sipet\n"
+        "db_name = sipet_oaxaca\n"
+        "db_engine = postgresql\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(database_router_module, "SIPET_CONFIG_PATH", conf_path)
+    monkeypatch.setattr(database_router_module, "DOMAIN_CONFIG_DIR", tmp_path / "dominios")
+
+    assert database_router_module.has_complete_database_config() is False
+
+
+def test_has_complete_database_config_accepts_complete_domain_conf(tmp_path, monkeypatch) -> None:
+    domain_dir = tmp_path / "dominios"
+    domain_dir.mkdir(parents=True)
+    domain_conf = domain_dir / "oaxaca.tunegociovale.com.conf"
+    domain_conf.write_text(
+        "[options]\n"
+        "domain = oaxaca.tunegociovale.com\n"
+        "db_host = 127.0.0.1\n"
+        "db_port = 5432\n"
+        "db_user = sipet\n"
+        "db_password = secret\n"
+        "db_name = sipet_oaxaca\n"
+        "db_engine = postgresql\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(database_router_module, "DOMAIN_CONFIG_DIR", domain_dir)
+    monkeypatch.setattr(database_router_module, "SIPET_CONFIG_PATH", tmp_path / "sipet.conf")
+
+    assert database_router_module.has_complete_database_config("oaxaca.tunegociovale.com") is True

@@ -4,6 +4,7 @@ from fastapi import Request
 from fastapi.responses import JSONResponse, RedirectResponse
 
 from fastapi_modulo.core import tenant_context
+from fastapi_modulo.core.database_router import can_connect_current_database
 from fastapi_modulo.modulos_sipet.web.servicios.access_service import get_user_screen_access_levels, has_screen_access
 from fastapi_modulo.modulos_sipet.web.servicios.session_service import (
     AUTH_COOKIE_NAME,
@@ -159,22 +160,33 @@ async def enforce_backend_login(request: Request, call_next):
     if getattr(request.state, "tenant_context", None) is None:
         binding = tenant_context.bind_request_tenant_context(request)
     path = request.url.path
+    setup_public_prefixes = (
+        "/base_datos",
+        "/api/base_datos",
+        "/static/",
+        "/templates/",
+        "/icon/",
+        "/modulo_base/static/",
+        "/modulos_sipet/",
+        "/health",
+        "/healthz",
+        "/docs/",
+        "/redoc/",
+    )
+
+    setup_allowed_path = any(path == prefix.rstrip("/") or path.startswith(prefix) for prefix in setup_public_prefixes)
+    if not setup_allowed_path:
+        request_host = request.headers.get("x-forwarded-host") or request.headers.get("host") or request.url.hostname
+        ok, error = can_connect_current_database(request_host)
+        if ok:
+            request.app.state.database_setup_required = False
+            request.app.state.database_setup_error = ""
+        else:
+            request.app.state.database_setup_required = True
+            request.app.state.database_setup_error = str(error or "Base de datos no inicializada")
 
     if getattr(request.app.state, "database_setup_required", False):
-        setup_public_prefixes = (
-            "/base_datos",
-            "/api/base_datos",
-            "/static/",
-            "/templates/",
-            "/icon/",
-            "/modulo_base/static/",
-            "/modulos_sipet/",
-            "/health",
-            "/healthz",
-            "/docs/",
-            "/redoc/",
-        )
-        if not any(path == prefix.rstrip("/") or path.startswith(prefix) for prefix in setup_public_prefixes):
+        if not setup_allowed_path:
             try:
                 return RedirectResponse(url="/base_datos/inicializar", status_code=303)
             finally:
@@ -238,9 +250,11 @@ async def enforce_backend_login(request: Request, call_next):
             and not path.startswith("/backend/passkey/")
             and not path.startswith("/identidad-institucional")
         ):
-            csrf_ok = await validate_csrf_request(request)
-            if not csrf_ok and is_same_origin_request(request):
-                csrf_ok = True
+            # Evita consumir bodies multipart same-origin en middleware.
+            # La validación basada en token se mantiene para requests cross-origin.
+            csrf_ok = is_same_origin_request(request)
+            if not csrf_ok:
+                csrf_ok = await validate_csrf_request(request)
             if not csrf_ok:
                 if path.startswith("/api/") or path.startswith("/guardar-colores"):
                     return JSONResponse({"success": False, "error": "CSRF validation failed"}, status_code=403)
