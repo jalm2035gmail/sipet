@@ -60,7 +60,11 @@ def store_user_session(
 ) -> None:
     db = SessionLocal()
     try:
-        existing = db.query(WebUserSession).filter(WebUserSession.session_jti == session_jti).first()
+        try:
+            existing = db.query(WebUserSession).filter(WebUserSession.session_jti == session_jti).first()
+        except (OperationalError, SQLAlchemyError):
+            db.rollback()
+            return
         if existing is None:
             existing = WebUserSession(
                 user_id=int(user_id),
@@ -83,7 +87,11 @@ def revoke_session(session_jti: str) -> None:
     mark_session_revoked(session_jti, 60 * 60 * 24)
     db = SessionLocal()
     try:
-        row = db.query(WebUserSession).filter(WebUserSession.session_jti == session_jti).first()
+        try:
+            row = db.query(WebUserSession).filter(WebUserSession.session_jti == session_jti).first()
+        except (OperationalError, SQLAlchemyError):
+            db.rollback()
+            return
         if row is None:
             return
         row.revoked_at = datetime.utcnow()
@@ -96,16 +104,20 @@ def revoke_user_sessions(*, user_id: int, tenant_id: str, keep_session_jti: str 
     revoked = 0
     db = SessionLocal()
     try:
-        rows = (
-            db.query(WebUserSession)
-            .filter(
-                WebUserSession.user_id == int(user_id),
-                WebUserSession.tenant_id == tenant_id,
-                WebUserSession.revoked_at.is_(None),
-                WebUserSession.expires_at > datetime.utcnow(),
+        try:
+            rows = (
+                db.query(WebUserSession)
+                .filter(
+                    WebUserSession.user_id == int(user_id),
+                    WebUserSession.tenant_id == tenant_id,
+                    WebUserSession.revoked_at.is_(None),
+                    WebUserSession.expires_at > datetime.utcnow(),
+                )
+                .all()
             )
-            .all()
-        )
+        except (OperationalError, SQLAlchemyError):
+            db.rollback()
+            return 0
         for row in rows:
             if keep_session_jti and row.session_jti == keep_session_jti:
                 continue
@@ -258,15 +270,19 @@ def is_session_active(session_jti: str) -> bool:
         return False
     db = SessionLocal()
     try:
-        row = (
-            db.query(WebUserSession)
-            .filter(
-                WebUserSession.session_jti == session_jti,
-                WebUserSession.revoked_at.is_(None),
-                WebUserSession.expires_at > datetime.utcnow(),
+        try:
+            row = (
+                db.query(WebUserSession)
+                .filter(
+                    WebUserSession.session_jti == session_jti,
+                    WebUserSession.revoked_at.is_(None),
+                    WebUserSession.expires_at > datetime.utcnow(),
+                )
+                .first()
             )
-            .first()
-        )
+        except (OperationalError, SQLAlchemyError):
+            db.rollback()
+            return False
         return row is not None
     finally:
         db.close()
