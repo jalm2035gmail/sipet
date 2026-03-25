@@ -24,6 +24,7 @@ class Rol(MAIN):
 
 class Usuario(MAIN):
     __tablename__ = "users"
+    __table_args__ = {"extend_existing": True}
 
     id = Column(Integer, primary_key=True, index=True)
     full_name = Column("full_name", String)
