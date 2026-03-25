@@ -25,6 +25,33 @@ def _redirect_to_database_setup(request: Request) -> RedirectResponse:
     return RedirectResponse(url="/base_datos/inicializar", status_code=303)
 
 
+@router.get("/api/backend/login/mfa-hint")
+def backend_login_mfa_hint(request: Request, usuario: str = ""):
+    if bool(getattr(getattr(request, "app", None), "state", None) and getattr(request.app.state, "database_setup_required", False)):
+        return JSONResponse({"success": False, "error": "Base de datos no inicializada"}, status_code=503)
+    username = (usuario or "").strip()
+    if not username:
+        return {"success": True, "show_authenticator_code": False}
+
+    db = auth_service.get_session_local()()
+    try:
+        try:
+            user = auth_service.find_user_by_login(db, username)
+        except SQLAlchemyError:
+            return _redirect_to_database_setup(request)
+        show_authenticator_code = bool(
+            user
+            and bool(getattr(user, "totp_enabled", False))
+            and str(getattr(user, "totp_secret", "") or "").strip()
+        )
+        return {
+            "success": True,
+            "show_authenticator_code": show_authenticator_code,
+        }
+    finally:
+        db.close()
+
+
 @router.post("/backend/login")
 def backend_login_submit(
     request: Request,

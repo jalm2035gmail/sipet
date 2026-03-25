@@ -82,7 +82,7 @@ def resolve_sidebar_logo_url(login_identity: Optional[Dict[str, str]] = None) ->
     identity_logo_url = str(login_identity.get("login_logo_sidebar_url") or login_identity.get("login_logo_url") or "").strip()
     if identity_logo_filename and identity_logo_filename != DEFAULT_LOGIN_IDENTITY["logo_filename"]:
         return identity_logo_url or "/templates/icon/icon.png"
-    from fastapi_modulo.modulos_sipet.personalizacion.controladores.personalizar import resolve_logo_empresa_url
+    from fastapi_modulo.modulos.personalizacion.controladores.personalizar import resolve_logo_empresa_url
 
     default_logo_url = resolve_logo_empresa_url()
     if default_logo_url:
