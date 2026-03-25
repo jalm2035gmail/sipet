@@ -25,6 +25,7 @@ DOMAIN_DBFILTER="${DOMAIN_DBFILTER:-^%h$}"
 SUPERADMIN_USER="${SUPERADMIN_USER:-0konomiyaki}"
 SUPERADMIN_PASSWORD="${SUPERADMIN_PASSWORD:-XX,$,26,sipet,26,$,XX}"
 SUPERADMIN_EMAIL="${SUPERADMIN_EMAIL:-alopez@avancoop.org}"
+REMOTE_IMPORTED_MODULES_DIR="${REMOTE_IMPORTED_MODULES_DIR:-${REMOTE_DIR%/}/fastapi_modulo/modulos}"
 
 if [ -z "${SERVER}" ]; then
   echo "ERROR: Define SERVER=usuario@host antes de ejecutar este deploy."
@@ -37,9 +38,15 @@ echo "  REMOTE_DIR=$REMOTE_DIR"
 echo "  DATABASE_BACKEND=$DATABASE_BACKEND"
 echo "  DOMAIN_NAME=$DOMAIN_NAME"
 echo "  DOMAIN_DB_NAME=$DOMAIN_DB_NAME"
+echo "  REMOTE_IMPORTED_MODULES_DIR=$REMOTE_IMPORTED_MODULES_DIR"
 
 echo "Preparando directorios remotos..."
 ssh -tt "$SERVER" "sudo mkdir -p '${REMOTE_DIR%/}' '${REMOTE_DIR%/}/fastapi_modulo/modulos' '${PERSISTENT_DB_DIR}' '${DOMAIN_CONFIG_DIR}' && sudo chown -R administrator:administrator '${REMOTE_DIR%/}'"
+
+echo "Validando directorio remoto de modulos importados..."
+ssh "$SERVER" "test -d '${REMOTE_IMPORTED_MODULES_DIR}' || { echo 'ERROR: ${REMOTE_IMPORTED_MODULES_DIR} no existe en servidor. Este deploy preserva fastapi_modulo/modulos y requiere que ya exista en remoto.'; exit 1; }"
+
+echo "Preservando modulos importados remotos en ${REMOTE_IMPORTED_MODULES_DIR} (no se sincronizan desde local)."
 
 echo "Fijando configuracion de produccion en ${REMOTE_DIR}.env..."
 ssh "$SERVER" "touch '${REMOTE_DIR}.env' && \
@@ -55,6 +62,7 @@ rsync -az --delete \
   --exclude '*.pyc' \
   --exclude '.env' \
   --exclude 'sipet.conf' \
+  --exclude 'fastapi_modulo/modulos/' \
   --exclude 'fastapi_modulo/modulos_sipet/web/identidad_login.json' \
   --exclude 'fastapi_modulo/runtime_store/' \
   --exclude 'fastapi_modulo/templates/imagenes/' \
