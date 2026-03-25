@@ -56,6 +56,9 @@
             const USER_LOGO_CACHE_KEY = 'sipet_logo_usuario_url';
             const ACTIVE_MAIN_MENU_KEY = 'sipet_active_main_menu_name';
             const NAVBAR_SUBMENU_CATALOG = window.__SIPET_BACKEND_NAVBAR_SUBMENU_CATALOG || {};
+            const MODULE_CONTEXT = window.__SIPET_MODULE_CONTEXT || {};
+            const MODULE_MENU_NAME = String(MODULE_CONTEXT.module_name || '').trim();
+            const MODULE_SECTIONS = Array.isArray(MODULE_CONTEXT.module_sections) ? MODULE_CONTEXT.module_sections : [];
             const ICON_CATALOG = window.__SIPET_ICON_CATALOG || { module: {}, role: {}, action: {}, fallback: 'fa-regular fa-circle' };
             const USER_STRATEGY_SUBMENU_ACCESS_LEVELS = {{ (user_strategy_submenu_access_levels | default({}, true) | tojson) | safe }};
             const CURRENT_USERNAME = String({{ (request.state.user_name | default('', true) | tojson) | safe }} || '').trim().toLowerCase();
@@ -277,6 +280,18 @@
                 });
             }
 
+            const getModuleScopedLinks = (menuKey) => {
+                if (!MODULE_MENU_NAME || !MODULE_SECTIONS.length) return [];
+                if (String(menuKey || '').trim() !== MODULE_MENU_NAME) return [];
+                return MODULE_SECTIONS
+                    .map((section) => ({
+                        href: String(section?.route || '').trim(),
+                        label: String(section?.label || '').trim(),
+                        fa: String(section?.icon || '').trim(),
+                    }))
+                    .filter((item) => item.href && item.label);
+            };
+
             const normalizeRoutePath = (value) => {
                 const raw = String(value || '').split('?')[0].split('#')[0].trim();
                 if (!raw) return '/';
@@ -312,6 +327,10 @@
                         }
                     });
                 };
+                const moduleScopedLinks = getModuleScopedLinks(MODULE_MENU_NAME);
+                if (moduleScopedLinks.length) {
+                    visitItems(MODULE_MENU_NAME, moduleScopedLinks);
+                }
                 Object.keys(NAVBAR_SUBMENU_CATALOG).forEach((menuName) => {
                     const items = Array.isArray(NAVBAR_SUBMENU_CATALOG[menuName]) ? NAVBAR_SUBMENU_CATALOG[menuName] : [];
                     visitItems(menuName, items);
@@ -326,6 +345,8 @@
             };
 
             const getVisibleCatalogLinks = (menuKey) => {
+                const moduleScopedLinks = getModuleScopedLinks(menuKey);
+                if (moduleScopedLinks.length) return moduleScopedLinks;
                 const links = Array.isArray(NAVBAR_SUBMENU_CATALOG[menuKey]) ? NAVBAR_SUBMENU_CATALOG[menuKey] : [];
                 if (menuKey !== 'Estrategia y táctica') return links;
                 const accessMap = USER_STRATEGY_SUBMENU_ACCESS_LEVELS && typeof USER_STRATEGY_SUBMENU_ACCESS_LEVELS === 'object'

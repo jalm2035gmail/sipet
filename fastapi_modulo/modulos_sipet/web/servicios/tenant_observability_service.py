@@ -10,7 +10,7 @@ from fastapi_modulo.core.module_registry import get_active_module_keys
 
 
 def _admin_session():
-    return core_db.get_session_factory_for_host("")()
+    return core_db.get_admin_session_factory()()
 
 
 def _redact_db_url(value: str) -> str:

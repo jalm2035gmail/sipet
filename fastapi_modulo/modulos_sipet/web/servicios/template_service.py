@@ -82,6 +82,7 @@ def render_backend_main(
     floating_buttons: Optional[List[Dict]] = None,
     floating_actions_html: str = "",
     floating_actions_screen: str = "personalization",
+    **extra: object,
 ) -> HTMLResponse:
     rendered_view_buttons = view_buttons_html or build_view_buttons_html(view_buttons)
     return get_templates(request).TemplateResponse(
@@ -102,6 +103,7 @@ def render_backend_main(
             floating_buttons=floating_buttons,
             floating_actions_html=floating_actions_html,
             floating_actions_screen=floating_actions_screen,
+            **extra,
         ),
     )
 

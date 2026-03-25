@@ -70,6 +70,7 @@ def render_backend_page_html(
     content: str,
     hide_floating_actions: bool = True,
     show_page_header: bool = False,
+    **extra: object,
 ) -> HTMLResponse:
     return render_backend_page(
         request,
@@ -78,6 +79,7 @@ def render_backend_page_html(
         content=content,
         hide_floating_actions=hide_floating_actions,
         show_page_header=show_page_header,
+        **extra,
     )
 
 

@@ -26,6 +26,7 @@ def _render_backend_MAIN(
     floating_buttons: Optional[List[Dict]] = None,
     floating_actions_html: str = "",
     floating_actions_screen: str = "personalization",
+    **extra: object,
 ) -> HTMLResponse:
     return render_backend_main(
         request=request,
@@ -44,6 +45,7 @@ def _render_backend_MAIN(
         floating_buttons=floating_buttons,
         floating_actions_html=floating_actions_html,
         floating_actions_screen=floating_actions_screen,
+        **extra,
     )
 
 
@@ -62,6 +64,7 @@ def backend_screen(
     page_description: Optional[str] = None,
     section_title: Optional[str] = None,
     section_label: Optional[str] = None,
+    **extra: object,
 ):
     return _render_backend_MAIN(
         request=request,
@@ -78,6 +81,7 @@ def backend_screen(
         section_title=section_title,
         section_label=section_label,
         floating_buttons=floating_buttons,
+        **extra,
     )
 
 
@@ -95,6 +99,7 @@ def render_backend_page(
     show_page_header: bool = True,
     section_title: Optional[str] = None,
     section_label: Optional[str] = None,
+    **extra: object,
 ) -> HTMLResponse:
     return _render_backend_MAIN(
         request=request,
@@ -112,4 +117,5 @@ def render_backend_page(
         section_label=section_label,
         floating_actions_html=floating_actions_html,
         floating_actions_screen=floating_actions_screen,
+        **extra,
     )

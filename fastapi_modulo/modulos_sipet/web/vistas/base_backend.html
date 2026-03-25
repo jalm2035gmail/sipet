@@ -39,6 +39,12 @@
             action: {{ action_icon_map | default({}, true) | tojson }},
             fallback: {{ default_module_icon | default('fa-regular fa-circle', true) | tojson }}
         };
+        window.__SIPET_MODULE_CONTEXT = {
+            module_key: {{ current_module | default('', true) | tojson }},
+            module_name: {{ module_name | default('', true) | tojson }},
+            current_section: {{ current_section | default('', true) | tojson }},
+            module_sections: {{ module_sections | default([], true) | tojson }}
+        };
     </script>
     <script>
         (function() {
@@ -68,7 +74,7 @@
     {% include "modulos_sipet/web/vistas/partials/navbar.html" %}
     {% include "modulos_sipet/web/vistas/partials/page_shell.html" %}
     {% include "modulos_sipet/web/vistas/partials/floating_actions.html" %}
-    {% include "modulos/web/backend_nav_catalog.html" %}
-    {% include "modulos/web/backend_shell_script.html" %}
+    {% include "modulos_sipet/web/vistas/backend_nav_catalog.html" %}
+    {% include "modulos_sipet/web/vistas/backend_shell_script.html" %}
 </body>
 </html>

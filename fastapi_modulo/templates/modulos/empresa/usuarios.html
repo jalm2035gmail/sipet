@@ -493,7 +493,10 @@
   }
 
   var _ALL_APP_OPTIONS = ['Mi tablero', 'Conversaciones', 'BSC', 'Organización', 'Estrategia y táctica', 'Datos financieros', 'Mesa de control', 'Cartera de préstamos', 'MKT', 'PLD', 'Control y seguimiento', 'KPIs', 'Reportes', 'Empresa', 'Intelicoop', 'Brújula', 'CRM', 'Encuestas', 'Auditoria', 'ActivoFijo', 'Multiempresa', 'Capacitacion'];
-  var ACCESS_APP_OPTIONS = _ALL_APP_OPTIONS.slice();
+  var LEGACY_ACCESS_APP_ALIASES = {
+    'Mesa de control': 'Cartera de préstamos'
+  };
+  var ACCESS_APP_OPTIONS = dedupeAccessOptionNames(_ALL_APP_OPTIONS);
   var EMPRESA_SCREEN_OPTIONS = [
     { key: 'empresa', label: 'Empresa' },
     { key: 'empresa.identidad', label: 'Identidad institucional' },
@@ -547,6 +550,31 @@
       .replace(/'/g, '&#39;');
   }
 
+  function canonicalAccessOptionName(value) {
+    var key = String(value || '').trim();
+    if (!key) return '';
+    return LEGACY_ACCESS_APP_ALIASES[key] || key;
+  }
+
+  function dedupeAccessOptionNames(values) {
+    var unique = [];
+    (Array.isArray(values) ? values : []).forEach(function (value) {
+      var canonical = canonicalAccessOptionName(value);
+      if (!canonical || unique.indexOf(canonical) !== -1) return;
+      unique.push(canonical);
+    });
+    return unique;
+  }
+
+  function getAccessMatrixEntry(rawLevels, appName) {
+    if (!rawLevels || typeof rawLevels !== 'object') return null;
+    if (rawLevels[appName] && typeof rawLevels[appName] === 'object') return rawLevels[appName];
+    var matchedKey = Object.keys(rawLevels).find(function (key) {
+      return canonicalAccessOptionName(key) === appName && rawLevels[key] && typeof rawLevels[key] === 'object';
+    });
+    return matchedKey ? rawLevels[matchedKey] : null;
+  }
+
   function normalizeAccessRole(raw) {
     var role = String(raw || '').trim().toLowerCase();
     if (role === 'admin') role = 'administrador';
@@ -562,7 +590,7 @@
   function getAccessOptionNames(rawLevels) {
     var names = [];
     function pushName(value) {
-      var key = String(value || '').trim();
+      var key = canonicalAccessOptionName(value);
       if (!key || names.indexOf(key) !== -1) return;
       names.push(key);
     }
@@ -584,7 +612,7 @@
         user_only: false,
         special_permissions: false
       };
-      var rawEntry = appAccessLevels && typeof appAccessLevels === 'object' ? appAccessLevels[appName] : null;
+      var rawEntry = getAccessMatrixEntry(appAccessLevels, appName);
       if (rawEntry && typeof rawEntry === 'object') {
         ACCESS_LEVEL_OPTIONS.forEach(function (level) {
           normalized[appName][level.key] = Boolean(rawEntry[level.key]);
@@ -601,7 +629,7 @@
     });
     if (Array.isArray(fallbackAppAccess)) {
       fallbackAppAccess.forEach(function (appName) {
-        var key = String(appName || '').trim();
+        var key = canonicalAccessOptionName(appName);
         if (!normalized[key]) return;
         if (!ACCESS_LEVEL_OPTIONS.some(function (level) { return normalized[key][level.key]; })) {
           normalized[key].full_access = true;
@@ -612,16 +640,32 @@
   }
 
   function deriveAppAccessFromMatrix(matrix) {
-    return ACCESS_APP_OPTIONS.filter(function (appName) {
+    return getAccessOptionNames(matrix).filter(function (appName) {
+      if (appName === 'Conversaciones') return false;
       var entry = matrix && typeof matrix === 'object' ? matrix[appName] : null;
       return !!entry && ACCESS_LEVEL_OPTIONS.some(function (level) { return Boolean(entry[level.key]); });
+    });
+  }
+
+  function isAdminRole(role) {
+    var normalizedRole = normalizeAccessRole(role || 'usuario');
+    return normalizedRole === 'administrador' || normalizedRole === 'administrador_multiempresa';
+  }
+
+  function isSuperadminRole(role) {
+    return normalizeAccessRole(role || 'usuario') === 'superadministrador';
+  }
+
+  function getManagedAccessOptionNames(matrix) {
+    return getAccessOptionNames(matrix).filter(function (appName) {
+      return appName !== 'Conversaciones';
     });
   }
 
   function getUniformAccessLevel(matrix) {
     var normalized = normalizeAccessMatrix(matrix, []);
     var selectedLevels = [];
-    ACCESS_APP_OPTIONS.forEach(function (appName) {
+    getManagedAccessOptionNames(matrix).forEach(function (appName) {
       var entry = normalized[appName];
       if (!entry) return;
       var activeLevel = ACCESS_LEVEL_OPTIONS.find(function (level) {
@@ -666,6 +710,8 @@
 
   function summarizeRoleProfile(profile) {
     var normalized = normalizeRoleProfile(profile);
+    if (isSuperadminRole(normalized.role_name)) return 'Acceso total a todos los módulos y pantallas.';
+    if (isAdminRole(normalized.role_name)) return 'Gestiona usuarios y permisos de módulos.';
     var modules = deriveAppAccessFromMatrix(normalized.screen_access_levels);
     if (!modules.length) return 'Sin permisos base configurados.';
     return modules.slice(0, 6).join(', ') + (modules.length > 6 ? '…' : '');
@@ -764,6 +810,7 @@
 
   function summarizeUserAccess(item) {
     if (!item || typeof item !== 'object') return 'Sin permisos configurados.';
+    if (isSuperadminRole(item.rol)) return 'Acceso total a todos los módulos y pantallas.';
     if (item.inherit_role_permissions !== false) {
       var roleProfile = getRoleProfile(item.rol || 'usuario');
       return summarizeRoleProfile(roleProfile);
@@ -775,6 +822,7 @@
 
   function getUserAccessLevel(item) {
     if (!item || typeof item !== 'object') return '';
+    if (isSuperadminRole(item.rol)) return 'Acceso total';
     if (item.inherit_role_permissions !== false) {
       return 'Heredado del rol';
     }
@@ -891,6 +939,11 @@
       conversation_access: normalizeConversationAccess(user && user.conversation_access),
       app_access_levels: normalizeAccessMatrix(user && user.app_access_levels, user && user.app_access)
     };
+    if (isSuperadminRole(createProfileState.rol)) {
+      createProfileState.inherit_role_permissions = true;
+      createProfileState.conversation_access = normalizeConversationAccess(null);
+      createProfileState.app_access_levels = normalizeAccessMatrix(null, []);
+    }
   }
 
   function renderAccessRadioGroup(name, options, selectedValue, dataAttrName, textClass) {
@@ -1123,6 +1176,12 @@
       createProfileState.rol = normalizeAccessRole(selectedRoleInput.value || 'usuario');
     } else if (createRolSelect && createRolSelect.value) {
       createProfileState.rol = normalizeAccessRole(createRolSelect.value);
+    }
+    if (isSuperadminRole(createProfileState.rol)) {
+      createProfileState.inherit_role_permissions = true;
+      createProfileState.conversation_access = normalizeConversationAccess(null);
+      createProfileState.app_access_levels = normalizeAccessMatrix(null, []);
+      return;
     }
     createProfileState.inherit_role_permissions = Boolean(createNotebookHost.querySelector('input[type="checkbox"][data-create-inherit-role="1"]')?.checked);
     if (createProfileState.inherit_role_permissions) {
@@ -1491,13 +1550,19 @@
       createNivelAccesoSelect.addEventListener('change', function () {
         var selectedLevel = createNivelAccesoSelect.value;
         if (selectedLevel === '__custom__') return;
+        if (isSuperadminRole(createProfileState.rol)) {
+          createProfileState.inherit_role_permissions = true;
+          createProfileState.app_access_levels = normalizeAccessMatrix(null, []);
+          renderCreateNotebook();
+          return;
+        }
         if (!selectedLevel) {
           createProfileState.inherit_role_permissions = true;
           createProfileState.app_access_levels = normalizeAccessMatrix(null, []);
         } else {
           createProfileState.inherit_role_permissions = false;
           var matrix = normalizeAccessMatrix(null, []);
-          ACCESS_APP_OPTIONS.forEach(function (app) {
+          getManagedAccessOptionNames(matrix).forEach(function (app) {
             ACCESS_LEVEL_OPTIONS.forEach(function (level) {
               matrix[app][level.key] = level.key === selectedLevel;
             });
@@ -1522,6 +1587,9 @@
     var inheritRolePermissions = Boolean(createProfileState.inherit_role_permissions);
     var conversationAccess = normalizeConversationAccess(createProfileState.conversation_access);
     var appAccessLevels = normalizeAccessMatrix(createProfileState.app_access_levels, []);
+    var isSuperadminSelected = isSuperadminRole(selectedRole);
+    var isAdminSelected = isAdminRole(selectedRole);
+    var currentUniformLevel = getUniformAccessLevel(appAccessLevels);
 
     createNotebookHost.innerHTML = '' +
       '<div>' +
@@ -1535,43 +1603,53 @@
       '<div class="rounded-box border border-MAIN-300 bg-MAIN-200 p-4 sm:p-5">' +
         (currentCreateTab === 'roles'
           ? '<div class="grid gap-4">' +
-              '<h4 class="text-MAIN font-normal text-MAIN-content">Roles</h4>' +
+              '<div class="grid gap-2">' +
+                '<h4 class="text-MAIN font-normal text-MAIN-content">Rol global del usuario</h4>' +
+                '<p class="text-sm text-MAIN-content/70">Aquí defines el nivel general del usuario dentro de SIPET. Los permisos por módulo se configuran en la pestaña Acceso.</p>' +
+              '</div>' +
               renderAccessRadioGroup('create-rol', roleOptions, selectedRole, 'data-create-role') +
+              '<div class="rounded-box border border-MAIN-300 bg-white px-4 py-3">' +
+                '<div class="text-sm font-semibold text-MAIN-content">Rol seleccionado: ' + esc(roleLabel(selectedRole)) + '</div>' +
+                '<div class="text-sm text-MAIN-content/70">' +
+                  (isSuperadminSelected
+                    ? 'Superadministrador tiene acceso total a todos los módulos y pantallas.'
+                    : isAdminSelected
+                      ? 'Administrador puede gestionar usuarios y asignar permisos a los módulos.'
+                      : esc(selectedRoleProfile.description || summarizeRoleProfile(selectedRoleProfile))) +
+                '</div>' +
+              '</div>' +
             '</div>'
           : '<div class="grid gap-5">' +
-              '<div class="grid gap-4 md:grid-cols-2">' +
-                '<label class="form-control">' +
-                  '<div class="label"><span class="label-text font-semibold">Rol del usuario</span></div>' +
-                  '<select class="select select-bordered" data-create-access-role="1">' +
-                    roleOptions.map(function (opt) {
-                      var isSelected = String(opt.value || '').trim().toLowerCase() === String(selectedRole || '').trim().toLowerCase();
-                      return '<option value="' + esc(opt.value || '') + '"' + (isSelected ? ' selected' : '') + '>' + esc(opt.label || '') + '</option>';
-                    }).join('') +
-                  '</select>' +
-                '</label>' +
-                '<label class="form-control">' +
-                  '<div class="label"><span class="label-text font-semibold">Nivel de acceso</span></div>' +
-                  '<select class="select select-bordered" data-create-access-level="1">' +
-                    '<option value=""' + (inheritRolePermissions ? ' selected' : '') + '>Heredar del rol</option>' +
-                    ACCESS_LEVEL_OPTIONS.map(function (level) {
-                      var isSelected = !inheritRolePermissions && getUniformAccessLevel(appAccessLevels) === level.key;
-                      return '<option value="' + esc(level.key) + '"' + (isSelected ? ' selected' : '') + '>' + esc(level.label) + '</option>';
-                    }).join('') +
-                    '<option value="__custom__"' + (!inheritRolePermissions && getUniformAccessLevel(appAccessLevels) === '__custom__' ? ' selected' : '') + ' disabled>Personalizado por modulo</option>' +
-                  '</select>' +
-                '</label>' +
-              '</div>' +
-              '<label class="label justify-start gap-3 cursor-pointer rounded-box border border-MAIN-300 bg-MAIN-100 px-4 py-3">' +
-                '<input type="checkbox" class="checkbox" data-create-inherit-role="1"' + (inheritRolePermissions ? ' checked' : '') + '>' +
-                '<span class="label-text font-semibold">Heredar permisos del rol seleccionado</span>' +
-              '</label>' +
               '<div class="rounded-box border border-MAIN-300 bg-white px-4 py-3">' +
-                '<div class="text-sm font-semibold text-MAIN-content">Perfil base: ' + esc(roleLabel(selectedRoleProfile.role_name)) + '</div>' +
-                '<div class="text-sm text-MAIN-content/70">' + esc(summarizeRoleProfile(selectedRoleProfile)) + '</div>' +
+                '<div class="text-sm font-semibold text-MAIN-content">Acceso de módulos para ' + esc(roleLabel(selectedRole)) + '</div>' +
+                '<div class="text-sm text-MAIN-content/70">' +
+                  (isSuperadminSelected
+                    ? 'No requiere configuración adicional: tiene acceso total.'
+                    : 'Aquí defines los módulos y pantallas que podrá usar este usuario.') +
+                '</div>' +
               '</div>' +
-              (inheritRolePermissions
+              (isSuperadminSelected
+                ? '<div class="rounded-box border border-dashed border-success/40 bg-success/10 p-4 text-sm text-MAIN-content/80">Superadministrador siempre tiene acceso completo. La configuración por módulo queda deshabilitada.</div>'
+                : '<div class="grid gap-4 md:grid-cols-2">' +
+                    '<label class="form-control">' +
+                      '<div class="label"><span class="label-text font-semibold">Nivel de acceso base</span></div>' +
+                      '<select class="select select-bordered" data-create-access-level="1">' +
+                        '<option value=""' + (inheritRolePermissions ? ' selected' : '') + '>Heredar del rol</option>' +
+                        ACCESS_LEVEL_OPTIONS.map(function (level) {
+                          var isSelected = !inheritRolePermissions && currentUniformLevel === level.key;
+                          return '<option value="' + esc(level.key) + '"' + (isSelected ? ' selected' : '') + '>' + esc(level.label || '') + '</option>';
+                        }).join('') +
+                        '<option value="__custom__"' + (!inheritRolePermissions && currentUniformLevel === '__custom__' ? ' selected' : '') + ' disabled>Personalizado por módulo</option>' +
+                      '</select>' +
+                    '</label>' +
+                    '<label class="label justify-start gap-3 cursor-pointer rounded-box border border-MAIN-300 bg-MAIN-100 px-4 py-3 mt-8">' +
+                      '<input type="checkbox" class="checkbox" data-create-inherit-role="1"' + (inheritRolePermissions ? ' checked' : '') + '>' +
+                      '<span class="label-text font-semibold">Heredar permisos del rol seleccionado</span>' +
+                    '</label>' +
+                  '</div>') +
+              (!isSuperadminSelected && inheritRolePermissions
                 ? '<div class="rounded-box border border-dashed border-MAIN-300 bg-MAIN-100 p-4 text-sm text-MAIN-content/70">El usuario usará el acceso definido en el perfil del rol. Desactiva esta opción si necesitas una sobreescritura específica para este usuario.</div>'
-                : '<div class="rounded-box border border-dashed border-MAIN-300 bg-MAIN-100 p-4">' +
+                : !isSuperadminSelected ? '<div class="rounded-box border border-dashed border-MAIN-300 bg-MAIN-100 p-4">' +
                     '<div class="grid gap-3">' +
                       '<div class="grid gap-2 pt-2">' +
                         '<h4 class="text-MAIN font-semibold text-MAIN-content">Permisos de módulos</h4>' +
@@ -1579,7 +1657,7 @@
                       '</div>' +
                       renderAccessModuleCards(appAccessLevels, conversationAccess) +
                     '</div>' +
-                  '</div>') +
+                  '</div>' : '') +
             '</div>') +
       '</div>';
 
@@ -1598,20 +1676,18 @@
       });
     });
 
-    var accessRoleSelect = createNotebookHost.querySelector('select[data-create-access-role="1"]');
-    if (accessRoleSelect) {
-      accessRoleSelect.addEventListener('change', function () {
-        createProfileState.rol = normalizeAccessRole(accessRoleSelect.value || 'usuario');
-        if (createRolSelect) createRolSelect.value = createProfileState.rol;
-        renderCreateNotebook();
-      });
-    }
-
     var accessLevelSelect = createNotebookHost.querySelector('select[data-create-access-level="1"]');
     if (accessLevelSelect) {
       accessLevelSelect.addEventListener('change', function () {
         var selectedLevel = String(accessLevelSelect.value || '').trim();
         if (selectedLevel === '__custom__') return;
+        if (isSuperadminRole(createProfileState.rol)) {
+          createProfileState.inherit_role_permissions = true;
+          createProfileState.app_access_levels = normalizeAccessMatrix(null, []);
+          createProfileState.conversation_access = normalizeConversationAccess(null);
+          renderCreateNotebook();
+          return;
+        }
         if (!selectedLevel) {
           createProfileState.inherit_role_permissions = true;
           createProfileState.app_access_levels = normalizeAccessMatrix(null, []);
@@ -1619,7 +1695,7 @@
         } else {
           createProfileState.inherit_role_permissions = false;
           var matrix = normalizeAccessMatrix(null, []);
-          ACCESS_APP_OPTIONS.forEach(function (app) {
+          getManagedAccessOptionNames(matrix).forEach(function (app) {
             ACCESS_LEVEL_OPTIONS.forEach(function (level) {
               matrix[app][level.key] = level.key === selectedLevel;
             });
@@ -1828,10 +1904,13 @@
     usuarios = Array.isArray(payload.data) ? payload.data : [];
     assignableRoles = Array.isArray(payload.assignable_roles) ? payload.assignable_roles : [];
     if (Array.isArray(payload.installed_app_options) && payload.installed_app_options.length) {
-      var installed = payload.installed_app_options;
-      ACCESS_APP_OPTIONS = _ALL_APP_OPTIONS.filter(function (name) {
-        return installed.indexOf(name) !== -1;
-      });
+      var installed = dedupeAccessOptionNames(payload.installed_app_options);
+      ACCESS_APP_OPTIONS = dedupeAccessOptionNames(_ALL_APP_OPTIONS.filter(function (name) {
+        return installed.indexOf(canonicalAccessOptionName(name)) !== -1;
+      }));
+      if (!ACCESS_APP_OPTIONS.length) {
+        ACCESS_APP_OPTIONS = dedupeAccessOptionNames(_ALL_APP_OPTIONS);
+      }
     }
     roleProfiles = Array.isArray(payload.role_profiles) ? payload.role_profiles.map(normalizeRoleProfile) : [];
     if (roleProfiles.length && !selectedRoleProfileKey) {

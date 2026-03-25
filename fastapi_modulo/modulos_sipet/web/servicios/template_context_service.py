@@ -15,49 +15,24 @@ from fastapi_modulo.modulos_sipet.web.servicios.access_service import (
 from fastapi_modulo.modulos_sipet.web.servicios.branding_image_service import resolve_branding_filename
 from fastapi_modulo.modulos_sipet.web.servicios.icon_catalog_service import build_icon_catalog_context
 from fastapi_modulo.modulos_sipet.web.servicios.identity_integration_service import merge_remote_branding
+from fastapi_modulo.modulos_sipet.web.servicios.login_identity_constants import (
+    DEFAULT_LOGIN_IDENTITY,
+    LOGIN_IDENTITY_IMAGE_DIR,
+)
+from fastapi_modulo.modulos_sipet.web.servicios.login_identity_service import (
+    _build_login_asset_url,
+    _load_login_identity,
+)
 from fastapi_modulo.modulos_sipet.web.servicios.module_catalog_service import get_backend_catalog_context
 from fastapi_modulo.modulos_sipet.web.servicios.session_service import CSRF_COOKIE_NAME, normalize_tenant_id
 from fastapi_modulo.modulos_sipet.web.servicios.ui_shell_service import get_colores_context
 from fastapi_modulo.modulos_sipet.web.servicios.visual_editor_service import backend_visual_editor_config
 
-IDENTIDAD_LOGIN_CONFIG_PATH = (os.environ.get("IDENTIDAD_LOGIN_CONFIG_PATH") or "fastapi_modulo/modulos_sipet/web/identidad_login.json").strip()
-IDENTIDAD_LOGIN_IMAGE_DIR = "fastapi_modulo/templates/imagenes"
-DEFAULT_LOGIN_IDENTITY = {
-    "favicon_filename": "icon.png",
-    "logo_filename": "icon.png",
-    "desktop_bg_filename": "fondo.jpg",
-    "mobile_bg_filename": "movil.jpg",
-    "company_short_name": "AVAN",
-    "login_message": "Incrementando el nivel de eficiencia",
-    "menu_position": "arriba",
-}
 APP_ENV = (os.environ.get("APP_ENV") or os.environ.get("ENVIRONMENT") or "development").strip().lower()
-
-def _load_login_identity() -> Dict[str, str]:
-    data = DEFAULT_LOGIN_IDENTITY.copy()
-    if os.path.exists(IDENTIDAD_LOGIN_CONFIG_PATH):
-        try:
-            with open(IDENTIDAD_LOGIN_CONFIG_PATH, "r", encoding="utf-8") as fh:
-                loaded = json.load(fh)
-            if isinstance(loaded, dict):
-                data.update({k: v for k, v in loaded.items() if isinstance(v, str)})
-        except (OSError, json.JSONDecodeError):
-            pass
-    return data
-
-
-def _build_login_asset_url(filename: Optional[str], default_filename: str) -> str:
-    selected = filename or default_filename
-    selected_path = os.path.join(IDENTIDAD_LOGIN_IMAGE_DIR, selected)
-    if not os.path.exists(selected_path):
-        selected = default_filename
-        selected_path = os.path.join(IDENTIDAD_LOGIN_IMAGE_DIR, selected)
-    version = int(os.path.getmtime(selected_path)) if os.path.exists(selected_path) else 0
-    return f"/templates/imagenes/{selected}?v={version}"
 
 
 def _build_branding_variant_url(filename: Optional[str], default_filename: str, variant: str = "") -> str:
-    selected = resolve_branding_filename(IDENTIDAD_LOGIN_IMAGE_DIR, filename, default_filename, variant)
+    selected = resolve_branding_filename(LOGIN_IDENTITY_IMAGE_DIR, filename, default_filename, variant)
     return _build_login_asset_url(selected, default_filename)
 
 
@@ -65,9 +40,14 @@ def get_login_identity_context(request: Optional[Request] = None) -> Dict[str, s
     data = _load_login_identity()
     local_context = {
         "login_favicon_url": _build_branding_variant_url(
-            data.get("logo_filename") or data.get("favicon_filename"),
+            data.get("favicon_filename"),
             DEFAULT_LOGIN_IDENTITY["favicon_filename"],
             "favicon",
+        ),
+        "login_screen_logo_url": _build_branding_variant_url(
+            data.get("login_logo_filename"),
+            DEFAULT_LOGIN_IDENTITY["login_logo_filename"],
+            "login",
         ),
         "login_logo_url": _build_branding_variant_url(data.get("logo_filename"), DEFAULT_LOGIN_IDENTITY["logo_filename"], "login"),
         "login_logo_sidebar_url": _build_branding_variant_url(

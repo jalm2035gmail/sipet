@@ -7,6 +7,11 @@
                 <span class="bar"></span>
             </button>
             <div class="navbar-title">
+                {% if module_logo_url %}
+                <img class="navbar-title-logo" src="{{ module_logo_url }}" alt="{{ page_title or title or 'Modulo' }}" />
+                {% elif module_icon %}
+                <i class="navbar-title-icon {{ module_icon }}" aria-hidden="true"></i>
+                {% endif %}
                 <span class="navbar-menu-name">{{ page_title or title or "BSC" }}</span>
             </div>
             <div class="navbar-section-menu" id="navbar-section-menu" style="display:none;">

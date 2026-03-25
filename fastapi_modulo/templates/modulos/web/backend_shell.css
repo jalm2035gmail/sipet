@@ -464,6 +464,9 @@ textarea:focus {
 .sidebar-main-icon.fa-solid,
 .sidebar-main-icon.fa-regular,
 .sidebar-main-icon.fa-brands,
+.navbar-title-icon.fa-solid,
+.navbar-title-icon.fa-regular,
+.navbar-title-icon.fa-brands,
 .navbar-section-link-icon.fa-solid,
 .navbar-section-link-icon.fa-regular,
 .navbar-section-link-icon.fa-brands,
@@ -481,12 +484,14 @@ textarea:focus {
     -moz-osx-font-smoothing: grayscale;
 }
 .sidebar-main-icon.fa-solid,
+.navbar-title-icon.fa-solid,
 .navbar-section-link-icon.fa-solid,
 .navbar-ia-icon.fa-solid,
 .navbar-notifications-icon.fa-solid {
     font-weight: 900 !important;
 }
 .sidebar-main-icon.fa-regular,
+.navbar-title-icon.fa-regular,
 .navbar-section-link-icon.fa-regular,
 .navbar-ia-icon.fa-regular,
 .navbar-notifications-icon.fa-regular {
@@ -640,12 +645,24 @@ textarea:focus {
 }
 .navbar-title {
     display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 2px;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
     font-weight: 700;
     line-height: 1.15;
     min-width: 0;
+}
+.navbar-title-logo {
+    width: 26px;
+    height: 26px;
+    object-fit: contain;
+    flex: 0 0 26px;
+    display: block;
+}
+.navbar-title-icon {
+    font-size: 1.15rem;
+    color: var(--navbar-text, #1f2933);
+    flex: 0 0 auto;
 }
 .navbar-menu-name {
     font-size: 1.18rem;
