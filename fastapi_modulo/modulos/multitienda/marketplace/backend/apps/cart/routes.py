@@ -1,13 +1,16 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from sqlalchemy.orm import Session, joinedload
 from typing import Optional
-from backend.core.db import get_db
-from backend.apps.cart.models import Cart, CartItem
-from backend.apps.products.models import Product, ProductVariant
-from backend.apps.vendors.models import VendorStore
-from backend.apps.users.models import User
-from backend.apps.cart.schemas import CartItemCreate, CartItemUpdate
-from backend.core.auth import get_current_user_or_none
+from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.cart.models import Cart, CartItem
+from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.cart.schemas import (
+    CartItemCreate,
+    CartItemUpdate,
+)
+from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.products.models import Product, ProductVariant
+from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.users.models import User
+from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.vendors.models import VendorStore
+from fastapi_modulo.modulos.multitienda.marketplace.backend.core.auth import get_current_user_or_none
+from fastapi_modulo.modulos.multitienda.marketplace.backend.core.db import get_db
 from decimal import Decimal
 import secrets
 

@@ -5,7 +5,7 @@ from decimal import Decimal
 from datetime import datetime
 from sqlalchemy import Column, Integer, String, Numeric, Boolean, ForeignKey, DateTime, Date, Enum, Text, JSON, UniqueConstraint, Index, CheckConstraint
 from sqlalchemy.orm import relationship
-from core.db import Base
+from fastapi_modulo.modulos.multitienda.marketplace.backend.core.db import Base
 
 class ReviewStatus(str, enum.Enum):
     pending = "pending"

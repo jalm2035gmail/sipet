@@ -2,7 +2,7 @@ from sqlalchemy import Column, Integer, String, Numeric, Boolean, ForeignKey, Da
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from decimal import Decimal
-from core.db import Base
+from fastapi_modulo.modulos.multitienda.marketplace.backend.core.db import Base
 
 class VendorAnalytics(Base):
     __tablename__ = 'vendor_analytics'

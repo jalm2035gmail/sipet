@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Security
 from sqlalchemy.orm import Session
 from sqlalchemy import Column, DateTime, Integer, MetaData, String, Table, Text, func, or_, select, text
-from apps.users import models, schemas
-from apps.vendors.models import VendorStore
-from core.db import SessionLocal
+from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.users import models, schemas
+from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.vendors.models import VendorStore
+from fastapi_modulo.modulos.multitienda.marketplace.backend.core.db import SessionLocal
 from jose import jwt, JWTError
 from datetime import datetime, timedelta
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm, HTTPAuthorizationCredentials, HTTPBearer

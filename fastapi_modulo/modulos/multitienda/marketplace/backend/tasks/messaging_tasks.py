@@ -2,9 +2,14 @@ from celery import shared_task
 from datetime import datetime, timedelta, date
 import logging
 from sqlalchemy.orm import Session
-from backend.core.db import SessionLocal
-from backend.apps.messaging.models import Message, Conversation, AutoReplyRule, MessageAnalytics
-from backend.apps.vendors.models import Vendor
+from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.messaging.models import (
+    AutoReplyRule,
+    Conversation,
+    Message,
+    MessageAnalytics,
+)
+from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.vendors.models import VendorStore as Vendor
+from fastapi_modulo.modulos.multitienda.marketplace.backend.core.db import SessionLocal
 # from backend.apps.notifications.utils import send_email_notification
 # from backend.apps.surveys.models import Survey
 

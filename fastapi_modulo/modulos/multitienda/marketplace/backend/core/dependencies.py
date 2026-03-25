@@ -3,11 +3,13 @@ from __future__ import annotations
 from fastapi import Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from backend.apps.users.routes import get_current_user as _get_current_user
-from backend.apps.users.routes import require_role
-from backend.apps.vendors.models import VendorStore
-from backend.core.db import get_db as _get_db
-from backend.core.db import get_db_session
+from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.users.routes import (
+    get_current_user as _get_current_user,
+)
+from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.users.routes import require_role
+from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.vendors.models import VendorStore
+from fastapi_modulo.modulos.multitienda.marketplace.backend.core.db import get_db as _get_db
+from fastapi_modulo.modulos.multitienda.marketplace.backend.core.db import get_db_session
 
 
 def get_db():

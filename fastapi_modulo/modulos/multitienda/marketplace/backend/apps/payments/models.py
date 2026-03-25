@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, Numeric, String, ForeignKey
 from sqlalchemy.orm import relationship
-from core.db import Base
+from fastapi_modulo.modulos.multitienda.marketplace.backend.core.db import Base
 
 class VendorPayout(Base):
     __tablename__ = "vendor_payouts"

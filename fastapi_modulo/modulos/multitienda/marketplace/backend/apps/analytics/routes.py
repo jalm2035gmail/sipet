@@ -1,10 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from datetime import date, timedelta
-from backend.core.db import get_db
-from backend.apps.analytics.models import VendorAnalytics, CustomerBehavior, PerformanceGoal
-from backend.apps.vendors.models import VendorStore as Vendor
-from backend.apps.users.models import User
+from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.analytics.models import (
+    CustomerBehavior,
+    PerformanceGoal,
+    VendorAnalytics,
+)
+from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.users.models import User
+from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.vendors.models import VendorStore as Vendor
+from fastapi_modulo.modulos.multitienda.marketplace.backend.core.db import get_db
 from typing import Optional
 
 router = APIRouter(prefix="/api/analytics", tags=["analytics"])

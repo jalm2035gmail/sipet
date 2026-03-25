@@ -2,7 +2,7 @@
 
 from sqlalchemy import Column, Integer, String, Numeric, Boolean, ForeignKey, JSON, DateTime, Enum
 from sqlalchemy.orm import relationship
-from core.db import Base
+from fastapi_modulo.modulos.multitienda.marketplace.backend.core.db import Base
 import enum
 from datetime import datetime
 
@@ -34,7 +34,11 @@ class VendorStore(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     is_active = Column(Boolean, default=True)
 
-    vendor = relationship("User", back_populates="vendor_profile", uselist=False)
+    vendor = relationship(
+        "User",
+        uselist=False,
+        foreign_keys=[vendor_id],
+    )
     documents = relationship("VendorDocument", back_populates="vendor", cascade="all, delete-orphan")
     commission_settings = relationship("VendorCommission", back_populates="vendor", uselist=False)
     payouts = relationship("Payout", back_populates="vendor", cascade="all, delete-orphan")

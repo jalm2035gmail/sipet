@@ -3,7 +3,7 @@ import uuid
 from datetime import datetime
 from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime, Date, Enum, Text, JSON, UniqueConstraint, Index, Time
 from sqlalchemy.orm import relationship, backref
-from core.db import Base
+from fastapi_modulo.modulos.multitienda.marketplace.backend.core.db import Base
 
 class ConversationType(str, enum.Enum):
     customer_vendor = "customer_vendor"

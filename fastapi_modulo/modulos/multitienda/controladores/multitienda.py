@@ -25,10 +25,9 @@ _MAIN_RE = re.compile(r"<main\b[^>]*>(.*?)</main>", re.IGNORECASE | re.DOTALL)
 _SCRIPT_RE = re.compile(r"(<script\b.*?</script>)", re.IGNORECASE | re.DOTALL)
 
 _MODULE_SECTIONS = [
+    {"id": "productos", "label": "Productos", "icon": "fa-solid fa-box", "route": "/multitienda/productos"},
     {"id": "configuracion", "label": "Configuración", "icon": "fa-solid fa-gear", "route": "/multitienda/configuracion"},
     {"id": "gestion", "label": "Administración de tiendas", "icon": "fa-solid fa-store", "route": "/multitienda/administracion_tiendas"},
-    {"id": "productos", "label": "Productos", "icon": "fa-solid fa-box", "route": "/multitienda/productos"},
-    {"id": "tienda", "label": "Vista de tienda", "icon": "fa-solid fa-shop", "route": "/multitienda/tienda"},
 ]
 _MODULE_NAVBAR_BOOTSTRAP = """
 <script>

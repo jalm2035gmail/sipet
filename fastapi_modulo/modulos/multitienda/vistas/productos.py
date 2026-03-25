@@ -943,6 +943,8 @@ __BACKEND_SHARED_SIDEBAR_HTML__
           <button class="pf-photo-btn" id="pf-photo-remove-btn" type="button">Quitar</button>
         </div>
         <input type="file" id="pf-photo-input" accept="image/*" style="display:none" />
+        <input type="hidden" id="pf-stock" value="" />
+        <input type="hidden" id="pf-stock-min" value="" />
       </div>
 
     </div><!-- /pf-body -->

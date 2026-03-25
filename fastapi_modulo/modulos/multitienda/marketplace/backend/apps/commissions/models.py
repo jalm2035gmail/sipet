@@ -5,7 +5,7 @@ from decimal import Decimal, ROUND_HALF_UP
 import enum
 import uuid
 
-from core.db import Base
+from fastapi_modulo.modulos.multitienda.marketplace.backend.core.db import Base
 
 class PlanType(str, enum.Enum):
     percentage = "percentage"

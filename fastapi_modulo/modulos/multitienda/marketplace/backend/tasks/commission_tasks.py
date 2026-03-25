@@ -5,10 +5,14 @@ from sqlalchemy import func, and_, exists
 from decimal import Decimal
 import logging
 
-from backend.core.db import get_db_session
-from backend.apps.orders.models import Order, OrderItem
-from backend.apps.vendors.models import VendorStore as Vendor
-from backend.apps.commissions.models import Payout, PayoutItem, VendorBalance
+from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.commissions.models import (
+    Payout,
+    PayoutItem,
+    VendorBalance,
+)
+from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.orders.models import Order, OrderItem
+from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.vendors.models import VendorStore as Vendor
+from fastapi_modulo.modulos.multitienda.marketplace.backend.core.db import get_db_session
 #from backend.apps.commissions.notifications import send_vendor_payout_notification
 
 logger = logging.getLogger(__name__)

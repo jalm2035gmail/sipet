@@ -7,32 +7,8 @@ from pathlib import Path
 from fastapi import APIRouter, FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
-
-from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.orders.routes import (
-    router as orders_router,
-)
-from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.payments.routes import (
-    router as payments_router,
-)
-from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.products.routes import (
-    router as products_router,
-)
-from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.users.models import User
-from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.users.routes import (
-    router as users_router,
-)
-from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.vendors.models import (
-    VendorStatus,
-    VendorStore,
-)
-from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.vendors.routes import (
-    router as vendors_router,
-)
+from sqlalchemy import text
 from fastapi_modulo.modulos.multitienda.marketplace.backend.core.db import SessionLocal
-
-# Registrar modelos relacionados para resolver relationships SQLAlchemy.
-import fastapi_modulo.modulos.multitienda.marketplace.backend.apps.analytics.models  # noqa: F401
-import fastapi_modulo.modulos.multitienda.marketplace.backend.apps.commissions.models  # noqa: F401
 
 
 BACKEND_ROOT_PATH = os.getenv("BACKEND_ROOT_PATH", "")
@@ -67,12 +43,25 @@ async def save_store_settings(request: Request):
 
     db = SessionLocal()
     try:
-        admin_user = db.query(User).filter(User.id == admin_user_id).first()
+        admin_user = db.execute(
+            text("SELECT id FROM users WHERE id = :admin_user_id LIMIT 1"),
+            {"admin_user_id": admin_user_id},
+        ).first()
         if not admin_user:
             raise HTTPException(status_code=404, detail="Admin user not found")
 
-        store = db.query(VendorStore).filter(VendorStore.vendor_id == admin_user_id).first()
-        theme = dict(store.store_theme or {}) if store and isinstance(store.store_theme, dict) else {}
+        store = db.execute(
+            text(
+                """
+                SELECT id, vendor_id, store_name, store_slug, store_theme, is_featured, is_active
+                FROM vendors
+                WHERE vendor_id = :admin_user_id
+                LIMIT 1
+                """
+            ),
+            {"admin_user_id": admin_user_id},
+        ).mappings().first()
+        theme = dict(store["store_theme"] or {}) if store and isinstance(store["store_theme"], dict) else {}
         theme.update(
             {
                 "store_type": str(payload.get("store_type") or "").strip(),
@@ -92,33 +81,66 @@ async def save_store_settings(request: Request):
             base_slug = _slugify_store_name(store_name)
             slug = base_slug
             suffix = 2
-            while db.query(VendorStore).filter(VendorStore.store_slug == slug).first():
+            while db.execute(
+                text("SELECT 1 FROM vendors WHERE store_slug = :slug LIMIT 1"),
+                {"slug": slug},
+            ).first():
                 slug = f"{base_slug}-{suffix}"
                 suffix += 1
-            store = VendorStore(
-                vendor_id=admin_user_id,
-                store_name=store_name,
-                store_slug=slug,
-                store_theme=theme,
-                is_featured=bool(payload.get("is_featured", False)),
-                status=VendorStatus.approved if bool(payload.get("is_active", True)) else VendorStatus.pending,
-                is_active=bool(payload.get("is_active", True)),
-            )
-            db.add(store)
+            created = db.execute(
+                text(
+                    """
+                    INSERT INTO vendors (
+                        vendor_id, store_name, store_slug, store_theme, is_featured, status, is_active
+                    ) VALUES (
+                        :vendor_id, :store_name, :store_slug, :store_theme, :is_featured, :status, :is_active
+                    )
+                    RETURNING id, vendor_id, store_name
+                    """
+                ),
+                {
+                    "vendor_id": admin_user_id,
+                    "store_name": store_name,
+                    "store_slug": slug,
+                    "store_theme": theme,
+                    "is_featured": bool(payload.get("is_featured", False)),
+                    "status": "approved" if bool(payload.get("is_active", True)) else "pending",
+                    "is_active": bool(payload.get("is_active", True)),
+                },
+            ).mappings().first()
         else:
-            store.store_name = store_name
-            store.store_theme = theme
-            store.is_featured = bool(payload.get("is_featured", False))
-            store.is_active = bool(payload.get("is_active", True))
-            store.status = VendorStatus.approved if store.is_active else VendorStatus.pending
+            db.execute(
+                text(
+                    """
+                    UPDATE vendors
+                    SET store_name = :store_name,
+                        store_theme = :store_theme,
+                        is_featured = :is_featured,
+                        is_active = :is_active,
+                        status = :status
+                    WHERE id = :id
+                    """
+                ),
+                {
+                    "id": store["id"],
+                    "store_name": store_name,
+                    "store_theme": theme,
+                    "is_featured": bool(payload.get("is_featured", False)),
+                    "is_active": bool(payload.get("is_active", True)),
+                    "status": "approved" if bool(payload.get("is_active", True)) else "pending",
+                },
+            )
+            created = db.execute(
+                text("SELECT id, vendor_id, store_name FROM vendors WHERE id = :id"),
+                {"id": store["id"]},
+            ).mappings().first()
 
         db.commit()
-        db.refresh(store)
         return JSONResponse(
             {
-                "id": store.id,
-                "store_name": store.store_name,
-                "vendor_id": store.vendor_id,
+                "id": created["id"],
+                "store_name": created["store_name"],
+                "vendor_id": created["vendor_id"],
                 "max_internal_users": theme.get("max_internal_users", 0),
                 "max_portal_users": theme.get("max_portal_users", 0),
             },
@@ -140,20 +162,6 @@ def build_marketplace_backend_app() -> FastAPI:
         app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
     app.include_router(marketplace_router)
-    app.include_router(users_router, prefix=f"{BACKEND_ROUTE_PREFIX}/users", tags=["users"])
-    app.include_router(vendors_router, prefix=f"{BACKEND_ROUTE_PREFIX}/vendors", tags=["vendors"])
-    app.include_router(products_router, prefix=f"{BACKEND_ROUTE_PREFIX}/products", tags=["products"])
-    app.include_router(orders_router, prefix=f"{BACKEND_ROUTE_PREFIX}/orders", tags=["orders"])
-    app.include_router(payments_router, prefix=f"{BACKEND_ROUTE_PREFIX}/payments", tags=["payments"])
-
-    try:
-        from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.reviews.api import (
-            router as reviews_api_router,
-        )
-
-        app.include_router(reviews_api_router, prefix=BACKEND_ROUTE_PREFIX)
-    except Exception as exc:
-        print(f"[startup] reviews router disabled: {exc}")
 
     return app
 

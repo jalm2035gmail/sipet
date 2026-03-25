@@ -2,7 +2,7 @@ from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Boolean, T
 from sqlalchemy.orm import relationship
 from datetime import datetime, timedelta
 import uuid
-from backend.core.db import Base
+from fastapi_modulo.modulos.multitienda.marketplace.backend.core.db import Base
 
 class VendorDomain(Base):
     __tablename__ = 'vendor_domains'

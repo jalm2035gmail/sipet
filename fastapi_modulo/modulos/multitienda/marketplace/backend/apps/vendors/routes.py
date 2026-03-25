@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy.orm import Session
-from apps.vendors import models, schemas
-from core.db import SessionLocal
-from apps.users.models import User, UserType
-from apps.users.routes import require_role
+from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.users.models import User, UserType
+from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.users.routes import require_role
+from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.vendors import models, schemas
+from fastapi_modulo.modulos.multitienda.marketplace.backend.core.db import SessionLocal
 from typing import List, Optional
 import bcrypt
 import os

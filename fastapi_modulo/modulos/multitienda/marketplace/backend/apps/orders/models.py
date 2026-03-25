@@ -3,10 +3,10 @@ import uuid
 from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Numeric, JSON
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-from apps.users.models import User
-from apps.vendors.models import VendorStore
-from apps.products.models import Product, ProductVariant
-from core.db import Base
+from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.products.models import Product, ProductVariant
+from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.users.models import User
+from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.vendors.models import VendorStore
+from fastapi_modulo.modulos.multitienda.marketplace.backend.core.db import Base
 
 class Order(Base):
     __tablename__ = 'order'

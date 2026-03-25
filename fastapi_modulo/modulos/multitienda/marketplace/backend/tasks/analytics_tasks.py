@@ -1,12 +1,16 @@
 from celery import shared_task
 from datetime import date, timedelta, datetime
 from sqlalchemy.orm import Session
-from backend.core.db import get_db_session
-from backend.apps.analytics.models import VendorAnalytics, CustomerBehavior, PerformanceGoal
-from backend.apps.orders.models import Order, OrderItem
-from backend.apps.vendors.models import VendorStore as Vendor
-from backend.apps.products.models import Product
-from backend.apps.reviews.models import ProductReview
+from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.analytics.models import (
+    CustomerBehavior,
+    PerformanceGoal,
+    VendorAnalytics,
+)
+from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.orders.models import Order, OrderItem
+from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.products.models import Product
+from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.reviews.models import ProductReview
+from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.vendors.models import VendorStore as Vendor
+from fastapi_modulo.modulos.multitienda.marketplace.backend.core.db import get_db_session
 from sqlalchemy import func
 import logging
 

@@ -2,10 +2,10 @@ from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Numeric, B
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from decimal import Decimal
-from backend.apps.products.models import Product, ProductVariant
-from backend.apps.vendors.models import VendorStore
-from backend.apps.users.models import User
-from backend.core.db import Base
+from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.products.models import Product, ProductVariant
+from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.users.models import User
+from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.vendors.models import VendorStore
+from fastapi_modulo.modulos.multitienda.marketplace.backend.core.db import Base
 
 class Cart(Base):
     __tablename__ = 'cart'
