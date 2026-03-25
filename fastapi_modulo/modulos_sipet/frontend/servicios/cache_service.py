@@ -16,7 +16,7 @@ Variables de entorno:
   PAGE_CACHE_PREFIX  Prefijo de claves (default: "frontend:page:").
 
 Uso típico en controladores:
-    from fastapi_modulo.modulos.frontend.servicios.cache_service import page_cache
+    from fastapi_modulo.modulos_sipet.frontend.servicios.cache_service import page_cache
 
     html = page_cache.get("inicio")
     if html is None:
@@ -233,7 +233,7 @@ class PageCache:
     y facilita el mocking en tests.
 
     Ejemplo:
-        from fastapi_modulo.modulos.frontend.servicios.cache_service import page_cache
+        from fastapi_modulo.modulos_sipet.frontend.servicios.cache_service import page_cache
 
         html = page_cache.get("inicio")
         page_cache.set("inicio", html)

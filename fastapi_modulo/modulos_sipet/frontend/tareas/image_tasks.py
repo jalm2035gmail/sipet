@@ -19,7 +19,7 @@ Variables de entorno:
   THUMBNAIL_HEIGHT       Alto del thumbnail (default: 240).
 
 Uso desde el controlador (llamada async):
-    from fastapi_modulo.modulos.frontend.tareas.image_tasks import (
+    from fastapi_modulo.modulos_sipet.frontend.tareas.image_tasks import (
         optimize_gallery_image,
         generate_thumbnail,
     )
@@ -93,7 +93,7 @@ celery_app.conf.update(
 
     # Rutas de tareas de este módulo
     task_routes={
-        "fastapi_modulo.modulos.frontend.tareas.image_tasks.*": {
+        "fastapi_modulo.modulos_sipet.frontend.tareas.image_tasks.*": {
             "queue": "frontend_images"
         }
     },
@@ -473,7 +473,7 @@ def cleanup_orphan_images() -> Dict:
 
     # Recopilar todo el HTML de páginas desde la BD
     try:
-        from fastapi_modulo.modulos.frontend.modelos.frontend_store import list_pages
+        from fastapi_modulo.modulos_sipet.frontend.modelos.frontend_store import list_pages
         pages    = list_pages()
         all_html = " ".join(
             (p.get("gjs_html") or "") + " ".join(

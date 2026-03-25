@@ -3,12 +3,9 @@ modelos/frontend_store.py
 ─────────────────────────────────────────────────────────────────────────────
 Capa de acceso a datos para el módulo frontend.
 
-Mejoras aplicadas:
-  • _migrate_legacy_files_if_needed() se ejecuta UNA sola vez en startup,
-    no en cada llamada a _db(). Se usa un flag de módulo protegido por lock.
-  • _db() ahora es una función limpia que solo abre la sesión.
-  • Nuevas funciones para Contactos y Brand (migrados desde JSON a BD).
-  • ensure_frontend_schema() crea todas las tablas nuevas también.
+El módulo inicializa esquema y migración legacy por BD resuelta en runtime.
+Eso evita sembrar datos del frontend en una base equivocada durante startup
+cuando todavía no existe contexto de host.
 """
 
 from __future__ import annotations
@@ -50,22 +47,23 @@ _TASAS_DEFAULT: List[Dict[str, str]] = [
     {"id": "credito_hip", "label": "Crédito hipotecario", "rate": "10.00", "color": "#8b5cf6", "unit": "% anual"},
 ]
 
-# ── Flag de migración: se ejecuta como máximo una vez por proceso ─────────────
-_migration_done = False
-_migration_lock = threading.Lock()
+# ── Inicialización por BD: esquema y migración legacy una vez por destino ────
+_ready_databases: set[str] = set()
+_ready_lock = threading.Lock()
 
 
 # ══════════════════════════════════════════════════════════════════════════════
 # SECCIÓN 1 — SCHEMA Y MIGRACIÓN (startup)
 # ══════════════════════════════════════════════════════════════════════════════
 
-def ensure_frontend_schema() -> None:
+def ensure_frontend_schema(host: Optional[str] = None) -> None:
     """
     Crea todas las tablas del módulo si no existen.
     Incluye las nuevas tablas FrontendContact, FrontendBrand y FrontendTasa.
-    Se llama una sola vez al importar el módulo.
+    Puede invocarse varias veces; es idempotente por BD.
     """
-    engine = core_db.get_engine_for_host(core_db.get_request_host())
+    target_host = host if host is not None else core_db.get_request_host()
+    engine = core_db.get_engine_for_host(target_host)
     MAIN.metadata.create_all(
         bind=engine,
         tables=[
@@ -81,26 +79,14 @@ def ensure_frontend_schema() -> None:
 
 def run_startup_migration() -> None:
     """
-    Ejecuta la migración de archivos JSON → BD exactamente una vez por proceso.
-    Llamar desde el lifespan/startup de FastAPI, NO desde _db().
-
-    El lock garantiza que si dos workers arrancan simultáneamente,
-    solo uno ejecuta la migración.
+    Intenta ejecutar la migración legacy del frontend para la BD del host actual.
+    Si aún no existe contexto de host, se omite para no tocar una BD implícita.
     """
-    global _migration_done
-    if _migration_done:
+    current_host = core_db.get_request_host()
+    if not current_host:
+        logger.info("Saltando migración startup de frontend: no hay host resuelto todavía.")
         return
-    with _migration_lock:
-        if _migration_done:   # double-checked locking
-            return
-        db = core_db.get_session_factory_for_host(core_db.get_request_host())()
-        try:
-            _migrate_all_legacy_files(db)
-            _migration_done = True
-        except Exception as exc:
-            logger.error("Error en migración legacy → BD: %s", exc)
-        finally:
-            db.close()
+    _ensure_frontend_storage_ready(current_host)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -110,10 +96,41 @@ def run_startup_migration() -> None:
 def _db() -> Session:
     """
     Abre y devuelve una nueva sesión SQLAlchemy.
-    Ya NO ejecuta la migración — eso ocurre en startup.
-    El caller es responsable de llamar db.close() en un bloque finally.
+    Garantiza antes que el esquema del módulo exista para la BD actual.
+    La migración legacy solo se ejecuta con un host explícito.
     """
-    return core_db.get_session_factory_for_host(core_db.get_request_host())()
+    current_host = core_db.get_request_host()
+    _ensure_frontend_storage_ready(current_host)
+    return core_db.get_session_factory_for_host(current_host)()
+
+
+def _database_ready_key(host: Optional[str]) -> str:
+    info = core_db.get_current_database_info(host)
+    db_url = str(info.get("url") or "").strip()
+    if db_url:
+        return db_url
+    normalized_host = str(info.get("host") or host or "").strip().lower()
+    return f"host:{normalized_host or 'default'}"
+
+
+def _ensure_frontend_storage_ready(host: Optional[str] = None) -> None:
+    current_host = host if host is not None else core_db.get_request_host()
+    ready_key = _database_ready_key(current_host)
+    if ready_key in _ready_databases:
+        return
+
+    with _ready_lock:
+        if ready_key in _ready_databases:
+            return
+
+        ensure_frontend_schema(current_host)
+        if current_host:
+            db = core_db.get_session_factory_for_host(current_host)()
+            try:
+                _migrate_all_legacy_files(db)
+            finally:
+                db.close()
+        _ready_databases.add(ready_key)
 
 
 def _load_legacy_json(path: str, default: Any) -> Any:
@@ -647,8 +664,7 @@ def save_tasas(items: List[Dict[str, Any]]) -> List[Dict[str, str]]:
         db.close()
 
 
-# ── Llamada de inicialización al importar el módulo ───────────────────────────
-# ensure_frontend_schema() crea las tablas si no existen.
-# run_startup_migration() debe llamarse explícitamente desde el lifespan
-# de FastAPI para no bloquear importaciones en tests.
-ensure_frontend_schema()
+# ── Inicialización diferida ───────────────────────────────────────────────────
+# El esquema y la migración se resuelven cuando ya existe una BD efectiva
+# para el host actual. Esto evita escribir en una BD por defecto equivocada
+# durante el import o el startup sin contexto de sitio.

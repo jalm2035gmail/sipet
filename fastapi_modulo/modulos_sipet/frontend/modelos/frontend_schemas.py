@@ -4,7 +4,7 @@ modelos/frontend_schemas.py
 Schemas Pydantic para validación de entrada/salida del módulo frontend.
 
 Uso en controladores:
-    from fastapi_modulo.modulos.frontend.modelos.frontend_schemas import (
+    from fastapi_modulo.modulos_sipet.frontend.modelos.frontend_schemas import (
         PagePayload, ContactPayload, TasaItem, TasaListPayload,
         BrandPayload, GalleryDeleteResponse, PageActionEnum,
     )

@@ -19,6 +19,7 @@ import os
 import re
 import uuid as _uuid
 from functools import lru_cache
+from importlib import import_module
 from typing import Any, Dict, List, Optional
 
 import redis
@@ -27,6 +28,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from pydantic import BaseModel, Field, field_validator
 
 from fastapi_modulo.core import db as core_db
+from fastapi_modulo.core.module_registry import is_module_enabled
 from fastapi_modulo.modulos_sipet.frontend.modelos.frontend_store import (
     create_contact as store_create_contact,
     delete_page as store_delete_page,
@@ -196,6 +198,19 @@ def _cache_delete(*keys: str) -> None:
         r.delete(*[f"{_CACHE_PREFIX}{k}" for k in keys])
     except Exception as exc:
         logger.debug("Redis DEL falló: %s", exc)
+
+
+def _load_form_definition_model():
+    for module_path in (
+        "fastapi_modulo.modulos_sipet.plantillas.modelos.plantillas_db_models",
+        "fastapi_modulo.modulos.plantillas.modelos.plantillas_db_models",
+    ):
+        try:
+            module = import_module(module_path)
+            return getattr(module, "FormDefinition", None)
+        except Exception:
+            continue
+    return None
 
 
 def clear_all_page_cache() -> None:
@@ -522,13 +537,17 @@ def api_list_forms(request: Request):
     """Lista formularios activos para el selector del builder."""
     require_screen_access(request, _FRONTEND_BUILDER_SCREEN, detail="Sin acceso al constructor frontend.")
     try:
-        from fastapi_modulo.modulos.plantillas.modelos.plantillas_db_models import FormDefinition
+        if not is_module_enabled("plantillas"):
+            return {"success": True, "data": []}
+        form_definition_model = _load_form_definition_model()
+        if form_definition_model is None:
+            return {"success": True, "data": []}
         db = core_db.get_session_factory_for_host(core_db.get_request_host())()
         try:
             forms = (
-                db.query(FormDefinition)
-                .filter(FormDefinition.is_active == True)  # noqa: E712
-                .order_by(FormDefinition.name)
+                db.query(form_definition_model)
+                .filter(form_definition_model.is_active == True)  # noqa: E712
+                .order_by(form_definition_model.name)
                 .all()
             )
             return {"success": True, "data": [{"id": f.id, "name": f.name, "slug": f.slug} for f in forms]}
@@ -673,15 +692,44 @@ def api_gallery_list(request: Request):
 
 
 @_gallery_router.post("/gallery/upload")
-async def api_gallery_upload(request: Request, file: UploadFile = File(...)):
+async def api_gallery_upload(request: Request):
     _require_write(request)
-    ext = os.path.splitext(file.filename or "")[1].lower()
+    upload = None
+    form_error = None
+    form_debug: list[str] = []
+    try:
+        form = await request.form()
+        for _, value in form.multi_items():
+            form_debug.append(f"{type(value).__name__}:{getattr(value, 'filename', '') or getattr(value, '__class__', type(value)).__name__}")
+            if getattr(value, "filename", None):
+                upload = value
+                break
+    except Exception as exc:
+        form_error = str(exc) or exc.__class__.__name__
+        logger.exception("frontend gallery upload: failed to parse multipart form")
+        upload = None
+    if upload is None or not getattr(upload, "filename", None):
+        error_message = "No se recibió ninguna imagen multipart en la solicitud."
+        if form_error:
+            error_message = f"{error_message} Detalle: {form_error}"
+        content_type = request.headers.get("content-type") or "(sin content-type)"
+        content_length = request.headers.get("content-length") or "(sin content-length)"
+        debug_fields = ", ".join(form_debug) if form_debug else "(sin campos parseados)"
+        error_message = (
+            f"{error_message} Content-Type: {content_type}. "
+            f"Content-Length: {content_length}. Campos: {debug_fields}."
+        )
+        return JSONResponse(
+            {"success": False, "error": error_message},
+            status_code=400,
+        )
+    ext = os.path.splitext(upload.filename or "")[1].lower()
     if ext not in _ALLOWED_IMAGE_EXTS:
         return JSONResponse(
             {"success": False, "error": f"Tipo no permitido. Usa: {', '.join(_ALLOWED_IMAGE_EXTS)}"},
             status_code=415,
         )
-    data = await file.read()
+    data = await upload.read()
     if len(data) > _GALLERY_MAX_MB * 1024 * 1024:
         return JSONResponse(
             {"success": False, "error": f"Imagen demasiado grande (máx {_GALLERY_MAX_MB} MB)"},
@@ -726,20 +774,14 @@ def _resolve_identidad_logo_url() -> str:
       2) Logo en Personalización
     """
     import glob as _glob
-    _CONFIG   = (os.environ.get("IDENTIDAD_LOGIN_CONFIG_PATH") or
-                 "fastapi_modulo/modulos_sipet/web/identidad_login.json").strip()
-    _IMG_DIR  = "fastapi_modulo/templates/imagenes"
-    _DEFAULT  = "icon.png"
+    from fastapi_modulo.modulos_sipet.web.servicios.login_identity_service import _build_login_asset_url
 
     try:
-        with open(_CONFIG, "r", encoding="utf-8") as fh:
-            data = json.load(fh)
+        data = _load_login_identity()
         logo_filename = str(data.get("logo_filename") or "").strip()
-        if logo_filename and logo_filename != _DEFAULT:
-            path = os.path.join(_IMG_DIR, logo_filename)
-            v = int(os.path.getmtime(path)) if os.path.exists(path) else 0
-            return f"/templates/imagenes/{logo_filename}?v={v}"
-    except (OSError, json.JSONDecodeError):
+        if logo_filename and logo_filename != "icon.png":
+            return _build_login_asset_url(logo_filename, "icon.png")
+    except Exception:
         pass
 
     _UPLOADS = os.path.join("fastapi_modulo", "modulos", "personalizacion", "uploads")

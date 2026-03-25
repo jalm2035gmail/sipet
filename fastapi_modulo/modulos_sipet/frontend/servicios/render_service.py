@@ -252,28 +252,18 @@ def _resolve_logo_url() -> str:
 
 def _resolve_identidad_logo_url() -> str:
     """
-    Lee el logo desde identidad_login.json o desde la carpeta de uploads
-    de personalización como respaldo.
+    Lee el logo desde la identidad institucional en BD y, si no existe un
+    logo personalizado, usa la carpeta de uploads de personalización.
     """
     import glob as _glob
 
-    _CONFIG      = (
-        os.environ.get("IDENTIDAD_LOGIN_CONFIG_PATH")
-        or "fastapi_modulo/modulos_sipet/web/identidad_login.json"
-    ).strip()
-    _IMG_DIR     = "fastapi_modulo/templates/imagenes"
-    _DEFAULT_LOGO = "icon.png"
-
     # Prioridad 2: identidad institucional
     try:
-        import json
-        with open(_CONFIG, "r", encoding="utf-8") as fh:
-            data = json.load(fh)
+        from fastapi_modulo.modulos_sipet.web.servicios.login_identity_service import _build_login_asset_url
+        data = _load_login_identity()
         logo_filename = str(data.get("logo_filename") or "").strip()
-        if logo_filename and logo_filename != _DEFAULT_LOGO:
-            path = os.path.join(_IMG_DIR, logo_filename)
-            v = int(os.path.getmtime(path)) if os.path.exists(path) else 0
-            return f"/templates/imagenes/{logo_filename}?v={v}"
+        if logo_filename and logo_filename != "icon.png":
+            return _build_login_asset_url(logo_filename, "icon.png")
     except Exception:
         pass
 
@@ -426,13 +416,46 @@ def _render_inline(ctx: Dict[str, Any]) -> HTMLResponse:
   {og_image_tag}
   <meta property="og:title" content="{title}">
   <meta property="og:type" content="website">
+  <link rel="stylesheet" href="/static/vendor/fontawesome/css/all.min.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
   {ctx["brand_vars"]}
-  <style>*{{box-sizing:border-box;margin:0;padding:0}}body{{font-family:system-ui,sans-serif;color:#1e293b}}</style>
+  <style>
+    *{{box-sizing:border-box;margin:0;padding:0}}
+    body{{font-family:system-ui,sans-serif;color:#1e293b;position:relative;isolation:isolate}}
+    .promo-bar{{position:relative;z-index:4200 !important}}
+    .topbar{{position:relative;z-index:4100 !important}}
+    body nav[style*="position:sticky"],
+    body nav[style*="position: fixed"],
+    body nav[style*="position:fixed"],
+    body nav[style*="position:absolute"][style*="top:0"],
+    body nav[style*="position: absolute"][style*="top: 0"]{{z-index:4100 !important}}
+  </style>
   {ctx["extra_style"]}
 </head>
-<body>{ctx["body_content"]}{ctx["bottom_menu"]}{ctx["form_script"]}</body>
+<body>{ctx["body_content"]}{ctx["bottom_menu"]}{ctx["form_script"]}
+<script>
+(function(){{
+  var links=document.querySelectorAll('[data-sipet-auth-link]');
+  if(!links.length) return;
+  fetch('/api/backend/me',{{credentials:'include'}})
+    .then(function(r){{return r.ok?r.json():null;}})
+    .then(function(data){{
+      var authenticated=!!(data&&data.authenticated);
+      var username=authenticated?String(data.username||data.user_name||'').trim():'';
+      links.forEach(function(link){{
+        var label=link.querySelector('[data-sipet-auth-label]');
+        if(label){{
+          label.textContent=authenticated?(username||''):'';
+          label.style.display=authenticated&&username?'':'none';
+        }}
+        link.setAttribute('href', authenticated?'/inicio':'/backend/login');
+        link.setAttribute('title', authenticated?(username||'Mi cuenta'):'Ingresar');
+      }});
+    }})
+    .catch(function(){{}});
+}})();
+</script></body>
 </html>""")
 
 

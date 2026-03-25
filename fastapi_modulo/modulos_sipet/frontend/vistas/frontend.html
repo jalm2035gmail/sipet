@@ -324,7 +324,8 @@
     color: var(--color-neutral-content); background: var(--color-neutral);
     box-shadow: 0 4px 16px rgba(0,0,0,.22);
     opacity: 0; pointer-events: none; transition: opacity .25s;
-    z-index: 9999; white-space: nowrap;
+    z-index: 9999; white-space: normal; max-width: min(92vw, 680px);
+    line-height: 1.45; text-align: center; word-break: break-word;
   }
   #wb-toast.show { opacity: 1; pointer-events: auto; }
 
@@ -1026,6 +1027,9 @@
     var t = document.getElementById('wb-toast');
     t.textContent = msg;
     t.style.background = ok ? '#0f172a' : '#7f1d1d';
+    if(!ok && window.console && typeof window.console.error === 'function'){
+      console.error('[frontend-builder]', msg);
+    }
     t.classList.add('show');
     setTimeout(function(){ t.classList.remove('show'); }, 2400);
   }
@@ -1035,6 +1039,19 @@
   }
   function currentPage(){ return _pages.find(function(p){ return p.id === _currentPageId; }) || null; }
   function _esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function _cookie(name){
+    var prefix = name + '=';
+    var parts = document.cookie ? document.cookie.split(';') : [];
+    for(var i=0;i<parts.length;i++){
+      var item = parts[i].trim();
+      if(item.indexOf(prefix) === 0) return decodeURIComponent(item.slice(prefix.length));
+    }
+    return '';
+  }
+  function _csrfHeaders(){
+    var token = _cookie('csrf_token');
+    return token ? { 'X-CSRF-Token': token } : {};
+  }
   function _renderHtmlRawPreview(html, css){
     var frame = document.getElementById('wb-html-preview-frame');
     if(!frame) return;
@@ -1339,11 +1356,11 @@
        1. MENU — variantes de barra de navegación
     ══════════════════════════════════════════════════ */
     bm.add('nav-classic', { label:'Navbar clásica', category:'Menu', media:'🔗',
-      content:'<nav style="display:flex;align-items:center;justify-content:space-between;padding:16px 5%;background:#fff;box-shadow:0 1px 10px rgba(0,0,0,.07);position:sticky;top:0;z-index:100;"><a href="#" data-sipet-logo="1" style="font-size:1.3rem;font-weight:800;color:#0f172a;text-decoration:none;">MiEmpresa</a><div style="display:flex;gap:24px;align-items:center;"><a href="#" style="color:#475569;text-decoration:none;font-size:.95rem;font-weight:500;">Inicio</a><a href="#" style="color:#475569;text-decoration:none;font-size:.95rem;font-weight:500;">Servicios</a><a href="#" style="color:#475569;text-decoration:none;font-size:.95rem;font-weight:500;">Nosotros</a><a href="#" style="color:#475569;text-decoration:none;font-size:.95rem;font-weight:500;">Contacto</a><a href="#" style="display:inline-block;padding:8px 20px;background:#0f172a;color:#fff;border-radius:7px;font-size:.9rem;font-weight:700;text-decoration:none;">Ingresar</a></div></nav>'
+      content:'<nav style="display:flex;align-items:center;justify-content:space-between;padding:16px 5%;background:#fff;box-shadow:0 1px 10px rgba(0,0,0,.07);position:sticky;top:0;z-index:100;"><a href="#" data-sipet-logo="1" style="font-size:1.3rem;font-weight:800;color:#0f172a;text-decoration:none;">MiEmpresa</a><div style="display:flex;gap:24px;align-items:center;"><a href="#" style="color:#475569;text-decoration:none;font-size:.95rem;font-weight:500;">Inicio</a><a href="#" style="color:#475569;text-decoration:none;font-size:.95rem;font-weight:500;">Servicios</a><a href="#" style="color:#475569;text-decoration:none;font-size:.95rem;font-weight:500;">Nosotros</a><a href="#" style="color:#475569;text-decoration:none;font-size:.95rem;font-weight:500;">Contacto</a><a data-sipet-auth-link="1" href="/backend/login" style="display:inline-flex;align-items:center;gap:10px;padding:8px 20px;background:#0f172a;color:#fff;border-radius:7px;font-size:.9rem;font-weight:700;text-decoration:none;"><i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i><span data-sipet-auth-label style="display:none;"></span></a></div></nav>'
     });
 
     bm.add('nav-dark', { label:'Navbar oscura', category:'Menu', media:'🌙',
-      content:'<nav style="display:flex;align-items:center;justify-content:space-between;padding:16px 5%;background:#0f172a;position:sticky;top:0;z-index:100;"><a href="#" data-sipet-logo="1" style="font-size:1.3rem;font-weight:800;color:#f8fafc;text-decoration:none;">MiEmpresa</a><div style="display:flex;gap:24px;align-items:center;"><a href="#" style="color:#94a3b8;text-decoration:none;font-size:.9rem;font-weight:500;transition:color .15s;">Inicio</a><a href="#" style="color:#94a3b8;text-decoration:none;font-size:.9rem;font-weight:500;">Servicios</a><a href="#" style="color:#94a3b8;text-decoration:none;font-size:.9rem;font-weight:500;">Nosotros</a><a href="#" style="color:#94a3b8;text-decoration:none;font-size:.9rem;font-weight:500;">Contacto</a><a href="#" style="display:inline-block;padding:8px 20px;background:#3b82f6;color:#fff;border-radius:7px;font-size:.9rem;font-weight:700;text-decoration:none;">Ingresar</a></div></nav>'
+      content:'<nav style="display:flex;align-items:center;justify-content:space-between;padding:16px 5%;background:#0f172a;position:sticky;top:0;z-index:100;"><a href="#" data-sipet-logo="1" style="font-size:1.3rem;font-weight:800;color:#f8fafc;text-decoration:none;">MiEmpresa</a><div style="display:flex;gap:24px;align-items:center;"><a href="#" style="color:#94a3b8;text-decoration:none;font-size:.9rem;font-weight:500;transition:color .15s;">Inicio</a><a href="#" style="color:#94a3b8;text-decoration:none;font-size:.9rem;font-weight:500;">Servicios</a><a href="#" style="color:#94a3b8;text-decoration:none;font-size:.9rem;font-weight:500;">Nosotros</a><a href="#" style="color:#94a3b8;text-decoration:none;font-size:.9rem;font-weight:500;">Contacto</a><a data-sipet-auth-link="1" href="/backend/login" style="display:inline-flex;align-items:center;gap:10px;padding:8px 20px;background:#3b82f6;color:#fff;border-radius:7px;font-size:.9rem;font-weight:700;text-decoration:none;"><i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i><span data-sipet-auth-label style="display:none;"></span></a></div></nav>'
     });
 
     bm.add('nav-centered', { label:'Logo centrado', category:'Menu', media:'🎯',
@@ -1351,15 +1368,15 @@
     });
 
     bm.add('nav-minimal', { label:'Navbar minimal', category:'Menu', media:'➡',
-      content:'<nav style="display:flex;align-items:center;justify-content:space-between;padding:14px 5%;background:#fff;border-bottom:1px solid #e2e8f0;"><a href="#" data-sipet-logo="1" style="font-size:1.1rem;font-weight:800;color:#0f172a;text-decoration:none;">Marca</a><div style="display:flex;gap:20px;align-items:center;"><a href="#" style="color:#475569;text-decoration:none;font-size:.875rem;">Servicios</a><a href="#" style="color:#475569;text-decoration:none;font-size:.875rem;">Contacto</a><a href="#" style="color:#3b82f6;font-weight:700;text-decoration:none;font-size:.875rem;">Entrar →</a></div></nav>'
+      content:'<nav style="display:flex;align-items:center;justify-content:space-between;padding:14px 5%;background:#fff;border-bottom:1px solid #e2e8f0;"><a href="#" data-sipet-logo="1" style="font-size:1.1rem;font-weight:800;color:#0f172a;text-decoration:none;">Marca</a><div style="display:flex;gap:20px;align-items:center;"><a href="#" style="color:#475569;text-decoration:none;font-size:.875rem;">Servicios</a><a href="#" style="color:#475569;text-decoration:none;font-size:.875rem;">Contacto</a><a data-sipet-auth-link="1" href="/backend/login" style="display:inline-flex;align-items:center;gap:8px;color:#3b82f6;font-weight:700;text-decoration:none;font-size:.875rem;"><i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i><span data-sipet-auth-label style="display:none;"></span></a></div></nav>'
     });
 
     bm.add('nav-transparent', { label:'Navbar transparente', category:'Menu', media:'💎',
-      content:'<nav style="display:flex;align-items:center;justify-content:space-between;padding:20px 5%;background:rgba(255,255,255,.1);backdrop-filter:blur(12px);position:absolute;top:0;left:0;right:0;z-index:100;"><a href="#" data-sipet-logo="1" style="font-size:1.3rem;font-weight:800;color:#fff;text-decoration:none;text-shadow:0 1px 4px rgba(0,0,0,.3);">MiEmpresa</a><div style="display:flex;gap:24px;align-items:center;"><a href="#" style="color:rgba(255,255,255,.85);text-decoration:none;font-size:.9rem;font-weight:500;">Inicio</a><a href="#" style="color:rgba(255,255,255,.85);text-decoration:none;font-size:.9rem;font-weight:500;">Servicios</a><a href="#" style="color:rgba(255,255,255,.85);text-decoration:none;font-size:.9rem;font-weight:500;">Contáctanos</a><a href="#" style="display:inline-block;padding:8px 20px;background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.4);border-radius:7px;font-size:.9rem;font-weight:700;text-decoration:none;">Ingresar</a></div></nav>'
+      content:'<nav style="display:flex;align-items:center;justify-content:space-between;padding:20px 5%;background:rgba(255,255,255,.1);backdrop-filter:blur(12px);position:absolute;top:0;left:0;right:0;z-index:100;"><a href="#" data-sipet-logo="1" style="font-size:1.3rem;font-weight:800;color:#fff;text-decoration:none;text-shadow:0 1px 4px rgba(0,0,0,.3);">MiEmpresa</a><div style="display:flex;gap:24px;align-items:center;"><a href="#" style="color:rgba(255,255,255,.85);text-decoration:none;font-size:.9rem;font-weight:500;">Inicio</a><a href="#" style="color:rgba(255,255,255,.85);text-decoration:none;font-size:.9rem;font-weight:500;">Servicios</a><a href="#" style="color:rgba(255,255,255,.85);text-decoration:none;font-size:.9rem;font-weight:500;">Contáctanos</a><a data-sipet-auth-link="1" href="/backend/login" style="display:inline-flex;align-items:center;gap:10px;padding:8px 20px;background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.4);border-radius:7px;font-size:.9rem;font-weight:700;text-decoration:none;"><i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i><span data-sipet-auth-label style="display:none;"></span></a></div></nav>'
     });
 
     bm.add('nav-mega', { label:'Navbar con submenu', category:'Menu', media:'📋',
-      content:'<nav style="display:flex;align-items:center;justify-content:space-between;padding:0 5%;background:#fff;box-shadow:0 2px 12px rgba(0,0,0,.08);position:sticky;top:0;z-index:100;height:58px;"><a href="#" data-sipet-logo="1" style="font-size:1.2rem;font-weight:800;color:#0f172a;text-decoration:none;">MiEmpresa</a><div style="display:flex;height:100%;align-items:stretch;gap:4px;"><a href="#" style="display:flex;align-items:center;padding:0 14px;color:#475569;text-decoration:none;font-size:.9rem;font-weight:500;border-bottom:3px solid transparent;">Inicio</a><a href="#" style="display:flex;align-items:center;padding:0 14px;color:#3b82f6;text-decoration:none;font-size:.9rem;font-weight:600;border-bottom:3px solid #3b82f6;">Servicios ▾</a><a href="#" style="display:flex;align-items:center;padding:0 14px;color:#475569;text-decoration:none;font-size:.9rem;font-weight:500;border-bottom:3px solid transparent;">Sucursales</a><a href="#" style="display:flex;align-items:center;padding:0 14px;color:#475569;text-decoration:none;font-size:.9rem;font-weight:500;border-bottom:3px solid transparent;">Contacto</a></div><div style="display:flex;gap:8px;"><a href="#" style="padding:8px 16px;border:1px solid #e2e8f0;color:#475569;border-radius:7px;font-size:.875rem;font-weight:600;text-decoration:none;">Registrarse</a><a href="#" style="padding:8px 18px;background:#0f172a;color:#fff;border-radius:7px;font-size:.875rem;font-weight:700;text-decoration:none;">Ingresar</a></div></nav>'
+      content:'<nav style="display:flex;align-items:center;justify-content:space-between;padding:0 5%;background:#fff;box-shadow:0 2px 12px rgba(0,0,0,.08);position:sticky;top:0;z-index:100;height:58px;"><a href="#" data-sipet-logo="1" style="font-size:1.2rem;font-weight:800;color:#0f172a;text-decoration:none;">MiEmpresa</a><div style="display:flex;height:100%;align-items:stretch;gap:4px;"><a href="#" style="display:flex;align-items:center;padding:0 14px;color:#475569;text-decoration:none;font-size:.9rem;font-weight:500;border-bottom:3px solid transparent;">Inicio</a><a href="#" style="display:flex;align-items:center;padding:0 14px;color:#3b82f6;text-decoration:none;font-size:.9rem;font-weight:600;border-bottom:3px solid #3b82f6;">Servicios ▾</a><a href="#" style="display:flex;align-items:center;padding:0 14px;color:#475569;text-decoration:none;font-size:.9rem;font-weight:500;border-bottom:3px solid transparent;">Sucursales</a><a href="#" style="display:flex;align-items:center;padding:0 14px;color:#475569;text-decoration:none;font-size:.9rem;font-weight:500;border-bottom:3px solid transparent;">Contacto</a></div><div style="display:flex;gap:8px;"><a href="#" style="padding:8px 16px;border:1px solid #e2e8f0;color:#475569;border-radius:7px;font-size:.875rem;font-weight:600;text-decoration:none;">Registrarse</a><a data-sipet-auth-link="1" href="/backend/login" style="display:inline-flex;align-items:center;gap:9px;padding:8px 18px;background:#0f172a;color:#fff;border-radius:7px;font-size:.875rem;font-weight:700;text-decoration:none;"><i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i><span data-sipet-auth-label style="display:none;"></span></a></div></nav>'
     });
 
     /* ══════════════════════════════════════════════════
@@ -1390,10 +1407,8 @@
     });
 
     addTypedBlock('header-fullphoto', { label:'Foto completa', category:'Header', media:'🌅',
-      attributes: { 'data-sipet-bg-image':'1', style:'position:relative;min-height:92vh;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#0f172a;' },
-      components: `<!-- Foto de fondo full-bleed -->
-  <img src="https://placehold.co/1600x900/1e3a5f/60a5fa?text=Tu+fotografía+aquí" alt="Fondo"
-       style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;opacity:.55;">
+      attributes: { 'data-sipet-bg-image':'1', style:'position:relative;min-height:calc(92vh - 72px);margin-top:72px;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#0f172a url(https://placehold.co/1600x900/1e3a5f/60a5fa?text=Tu+fotografía+aquí) center/cover no-repeat;' },
+      components: `
   <!-- Gradiente elegante sobre la foto -->
   <div style="position:absolute;inset:0;background:linear-gradient(160deg,rgba(15,23,42,.72) 0%,rgba(15,23,42,.28) 55%,rgba(15,23,42,.65) 100%);"></div>
   <!-- Ruido de textura sutil (SVG inline) -->
@@ -1429,7 +1444,7 @@
     addTypedBlock('header-parallax-photo', { label:'Foto fija + scroll', category:'Header', media:'🧲',
       attributes: { 'data-sipet-bg-image':'1', style:'position:relative;min-height:180vh;background:#0f172a;' },
       components: `<div style="position:sticky;top:0;height:100vh;overflow:hidden;">
-    <img src="https://placehold.co/1600x1100/0f172a/93c5fd?text=Foto+de+portada" alt="Foto fija"
+    <img src="https://placehold.co/1600x1100/0f172a/93c5fd?text=Foto+de+portada" alt="Foto fija" data-sipet-bg-target="1"
          style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;opacity:.78;">
     <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(15,23,42,.24) 0%,rgba(15,23,42,.46) 38%,rgba(15,23,42,.82) 100%);"></div>
     <div style="position:relative;z-index:1;height:100%;display:flex;align-items:center;justify-content:center;padding:0 6%;">
@@ -1820,7 +1835,7 @@
         +'<a href="#" style="display:flex;align-items:center;padding:0 14px;color:#475569;text-decoration:none;font-size:.875rem;font-weight:500;border-bottom:2px solid transparent;">Nosotros</a>'
         +'<a href="#" style="display:flex;align-items:center;padding:0 14px;color:#475569;text-decoration:none;font-size:.875rem;font-weight:500;border-bottom:2px solid transparent;">Contacto</a>'
         +'</div><div style="flex:1;"></div>'
-        +'<a href="#" style="padding:8px 18px;background:#0f172a;color:#fff;border-radius:7px;font-size:.85rem;font-weight:700;text-decoration:none;">Ingresar</a>'
+        +'<a data-sipet-auth-link="1" href="/backend/login" style="display:inline-flex;align-items:center;gap:9px;padding:8px 18px;background:#0f172a;color:#fff;border-radius:7px;font-size:.85rem;font-weight:700;text-decoration:none;"><i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i><span data-sipet-auth-label style="display:none;"></span></a>'
     });
 
     addTypedBlock('menu-mega', { label:'Mega men\u00fa', category:'Men\u00fa', media:'🗺',
@@ -1842,7 +1857,7 @@
   </details>
   <div style="display:flex;gap:8px;">
     <a href="#" style="padding:8px 16px;border:1px solid #e2e8f0;color:#475569;border-radius:7px;font-size:.875rem;font-weight:600;text-decoration:none;">Registrarse</a>
-    <a href="#" style="padding:8px 18px;background:#0f172a;color:#fff;border-radius:7px;font-size:.875rem;font-weight:700;text-decoration:none;">Ingresar</a>
+    <a data-sipet-auth-link="1" href="/backend/login" style="display:inline-flex;align-items:center;gap:9px;padding:8px 18px;background:#0f172a;color:#fff;border-radius:7px;font-size:.875rem;font-weight:700;text-decoration:none;"><i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i><span data-sipet-auth-label style="display:none;"></span></a>
   </div>`
     });
 
@@ -1928,7 +1943,7 @@
     <a href="#" style="display:flex;align-items:center;gap:9px;padding:10px 11px;border-radius:9px;color:#475569;text-decoration:none;font-size:.875rem;font-weight:500;margin-bottom:3px;">📞 Contacto</a>
     <a href="#" style="display:flex;align-items:center;gap:9px;padding:10px 11px;border-radius:9px;color:#475569;text-decoration:none;font-size:.875rem;font-weight:500;margin-bottom:3px;">🏦 Nosotros</a>
     <a href="#" style="display:flex;align-items:center;gap:9px;padding:10px 11px;border-radius:9px;color:#475569;text-decoration:none;font-size:.875rem;font-weight:500;">📰 Blog</a>
-    <a href="/backend/login" style="display:flex;align-items:center;justify-content:center;gap:9px;padding:11px 14px;border-radius:10px;background:#0f172a;color:#fff;text-decoration:none;font-size:.875rem;font-weight:700;margin-top:14px;">🔐 Ingresar</a>
+    <a data-sipet-auth-link="1" href="/backend/login" style="display:flex;align-items:center;justify-content:center;gap:9px;padding:11px 14px;border-radius:10px;background:#0f172a;color:#fff;text-decoration:none;font-size:.875rem;font-weight:700;margin-top:14px;"><i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i><span data-sipet-auth-label style="display:none;"></span></a>
   </nav>
 </aside>
 <main data-snav-main>
@@ -2298,7 +2313,7 @@
       id: 'home-coop', title: 'Home Cooperativa', thumb: '🏦',
       desc: 'Página de inicio completa: navbar, hero, estadísticas, servicios, CTA, pie.',
       css: 'section,nav,footer{box-sizing:border-box}',
-      html: '<nav style="display:flex;align-items:center;justify-content:space-between;padding:16px 5%;background:#fff;box-shadow:0 1px 10px rgba(0,0,0,.07);position:sticky;top:0;z-index:100;"><a href="#" style="font-size:1.3rem;font-weight:800;color:#0f172a;text-decoration:none;">Cooperativa</a><div style="display:flex;gap:20px;align-items:center;"><a href="#" style="color:#475569;text-decoration:none;font-size:.9rem;font-weight:500;">Inicio</a><a href="#" style="color:#475569;text-decoration:none;font-size:.9rem;font-weight:500;">Servicios</a><a href="#" style="color:#475569;text-decoration:none;font-size:.9rem;font-weight:500;">Nosotros</a><a href="#" style="display:inline-block;padding:7px 18px;background:#0f172a;color:#fff;border-radius:7px;font-size:.85rem;font-weight:700;text-decoration:none;">Ingresar</a></div></nav><section style="display:flex;align-items:center;gap:48px;padding:80px 5%;background:#f8fafc;flex-wrap:wrap;"><div style="flex:1;min-width:280px;"><p style="font-size:.8rem;font-weight:700;color:#3b82f6;text-transform:uppercase;letter-spacing:.1em;margin:0 0 10px;">Bienvenidos</p><h1 style="font-size:2.4rem;font-weight:800;color:#0f172a;margin:0 0 16px;line-height:1.2;">Tu solución financiera de confianza</h1><p style="color:#64748b;margin:0 0 28px;line-height:1.7;">Ahorro, crédito y servicios financieros para toda la familia.</p><a href="#" style="display:inline-block;padding:13px 30px;background:#0f172a;color:#fff;border-radius:8px;font-weight:700;text-decoration:none;margin-right:10px;">Conocer más</a><a href="#" style="display:inline-block;padding:13px 30px;border:2px solid #0f172a;color:#0f172a;border-radius:8px;font-weight:700;text-decoration:none;">Asociarme</a></div><div style="flex:1;min-width:240px;text-align:center;"><img src="https://placehold.co/520x360/e2e8f0/94a3b8?text=Cooperativa" style="width:100%;border-radius:16px;box-shadow:0 20px 40px rgba(0,0,0,.12);" alt="Hero"></div></section><section style="padding:48px 5%;background:#0f172a;color:#fff;"><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:24px;max-width:900px;margin:0 auto;text-align:center;"><div><div style="font-size:2.4rem;font-weight:800;color:#3b82f6;">12,000+</div><div style="color:#94a3b8;font-size:.85rem;margin-top:4px;">Socios activos</div></div><div><div style="font-size:2.4rem;font-weight:800;color:#3b82f6;">25 años</div><div style="color:#94a3b8;font-size:.85rem;margin-top:4px;">De experiencia</div></div><div><div style="font-size:2.4rem;font-weight:800;color:#3b82f6;">Q450M</div><div style="color:#94a3b8;font-size:.85rem;margin-top:4px;">En cartera</div></div><div><div style="font-size:2.4rem;font-weight:800;color:#3b82f6;">8</div><div style="color:#94a3b8;font-size:.85rem;margin-top:4px;">Sucursales</div></div></div></section><section style="padding:64px 5%;background:#fff;"><div style="text-align:center;margin-bottom:36px;"><h2 style="font-size:1.9rem;font-weight:800;color:#0f172a;margin:0 0 10px;">Nuestros servicios</h2><p style="color:#64748b;">Diseñados para acompañar cada etapa de tu vida.</p></div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:20px;max-width:1100px;margin:0 auto;"><div style="background:#f8fafc;border-radius:12px;padding:28px;text-align:center;"><div style="font-size:2rem;margin-bottom:12px;">💳</div><h3 style="font-size:1rem;font-weight:700;color:#0f172a;margin:0 0 8px;">Ahorro</h3><p style="color:#64748b;font-size:.875rem;line-height:1.65;">Cuentas con rendimientos competitivos y sin comisiones.</p></div><div style="background:#f8fafc;border-radius:12px;padding:28px;text-align:center;"><div style="font-size:2rem;margin-bottom:12px;">🏦</div><h3 style="font-size:1rem;font-weight:700;color:#0f172a;margin:0 0 8px;">Créditos</h3><p style="color:#64748b;font-size:.875rem;line-height:1.65;">Préstamos personales e hipotecarios a tu medida.</p></div><div style="background:#f8fafc;border-radius:12px;padding:28px;text-align:center;"><div style="font-size:2rem;margin-bottom:12px;">📱</div><h3 style="font-size:1rem;font-weight:700;color:#0f172a;margin:0 0 8px;">Digital</h3><p style="color:#64748b;font-size:.875rem;line-height:1.65;">Gestiona tu cuenta desde cualquier dispositivo.</p></div><div style="background:#f8fafc;border-radius:12px;padding:28px;text-align:center;"><div style="font-size:2rem;margin-bottom:12px;">🔒</div><h3 style="font-size:1rem;font-weight:700;color:#0f172a;margin:0 0 8px;">Seguro</h3><p style="color:#64748b;font-size:.875rem;line-height:1.65;">Fondos protegidos y auditados cada año.</p></div></div></section><section style="background:#3b82f6;color:#fff;padding:64px 24px;text-align:center;"><h2 style="font-size:2rem;font-weight:800;margin:0 0 12px;">¿Listo para empezar?</h2><p style="opacity:.85;margin:0 0 28px;font-size:1.05rem;max-width:520px;margin-left:auto;margin-right:auto;">Únete a miles de socios que ya confían en nosotros.</p><a href="#" style="display:inline-block;padding:14px 36px;background:#fff;color:#3b82f6;border-radius:8px;font-weight:700;text-decoration:none;font-size:1rem;">Asociarme ahora</a></section><footer style="background:#0f172a;color:#94a3b8;padding:48px 5% 24px;"><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:32px;margin-bottom:32px;"><div><h3 style="color:#f8fafc;font-size:1.05rem;font-weight:700;margin:0 0 10px;">Cooperativa</h3><p style="font-size:.85rem;line-height:1.7;">Financiando el futuro de nuestros socios desde 2001.</p></div><div><h4 style="color:#f8fafc;font-size:.85rem;font-weight:700;margin:0 0 8px;text-transform:uppercase;letter-spacing:.06em;">Servicios</h4><ul style="list-style:none;display:flex;flex-direction:column;gap:6px;font-size:.85rem;"><li><a href="#" style="color:#94a3b8;text-decoration:none;">Ahorro</a></li><li><a href="#" style="color:#94a3b8;text-decoration:none;">Créditos</a></li><li><a href="#" style="color:#94a3b8;text-decoration:none;">Digital</a></li></ul></div><div><h4 style="color:#f8fafc;font-size:.85rem;font-weight:700;margin:0 0 8px;text-transform:uppercase;letter-spacing:.06em;">Contacto</h4><ul style="list-style:none;gap:6px;display:flex;flex-direction:column;font-size:.85rem;"><li>📞 (502) 2222-3333</li><li>✉ info@cooperativa.com</li></ul></div></div><div style="border-top:1px solid #1e293b;padding-top:18px;text-align:center;font-size:.8rem;">© 2026 Cooperativa. Todos los derechos reservados.</div></footer>'
+      html: '<nav style="display:flex;align-items:center;justify-content:space-between;padding:16px 5%;background:#fff;box-shadow:0 1px 10px rgba(0,0,0,.07);position:sticky;top:0;z-index:100;"><a href="#" style="font-size:1.3rem;font-weight:800;color:#0f172a;text-decoration:none;">Cooperativa</a><div style="display:flex;gap:20px;align-items:center;"><a href="#" style="color:#475569;text-decoration:none;font-size:.9rem;font-weight:500;">Inicio</a><a href="#" style="color:#475569;text-decoration:none;font-size:.9rem;font-weight:500;">Servicios</a><a href="#" style="color:#475569;text-decoration:none;font-size:.9rem;font-weight:500;">Nosotros</a><a data-sipet-auth-link="1" href="/backend/login" style="display:inline-flex;align-items:center;gap:9px;padding:7px 18px;background:#0f172a;color:#fff;border-radius:7px;font-size:.85rem;font-weight:700;text-decoration:none;"><i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i><span data-sipet-auth-label style="display:none;"></span></a></div></nav><section style="display:flex;align-items:center;gap:48px;padding:80px 5%;background:#f8fafc;flex-wrap:wrap;"><div style="flex:1;min-width:280px;"><p style="font-size:.8rem;font-weight:700;color:#3b82f6;text-transform:uppercase;letter-spacing:.1em;margin:0 0 10px;">Bienvenidos</p><h1 style="font-size:2.4rem;font-weight:800;color:#0f172a;margin:0 0 16px;line-height:1.2;">Tu solución financiera de confianza</h1><p style="color:#64748b;margin:0 0 28px;line-height:1.7;">Ahorro, crédito y servicios financieros para toda la familia.</p><a href="#" style="display:inline-block;padding:13px 30px;background:#0f172a;color:#fff;border-radius:8px;font-weight:700;text-decoration:none;margin-right:10px;">Conocer más</a><a href="#" style="display:inline-block;padding:13px 30px;border:2px solid #0f172a;color:#0f172a;border-radius:8px;font-weight:700;text-decoration:none;">Asociarme</a></div><div style="flex:1;min-width:240px;text-align:center;"><img src="https://placehold.co/520x360/e2e8f0/94a3b8?text=Cooperativa" style="width:100%;border-radius:16px;box-shadow:0 20px 40px rgba(0,0,0,.12);" alt="Hero"></div></section><section style="padding:48px 5%;background:#0f172a;color:#fff;"><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:24px;max-width:900px;margin:0 auto;text-align:center;"><div><div style="font-size:2.4rem;font-weight:800;color:#3b82f6;">12,000+</div><div style="color:#94a3b8;font-size:.85rem;margin-top:4px;">Socios activos</div></div><div><div style="font-size:2.4rem;font-weight:800;color:#3b82f6;">25 años</div><div style="color:#94a3b8;font-size:.85rem;margin-top:4px;">De experiencia</div></div><div><div style="font-size:2.4rem;font-weight:800;color:#3b82f6;">Q450M</div><div style="color:#94a3b8;font-size:.85rem;margin-top:4px;">En cartera</div></div><div><div style="font-size:2.4rem;font-weight:800;color:#3b82f6;">8</div><div style="color:#94a3b8;font-size:.85rem;margin-top:4px;">Sucursales</div></div></div></section><section style="padding:64px 5%;background:#fff;"><div style="text-align:center;margin-bottom:36px;"><h2 style="font-size:1.9rem;font-weight:800;color:#0f172a;margin:0 0 10px;">Nuestros servicios</h2><p style="color:#64748b;">Diseñados para acompañar cada etapa de tu vida.</p></div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:20px;max-width:1100px;margin:0 auto;"><div style="background:#f8fafc;border-radius:12px;padding:28px;text-align:center;"><div style="font-size:2rem;margin-bottom:12px;">💳</div><h3 style="font-size:1rem;font-weight:700;color:#0f172a;margin:0 0 8px;">Ahorro</h3><p style="color:#64748b;font-size:.875rem;line-height:1.65;">Cuentas con rendimientos competitivos y sin comisiones.</p></div><div style="background:#f8fafc;border-radius:12px;padding:28px;text-align:center;"><div style="font-size:2rem;margin-bottom:12px;">🏦</div><h3 style="font-size:1rem;font-weight:700;color:#0f172a;margin:0 0 8px;">Créditos</h3><p style="color:#64748b;font-size:.875rem;line-height:1.65;">Préstamos personales e hipotecarios a tu medida.</p></div><div style="background:#f8fafc;border-radius:12px;padding:28px;text-align:center;"><div style="font-size:2rem;margin-bottom:12px;">📱</div><h3 style="font-size:1rem;font-weight:700;color:#0f172a;margin:0 0 8px;">Digital</h3><p style="color:#64748b;font-size:.875rem;line-height:1.65;">Gestiona tu cuenta desde cualquier dispositivo.</p></div><div style="background:#f8fafc;border-radius:12px;padding:28px;text-align:center;"><div style="font-size:2rem;margin-bottom:12px;">🔒</div><h3 style="font-size:1rem;font-weight:700;color:#0f172a;margin:0 0 8px;">Seguro</h3><p style="color:#64748b;font-size:.875rem;line-height:1.65;">Fondos protegidos y auditados cada año.</p></div></div></section><section style="background:#3b82f6;color:#fff;padding:64px 24px;text-align:center;"><h2 style="font-size:2rem;font-weight:800;margin:0 0 12px;">¿Listo para empezar?</h2><p style="opacity:.85;margin:0 0 28px;font-size:1.05rem;max-width:520px;margin-left:auto;margin-right:auto;">Únete a miles de socios que ya confían en nosotros.</p><a href="#" style="display:inline-block;padding:14px 36px;background:#fff;color:#3b82f6;border-radius:8px;font-weight:700;text-decoration:none;font-size:1rem;">Asociarme ahora</a></section><footer style="background:#0f172a;color:#94a3b8;padding:48px 5% 24px;"><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:32px;margin-bottom:32px;"><div><h3 style="color:#f8fafc;font-size:1.05rem;font-weight:700;margin:0 0 10px;">Cooperativa</h3><p style="font-size:.85rem;line-height:1.7;">Financiando el futuro de nuestros socios desde 2001.</p></div><div><h4 style="color:#f8fafc;font-size:.85rem;font-weight:700;margin:0 0 8px;text-transform:uppercase;letter-spacing:.06em;">Servicios</h4><ul style="list-style:none;display:flex;flex-direction:column;gap:6px;font-size:.85rem;"><li><a href="#" style="color:#94a3b8;text-decoration:none;">Ahorro</a></li><li><a href="#" style="color:#94a3b8;text-decoration:none;">Créditos</a></li><li><a href="#" style="color:#94a3b8;text-decoration:none;">Digital</a></li></ul></div><div><h4 style="color:#f8fafc;font-size:.85rem;font-weight:700;margin:0 0 8px;text-transform:uppercase;letter-spacing:.06em;">Contacto</h4><ul style="list-style:none;gap:6px;display:flex;flex-direction:column;font-size:.85rem;"><li>📞 (502) 2222-3333</li><li>✉ info@cooperativa.com</li></ul></div></div><div style="border-top:1px solid #1e293b;padding-top:18px;text-align:center;font-size:.8rem;">© 2026 Cooperativa. Todos los derechos reservados.</div></footer>'
     },
     {
       id: 'servicios', title: 'Página de Servicios', thumb: '💼',
@@ -2765,12 +2780,21 @@
             upBtn.addEventListener('click', function(){ fileInp.click(); });
             fileInp.addEventListener('change', function(){
               if(!fileInp.files||!fileInp.files.length) return;
-              var fd = new FormData(); fd.append('file', fileInp.files[0]);
+              var file = fileInp.files[0];
+              var fd = new FormData();
+              fd.append('file', file);
+              fd.append('image', file);
+              fd.append('files', file);
+              console.log('[frontend-builder] upload component file', {
+                name: file && file.name,
+                size: file && file.size,
+                type: file && file.type
+              });
               upBtn.textContent='Subiendo…'; upBtn.disabled=true;
-              fetch('/api/frontend/gallery/upload',{method:'POST',body:fd})
-                .then(function(r){ return r.json(); })
+              fetch('/api/frontend/gallery/upload',{method:'POST',credentials:'include',headers:_csrfHeaders(),body:fd})
+                .then(_readJSONResponse)
                 .then(function(j){ if(j.success){ loadGallery(); } else { alert(j.error||'Error al subir'); } })
-                .catch(function(){ alert('Error de red'); })
+                .catch(function(err){ alert(err && err.message ? err.message : 'Error de red'); })
                 .finally(function(){ upBtn.textContent='+ Subir imagen'; upBtn.disabled=false; fileInp.value=''; });
             });
           }
@@ -3023,13 +3047,21 @@
       _brandLogo = url;
       fetch('/api/frontend/brand', {method:'POST', credentials:'include', headers:{'Content-Type':'application/json'}, body:JSON.stringify({logo_url:url})});
     } else if(_galleryMode === 'bgimage'){
-      /* Apply as CSS background-image (e.g. Hero Centrado section) */
-      _galleryTargetComp.addStyle({
-        'background-image':    'url("'+url+'")',
-        'background-size':     'cover',
-        'background-position': 'center',
-        'background-repeat':   'no-repeat'
-      });
+      var bgApplied = false;
+      var bgImgComp = _findBgTargetComp(_galleryTargetComp);
+      if(bgImgComp){
+        bgImgComp.addAttributes({ src: url });
+        bgApplied = true;
+      }
+      if(!bgApplied){
+        /* Apply as CSS background-image (e.g. Hero Centrado section) */
+        _galleryTargetComp.addStyle({
+          'background-image':    'url("'+url+'")',
+          'background-size':     'cover',
+          'background-position': 'center',
+          'background-repeat':   'no-repeat'
+        });
+      }
     } else {
       _galleryTargetComp.addAttributes({ src: url });
     }
@@ -3047,18 +3079,48 @@
     _openGalleryForComp(comp);
   };
 
+  function _findBgTargetComp(comp){
+    if(!comp) return null;
+    var attrs = comp.getAttributes ? comp.getAttributes() : {};
+    if(attrs && attrs['data-sipet-bg-target']) return comp;
+    if(comp.components){
+      var children = comp.components();
+      if(children && children.length){
+        for(var i = 0; i < children.length; i++){
+          var child = children.at ? children.at(i) : children[i];
+          var found = _findBgTargetComp(child);
+          if(found) return found;
+        }
+      }
+    }
+    return null;
+  }
+
+  function _findBgHostComp(comp){
+    var current = comp;
+    while(current){
+      if(_isBgImageComp(current)) return current;
+      current = current.parent ? current.parent() : null;
+    }
+    return comp || null;
+  }
+
+  function _isBgImageComp(comp){
+    if(!comp || !comp.getAttributes) return false;
+    var attrs = comp.getAttributes() || {};
+    return !!attrs['data-sipet-bg-image'];
+  }
+
   function _openGalleryForComp(comp){
-    _galleryTargetComp = comp;
+    _galleryTargetComp = _findBgHostComp(comp);
+    if(_isBgImageComp(comp)) _galleryMode = 'bgimage';
+    if(_isBgImageComp(_galleryTargetComp)) _galleryMode = 'bgimage';
     document.getElementById('wb-gallery-overlay').classList.add('open');
     _loadGallery();
   }
 
   function _resolveCompFromCanvasElement(el){
     if(!_editor || !el) return null;
-    if(typeof _editor.getModelForEl === 'function'){
-      var direct = _editor.getModelForEl(el);
-      if(direct) return direct;
-    }
     if(el.closest){
       var bgHost = el.closest('[data-sipet-bg-image]');
       if(bgHost && typeof _editor.getModelForEl === 'function'){
@@ -3076,6 +3138,10 @@
         if(imgComp) return imgComp;
       }
     }
+    if(typeof _editor.getModelForEl === 'function'){
+      var direct = _editor.getModelForEl(el);
+      if(direct) return direct;
+    }
     return _editor.getSelected ? _editor.getSelected() : null;
   }
 
@@ -3083,17 +3149,25 @@
   document.getElementById('wb-img-upload').addEventListener('change', function(){
     var file = this.files && this.files[0];
     if(!file) return;
-    var fd = new FormData(); fd.append('file', file);
+    var fd = new FormData();
+    fd.append('file', file);
+    fd.append('image', file);
+    fd.append('files', file);
+    console.log('[frontend-builder] upload file', {
+      name: file && file.name,
+      size: file && file.size,
+      type: file && file.type
+    });
     toast('Subiendo imagen…');
-    fetch('/api/frontend/gallery/upload', { method:'POST', credentials:'include', body:fd })
-      .then(function(r){ return r.json(); })
+    fetch('/api/frontend/gallery/upload', { method:'POST', credentials:'include', headers:_csrfHeaders(), body:fd })
+      .then(_readJSONResponse)
       .then(function(j){
         if(j.success && j.url){
           window._applyGalleryImg(j.url);
         } else {
           toast('Error: '+(j.error||'sin respuesta'), false);
         }
-      }).catch(function(){ toast('Error de red', false); });
+      }).catch(function(err){ toast('Error: ' + (err && err.message ? err.message : 'red'), false); });
     this.value = '';
   });
 
@@ -3187,9 +3261,10 @@
     _ctxComp = comp;
     var el   = comp.getEl();
     var isImg = el && el.tagName === 'IMG';
+    var isBgImage = _isBgImageComp(comp);
     var canEditText = _canEditText(comp);
     var menu = document.getElementById('wb-ctx-menu');
-    document.getElementById('ctx-img').style.display = isImg ? 'flex' : 'none';
+    document.getElementById('ctx-img').style.display = (isImg || isBgImage) ? 'flex' : 'none';
     document.getElementById('ctx-text').style.display = canEditText ? 'flex' : 'none';
     /* offset because canvas is inside an iframe */
     var canvasRect = document.getElementById('gjs').getBoundingClientRect();
