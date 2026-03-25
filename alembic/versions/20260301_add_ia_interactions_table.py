@@ -15,6 +15,10 @@ from alembic import op
 import sqlalchemy as sa
 
 def upgrade():
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    if inspector.has_table('ia_interactions'):
+        return
     op.create_table(
         'ia_interactions',
         sa.Column('id', sa.Integer, primary_key=True, index=True),
@@ -33,4 +37,7 @@ def upgrade():
     )
 
 def downgrade():
-    op.drop_table('ia_interactions')
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    if inspector.has_table('ia_interactions'):
+        op.drop_table('ia_interactions')

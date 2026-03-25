@@ -36,8 +36,32 @@ def _unique_exists(table_name: str, unique_name: str) -> bool:
     return any(item.get("name") == unique_name for item in inspector.get_unique_constraints(table_name))
 
 
+def _fk_exists(table_name: str, fk_name: str) -> bool:
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    return any(item.get("name") == fk_name for item in inspector.get_foreign_keys(table_name))
+
+
 def upgrade() -> None:
     """Upgrade schema."""
+    if not _table_exists('users'):
+        op.create_table('users',
+        sa.Column('id', sa.Integer(), nullable=False),
+        sa.Column('email', sa.String(length=100), nullable=False),
+        sa.Column('username', sa.String(length=50), nullable=True),
+        sa.Column('full_name', sa.String(length=150), nullable=True),
+        sa.Column('password', sa.String(length=255), nullable=False),
+        sa.Column('department_id', sa.Integer(), nullable=True),
+        sa.Column('role', sa.String(length=50), nullable=True),
+        sa.Column('is_active', sa.Boolean(), nullable=True),
+        sa.PrimaryKeyConstraint('id')
+        )
+    if _table_exists('users') and not _index_exists('users', op.f('ix_users_email')):
+        op.create_index(op.f('ix_users_email'), 'users', ['email'], unique=True)
+    if _table_exists('users') and not _index_exists('users', op.f('ix_users_id')):
+        op.create_index(op.f('ix_users_id'), 'users', ['id'], unique=False)
+    if _table_exists('users') and not _index_exists('users', op.f('ix_users_username')):
+        op.create_index(op.f('ix_users_username'), 'users', ['username'], unique=True)
     if not _table_exists('departments'):
         op.create_table('departments',
         sa.Column('id', sa.Integer(), nullable=False),
@@ -47,13 +71,35 @@ def upgrade() -> None:
         sa.Column('parent_id', sa.Integer(), nullable=True),
         sa.Column('manager_id', sa.Integer(), nullable=True),
         sa.Column('budget', sa.Float(), nullable=True),
-        sa.ForeignKeyConstraint(['manager_id'], ['users.id'], ),
-        sa.ForeignKeyConstraint(['parent_id'], ['departments.id'], ),
         sa.PrimaryKeyConstraint('id'),
         sa.UniqueConstraint('code')
         )
+    if _table_exists('departments') and not _fk_exists('departments', 'fk_departments_manager_id_users'):
+        op.create_foreign_key(
+            'fk_departments_manager_id_users',
+            'departments',
+            'users',
+            ['manager_id'],
+            ['id'],
+        )
+    if _table_exists('departments') and not _fk_exists('departments', 'fk_departments_parent_id_departments'):
+        op.create_foreign_key(
+            'fk_departments_parent_id_departments',
+            'departments',
+            'departments',
+            ['parent_id'],
+            ['id'],
+        )
     if _table_exists('departments') and not _index_exists('departments', op.f('ix_departments_id')):
         op.create_index(op.f('ix_departments_id'), 'departments', ['id'], unique=False)
+    if _table_exists('users') and _table_exists('departments') and not _fk_exists('users', 'fk_users_department_id_departments'):
+        op.create_foreign_key(
+            'fk_users_department_id_departments',
+            'users',
+            'departments',
+            ['department_id'],
+            ['id'],
+        )
     if not _table_exists('reports'):
         op.create_table('reports',
         sa.Column('id', sa.Integer(), nullable=False),
@@ -66,25 +112,6 @@ def upgrade() -> None:
         )
     if _table_exists('reports') and not _index_exists('reports', op.f('ix_reports_id')):
         op.create_index(op.f('ix_reports_id'), 'reports', ['id'], unique=False)
-    if not _table_exists('users'):
-        op.create_table('users',
-        sa.Column('id', sa.Integer(), nullable=False),
-        sa.Column('email', sa.String(length=100), nullable=False),
-        sa.Column('username', sa.String(length=50), nullable=True),
-        sa.Column('full_name', sa.String(length=150), nullable=True),
-        sa.Column('password', sa.String(length=255), nullable=False),
-        sa.Column('department_id', sa.Integer(), nullable=True),
-        sa.Column('role', sa.String(length=50), nullable=True),
-        sa.Column('is_active', sa.Boolean(), nullable=True),
-        sa.ForeignKeyConstraint(['department_id'], ['departments.id'], ),
-        sa.PrimaryKeyConstraint('id')
-        )
-    if _table_exists('users') and not _index_exists('users', op.f('ix_users_email')):
-        op.create_index(op.f('ix_users_email'), 'users', ['email'], unique=True)
-    if _table_exists('users') and not _index_exists('users', op.f('ix_users_id')):
-        op.create_index(op.f('ix_users_id'), 'users', ['id'], unique=False)
-    if _table_exists('users') and not _index_exists('users', op.f('ix_users_username')):
-        op.create_index(op.f('ix_users_username'), 'users', ['username'], unique=True)
     if not _table_exists('generated_reports'):
         op.create_table('generated_reports',
         sa.Column('id', sa.Integer(), nullable=False),
