@@ -12,13 +12,31 @@ from typing import Any, Dict, Iterable, List, Optional
 from fastapi import FastAPI
 from sqlalchemy import bindparam, text
 
-from fastapi_modulo.core.db import (
-    TenantInstalledApp,
-    ensure_tenant_admin_schema,
-    get_admin_engine,
-    get_admin_session_factory,
-)
+from fastapi_modulo.core import db as core_db
 from fastapi_modulo.core.tenant_context import get_tenant_context
+
+TenantInstalledApp = core_db.TenantInstalledApp
+ensure_tenant_admin_schema = core_db.ensure_tenant_admin_schema
+
+
+def get_admin_engine():
+    resolver = getattr(core_db, "get_admin_engine", None)
+    if callable(resolver):
+        return resolver()
+    fallback = getattr(core_db, "get_engine_for_host", None)
+    if callable(fallback):
+        return fallback("")
+    return core_db.engine
+
+
+def get_admin_session_factory():
+    resolver = getattr(core_db, "get_admin_session_factory", None)
+    if callable(resolver):
+        return resolver()
+    fallback = getattr(core_db, "get_session_factory_for_host", None)
+    if callable(fallback):
+        return fallback("")
+    return core_db.SessionLocal
 
 
 @dataclass
