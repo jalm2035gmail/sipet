@@ -17,6 +17,7 @@ from fastapi_modulo.modulos_sipet.aplicaciones.modelos.schemas import ModuleRoll
 from fastapi_modulo.modulos_sipet.aplicaciones.servicios.image_branding_service import build_module_image_response
 from fastapi_modulo.modulos_sipet.aplicaciones.servicios.package_service import (
     get_module_image_path,
+    get_module_upload_root,
     import_module_package,
     rollback_module_package_job,
     uninstall_module_package_job,
@@ -35,6 +36,18 @@ from fastapi_modulo.core.module_registry import MODULES_BY_KEY
 router = APIRouter()
 
 
+def _require_package_manageable_module(module_key: str) -> str:
+    normalized_key = str(module_key or "").strip()
+    definition = MODULES_BY_KEY.get(normalized_key)
+    if definition is None:
+        raise HTTPException(status_code=404, detail="Módulo no encontrado.")
+    if not bool(getattr(definition, "manageable", False)):
+        raise HTTPException(status_code=400, detail="Este módulo no admite instalación o actualización por importación.")
+    if not get_module_upload_root(normalized_key):
+        raise HTTPException(status_code=400, detail="Este módulo no admite instalación o actualización por importación.")
+    return normalized_key
+
+
 @router.post("/api/system/modules/{module_key}/upload", response_model=ModuleUploadResponse, include_in_schema=False)
 @router.post("/api/aplicaciones/modulos/{module_key}/upload", response_model=ModuleUploadResponse)
 async def aplicaciones_upload(
@@ -46,6 +59,7 @@ async def aplicaciones_upload(
     challenge_token: str = Form(""),
 ):
     require_applications_permission(request, APPLICATIONS_PERMISSION_PACKAGES_UPLOAD)
+    module_key = _require_package_manageable_module(module_key)
     actor = request_actor_context(request)
     filename = str(package.filename or "").strip()
     if not filename.lower().endswith(".zip"):
@@ -78,6 +92,7 @@ def aplicaciones_rollback(
     challenge_token: str = Form(...),
 ):
     require_applications_permission(request, APPLICATIONS_PERMISSION_PACKAGES_UPLOAD)
+    module_key = _require_package_manageable_module(module_key)
     actor = request_actor_context(request)
     verify_sensitive_action_token(
         token=challenge_token,
@@ -119,6 +134,7 @@ def aplicaciones_uninstall(
     challenge_token: str = Query(...),
 ):
     require_applications_permission(request, APPLICATIONS_PERMISSION_PACKAGES_UPLOAD)
+    module_key = _require_package_manageable_module(module_key)
     actor = request_actor_context(request)
     verify_sensitive_action_token(
         token=challenge_token,

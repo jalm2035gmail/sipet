@@ -85,6 +85,20 @@ def test_apply_module_zip_uses_staging_before_target(monkeypatch, tmp_path: Path
     package_repository.cleanup_staging_dir(str(inspection["staging_root"]))
 
 
+def test_inspect_module_zip_accepts_alias_root_named_after_module_key(monkeypatch, tmp_path: Path) -> None:
+    module_root = tmp_path / "empleados"
+    module_root.mkdir()
+    zip_path = tmp_path / "package.zip"
+    _build_zip(zip_path, {"organizacion/empleados.txt": b"fresh"})
+    monkeypatch.setattr(package_repository, "get_module_upload_root", lambda module_key: str(module_root))
+
+    inspection = package_repository.inspect_module_zip("organizacion", str(zip_path))
+
+    preview_paths = [entry["path"] for entry in inspection["preview_files"]]
+    assert preview_paths == ["empleados.txt"]
+    package_repository.cleanup_staging_dir(str(inspection["staging_root"]))
+
+
 def test_restore_module_snapshot_restores_previous_state(monkeypatch, tmp_path: Path) -> None:
     module_root = tmp_path / "modulo"
     module_root.mkdir()

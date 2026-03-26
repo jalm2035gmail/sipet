@@ -118,8 +118,9 @@ def _is_symlink(info: zipfile.ZipInfo) -> bool:
     return ((info.external_attr >> 16) & 0o170000) == 0o120000
 
 
-def _iter_zip_members(archive: zipfile.ZipFile, target_root: str):
+def _iter_zip_members(archive: zipfile.ZipFile, target_root: str, module_key: str = ""):
     target_dir_name = os.path.basename(os.path.normpath(target_root))
+    normalized_module_key = str(module_key or "").strip()
     file_infos = [info for info in archive.infolist() if not info.is_dir()]
     file_infos = [info for info in file_infos if not PurePosixPath(info.filename.replace("\\", "/")).name.startswith(".DS_Store")]
     file_infos = [info for info in file_infos if not info.filename.replace("\\", "/").startswith("__MACOSX/")]
@@ -137,7 +138,12 @@ def _iter_zip_members(archive: zipfile.ZipFile, target_root: str):
         normalized_parts.append((info, tuple(part for part in path.parts if part not in {"", "."})))
 
     first_parts = {parts[0] for _, parts in normalized_parts if parts}
-    strip_first_segment = len(first_parts) == 1 and next(iter(first_parts)) in {target_dir_name, "src", "package"}
+    strip_first_segment = len(first_parts) == 1 and next(iter(first_parts)) in {
+        target_dir_name,
+        normalized_module_key,
+        "src",
+        "package",
+    }
 
     for info, parts in normalized_parts:
         rel_parts = parts[1:] if strip_first_segment and len(parts) > 1 else parts
@@ -178,7 +184,7 @@ def _extract_archive_to_staging(
     staging_root: str,
 ) -> dict[str, Any]:
     entries: list[dict[str, Any]] = []
-    members = list(_iter_zip_members(archive, target_root))
+    members = list(_iter_zip_members(archive, target_root, module_key))
     if len(members) > MAX_ZIP_FILE_COUNT:
         raise HTTPException(status_code=400, detail="El ZIP contiene demasiados archivos.")
 

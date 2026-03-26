@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
 
@@ -163,6 +165,51 @@ def test_api_upload_propagates_invalid_module(monkeypatch) -> None:
 
     assert response.status_code == 400
     assert "no admite" in response.json()["detail"]
+
+
+def test_api_upload_allows_manageable_alias_module(monkeypatch) -> None:
+    monkeypatch.setattr(api_packages, "require_applications_permission", lambda request, permission: None)
+    monkeypatch.setattr(api_packages, "request_actor_context", lambda request: {"user_id": "tester", "tenant_id": "default", "tenant_key": "default", "ip": "127.0.0.1"})
+    monkeypatch.setitem(api_packages.MODULES_BY_KEY, "empresa", SimpleNamespace(manageable=True))
+    monkeypatch.setattr(api_packages, "get_module_upload_root", lambda module_key: "/tmp/project/fastapi_modulo/modulos/identidad_institucional")
+    captured: dict[str, str] = {}
+
+    async def _import_module_package(module_key, package, **kwargs):
+        captured["module_key"] = module_key
+        return {
+            "module_key": module_key,
+            "target_root": "/tmp/project/fastapi_modulo/modulos/identidad_institucional",
+            "dry_run": True,
+            "status": "success",
+            "task_id": "",
+            "task_name": "",
+            "checksum": "abc",
+            "file_size": 3,
+            "content_type": "application/zip",
+            "updated_files": 0,
+            "total_files": 1,
+            "total_uncompressed_size": 3,
+            "new_files": 1,
+            "changed_files": 0,
+            "unchanged_files": 0,
+            "preview_files": [],
+            "warnings": [],
+            "architecture_ok": True,
+            "architecture_errors": [],
+            "architecture_warnings": [],
+        }
+
+    monkeypatch.setattr(api_packages, "import_module_package", _import_module_package)
+
+    response = _client().post(
+        "/api/aplicaciones/modulos/empresa/upload",
+        files={"package": ("empresa.zip", b"PK\x03\x04", "application/zip")},
+        data={"dry_run": "true"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["module_key"] == "empresa"
+    assert captured["module_key"] == "empresa"
 
 
 def test_api_uninstall_module(monkeypatch) -> None:

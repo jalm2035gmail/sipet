@@ -40,6 +40,10 @@ def _is_installed_module(item: dict[str, Any], target_root: str | None) -> bool:
     return bool(item.get("always_enabled"))
 
 
+def _supports_package_management(item: dict[str, Any], target_root: str | None) -> bool:
+    return bool(target_root) and bool(item.get("manageable", True))
+
+
 def decorate_modules_payload(
     items: list[dict[str, Any]] | None = None,
     tenant_key: str | None = None,
@@ -78,8 +82,9 @@ def decorate_modules_payload(
                 item["installed_version"] = state_row.installed_version
         module_icon = str(item.get("icon") or "").strip()
         module_image_path = get_module_image_path(key)
-        item["package_upload_enabled"] = bool(target_root)
-        item["package_target_label"] = os.path.relpath(target_root, PROJECT_ROOT) if target_root else ""
+        package_upload_enabled = _supports_package_management(item, target_root)
+        item["package_upload_enabled"] = package_upload_enabled
+        item["package_target_label"] = os.path.relpath(target_root, PROJECT_ROOT) if package_upload_enabled and target_root else ""
         item["image_url"] = get_module_catalog_image_url(key) if module_image_path else None
         item["icon"] = module_icon
         upload_row = get_latest_package_upload(key)
