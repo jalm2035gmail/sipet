@@ -34,6 +34,11 @@ PUBLIC_PATHS = {
     "/healthz",
     "/favicon.ico",
     "/api/backend/me",
+    "/tiendas",
+    "/tiendas/",
+    "/multitienda/tiendas",
+    "/multitienda/tiendas/",
+    "/multitienda/public/tiendas",
 }
 
 

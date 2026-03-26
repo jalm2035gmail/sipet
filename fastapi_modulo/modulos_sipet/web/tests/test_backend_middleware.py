@@ -45,6 +45,16 @@ def test_is_public_backend_path_allows_login() -> None:
     assert backend_middleware.is_public_backend_path(request, "/backend/login") is True
 
 
+def test_is_public_backend_path_allows_tiendas_landing() -> None:
+    _install_frontend_public_path_stub()
+    request = _request("/tiendas")
+    assert backend_middleware.is_public_backend_path(request, "/tiendas") is True
+    assert backend_middleware.is_public_backend_path(request, "/tiendas/") is True
+    assert backend_middleware.is_public_backend_path(request, "/multitienda/tiendas") is True
+    assert backend_middleware.is_public_backend_path(request, "/multitienda/tiendas/") is True
+    assert backend_middleware.is_public_backend_path(request, "/multitienda/public/tiendas") is True
+
+
 def test_is_public_backend_path_allows_web_public_pages() -> None:
     request = _request("/web/inicio")
     assert backend_middleware.is_public_backend_path(request, "/web") is True
