@@ -390,12 +390,12 @@ MODULE_DEFINITIONS: List[ModuleDefinition] = [
     ),
     ModuleDefinition(
         key="empresa",
-        label="Empresa",
-        description="Configuración institucional y estructura MAIN.",
+        label="Personalización",
+        description="Personalización institucional y estructura visual principal.",
         route="/identidad-institucional",
         icon="fa-solid fa-building",
         manifest_file="fastapi_modulo/modulos/identidad_institucional/__manifest__.py",
-        app_access_name="Empresa",
+        app_access_name="Personalización",
         sidebar_visible=True,
         manageable=True,
         always_enabled=True,
@@ -425,8 +425,7 @@ MODULE_DEFINITIONS: List[ModuleDefinition] = [
         manifest_file="fastapi_modulo/modulos/multiempresa/__manifest__.py",
         app_access_name="Multiempresa",
         sidebar_visible=True,
-        manageable=False,
-        always_enabled=True,
+        manageable=True,
         router_specs=[RouterSpec("fastapi_modulo.modulos.multiempresa.controladores.multiempresa")],
     ),
     ModuleDefinition(
@@ -695,11 +694,11 @@ def refresh_module_registry_from_disk() -> list[str]:
 def is_legacy_module(module: ModuleDefinition) -> bool:
     if str(module.key or "").strip() in LEGACY_RUNTIME_ALLOWLIST:
         return False
-    if str(module.manifest_file or "").startswith("fastapi_modulo/modulos/"):
+    manifest_file = str(module.manifest_file or "").strip()
+    metadata_file = str(module.metadata_file or "").strip()
+    if "legacy_source/" in manifest_file or "legacy_source/" in metadata_file:
         return True
-    if str(module.metadata_file or "").startswith("fastapi_modulo/modulos/"):
-        return True
-    return any(str(spec.module_path or "").startswith("fastapi_modulo.modulos.") for spec in module.router_specs)
+    return any("legacy_source" in str(spec.module_path or "") for spec in module.router_specs)
 
 
 def is_supported_module(module: ModuleDefinition) -> bool:
@@ -1016,7 +1015,9 @@ def set_module_enabled(module_key: str, enabled: bool) -> Dict[str, Any]:
         raise KeyError("Módulo no encontrado.")
     if not is_supported_module(module):
         raise ValueError("Este módulo legacy está deshabilitado hasta ser migrado a modulos_sipet.")
-    if module.always_enabled or not module.manageable:
+    if not module.manageable:
+        raise ValueError("Este módulo no se puede desactivar.")
+    if module.always_enabled and not enabled:
         raise ValueError("Este módulo no se puede desactivar.")
     _ensure_module_settings_table()
     with get_admin_engine().begin() as conn:

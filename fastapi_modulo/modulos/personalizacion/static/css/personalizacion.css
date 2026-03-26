@@ -1,0 +1,92 @@
+.section-description {
+  margin: 4px 0 0;
+  color: var(--muted, #64748b);
+  font-size: 13px;
+}
+
+.field-hint {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--muted, #64748b);
+}
+
+.form-field--actions {
+  display: flex;
+  align-items: flex-end;
+  padding-bottom: 2px;
+}
+
+.roles-table-wrapper {
+  margin-top: 24px;
+  overflow-x: auto;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+}
+
+.roles-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.roles-table thead tr {
+  background: rgba(15, 23, 42, 0.04);
+}
+
+.roles-table th,
+.roles-table td {
+  padding: 10px 14px;
+  text-align: left;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+  vertical-align: middle;
+}
+
+.roles-table th {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted, #64748b);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.roles-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.roles-table tbody tr:hover {
+  background: rgba(15, 23, 42, 0.02);
+}
+
+.col-actions {
+  width: 280px;
+}
+
+.roles-table td.col-actions {
+  padding: 6px 10px;
+}
+
+.role-actions-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.role-edit-form {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.role-edit-form .campo-personalizado {
+  flex: 1 1 90px;
+  min-width: 80px;
+  padding: 6px 10px;
+  font-size: 13px;
+  border-radius: 8px;
+}
+
+.role-delete-form {
+  display: flex;
+}

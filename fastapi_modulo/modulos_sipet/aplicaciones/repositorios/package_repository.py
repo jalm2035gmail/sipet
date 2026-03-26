@@ -13,6 +13,7 @@ from fastapi_modulo.core.module_registry import MODULES_BY_KEY
 from scripts.validate_module_architecture import validate_module
 
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", ".."))
+IMPORTABLE_MODULES_ROOT = os.path.realpath(os.path.join(PROJECT_ROOT, "fastapi_modulo", "modulos"))
 MAX_UPLOAD_BYTES = 50 * 1024 * 1024
 MAX_ZIP_FILE_COUNT = 500
 MAX_TOTAL_UNCOMPRESSED_BYTES = 200 * 1024 * 1024
@@ -50,6 +51,16 @@ def _resolve_module_root_from_manifest(module_key: str) -> str | None:
         if os.path.isdir(module_root):
             return module_root
     return None
+
+
+def _is_importable_module_root(target_root: str | None) -> bool:
+    normalized_root = os.path.realpath(str(target_root or "").strip())
+    if not normalized_root or not os.path.isdir(normalized_root):
+        return False
+    try:
+        return os.path.commonpath([IMPORTABLE_MODULES_ROOT, normalized_root]) == IMPORTABLE_MODULES_ROOT
+    except ValueError:
+        return False
 
 
 def _resolve_module_root_from_router(module_key: str) -> str | None:
@@ -91,7 +102,7 @@ def get_module_upload_root(module_key: str) -> str | None:
         or _resolve_module_root_from_router(module_key)
         or _resolve_module_root_from_key(module_key)
     )
-    if not target_root or not os.path.isdir(target_root):
+    if not _is_importable_module_root(target_root):
         return None
     return target_root
 

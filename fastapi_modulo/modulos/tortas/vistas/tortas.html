@@ -1,0 +1,480 @@
+<div class="tortas-container">
+
+  <!-- Header -->
+  <div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+      <h1 class="h3 mb-0">
+        <i class="fa-solid fa-bread-slice me-2" style="color:#8B4513;"></i>
+        Tortas
+      </h1>
+      <p class="text-muted mb-0 small">Sistema de gestión de negocio de tortas</p>
+    </div>
+    <div class="d-flex gap-2">
+      <button class="btn btn-outline-secondary btn-sm" onclick="tortasApp.loadAll()">
+        <i class="fa-solid fa-rotate me-1"></i> Actualizar
+      </button>
+      <button class="btn tortas-btn-primary btn-sm" onclick="tortasApp.openModalPedido()">
+        <i class="fa-solid fa-plus me-1"></i> Nuevo Pedido
+      </button>
+    </div>
+  </div>
+
+  <!-- KPI Cards -->
+  <div class="row g-3 mb-4" id="tortas-kpis">
+    <div class="col-6 col-sm-4 col-xl-2">
+      <div class="card border-0 shadow-sm h-100 tortas-kpi-card">
+        <div class="card-body text-center py-3">
+          <i class="fa-solid fa-receipt fa-2x mb-2" style="color:#8B4513;"></i>
+          <div class="h4 mb-0 fw-bold" id="kpi-total">–</div>
+          <small class="text-muted">Total Pedidos</small>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-sm-4 col-xl-2">
+      <div class="card border-0 shadow-sm h-100 tortas-kpi-card">
+        <div class="card-body text-center py-3">
+          <i class="fa-solid fa-file-pen fa-2x mb-2 text-secondary"></i>
+          <div class="h4 mb-0 fw-bold" id="kpi-borrador">–</div>
+          <small class="text-muted">Borrador</small>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-sm-4 col-xl-2">
+      <div class="card border-0 shadow-sm h-100 tortas-kpi-card">
+        <div class="card-body text-center py-3">
+          <i class="fa-solid fa-fire-burner fa-2x mb-2 text-warning"></i>
+          <div class="h4 mb-0 fw-bold" id="kpi-preparacion">–</div>
+          <small class="text-muted">En Preparación</small>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-sm-4 col-xl-2">
+      <div class="card border-0 shadow-sm h-100 tortas-kpi-card">
+        <div class="card-body text-center py-3">
+          <i class="fa-solid fa-bell fa-2x mb-2 text-success"></i>
+          <div class="h4 mb-0 fw-bold" id="kpi-listo">–</div>
+          <small class="text-muted">Listos</small>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-sm-4 col-xl-2">
+      <div class="card border-0 shadow-sm h-100 tortas-kpi-card">
+        <div class="card-body text-center py-3">
+          <i class="fa-solid fa-circle-check fa-2x mb-2 text-info"></i>
+          <div class="h4 mb-0 fw-bold" id="kpi-entregado">–</div>
+          <small class="text-muted">Entregados</small>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-sm-4 col-xl-2">
+      <div class="card border-0 shadow-sm h-100 tortas-kpi-card">
+        <div class="card-body text-center py-3">
+          <i class="fa-solid fa-calendar-day fa-2x mb-2" style="color:#8B4513;"></i>
+          <div class="h4 mb-0 fw-bold" id="kpi-hoy">–</div>
+          <small class="text-muted">Hoy</small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <ul class="nav nav-tabs mb-3" id="tortasTabs">
+    <li class="nav-item">
+      <button class="nav-link active" onclick="tortasApp.showTab('pedidos', this)">
+        <i class="fa-solid fa-clipboard-list me-1"></i> Pedidos
+      </button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link" onclick="tortasApp.showTab('menu', this)">
+        <i class="fa-solid fa-bread-slice me-1"></i> Menú
+      </button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link" onclick="tortasApp.showTab('preordenes', this)">
+        <i class="fa-solid fa-calendar-plus me-1"></i> Preordenes
+      </button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link" onclick="tortasApp.showTab('config', this)">
+        <i class="fa-solid fa-gear me-1"></i> Config
+      </button>
+    </li>
+  </ul>
+
+  <!-- Tab: Pedidos -->
+  <div id="tab-pedidos" class="tortas-tab-content">
+    <div class="d-flex gap-2 mb-3 flex-wrap">
+      <select class="form-select form-select-sm w-auto" id="filtro-estado" onchange="tortasApp.filtrarPedidos()">
+        <option value="">Todos los estados</option>
+        <option value="borrador">Borrador</option>
+        <option value="confirmado">Confirmado</option>
+        <option value="en_preparacion">En Preparación</option>
+        <option value="listo">Listo</option>
+        <option value="entregado">Entregado</option>
+        <option value="cancelado">Cancelado</option>
+      </select>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-sm table-hover align-middle">
+        <thead class="table-light">
+          <tr>
+            <th>Pedido</th>
+            <th>Cliente</th>
+            <th>Tipo</th>
+            <th>Prioridad</th>
+            <th>Estado</th>
+            <th>Total</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="tabla-pedidos">
+          <tr><td colspan="7" class="text-center text-muted py-4">Cargando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Tab: Menú -->
+  <div id="tab-menu" class="tortas-tab-content d-none">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <span class="text-muted small" id="menu-count">Cargando...</span>
+      <button class="btn tortas-btn-primary btn-sm" onclick="tortasApp.openModalTorta()">
+        <i class="fa-solid fa-plus me-1"></i> Nueva Torta
+      </button>
+    </div>
+    <div class="row g-3" id="grid-menu">
+      <div class="col-12 text-center text-muted py-4">Cargando...</div>
+    </div>
+  </div>
+
+  <!-- Tab: Preordenes -->
+  <div id="tab-preordenes" class="tortas-tab-content d-none">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <span class="text-muted small">Pedidos programados para fecha futura</span>
+      <button class="btn tortas-btn-primary btn-sm" onclick="tortasApp.openModalPreorden()">
+        <i class="fa-solid fa-plus me-1"></i> Nueva Preorden
+      </button>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-sm table-hover align-middle">
+        <thead class="table-light">
+          <tr>
+            <th>Folio</th>
+            <th>Cliente</th>
+            <th>Fecha Entrega</th>
+            <th>Hora</th>
+            <th>Tipo</th>
+            <th>Estado</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="tabla-preordenes">
+          <tr><td colspan="7" class="text-center text-muted py-4">Cargando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Tab: Configuración -->
+  <div id="tab-config" class="tortas-tab-content d-none">
+    <div class="row g-3">
+      <div class="col-md-4">
+        <div class="card border-0 shadow-sm h-100">
+          <div class="card-body">
+            <h6 class="card-title fw-bold">
+              <i class="fa-solid fa-layer-group me-1" style="color:#8B4513;"></i> Menú
+            </h6>
+            <p class="text-muted small">Categorías, tortas, toppings y tipos de pan.</p>
+            <div class="d-flex flex-column gap-2">
+              <button class="btn btn-outline-secondary btn-sm" onclick="tortasApp.loadCategorias()">
+                <i class="fa-solid fa-tags me-1"></i> Categorías
+              </button>
+              <button class="btn btn-outline-secondary btn-sm" onclick="tortasApp.loadToppings()">
+                <i class="fa-solid fa-plus-circle me-1"></i> Toppings
+              </button>
+              <button class="btn btn-outline-secondary btn-sm" onclick="tortasApp.loadTiposPan()">
+                <i class="fa-solid fa-bread-slice me-1"></i> Tipos de Pan
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card border-0 shadow-sm h-100">
+          <div class="card-body">
+            <h6 class="card-title fw-bold">
+              <i class="fa-solid fa-truck me-1" style="color:#8B4513;"></i> Entrega
+            </h6>
+            <p class="text-muted small">Zonas de entrega y métodos.</p>
+            <div class="d-flex flex-column gap-2">
+              <button class="btn btn-outline-secondary btn-sm" onclick="tortasApp.loadZonas()">
+                <i class="fa-solid fa-map-marker-alt me-1"></i> Zonas de Entrega
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card border-0 shadow-sm h-100">
+          <div class="card-body">
+            <h6 class="card-title fw-bold">
+              <i class="fa-solid fa-cash-register me-1" style="color:#8B4513;"></i> Caja
+            </h6>
+            <p class="text-muted small">Corte de caja y formas de pago.</p>
+            <div class="d-flex flex-column gap-2">
+              <button class="btn tortas-btn-primary btn-sm" onclick="tortasApp.abrirCorte()">
+                <i class="fa-solid fa-lock-open me-1"></i> Abrir Corte
+              </button>
+              <button class="btn btn-outline-danger btn-sm" onclick="tortasApp.cerrarCorte()">
+                <i class="fa-solid fa-lock me-1"></i> Cerrar Corte
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Cambiar estado pedido -->
+  <div class="modal fade" id="modalEstadoPedido" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h6 class="modal-title">Cambiar Estado</h6>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <p class="small text-muted mb-2">Pedido: <strong id="modal-estado-numero">–</strong></p>
+          <select class="form-select" id="modal-nuevo-estado">
+            <option value="borrador">Borrador</option>
+            <option value="confirmado">Confirmado</option>
+            <option value="en_preparacion">En Preparación</option>
+            <option value="listo">Listo</option>
+            <option value="entregado">Entregado</option>
+            <option value="cancelado">Cancelado</option>
+          </select>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+          <button class="btn tortas-btn-primary btn-sm" onclick="tortasApp.confirmarCambioEstado()">Guardar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const tortasApp = (() => {
+  let _pedidoIdActivo = null;
+  const ESTADOS_BADGE = {
+    borrador: 'secondary',
+    confirmado: 'info',
+    en_preparacion: 'warning',
+    listo: 'success',
+    entregado: 'primary',
+    cancelado: 'danger',
+  };
+  const ESTADOS_LABEL = {
+    borrador: 'Borrador', confirmado: 'Confirmado',
+    en_preparacion: 'En Preparación', listo: 'Listo',
+    entregado: 'Entregado', cancelado: 'Cancelado',
+  };
+  const PRIORIDAD_BADGE = { baja: 'light', normal: 'secondary', alta: 'warning', urgente: 'danger' };
+
+  async function _fetch(url, opts = {}) {
+    const r = await fetch(url, opts);
+    return r.json();
+  }
+
+  async function loadStats() {
+    const res = await _fetch('/api/tortas/stats');
+    if (!res.success) return;
+    const d = res.data;
+    document.getElementById('kpi-total').textContent = d.total_pedidos ?? 0;
+    document.getElementById('kpi-borrador').textContent = d.por_estado?.borrador ?? 0;
+    document.getElementById('kpi-preparacion').textContent = d.por_estado?.en_preparacion ?? 0;
+    document.getElementById('kpi-listo').textContent = d.por_estado?.listo ?? 0;
+    document.getElementById('kpi-entregado').textContent = d.por_estado?.entregado ?? 0;
+    document.getElementById('kpi-hoy').textContent = d.pedidos_hoy ?? 0;
+  }
+
+  async function loadPedidos(estado = '') {
+    const url = '/api/tortas/pedidos?limit=200' + (estado ? `&estado=${estado}` : '');
+    const res = await _fetch(url);
+    const tbody = document.getElementById('tabla-pedidos');
+    if (!res.success) { tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger">Error al cargar</td></tr>'; return; }
+    if (!res.data.length) { tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">Sin pedidos</td></tr>'; return; }
+    tbody.innerHTML = res.data.map(p => `
+      <tr>
+        <td><span class="fw-bold">${p.numero_pedido}</span><br><small class="text-muted">${_fmtDate(p.fecha_pedido)}</small></td>
+        <td>${p.nombre_cliente || '<em class="text-muted">Mostrador</em>'}<br><small class="text-muted">${p.telefono || ''}</small></td>
+        <td><span class="badge bg-light text-dark border">${_fmtTipo(p.tipo_pedido)}</span></td>
+        <td><span class="badge bg-${PRIORIDAD_BADGE[p.prioridad] || 'secondary'}">${p.prioridad}</span></td>
+        <td><span class="badge bg-${ESTADOS_BADGE[p.estado] || 'secondary'}">${ESTADOS_LABEL[p.estado] || p.estado}</span></td>
+        <td class="text-end">$${(p.costo_envio || 0).toFixed(2)}</td>
+        <td>
+          <button class="btn btn-outline-secondary btn-sm" onclick="tortasApp.abrirModalEstado(${p.id}, '${p.numero_pedido}', '${p.estado}')">
+            <i class="fa-solid fa-pen"></i>
+          </button>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  async function loadMenu() {
+    const res = await _fetch('/api/tortas/menu');
+    const grid = document.getElementById('grid-menu');
+    if (!res.success) { grid.innerHTML = '<div class="col-12 text-danger">Error al cargar</div>'; return; }
+    document.getElementById('menu-count').textContent = `${res.data.length} producto(s) activo(s)`;
+    if (!res.data.length) { grid.innerHTML = '<div class="col-12 text-center text-muted py-4">Sin productos en el menú</div>'; return; }
+    grid.innerHTML = res.data.map(t => `
+      <div class="col-sm-6 col-md-4 col-xl-3">
+        <div class="card border-0 shadow-sm h-100">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start">
+              <div>
+                <div class="fw-bold">${t.name}</div>
+                <small class="text-muted">${t.descripcion || ''}</small>
+              </div>
+              <span class="badge" style="background:#8B4513;">$${t.precio.toFixed(2)}</span>
+            </div>
+            ${t.requiere_tipo_pan ? '<span class="badge bg-light text-dark border mt-2"><i class="fa-solid fa-bread-slice me-1"></i>Requiere pan</span>' : ''}
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  async function loadPreordenes() {
+    const res = await _fetch('/api/tortas/preordenes?limit=100');
+    const tbody = document.getElementById('tabla-preordenes');
+    if (!res.success) { tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger">Error</td></tr>'; return; }
+    if (!res.data.length) { tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">Sin preordenes</td></tr>'; return; }
+    const EST = { borrador: 'secondary', confirmado: 'info', recordatorio_enviado: 'warning', pedido_generado: 'success', cancelado: 'danger' };
+    tbody.innerHTML = res.data.map(p => `
+      <tr>
+        <td class="fw-bold">${p.name}</td>
+        <td>${p.nombre_cliente}</td>
+        <td>${p.fecha_entrega || '–'}</td>
+        <td>${p.hora_entrega}</td>
+        <td>${_fmtTipo(p.tipo_pedido)}</td>
+        <td><span class="badge bg-${EST[p.state] || 'secondary'}">${p.state}</span></td>
+        <td>
+          ${p.state === 'confirmado' ? `<button class="btn btn-outline-success btn-sm" onclick="tortasApp.generarPedidoPreorden(${p.id})"><i class="fa-solid fa-file-invoice"></i> Generar Pedido</button>` : ''}
+          ${(p.state === 'borrador' || p.state === 'confirmado') ? `<button class="btn btn-outline-info btn-sm ms-1" onclick="tortasApp.confirmarPreorden(${p.id})">Confirmar</button>` : ''}
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  function _fmtDate(iso) {
+    if (!iso) return '–';
+    return new Date(iso).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' });
+  }
+  function _fmtTipo(t) {
+    return { mostrador: 'Mostrador', para_llevar: 'Para llevar', domicilio: 'Domicilio' }[t] || t;
+  }
+
+  function showTab(name, btn) {
+    document.querySelectorAll('.tortas-tab-content').forEach(el => el.classList.add('d-none'));
+    document.querySelectorAll('#tortasTabs .nav-link').forEach(b => b.classList.remove('active'));
+    document.getElementById(`tab-${name}`).classList.remove('d-none');
+    btn.classList.add('active');
+    if (name === 'menu') loadMenu();
+    if (name === 'preordenes') loadPreordenes();
+  }
+
+  function filtrarPedidos() {
+    const estado = document.getElementById('filtro-estado').value;
+    loadPedidos(estado);
+  }
+
+  function abrirModalEstado(pedidoId, numero, estadoActual) {
+    _pedidoIdActivo = pedidoId;
+    document.getElementById('modal-estado-numero').textContent = numero;
+    document.getElementById('modal-nuevo-estado').value = estadoActual;
+    new bootstrap.Modal(document.getElementById('modalEstadoPedido')).show();
+  }
+
+  async function confirmarCambioEstado() {
+    const estado = document.getElementById('modal-nuevo-estado').value;
+    await _fetch(`/api/tortas/pedidos/${_pedidoIdActivo}/estado`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ estado }),
+    });
+    bootstrap.Modal.getInstance(document.getElementById('modalEstadoPedido')).hide();
+    loadAll();
+  }
+
+  async function confirmarPreorden(id) {
+    await _fetch(`/api/tortas/preordenes/${id}/estado`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ state: 'confirmado' }),
+    });
+    loadPreordenes();
+  }
+
+  async function generarPedidoPreorden(id) {
+    const res = await _fetch(`/api/tortas/preordenes/${id}/generar-pedido`, { method: 'POST' });
+    if (res.success) {
+      alert(`Pedido generado: ${res.data.numero_pedido}`);
+      loadAll();
+    } else {
+      alert('Error al generar el pedido');
+    }
+  }
+
+  async function abrirCorte() {
+    const monto = prompt('Monto inicial en caja (efectivo):');
+    if (monto === null) return;
+    const res = await _fetch('/api/tortas/cortes', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ monto_inicial: parseFloat(monto) || 0, usuario_apertura: '' }),
+    });
+    if (res.success) alert(`Corte abierto: ${res.data.name}`);
+    else alert(res.detail || 'Error al abrir corte');
+  }
+
+  async function cerrarCorte() {
+    const efectivo = prompt('Efectivo contado en caja:');
+    if (efectivo === null) return;
+    const res = await _fetch('/api/tortas/cortes');
+    if (!res.success || !res.data.length) { alert('Sin cortes abiertos'); return; }
+    const abierto = res.data.find(c => c.estado === 'abierto');
+    if (!abierto) { alert('No hay corte abierto'); return; }
+    const closeRes = await _fetch(`/api/tortas/cortes/${abierto.id}/cerrar`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ efectivo_contado: parseFloat(efectivo) || 0 }),
+    });
+    if (closeRes.success) alert('Corte cerrado correctamente');
+    else alert('Error al cerrar corte');
+  }
+
+  function openModalPedido() { alert('Módulo de nuevo pedido (próximamente).'); }
+  function openModalTorta() { alert('Formulario de nueva torta (próximamente).'); }
+  function openModalPreorden() { alert('Formulario de nueva preorden (próximamente).'); }
+  function loadCategorias() { alert('Gestión de categorías (próximamente).'); }
+  function loadToppings() { alert('Gestión de toppings (próximamente).'); }
+  function loadTiposPan() { alert('Gestión de tipos de pan (próximamente).'); }
+  function loadZonas() { alert('Gestión de zonas de entrega (próximamente).'); }
+
+  async function loadAll() {
+    loadStats();
+    loadPedidos(document.getElementById('filtro-estado')?.value || '');
+  }
+
+  // Init
+  loadAll();
+
+  return {
+    loadAll, loadPedidos, loadMenu, loadPreordenes, showTab, filtrarPedidos,
+    abrirModalEstado, confirmarCambioEstado,
+    confirmarPreorden, generarPedidoPreorden,
+    abrirCorte, cerrarCorte,
+    openModalPedido, openModalTorta, openModalPreorden,
+    loadCategorias, loadToppings, loadTiposPan, loadZonas,
+  };
+})();
+</script>

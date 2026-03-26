@@ -68,6 +68,38 @@ def test_decorate_modules_payload_prefers_icon_when_module_has_no_uploaded_image
     assert payload[0]["image_url"] is None
 
 
+def test_decorate_modules_payload_never_exposes_modulos_sipet_as_importable(monkeypatch) -> None:
+    monkeypatch.setattr(
+        catalog_service,
+        "list_catalog_modules",
+        lambda tenant_key=None, refresh=False, include_legacy=False: [
+            {
+                "key": "frontend",
+                "label": "Frontend",
+                "enabled": True,
+                "description": "demo",
+                "manageable": True,
+                "always_enabled": True,
+                "manifest_file": "fastapi_modulo/modulos_sipet/frontend/__manifest__.py",
+            }
+        ],
+    )
+    monkeypatch.setattr(catalog_service, "cache_catalog", lambda payload: None)
+    monkeypatch.setattr(catalog_service, "list_registry_state", lambda tenant_id=None: {})
+    monkeypatch.setattr(catalog_service, "get_protocol_audit_map", lambda: {})
+    monkeypatch.setattr(catalog_service, "get_module_architecture_report", lambda key, target_root=None: {"architecture_ok": True, "architecture_errors": [], "architecture_warnings": []})
+    monkeypatch.setattr(catalog_service, "get_module_upload_root", lambda key: "/tmp/project/fastapi_modulo/modulos/frontend")
+    monkeypatch.setattr(catalog_service, "get_module_image_path", lambda key: "")
+    monkeypatch.setattr(catalog_service, "get_module_catalog_image_url", lambda key: None)
+    monkeypatch.setattr(catalog_service, "get_latest_package_upload", lambda key: None)
+
+    payload = catalog_service.decorate_modules_payload()
+
+    assert payload[0]["key"] == "frontend"
+    assert payload[0]["package_upload_enabled"] is False
+    assert payload[0]["package_target_label"] == ""
+
+
 def test_decorate_modules_payload_filters_uninstalled_modules(monkeypatch) -> None:
     monkeypatch.setattr(
         catalog_service,
@@ -136,8 +168,8 @@ def test_decorate_modules_payload_dedupes_by_route_and_hides_non_application_ent
         lambda tenant_key=None, refresh=False, include_legacy=False: [
             {"key": "system_admin", "label": "Gobierno de Aplicaciones", "enabled": True, "description": "demo", "route": "/aplicaciones", "always_enabled": True, "manageable": False},
             {"key": "aplicaciones", "label": "Gobierno de Aplicaciones", "enabled": True, "description": "demo", "route": "/aplicaciones", "application": False, "always_enabled": True},
-            {"key": "empresa", "label": "Empresa", "enabled": True, "description": "demo", "route": "/identidad-institucional", "always_enabled": True, "manageable": True},
-            {"key": "identidad_institucional", "label": "Empresa", "enabled": True, "description": "demo", "route": "/identidad-institucional", "application": True, "always_enabled": True, "manageable": True},
+            {"key": "empresa", "label": "Personalización", "enabled": True, "description": "demo", "route": "/identidad-institucional", "always_enabled": True, "manageable": True},
+            {"key": "identidad_institucional", "label": "Personalización", "enabled": True, "description": "demo", "route": "/identidad-institucional", "application": True, "always_enabled": True, "manageable": True},
         ],
     )
     monkeypatch.setattr(catalog_service, "cache_catalog", lambda payload: None)
@@ -161,7 +193,7 @@ def test_decorate_modules_payload_enables_package_actions_for_empresa_alias(monk
         catalog_service,
         "list_catalog_modules",
         lambda tenant_key=None, refresh=False, include_legacy=False: [
-            {"key": "empresa", "label": "Empresa", "enabled": True, "description": "demo", "route": "/identidad-institucional", "always_enabled": True, "manageable": True},
+            {"key": "empresa", "label": "Personalización", "enabled": True, "description": "demo", "route": "/identidad-institucional", "always_enabled": True, "manageable": True},
         ],
     )
     monkeypatch.setattr(catalog_service, "cache_catalog", lambda payload: None)
@@ -178,3 +210,31 @@ def test_decorate_modules_payload_enables_package_actions_for_empresa_alias(monk
     assert payload[0]["key"] == "empresa"
     assert payload[0]["package_upload_enabled"] is True
     assert payload[0]["package_target_label"] == "fastapi_modulo/modulos/identidad_institucional"
+
+
+def test_decorate_modules_payload_keeps_always_enabled_alias_active_with_stale_registry_state(monkeypatch) -> None:
+    monkeypatch.setattr(
+        catalog_service,
+        "list_catalog_modules",
+        lambda tenant_key=None, refresh=False, include_legacy=False: [
+            {"key": "empresa", "label": "Personalización", "enabled": True, "description": "demo", "route": "/identidad-institucional", "always_enabled": True, "manageable": True},
+        ],
+    )
+    monkeypatch.setattr(catalog_service, "cache_catalog", lambda payload: None)
+    monkeypatch.setattr(
+        catalog_service,
+        "list_registry_state",
+        lambda tenant_id=None: {"empresa": SimpleNamespace(enabled=False, installed_version="1.0.0")},
+    )
+    monkeypatch.setattr(catalog_service, "get_protocol_audit_map", lambda: {})
+    monkeypatch.setattr(catalog_service, "get_module_architecture_report", lambda key, target_root=None: {"architecture_ok": True, "architecture_errors": [], "architecture_warnings": []})
+    monkeypatch.setattr(catalog_service, "get_module_upload_root", lambda key: "/tmp/project/fastapi_modulo/modulos/identidad_institucional")
+    monkeypatch.setattr(catalog_service, "get_module_image_path", lambda key: "")
+    monkeypatch.setattr(catalog_service, "get_module_catalog_image_url", lambda key: None)
+    monkeypatch.setattr(catalog_service, "get_latest_package_upload", lambda key: None)
+
+    payload = catalog_service.decorate_modules_payload()
+
+    assert payload[0]["key"] == "empresa"
+    assert payload[0]["enabled"] is True
+    assert payload[0]["installed_version"] == "1.0.0"

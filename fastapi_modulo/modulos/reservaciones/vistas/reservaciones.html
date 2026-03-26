@@ -1,0 +1,975 @@
+<div class="res-container">
+
+  <!-- Header -->
+  <div class="res-header d-flex align-items-center justify-content-between mb-4">
+    <div>
+      <h1 class="h3 mb-0">
+        <i class="fa-solid fa-calendar-check me-2" style="color:#1a6b3c;"></i>
+        Reservaciones
+      </h1>
+      <p class="text-muted mb-0 small">Sistema de gestión de citas y ejecutivos</p>
+    </div>
+    <div class="d-flex gap-2">
+      <button class="btn btn-outline-secondary btn-sm" onclick="resApp.loadAll()">
+        <i class="fa-solid fa-rotate me-1"></i> Actualizar
+      </button>
+      <button class="btn res-btn-primary btn-sm" onclick="resApp.openModalCita()">
+        <i class="fa-solid fa-plus me-1"></i> Nueva Cita
+      </button>
+    </div>
+  </div>
+
+  <!-- KPI Cards -->
+  <div class="row g-3 mb-4" id="res-kpis">
+    <div class="col-6 col-sm-4 col-xl-2">
+      <div class="card border-0 shadow-sm h-100 res-kpi-card">
+        <div class="card-body text-center py-3">
+          <i class="fa-solid fa-calendar-days fa-2x mb-2" style="color:#1a6b3c;"></i>
+          <div class="h4 mb-0 fw-bold" id="kpi-total">–</div>
+          <small class="text-muted">Total Citas</small>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-sm-4 col-xl-2">
+      <div class="card border-0 shadow-sm h-100 res-kpi-card">
+        <div class="card-body text-center py-3">
+          <i class="fa-solid fa-file-pen fa-2x mb-2 text-secondary"></i>
+          <div class="h4 mb-0 fw-bold" id="kpi-draft">–</div>
+          <small class="text-muted">Solicitadas</small>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-sm-4 col-xl-2">
+      <div class="card border-0 shadow-sm h-100 res-kpi-card">
+        <div class="card-body text-center py-3">
+          <i class="fa-solid fa-circle-check fa-2x mb-2 text-info"></i>
+          <div class="h4 mb-0 fw-bold" id="kpi-confirmed">–</div>
+          <small class="text-muted">Confirmadas</small>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-sm-4 col-xl-2">
+      <div class="card border-0 shadow-sm h-100 res-kpi-card">
+        <div class="card-body text-center py-3">
+          <i class="fa-solid fa-hourglass-half fa-2x mb-2 text-warning"></i>
+          <div class="h4 mb-0 fw-bold" id="kpi-in-progress">–</div>
+          <small class="text-muted">En Progreso</small>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-sm-4 col-xl-2">
+      <div class="card border-0 shadow-sm h-100 res-kpi-card">
+        <div class="card-body text-center py-3">
+          <i class="fa-solid fa-flag-checkered fa-2x mb-2 text-success"></i>
+          <div class="h4 mb-0 fw-bold" id="kpi-completed">–</div>
+          <small class="text-muted">Completadas</small>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-sm-4 col-xl-2">
+      <div class="card border-0 shadow-sm h-100 res-kpi-card">
+        <div class="card-body text-center py-3">
+          <i class="fa-solid fa-ban fa-2x mb-2 text-danger"></i>
+          <div class="h4 mb-0 fw-bold" id="kpi-cancelled">–</div>
+          <small class="text-muted">Canceladas</small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <ul class="nav nav-tabs mb-3" id="resTabs">
+    <li class="nav-item">
+      <a class="nav-link active" data-bs-toggle="tab" href="#tab-citas">
+        <i class="fa-solid fa-calendar-day me-1"></i> Citas
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" data-bs-toggle="tab" href="#tab-ejecutivos">
+        <i class="fa-solid fa-user-tie me-1"></i> Ejecutivos
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" data-bs-toggle="tab" href="#tab-config">
+        <i class="fa-solid fa-gear me-1"></i> Configuración
+      </a>
+    </li>
+  </ul>
+
+  <div class="tab-content">
+
+    <!-- TAB CITAS -->
+    <div class="tab-pane fade show active" id="tab-citas">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white border-bottom d-flex align-items-center justify-content-between flex-wrap gap-2 py-3">
+          <div class="d-flex gap-2 flex-wrap" id="res-state-filters">
+            <button class="btn btn-sm res-filter-btn active" data-state="" onclick="resApp.filterByState(this, '')">Todas</button>
+            <button class="btn btn-sm res-filter-btn" data-state="draft" onclick="resApp.filterByState(this, 'draft')">Solicitadas</button>
+            <button class="btn btn-sm res-filter-btn" data-state="confirmed" onclick="resApp.filterByState(this, 'confirmed')">Confirmadas</button>
+            <button class="btn btn-sm res-filter-btn" data-state="in_progress" onclick="resApp.filterByState(this, 'in_progress')">En Progreso</button>
+            <button class="btn btn-sm res-filter-btn" data-state="completed" onclick="resApp.filterByState(this, 'completed')">Completadas</button>
+            <button class="btn btn-sm res-filter-btn" data-state="cancelled" onclick="resApp.filterByState(this, 'cancelled')">Canceladas</button>
+          </div>
+          <div class="input-group" style="max-width:220px;">
+            <span class="input-group-text bg-white border-end-0"><i class="fa-solid fa-search text-muted"></i></span>
+            <input type="text" class="form-control border-start-0 ps-0" placeholder="Buscar..." id="res-search-input" oninput="resApp.applySearch(this.value)">
+          </div>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 res-table">
+              <thead class="res-table-head">
+                <tr>
+                  <th class="ps-3">Asunto</th>
+                  <th>Cliente</th>
+                  <th class="d-none d-md-table-cell">Teléfono</th>
+                  <th>Fecha / Hora</th>
+                  <th class="d-none d-lg-table-cell">Ejecutivo</th>
+                  <th>Estado</th>
+                  <th class="text-end pe-3">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="res-citas-tbody">
+                <tr>
+                  <td colspan="7" class="text-center py-4 text-muted">
+                    <i class="fa-solid fa-spinner fa-spin me-2"></i> Cargando...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB EJECUTIVOS -->
+    <div class="tab-pane fade" id="tab-ejecutivos">
+      <div class="d-flex justify-content-end mb-3">
+        <button class="btn res-btn-primary btn-sm" onclick="resApp.openModalEjecutivo()">
+          <i class="fa-solid fa-plus me-1"></i> Nuevo Ejecutivo
+        </button>
+      </div>
+      <div class="row g-3" id="res-ejecutivos-grid">
+        <div class="col-12 text-center text-muted py-4">
+          <i class="fa-solid fa-spinner fa-spin me-2"></i> Cargando ejecutivos...
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB CONFIGURACIÓN -->
+    <div class="tab-pane fade" id="tab-config">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body">
+          <h5 class="mb-3"><i class="fa-solid fa-sliders me-2" style="color:#1a6b3c;"></i>Tipos de Cita</h5>
+          <div class="mb-3 d-flex gap-2">
+            <input type="text" class="form-control form-control-sm" style="max-width:200px;" id="nuevo-tipo-name" placeholder="Nombre del tipo">
+            <input type="color" class="form-control form-control-color form-control-sm" id="nuevo-tipo-color" value="#1a6b3c" title="Color">
+            <button class="btn res-btn-primary btn-sm" onclick="resApp.createTipo()">
+              <i class="fa-solid fa-plus me-1"></i> Agregar
+            </button>
+          </div>
+          <div id="res-tipos-list" class="d-flex flex-wrap gap-2">
+            <span class="text-muted small">Cargando...</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /tab-content -->
+
+</div><!-- /res-container -->
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     MODAL: Nueva Cita
+════════════════════════════════════════════════════════════ -->
+<div class="modal fade" id="modalNuevaCita" tabindex="-1" aria-labelledby="modalNuevaCitaLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header res-modal-header">
+        <h5 class="modal-title" id="modalNuevaCitaLabel">
+          <i class="fa-solid fa-calendar-plus me-2"></i> Nueva Cita
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-3">
+          <div class="col-12 col-md-6">
+            <label class="form-label fw-semibold">Asunto <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="cita-name" placeholder="Consulta de préstamo...">
+          </div>
+          <div class="col-12 col-md-6">
+            <label class="form-label fw-semibold">Nombre del cliente <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="cita-nombre-persona" placeholder="Juan Pérez">
+          </div>
+          <div class="col-12 col-md-6">
+            <label class="form-label fw-semibold">Teléfono / Celular</label>
+            <input type="tel" class="form-control" id="cita-celular" placeholder="+52 999 000 0000">
+          </div>
+          <div class="col-12 col-md-6">
+            <label class="form-label fw-semibold">Correo electrónico</label>
+            <input type="email" class="form-control" id="cita-email" placeholder="cliente@correo.com">
+          </div>
+          <div class="col-12 col-md-6">
+            <label class="form-label fw-semibold">Ejecutivo</label>
+            <select class="form-select" id="cita-ejecutivo-id">
+              <option value="">— Sin asignar —</option>
+            </select>
+          </div>
+          <div class="col-12 col-md-6">
+            <label class="form-label fw-semibold">Tipo de cita</label>
+            <select class="form-select" id="cita-tipo-id">
+              <option value="">— Sin tipo —</option>
+            </select>
+          </div>
+          <div class="col-12 col-md-6">
+            <label class="form-label fw-semibold">Fecha <span class="text-danger">*</span></label>
+            <input type="date" class="form-control" id="cita-fecha" onchange="resApp.loadSlots()">
+          </div>
+          <div class="col-12 col-md-6">
+            <label class="form-label fw-semibold">Horario disponible</label>
+            <select class="form-select" id="cita-slot">
+              <option value="">Seleccione ejecutivo y fecha</option>
+            </select>
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-semibold">Notas</label>
+            <textarea class="form-control" id="cita-notes" rows="2" placeholder="Información adicional..."></textarea>
+          </div>
+        </div>
+        <div id="cita-error" class="alert alert-danger mt-3 d-none"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn res-btn-primary" onclick="resApp.saveCita()">
+          <i class="fa-solid fa-floppy-disk me-1"></i> Guardar Cita
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     MODAL: Nuevo Ejecutivo
+════════════════════════════════════════════════════════════ -->
+<div class="modal fade" id="modalNuevoEjecutivo" tabindex="-1" aria-labelledby="modalNuevoEjecutivoLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header res-modal-header">
+        <h5 class="modal-title" id="modalNuevoEjecutivoLabel">
+          <i class="fa-solid fa-user-tie me-2"></i> Nuevo Ejecutivo
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-3">
+          <!-- Datos básicos -->
+          <div class="col-12">
+            <h6 class="res-section-title"><i class="fa-solid fa-address-card me-2"></i>Datos del Ejecutivo</h6>
+          </div>
+          <div class="col-12 col-md-4">
+            <label class="form-label fw-semibold">Nombre completo <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="ej-name" placeholder="María García">
+          </div>
+          <div class="col-12 col-md-4">
+            <label class="form-label fw-semibold">Correo electrónico</label>
+            <input type="email" class="form-control" id="ej-email" placeholder="mgarcia@empresa.com">
+          </div>
+          <div class="col-12 col-md-4">
+            <label class="form-label fw-semibold">Teléfono</label>
+            <input type="tel" class="form-control" id="ej-phone" placeholder="+52 999 000 0000">
+          </div>
+          <div class="col-12 col-md-6">
+            <label class="form-label fw-semibold">Especialidad</label>
+            <input type="text" class="form-control" id="ej-especialidad" placeholder="Créditos personales, Ahorro...">
+          </div>
+          <div class="col-6 col-md-3">
+            <label class="form-label fw-semibold">Duración de cita (min)</label>
+            <input type="number" class="form-control" id="ej-tiempo-cita" value="30" min="5" max="240">
+          </div>
+          <div class="col-6 col-md-3">
+            <label class="form-label fw-semibold">Descanso entre citas (min)</label>
+            <input type="number" class="form-control" id="ej-tiempo-descanso" value="0" min="0" max="120">
+          </div>
+
+          <!-- Horarios -->
+          <div class="col-12 mt-2">
+            <h6 class="res-section-title"><i class="fa-solid fa-clock me-2"></i>Horario de Atención</h6>
+          </div>
+          <div class="col-12">
+            <div class="table-responsive">
+              <table class="table table-sm table-bordered align-middle res-schedule-table">
+                <thead class="res-table-head">
+                  <tr>
+                    <th>Día</th>
+                    <th>Descanso</th>
+                    <th>Hora Inicio</th>
+                    <th>Hora Fin</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="fw-semibold">Lunes</td>
+                    <td><input type="checkbox" class="form-check-input" id="ej-desc-lunes"></td>
+                    <td><input type="time" class="form-control form-control-sm" id="ej-ini-lunes" value="09:00"></td>
+                    <td><input type="time" class="form-control form-control-sm" id="ej-fin-lunes" value="17:00"></td>
+                  </tr>
+                  <tr>
+                    <td class="fw-semibold">Martes</td>
+                    <td><input type="checkbox" class="form-check-input" id="ej-desc-martes"></td>
+                    <td><input type="time" class="form-control form-control-sm" id="ej-ini-martes" value="09:00"></td>
+                    <td><input type="time" class="form-control form-control-sm" id="ej-fin-martes" value="17:00"></td>
+                  </tr>
+                  <tr>
+                    <td class="fw-semibold">Miércoles</td>
+                    <td><input type="checkbox" class="form-check-input" id="ej-desc-miercoles"></td>
+                    <td><input type="time" class="form-control form-control-sm" id="ej-ini-miercoles" value="09:00"></td>
+                    <td><input type="time" class="form-control form-control-sm" id="ej-fin-miercoles" value="17:00"></td>
+                  </tr>
+                  <tr>
+                    <td class="fw-semibold">Jueves</td>
+                    <td><input type="checkbox" class="form-check-input" id="ej-desc-jueves"></td>
+                    <td><input type="time" class="form-control form-control-sm" id="ej-ini-jueves" value="09:00"></td>
+                    <td><input type="time" class="form-control form-control-sm" id="ej-fin-jueves" value="17:00"></td>
+                  </tr>
+                  <tr>
+                    <td class="fw-semibold">Viernes</td>
+                    <td><input type="checkbox" class="form-check-input" id="ej-desc-viernes"></td>
+                    <td><input type="time" class="form-control form-control-sm" id="ej-ini-viernes" value="09:00"></td>
+                    <td><input type="time" class="form-control form-control-sm" id="ej-fin-viernes" value="17:00"></td>
+                  </tr>
+                  <tr>
+                    <td class="fw-semibold">Sábado</td>
+                    <td><input type="checkbox" class="form-check-input" id="ej-desc-sabado" checked></td>
+                    <td><input type="time" class="form-control form-control-sm" id="ej-ini-sabado" value="09:00"></td>
+                    <td><input type="time" class="form-control form-control-sm" id="ej-fin-sabado" value="13:00"></td>
+                  </tr>
+                  <tr>
+                    <td class="fw-semibold">Domingo</td>
+                    <td><input type="checkbox" class="form-check-input" id="ej-desc-domingo" checked></td>
+                    <td><input type="time" class="form-control form-control-sm" id="ej-ini-domingo" value="00:00"></td>
+                    <td><input type="time" class="form-control form-control-sm" id="ej-fin-domingo" value="00:00"></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-semibold">Notas internas</label>
+            <textarea class="form-control" id="ej-notas" rows="2" placeholder="Observaciones sobre disponibilidad..."></textarea>
+          </div>
+        </div>
+        <div id="ej-error" class="alert alert-danger mt-3 d-none"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn res-btn-primary" onclick="resApp.saveEjecutivo()">
+          <i class="fa-solid fa-floppy-disk me-1"></i> Guardar Ejecutivo
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     STYLES
+════════════════════════════════════════════════════════════ -->
+<style>
+  :root {
+    --res-primary: #1a6b3c;
+    --res-primary-dark: #14532d;
+    --res-primary-light: #d1fae5;
+    --res-primary-mid: #166534;
+  }
+
+  .res-container {
+    padding: 1.5rem;
+  }
+
+  .res-btn-primary {
+    background-color: var(--res-primary);
+    border-color: var(--res-primary);
+    color: #fff;
+  }
+  .res-btn-primary:hover {
+    background-color: var(--res-primary-dark);
+    border-color: var(--res-primary-dark);
+    color: #fff;
+  }
+
+  .res-modal-header {
+    background: linear-gradient(135deg, var(--res-primary) 0%, var(--res-primary-mid) 100%);
+    color: #fff;
+  }
+
+  .res-kpi-card {
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .res-kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(26,107,60,.12) !important;
+  }
+
+  .res-table-head {
+    background-color: #f0fdf4;
+    color: var(--res-primary-dark);
+    font-size: 0.82rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  .res-table tbody tr:hover {
+    background-color: #f0fdf4;
+  }
+
+  .res-filter-btn {
+    border-color: #d1fae5;
+    color: var(--res-primary);
+    background-color: #fff;
+  }
+  .res-filter-btn:hover,
+  .res-filter-btn.active {
+    background-color: var(--res-primary);
+    border-color: var(--res-primary);
+    color: #fff;
+  }
+
+  .res-section-title {
+    color: var(--res-primary);
+    border-bottom: 2px solid #d1fae5;
+    padding-bottom: 0.35rem;
+    margin-bottom: 0.75rem;
+    font-weight: 600;
+  }
+
+  .res-schedule-table thead th {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+  }
+
+  /* Estado badges */
+  .res-badge-draft      { background-color: #e2e8f0; color: #475569; }
+  .res-badge-confirmed  { background-color: #bfdbfe; color: #1e40af; }
+  .res-badge-in_progress{ background-color: #fef9c3; color: #854d0e; }
+  .res-badge-completed  { background-color: #bbf7d0; color: #14532d; }
+  .res-badge-cancelled  { background-color: #fee2e2; color: #991b1b; }
+
+  .res-estado-badge {
+    display: inline-block;
+    padding: 0.25em 0.6em;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  /* Ejecutivo cards */
+  .res-ej-card {
+    transition: transform 0.15s, box-shadow 0.15s;
+    border-left: 4px solid var(--res-primary) !important;
+  }
+  .res-ej-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(26,107,60,.13) !important;
+  }
+  .res-ej-disponible {
+    background-color: #d1fae5;
+    color: var(--res-primary-dark);
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 0.2em 0.6em;
+    border-radius: 999px;
+    text-transform: uppercase;
+  }
+  .res-ej-nodisponible {
+    background-color: #fee2e2;
+    color: #991b1b;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 0.2em 0.6em;
+    border-radius: 999px;
+    text-transform: uppercase;
+  }
+
+  .nav-tabs .nav-link.active {
+    color: var(--res-primary);
+    border-bottom-color: var(--res-primary);
+    font-weight: 600;
+  }
+  .nav-tabs .nav-link:hover {
+    color: var(--res-primary-dark);
+  }
+
+  @media (max-width: 576px) {
+    .res-container { padding: 0.75rem; }
+  }
+</style>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     SCRIPT
+════════════════════════════════════════════════════════════ -->
+<script>
+(function () {
+  'use strict';
+
+  // ── State ──────────────────────────────────────────────────
+  let _citas = [];
+  let _ejecutivos = [];
+  let _tipos = [];
+  let _activeState = '';
+  let _searchTerm = '';
+
+  // ── Helpers ────────────────────────────────────────────────
+
+  function timeToFloat(timeStr) {
+    const [h, m] = timeStr.split(':').map(Number);
+    return h + m / 60;
+  }
+
+  function formatDatetime(iso) {
+    if (!iso) return '–';
+    try {
+      const d = new Date(iso);
+      return d.toLocaleString('es-MX', {
+        day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+      });
+    } catch { return iso; }
+  }
+
+  function estadoBadge(state) {
+    const labels = {
+      draft: 'Solicitada',
+      confirmed: 'Confirmada',
+      in_progress: 'En Progreso',
+      completed: 'Completada',
+      cancelled: 'Cancelada',
+    };
+    const label = labels[state] || state;
+    return `<span class="res-estado-badge res-badge-${state}">${label}</span>`;
+  }
+
+  function getEjecutivoName(id) {
+    const ej = _ejecutivos.find(e => e.id === id);
+    return ej ? ej.name : '–';
+  }
+
+  function showError(elementId, msg) {
+    const el = document.getElementById(elementId);
+    if (el) { el.textContent = msg; el.classList.remove('d-none'); }
+  }
+
+  function hideError(elementId) {
+    const el = document.getElementById(elementId);
+    if (el) el.classList.add('d-none');
+  }
+
+  // ── API calls ──────────────────────────────────────────────
+
+  async function fetchJSON(url, opts = {}) {
+    const res = await fetch(url, {
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      ...opts,
+    });
+    if (!res.ok) {
+      const txt = await res.text();
+      throw new Error(txt || `HTTP ${res.status}`);
+    }
+    return res.json();
+  }
+
+  // ── Load data ──────────────────────────────────────────────
+
+  async function loadStats() {
+    try {
+      const r = await fetchJSON('/api/reservaciones/stats');
+      if (!r.success) return;
+      const d = r.data;
+      document.getElementById('kpi-total').textContent = d.total ?? 0;
+      document.getElementById('kpi-draft').textContent = d.by_state?.draft ?? 0;
+      document.getElementById('kpi-confirmed').textContent = d.by_state?.confirmed ?? 0;
+      document.getElementById('kpi-in-progress').textContent = d.by_state?.in_progress ?? 0;
+      document.getElementById('kpi-completed').textContent = d.by_state?.completed ?? 0;
+      document.getElementById('kpi-cancelled').textContent = d.by_state?.cancelled ?? 0;
+    } catch (e) { console.error('stats error', e); }
+  }
+
+  async function loadCitas() {
+    try {
+      const r = await fetchJSON('/api/reservaciones/citas?limit=200');
+      _citas = r.success ? r.data : [];
+      renderCitas();
+    } catch (e) {
+      console.error('citas error', e);
+      document.getElementById('res-citas-tbody').innerHTML =
+        '<tr><td colspan="7" class="text-center text-danger py-3">Error al cargar citas</td></tr>';
+    }
+  }
+
+  async function loadEjecutivos() {
+    try {
+      const r = await fetchJSON('/api/reservaciones/ejecutivos');
+      _ejecutivos = r.success ? r.data : [];
+      renderEjecutivos();
+      populateEjecutivoSelect();
+    } catch (e) { console.error('ejecutivos error', e); }
+  }
+
+  async function loadTipos() {
+    try {
+      const r = await fetchJSON('/api/reservaciones/tipos');
+      _tipos = r.success ? r.data : [];
+      renderTipos();
+      populateTipoSelect();
+    } catch (e) { console.error('tipos error', e); }
+  }
+
+  function loadAll() {
+    loadStats();
+    loadCitas();
+    loadEjecutivos();
+    loadTipos();
+  }
+
+  // ── Render: Citas ──────────────────────────────────────────
+
+  function renderCitas() {
+    let data = _citas;
+
+    if (_activeState) {
+      data = data.filter(c => c.state === _activeState);
+    }
+    if (_searchTerm) {
+      const q = _searchTerm.toLowerCase();
+      data = data.filter(c =>
+        (c.name || '').toLowerCase().includes(q) ||
+        (c.nombre_persona || '').toLowerCase().includes(q) ||
+        (c.celular_persona || '').toLowerCase().includes(q)
+      );
+    }
+
+    const tbody = document.getElementById('res-citas-tbody');
+    if (!data.length) {
+      tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4"><i class="fa-solid fa-calendar-xmark me-2"></i>Sin citas en este filtro</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = data.map(c => `
+      <tr>
+        <td class="ps-3 fw-semibold">${escHtml(c.name)}</td>
+        <td>${escHtml(c.nombre_persona)}</td>
+        <td class="d-none d-md-table-cell text-muted small">${escHtml(c.celular_persona) || '–'}</td>
+        <td class="small">${formatDatetime(c.start_datetime)}</td>
+        <td class="d-none d-lg-table-cell small text-muted">${escHtml(getEjecutivoName(c.ejecutivo_id))}</td>
+        <td>${estadoBadge(c.state)}</td>
+        <td class="text-end pe-3">
+          <div class="dropdown">
+            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+              Cambiar estado
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+              <li><a class="dropdown-item" href="#" onclick="resApp.changeEstado(${c.id},'draft');return false;">Solicitada</a></li>
+              <li><a class="dropdown-item" href="#" onclick="resApp.changeEstado(${c.id},'confirmed');return false;">Confirmada</a></li>
+              <li><a class="dropdown-item" href="#" onclick="resApp.changeEstado(${c.id},'in_progress');return false;">En Progreso</a></li>
+              <li><a class="dropdown-item" href="#" onclick="resApp.changeEstado(${c.id},'completed');return false;">Completada</a></li>
+              <li><hr class="dropdown-divider"></li>
+              <li><a class="dropdown-item text-danger" href="#" onclick="resApp.changeEstado(${c.id},'cancelled');return false;">Cancelar</a></li>
+            </ul>
+          </div>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  function escHtml(str) {
+    if (str == null) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function filterByState(btn, state) {
+    _activeState = state;
+    document.querySelectorAll('.res-filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderCitas();
+  }
+
+  function applySearch(val) {
+    _searchTerm = val.trim();
+    renderCitas();
+  }
+
+  // ── Render: Ejecutivos ─────────────────────────────────────
+
+  function renderEjecutivos() {
+    const grid = document.getElementById('res-ejecutivos-grid');
+    if (!_ejecutivos.length) {
+      grid.innerHTML = '<div class="col-12 text-center text-muted py-4"><i class="fa-solid fa-user-slash me-2"></i>Sin ejecutivos registrados</div>';
+      return;
+    }
+    grid.innerHTML = _ejecutivos.map(e => `
+      <div class="col-12 col-sm-6 col-xl-4">
+        <div class="card border-0 shadow-sm h-100 res-ej-card">
+          <div class="card-body">
+            <div class="d-flex align-items-start justify-content-between mb-2">
+              <div>
+                <div class="fw-bold fs-6">${escHtml(e.name)}</div>
+                <div class="text-muted small">${escHtml(e.especialidad) || 'Sin especialidad'}</div>
+              </div>
+              <span class="${e.disponible ? 'res-ej-disponible' : 'res-ej-nodisponible'}">
+                ${e.disponible ? 'Disponible' : 'No disponible'}
+              </span>
+            </div>
+            <div class="small text-muted mt-2">
+              ${e.email ? `<div><i class="fa-solid fa-envelope me-1" style="color:#1a6b3c;"></i>${escHtml(e.email)}</div>` : ''}
+              ${e.phone ? `<div><i class="fa-solid fa-phone me-1" style="color:#1a6b3c;"></i>${escHtml(e.phone)}</div>` : ''}
+              <div><i class="fa-solid fa-clock me-1" style="color:#1a6b3c;"></i>Citas de ${e.tiempo_promedio_cita} min</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function populateEjecutivoSelect() {
+    const sel = document.getElementById('cita-ejecutivo-id');
+    const current = sel.value;
+    sel.innerHTML = '<option value="">— Sin asignar —</option>' +
+      _ejecutivos.map(e => `<option value="${e.id}">${escHtml(e.name)}</option>`).join('');
+    sel.value = current;
+  }
+
+  // ── Render: Tipos ──────────────────────────────────────────
+
+  function renderTipos() {
+    const container = document.getElementById('res-tipos-list');
+    if (!_tipos.length) {
+      container.innerHTML = '<span class="text-muted small">Sin tipos de cita registrados</span>';
+      return;
+    }
+    container.innerHTML = _tipos.map(t =>
+      `<span class="badge rounded-pill px-3 py-2" style="background-color:${escHtml(t.color)};font-size:0.82rem;">${escHtml(t.name)}</span>`
+    ).join('');
+  }
+
+  function populateTipoSelect() {
+    const sel = document.getElementById('cita-tipo-id');
+    const current = sel.value;
+    sel.innerHTML = '<option value="">— Sin tipo —</option>' +
+      _tipos.map(t => `<option value="${t.id}">${escHtml(t.name)}</option>`).join('');
+    sel.value = current;
+  }
+
+  // ── Slots ──────────────────────────────────────────────────
+
+  async function loadSlots() {
+    const ejId = document.getElementById('cita-ejecutivo-id').value;
+    const fecha = document.getElementById('cita-fecha').value;
+    const slotSel = document.getElementById('cita-slot');
+
+    if (!ejId || !fecha) {
+      slotSel.innerHTML = '<option value="">Seleccione ejecutivo y fecha</option>';
+      return;
+    }
+    slotSel.innerHTML = '<option value="">Cargando horarios...</option>';
+    try {
+      const r = await fetchJSON(`/api/reservaciones/ejecutivos/${ejId}/slots?fecha=${fecha}`);
+      const slots = r.success ? r.data : [];
+      if (!slots.length) {
+        slotSel.innerHTML = '<option value="">Sin horarios disponibles ese día</option>';
+        return;
+      }
+      slotSel.innerHTML = slots.map(s =>
+        `<option value="${escHtml(s.datetime_str)}" ${!s.disponible ? 'disabled' : ''}>
+          ${escHtml(s.hora)}${!s.disponible ? ' (ocupado)' : ''}
+        </option>`
+      ).join('');
+    } catch (e) {
+      slotSel.innerHTML = '<option value="">Error al cargar horarios</option>';
+    }
+  }
+
+  // ── Modal: Nueva Cita ──────────────────────────────────────
+
+  function openModalCita() {
+    hideError('cita-error');
+    ['cita-name','cita-nombre-persona','cita-celular','cita-email','cita-notes'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+    document.getElementById('cita-ejecutivo-id').value = '';
+    document.getElementById('cita-tipo-id').value = '';
+    document.getElementById('cita-fecha').value = '';
+    document.getElementById('cita-slot').innerHTML = '<option value="">Seleccione ejecutivo y fecha</option>';
+
+    const modal = new bootstrap.Modal(document.getElementById('modalNuevaCita'));
+    modal.show();
+  }
+
+  async function saveCita() {
+    hideError('cita-error');
+    const name = document.getElementById('cita-name').value.trim();
+    const nombrePersona = document.getElementById('cita-nombre-persona').value.trim();
+    const slotVal = document.getElementById('cita-slot').value;
+
+    if (!name) { showError('cita-error', 'El asunto es requerido.'); return; }
+    if (!nombrePersona) { showError('cita-error', 'El nombre del cliente es requerido.'); return; }
+    if (!slotVal) { showError('cita-error', 'Seleccione un horario disponible.'); return; }
+
+    const ejId = document.getElementById('cita-ejecutivo-id').value;
+    const tipoId = document.getElementById('cita-tipo-id').value;
+
+    const payload = {
+      name,
+      nombre_persona: nombrePersona,
+      celular_persona: document.getElementById('cita-celular').value.trim(),
+      email_persona: document.getElementById('cita-email').value.trim(),
+      start_datetime: slotVal,
+      ejecutivo_id: ejId ? parseInt(ejId) : null,
+      tipo_id: tipoId ? parseInt(tipoId) : null,
+      notes: document.getElementById('cita-notes').value.trim(),
+    };
+
+    try {
+      const r = await fetchJSON('/api/reservaciones/citas', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+      if (!r.success) throw new Error(r.detail || 'Error al guardar');
+      bootstrap.Modal.getInstance(document.getElementById('modalNuevaCita')).hide();
+      loadAll();
+    } catch (e) {
+      showError('cita-error', e.message || 'Error al guardar la cita');
+    }
+  }
+
+  // ── Modal: Nuevo Ejecutivo ─────────────────────────────────
+
+  function openModalEjecutivo() {
+    hideError('ej-error');
+    document.getElementById('ej-name').value = '';
+    document.getElementById('ej-email').value = '';
+    document.getElementById('ej-phone').value = '';
+    document.getElementById('ej-especialidad').value = '';
+    document.getElementById('ej-tiempo-cita').value = '30';
+    document.getElementById('ej-tiempo-descanso').value = '0';
+    document.getElementById('ej-notas').value = '';
+
+    const modal = new bootstrap.Modal(document.getElementById('modalNuevoEjecutivo'));
+    modal.show();
+  }
+
+  async function saveEjecutivo() {
+    hideError('ej-error');
+    const name = document.getElementById('ej-name').value.trim();
+    if (!name) { showError('ej-error', 'El nombre es requerido.'); return; }
+
+    const payload = {
+      name,
+      email: document.getElementById('ej-email').value.trim(),
+      phone: document.getElementById('ej-phone').value.trim(),
+      especialidad: document.getElementById('ej-especialidad').value.trim(),
+      tiempo_promedio_cita: parseInt(document.getElementById('ej-tiempo-cita').value) || 30,
+      tiempo_descanso_sesiones: parseInt(document.getElementById('ej-tiempo-descanso').value) || 0,
+      notas: document.getElementById('ej-notas').value.trim(),
+      descanso_lunes: document.getElementById('ej-desc-lunes').checked,
+      descanso_martes: document.getElementById('ej-desc-martes').checked,
+      descanso_miercoles: document.getElementById('ej-desc-miercoles').checked,
+      descanso_jueves: document.getElementById('ej-desc-jueves').checked,
+      descanso_viernes: document.getElementById('ej-desc-viernes').checked,
+      descanso_sabado: document.getElementById('ej-desc-sabado').checked,
+      descanso_domingo: document.getElementById('ej-desc-domingo').checked,
+      hora_inicial_lunes: timeToFloat(document.getElementById('ej-ini-lunes').value),
+      hora_final_lunes: timeToFloat(document.getElementById('ej-fin-lunes').value),
+      hora_inicial_martes: timeToFloat(document.getElementById('ej-ini-martes').value),
+      hora_final_martes: timeToFloat(document.getElementById('ej-fin-martes').value),
+      hora_inicial_miercoles: timeToFloat(document.getElementById('ej-ini-miercoles').value),
+      hora_final_miercoles: timeToFloat(document.getElementById('ej-fin-miercoles').value),
+      hora_inicial_jueves: timeToFloat(document.getElementById('ej-ini-jueves').value),
+      hora_final_jueves: timeToFloat(document.getElementById('ej-fin-jueves').value),
+      hora_inicial_viernes: timeToFloat(document.getElementById('ej-ini-viernes').value),
+      hora_final_viernes: timeToFloat(document.getElementById('ej-fin-viernes').value),
+      hora_inicial_sabado: timeToFloat(document.getElementById('ej-ini-sabado').value),
+      hora_final_sabado: timeToFloat(document.getElementById('ej-fin-sabado').value),
+      hora_inicial_domingo: timeToFloat(document.getElementById('ej-ini-domingo').value),
+      hora_final_domingo: timeToFloat(document.getElementById('ej-fin-domingo').value),
+    };
+
+    try {
+      const r = await fetchJSON('/api/reservaciones/ejecutivos', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+      if (!r.success) throw new Error(r.detail || 'Error al guardar');
+      bootstrap.Modal.getInstance(document.getElementById('modalNuevoEjecutivo')).hide();
+      loadAll();
+    } catch (e) {
+      showError('ej-error', e.message || 'Error al guardar el ejecutivo');
+    }
+  }
+
+  // ── Cambio de estado ───────────────────────────────────────
+
+  async function changeEstado(citaId, state) {
+    try {
+      const r = await fetchJSON(`/api/reservaciones/citas/${citaId}/estado`, {
+        method: 'PUT',
+        body: JSON.stringify({ state }),
+      });
+      if (r.success) { loadStats(); loadCitas(); }
+    } catch (e) {
+      console.error('changeEstado error', e);
+    }
+  }
+
+  // ── Crear tipo ─────────────────────────────────────────────
+
+  async function createTipo() {
+    const nameEl = document.getElementById('nuevo-tipo-name');
+    const colorEl = document.getElementById('nuevo-tipo-color');
+    const name = nameEl.value.trim();
+    if (!name) return;
+
+    try {
+      const r = await fetchJSON('/api/reservaciones/tipos', {
+        method: 'POST',
+        body: JSON.stringify({ name, color: colorEl.value }),
+      });
+      if (r.success) {
+        nameEl.value = '';
+        loadTipos();
+      }
+    } catch (e) { console.error('createTipo error', e); }
+  }
+
+  // ── Auto-trigger loadSlots on ejecutivo change ─────────────
+  document.addEventListener('DOMContentLoaded', function () {
+    const ejSel = document.getElementById('cita-ejecutivo-id');
+    if (ejSel) ejSel.addEventListener('change', loadSlots);
+  });
+
+  // ── Public API ─────────────────────────────────────────────
+  window.resApp = {
+    loadAll,
+    filterByState,
+    applySearch,
+    loadSlots,
+    openModalCita,
+    saveCita,
+    openModalEjecutivo,
+    saveEjecutivo,
+    changeEstado,
+    createTipo,
+  };
+
+  // ── Init ───────────────────────────────────────────────────
+  loadAll();
+
+})();
+</script>

@@ -7,7 +7,7 @@ from pathlib import Path
 from fastapi import APIRouter, FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
-from sqlalchemy import text
+from sqlalchemy import Column, DateTime, Integer, MetaData, String, Table, Text, func, insert, select, text
 from fastapi_modulo.modulos.multitienda.marketplace.backend.core.db import SessionLocal
 
 
@@ -20,6 +20,54 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 STATIC_DIR = PROJECT_ROOT / "static"
 
 marketplace_router = APIRouter()
+_business_type_metadata = MetaData()
+store_business_types = Table(
+    "store_business_types",
+    _business_type_metadata,
+    Column("id", Integer, primary_key=True, autoincrement=True),
+    Column("name", String(160), nullable=False),
+    Column("code", String(40), nullable=False, unique=True, index=True),
+    Column("description", Text, nullable=False, default=""),
+    Column("created_at", DateTime, nullable=False, server_default=func.now()),
+)
+
+
+def _ensure_business_types_schema(bind) -> None:
+    _business_type_metadata.create_all(bind=bind, tables=[store_business_types], checkfirst=True)
+
+
+def _default_business_types() -> list[dict[str, str]]:
+    return [
+        {"name": "Restaurante", "code": "REST", "description": "Negocios de alimentos y bebidas."},
+        {"name": "Moda", "code": "MODA", "description": "Ropa, calzado y accesorios."},
+        {"name": "Ferretería", "code": "FERR", "description": "Herramientas y materiales para construcción."},
+    ]
+
+
+def _list_business_types(db) -> list[dict[str, str]]:
+    _ensure_business_types_schema(db.bind)
+    rows = db.execute(
+        select(
+            store_business_types.c.id,
+            store_business_types.c.name,
+            store_business_types.c.code,
+            store_business_types.c.description,
+        ).order_by(store_business_types.c.name.asc())
+    ).mappings().all()
+    if rows:
+        return [dict(row) for row in rows]
+    defaults = _default_business_types()
+    db.execute(insert(store_business_types), defaults)
+    db.commit()
+    seeded = db.execute(
+        select(
+            store_business_types.c.id,
+            store_business_types.c.name,
+            store_business_types.c.code,
+            store_business_types.c.description,
+        ).order_by(store_business_types.c.name.asc())
+    ).mappings().all()
+    return [dict(row) for row in seeded]
 
 
 def _slugify_store_name(value: str) -> str:
@@ -146,6 +194,56 @@ async def save_store_settings(request: Request):
             },
             status_code=201,
         )
+    finally:
+        db.close()
+
+
+@marketplace_router.get(f"{BACKEND_ROUTE_PREFIX}/admin/business-types")
+def list_business_types():
+    db = SessionLocal()
+    try:
+        return _list_business_types(db)
+    finally:
+        db.close()
+
+
+@marketplace_router.post(f"{BACKEND_ROUTE_PREFIX}/admin/business-types")
+async def create_business_type(request: Request):
+    payload = await request.json()
+    name = str(payload.get("name") or "").strip()
+    code = str(payload.get("code") or "").strip().upper()
+    description = str(payload.get("description") or "").strip()
+    if not name or not code or not description:
+        raise HTTPException(status_code=422, detail="Completa Giro de negocio, Código y Descripción.")
+
+    db = SessionLocal()
+    try:
+        _ensure_business_types_schema(db.bind)
+        existing = db.execute(
+            select(store_business_types.c.id).where(
+                (store_business_types.c.code == code) | (store_business_types.c.name == name)
+            )
+        ).first()
+        if existing:
+            raise HTTPException(status_code=409, detail="Ese giro o código ya existe.")
+
+        db.execute(
+            insert(store_business_types).values(
+                name=name,
+                code=code,
+                description=description,
+            )
+        )
+        db.commit()
+        created = db.execute(
+            select(
+                store_business_types.c.id,
+                store_business_types.c.name,
+                store_business_types.c.code,
+                store_business_types.c.description,
+            ).where(store_business_types.c.code == code)
+        ).mappings().first()
+        return JSONResponse(dict(created), status_code=201)
     finally:
         db.close()
 

@@ -39,6 +39,8 @@ logger = logging.getLogger(__name__)
 # ── Rutas de templates ────────────────────────────────────────────────────────
 _TEMPLATES_DIR    = os.path.join("fastapi_modulo", "modulos_sipet", "frontend", "vistas")
 _PAGE_RENDER_TMPL = "page_render.html"
+_NAV_RE = re.compile(r"<nav\b[^>]*>.*?</nav>", re.IGNORECASE | re.DOTALL)
+_FOOTER_RE = re.compile(r"<footer\b[^>]*>.*?</footer>", re.IGNORECASE | re.DOTALL)
 
 # ── Script de widget de formulario (inyectado solo si la página lo necesita) ─
 _FORM_WIDGET_SCRIPT = """
@@ -351,6 +353,18 @@ def render_page(page: Dict[str, Any]) -> HTMLResponse:
 
     # Contenido del body: GrapesJS o bloques legacy
     raw_body     = gjs_html if gjs_html else render_blocks(page.get("blocks", []))
+    raw_body = _FOOTER_RE.sub("", _NAV_RE.sub("", raw_body)).strip()
+    try:
+        from fastapi_modulo.modulos_sipet.frontend.modelos.frontend_store import get_brand
+        brand = get_brand()
+        global_nav = str(brand.get("global_nav_html") or "").strip()
+        global_footer = str(brand.get("global_footer_html") or "").strip()
+        if global_nav:
+            raw_body = global_nav + raw_body
+        if global_footer:
+            raw_body = raw_body + global_footer
+    except Exception:
+        pass
     body_content = inject_logo(raw_body)
     extra_style  = f"<style>{gjs_css}</style>" if gjs_css else ""
 

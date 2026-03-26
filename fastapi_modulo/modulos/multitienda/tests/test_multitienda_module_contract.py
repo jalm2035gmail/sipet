@@ -83,6 +83,9 @@ def test_multitienda_management_section_uses_updated_label_and_cached_notebook_s
     assert "Administrar tiendas" in content
     assert ".multitienda-official-view .notebook-tab.active" in content
     assert '<button class="notebook-tab active"' in content
+    assert '/multitienda/admin/business-types' in content
+    assert 'fetch("/api/usuarios"' in content
+    assert "__USERS_PATH__" not in content
 
 
 def test_multitienda_main_is_thin_bootstrap() -> None:

@@ -26,6 +26,7 @@ from fastapi_modulo.modulos_sipet.web.servicios.auth_service import (
     encrypt_sensitive,
     hash_password,
 )
+from fastapi_modulo.modulos_sipet.web.servicios import mfa_service
 from fastapi_modulo.modulos_sipet.web.servicios.template_service import get_templates
 
 router = APIRouter()
@@ -497,11 +498,11 @@ def _allowed_role_assignments(viewer_role: str) -> set[str]:
     if role == "superadministrdor":
         role = "superadministrador"
     if role == "superadministrador":
-        return {"superadministrador", "administrador_multiempresa", "administrador", "usuario", "autoridades", "departamento"}
+        return {"superadministrador", "administrador_multiempresa", "administrador", "administrador_tienda", "vendedor_tienda", "usuario", "autoridades", "departamento"}
     if role in {"administrador_multiempresa", "admin_multiempresa"}:
-        return {"administrador", "usuario", "autoridades", "departamento"}
+        return {"administrador", "administrador_tienda", "vendedor_tienda", "usuario", "autoridades", "departamento"}
     if role == "administrador":
-        return {"administrador", "usuario", "autoridades", "departamento"}
+        return {"administrador", "administrador_tienda", "vendedor_tienda", "usuario", "autoridades", "departamento"}
     return set()
 
 EMPLEADOS_TEMPLATE_PATH = os.path.join(
@@ -570,6 +571,7 @@ def _build_colaboradores_payload(request: Request) -> Dict[str, Any]:
                         "empleado": bool(meta_entry.get("colaborador", False)),
                         "colaborador": bool(meta_entry.get("colaborador", False)),
                         "totp_enabled": bool(getattr(u, "totp_enabled", False)),
+                        "totp_secret_configured": bool(str(getattr(u, "totp_secret", "") or "").strip()),
                         "menu_blocks": meta_entry.get("menu_blocks", []),
                         "poa_access_level": _normalize_poa_access_level(meta_entry.get("poa_access_level", "mis_tareas")),
                         "backend_roles": meta_entry.get("backend_roles", []),
@@ -1018,6 +1020,11 @@ def api_guardar_colaborador(request: Request, data: dict = Body(...)):
             existing.rol_id = rol_id
             existing.is_active = True
             existing.totp_enabled = totp_enabled
+            existing.totp_secret = (
+                mfa_service.generate_totp_secret()
+                if totp_enabled and not str(getattr(existing, "totp_secret", "") or "").strip()
+                else (getattr(existing, "totp_secret", None) if totp_enabled else None)
+            )
             if password:
                 existing.contrasena = hash_password(password)
             db.add(existing)
@@ -1082,6 +1089,7 @@ def api_guardar_colaborador(request: Request, data: dict = Body(...)):
                     "empleado": colaborador,
                     "colaborador": colaborador,
                     "totp_enabled": bool(getattr(existing, "totp_enabled", False)),
+                    "totp_secret_configured": bool(str(getattr(existing, "totp_secret", "") or "").strip()),
                     "menu_blocks": menu_blocks,
                     "poa_access_level": poa_access_level,
                     "app_access_levels": effective_app_access_levels,
@@ -1127,6 +1135,7 @@ def api_guardar_colaborador(request: Request, data: dict = Body(...)):
             rol_id=rol_id,
             is_active=True,
             totp_enabled=totp_enabled,
+            totp_secret=mfa_service.generate_totp_secret() if totp_enabled else None,
         )
         db.add(nuevo)
         db.commit()
@@ -1179,6 +1188,7 @@ def api_guardar_colaborador(request: Request, data: dict = Body(...)):
                 "empleado": colaborador,
                 "colaborador": colaborador,
                 "totp_enabled": bool(getattr(nuevo, "totp_enabled", False)),
+                "totp_secret_configured": bool(str(getattr(nuevo, "totp_secret", "") or "").strip()),
                 "menu_blocks": menu_blocks,
                 "poa_access_level": poa_access_level,
                 "app_access_levels": effective_app_access_levels,
@@ -1223,6 +1233,54 @@ def api_guardar_colaborador(request: Request, data: dict = Body(...)):
             },
             status_code=500,
         )
+    finally:
+        db.close()
+
+
+@router.post("/api/colaboradores/{user_id}/totp/setup", response_class=JSONResponse)
+def api_configurar_totp_colaborador(user_id: int, request: Request):
+    viewer_role = normalize_role_name((getattr(request.state, "user_role", None) or "").strip().lower())
+    viewer_username = (getattr(request.state, "user_name", None) or "").strip().lower()
+    can_admin_manage = _is_admin_role(viewer_role)
+    db = _db_session()
+    try:
+        user = db.query(Usuario).filter(Usuario.id == user_id).first()
+        if not user:
+            return JSONResponse({"success": False, "error": "Usuario no encontrado"}, status_code=404)
+        username_value = str(decrypt_sensitive(getattr(user, "usuario", "") or "")).strip().lower()
+        is_self_service_update = bool(user and not can_admin_manage and viewer_username and username_value == viewer_username)
+        if not can_admin_manage and not is_self_service_update:
+            return JSONResponse(
+                {"success": False, "error": "No tiene permisos para configurar este usuario"},
+                status_code=403,
+            )
+
+        if not str(getattr(user, "totp_secret", "") or "").strip():
+            user.totp_secret = mfa_service.generate_totp_secret()
+        user.totp_enabled = True
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+
+        issuer = (
+            str(getattr(request.url, "hostname", "") or "").strip()
+            or str(request.headers.get("host") or "").split(":", 1)[0].strip()
+            or "SIPET"
+        )
+        visible_username = str(decrypt_sensitive(getattr(user, "usuario", "") or "") or "").strip() or f"usuario-{user.id}"
+        otpauth_url = mfa_service.build_totp_otpauth_url(user.totp_secret, visible_username, issuer)
+        qr_data_url = mfa_service.build_totp_qr_data_url(otpauth_url)
+        return {
+            "success": True,
+            "data": {
+                "user_id": user.id,
+                "username": visible_username,
+                "issuer": issuer,
+                "secret": user.totp_secret,
+                "otpauth_url": otpauth_url,
+                "qr_data_url": qr_data_url,
+            },
+        }
     finally:
         db.close()
 
@@ -1472,18 +1530,22 @@ def _render_empresa_usuarios_roles_page(request: Request) -> HTMLResponse:
     assignable_roles = list(_allowed_role_assignments(viewer_role))
     role_order = [
         "administrador",
+        "administrador_tienda",
         "administrador_multiempresa",
         "autoridades",
         "departamento",
         "superadministrador",
+        "vendedor_tienda",
         "usuario",
     ]
     role_labels = {
         "administrador": "Administrador",
+        "administrador_tienda": "Administrador de tienda",
         "administrador_multiempresa": "Administrador multiempresa",
         "autoridades": "Autoridades",
         "departamento": "Departamento",
         "superadministrador": "Superadministrador",
+        "vendedor_tienda": "Vendedor de tienda",
         "usuario": "Usuario",
     }
     ordered_roles = [role for role in role_order if role in assignable_roles]

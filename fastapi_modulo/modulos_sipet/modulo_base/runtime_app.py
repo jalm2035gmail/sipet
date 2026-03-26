@@ -33,7 +33,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import create_engine, Column, Integer, String, Boolean, DateTime, Date, ForeignKey, Text, JSON, UniqueConstraint, func, inspect
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm import declarative_base, relationship
+from sqlalchemy.orm import relationship
 from cryptography.fernet import Fernet, InvalidToken
 from textwrap import dedent
 from html import escape
@@ -478,7 +478,7 @@ AUTO_UPDATE_ENABLED = (os.environ.get("AUTO_UPDATE_ENABLED") or "true").strip().
     "yes",
     "on",
 }
-MAIN = declarative_base()
+MAIN = core_db.MAIN
 engine = core_db.engine
 SessionLocal = core_db.SessionLocal
 
@@ -2482,11 +2482,21 @@ def _render_database_tools_page(request: Request) -> HTMLResponse:
     if msg:
         tone = "#166534" if status == "ok" else "#b91c1c"
         flash_html = f"<p style='margin:0 0 12px;color:{tone};font-weight:700'>{escape(msg)}</p>"
+    db_info = _get_request_database_info(request)
+    engine_name = str(db_info.get("engine") or "").strip().lower()
     sqlite_note = ""
-    if not IS_SQLITE_DATABASE:
+    accept_attr = ".db,.sqlite,.sqlite3,application/octet-stream"
+    if engine_name == "postgresql":
+        sqlite_note = (
+            "<p style='margin:0 0 12px;color:#0f766e;font-weight:600'>"
+            "PostgreSQL exporta e importa respaldos en formato .sql."
+            "</p>"
+        )
+        accept_attr = ".sql,text/sql,application/sql,text/plain"
+    elif engine_name != "sqlite":
         sqlite_note = (
             "<p style='margin:0 0 12px;color:#92400e;font-weight:600'>"
-            "La exportación/importación por archivo aplica para SQLite."
+            "La exportación/importación por archivo depende del motor configurado en este sitio."
             "</p>"
         )
 
@@ -2501,7 +2511,7 @@ def _render_database_tools_page(request: Request) -> HTMLResponse:
                 Exportar BD
             </a>
             <form method="post" action="/empresa/base-datos/importar" enctype="multipart/form-data" style="display:inline-flex;gap:8px;align-items:center;flex-wrap:wrap;">
-                <input type="file" name="db_file" accept=".db,.sqlite,.sqlite3,application/octet-stream" required style="padding:8px;border:1px solid #cbd5e1;border-radius:10px;">
+                <input type="file" name="db_file" accept="{accept_attr}" required style="padding:8px;border:1px solid #cbd5e1;border-radius:10px;">
                 <button type="submit" style="padding:10px 14px;border-radius:10px;border:1px solid #0f172a;background:#0f172a;color:#fff;font-weight:700;cursor:pointer;">
                     Importar BD
                 </button>

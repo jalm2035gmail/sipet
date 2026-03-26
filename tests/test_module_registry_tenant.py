@@ -90,13 +90,26 @@ def test_register_enabled_routers_skips_incomplete_module_import(monkeypatch) ->
     assert registered == []
 
 
-def test_legacy_module_is_disabled_by_default(monkeypatch) -> None:
+def test_module_from_modulos_is_supported_by_default() -> None:
+    legacy_module = module_registry.ModuleDefinition(
+        key="organizacion_demo",
+        label="Organizacion",
+        description="Organizacion",
+        manifest_file="fastapi_modulo/modulos/legacy_demo/__manifest__.py",
+        router_specs=[module_registry.RouterSpec("fastapi_modulo.modulos.legacy_demo.controladores.legacy_demo")],
+    )
+
+    assert module_registry.is_legacy_module(legacy_module) is False
+    assert module_registry.is_supported_module(legacy_module) is True
+
+
+def test_legacy_source_module_is_disabled_by_default(monkeypatch) -> None:
     legacy_module = module_registry.ModuleDefinition(
         key="legacy_demo",
         label="Legacy",
         description="Legacy",
-        manifest_file="fastapi_modulo/modulos/legacy_demo/__manifest__.py",
-        router_specs=[module_registry.RouterSpec("fastapi_modulo.modulos.legacy_demo.controladores.legacy_demo")],
+        manifest_file="fastapi_modulo/legacy_source/legacy_demo/__manifest__.py",
+        router_specs=[module_registry.RouterSpec("fastapi_modulo.legacy_source.legacy_demo.controladores.legacy_demo")],
     )
 
     monkeypatch.setattr(module_registry, "MODULES_BY_KEY", {"legacy_demo": legacy_module})

@@ -209,6 +209,10 @@
             gap: 4px;
         }
 
+        .field[hidden] {
+            display: none !important;
+        }
+
         .field label {
             font-size: 0.75rem;
             text-transform: uppercase;
@@ -521,6 +525,7 @@
         const setAuthenticatorFieldVisible = (visible) => {
             if (!codigoAutenticadorField || !codigoAutenticadorInput) return;
             codigoAutenticadorField.hidden = !visible;
+            codigoAutenticadorField.setAttribute("aria-hidden", String(!visible));
             codigoAutenticadorInput.disabled = !visible;
             if (!visible) codigoAutenticadorInput.value = "";
         };
@@ -575,7 +580,7 @@
                 });
                 const payload = await response.json().catch(() => ({}));
                 if (requestId !== mfaHintRequestId) return;
-                setAuthenticatorFieldVisible(!!payload.show_authenticator_code);
+                setAuthenticatorFieldVisible(!!(payload && payload.show_authenticator_code));
             } catch (err) {
                 if (requestId !== mfaHintRequestId) return;
                 setAuthenticatorFieldVisible(false);

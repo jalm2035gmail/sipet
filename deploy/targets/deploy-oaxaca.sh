@@ -49,8 +49,21 @@ ssh "$SERVER" "test -d '${REMOTE_IMPORTED_MODULES_DIR}' || { echo 'ERROR: ${REMO
 echo "Preservando modulos importados remotos en ${REMOTE_IMPORTED_MODULES_DIR} (no se sincronizan desde local)."
 
 echo "Fijando configuracion de produccion en ${REMOTE_DIR}.env..."
+EXISTING_DOMAIN_DB_PASSWORD="$(ssh "$SERVER" "python3 -c \"from configparser import ConfigParser; from pathlib import Path; path = Path('${DOMAIN_CONFIG_DIR}/${DOMAIN_NAME}.conf'); parser = ConfigParser(interpolation=None); parser.read(path, encoding='utf-8'); print(parser.get('options', 'db_password', fallback='')) if path.exists() else print('')\"" | tr -d '\r')"
+if [ -z "${DOMAIN_DB_PASSWORD}" ] && [ -n "${EXISTING_DOMAIN_DB_PASSWORD}" ]; then
+  DOMAIN_DB_PASSWORD="${EXISTING_DOMAIN_DB_PASSWORD}"
+fi
+if [ -z "${DOMAIN_DB_PASSWORD}" ]; then
+  echo "ERROR: DOMAIN_DB_PASSWORD no esta definido y no se pudo recuperar desde ${DOMAIN_CONFIG_DIR}/${DOMAIN_NAME}.conf"
+  echo "Aborto el deploy para no sobreescribir .env o sipet.conf con una configuracion PostgreSQL incompleta."
+  exit 1
+fi
+ENCODED_DOMAIN_DB_PASSWORD="$(python3 -c 'import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1], safe=""))' "${DOMAIN_DB_PASSWORD}")"
+DATAMAIN_URL_VALUE="postgresql://${DOMAIN_DB_USER}:${ENCODED_DOMAIN_DB_PASSWORD}@${DOMAIN_DB_HOST}:${DOMAIN_DB_PORT}/${DOMAIN_DB_NAME}"
 ssh "$SERVER" "touch '${REMOTE_DIR}.env' && \
   grep -q '^APP_ENV=' '${REMOTE_DIR}.env' && sed -i 's|^APP_ENV=.*|APP_ENV=production|' '${REMOTE_DIR}.env' || echo 'APP_ENV=production' >> '${REMOTE_DIR}.env' && \
+  grep -q '^DATABASE_URL=' '${REMOTE_DIR}.env' && sed -i 's|^DATABASE_URL=.*|DATABASE_URL=${DATAMAIN_URL_VALUE}|' '${REMOTE_DIR}.env' || echo 'DATABASE_URL=${DATAMAIN_URL_VALUE}' >> '${REMOTE_DIR}.env' && \
+  grep -q '^DATAMAIN_URL=' '${REMOTE_DIR}.env' && sed -i 's|^DATAMAIN_URL=.*|DATAMAIN_URL=${DATAMAIN_URL_VALUE}|' '${REMOTE_DIR}.env' || echo 'DATAMAIN_URL=${DATAMAIN_URL_VALUE}' >> '${REMOTE_DIR}.env' && \
   grep -q '^SQLITE_DB_PATH=' '${REMOTE_DIR}.env' && sed -i 's|^SQLITE_DB_PATH=.*|SQLITE_DB_PATH=${PERSISTENT_DB_PATH}|' '${REMOTE_DIR}.env' || echo 'SQLITE_DB_PATH=${PERSISTENT_DB_PATH}' >> '${REMOTE_DIR}.env' && \
   grep -q '^AUTH_COOKIE_SECRET=' '${REMOTE_DIR}.env' || (python3 -c 'import secrets; print(\"AUTH_COOKIE_SECRET=\" + secrets.token_urlsafe(48))' >> '${REMOTE_DIR}.env')"
 
@@ -72,10 +85,6 @@ rsync -az --delete \
 
 echo "Publicando configuracion dedicada del dominio..."
 REMOTE_DOMAIN_CONF="/tmp/${DOMAIN_NAME}.conf"
-EXISTING_DOMAIN_DB_PASSWORD="$(ssh "$SERVER" "python3 -c \"from configparser import ConfigParser; from pathlib import Path; path = Path('${DOMAIN_CONFIG_DIR}/${DOMAIN_NAME}.conf'); parser = ConfigParser(interpolation=None); parser.read(path, encoding='utf-8'); print(parser.get('options', 'db_password', fallback='')) if path.exists() else print('')\"" | tr -d '\r')"
-if [ -z "${DOMAIN_DB_PASSWORD}" ] && [ -n "${EXISTING_DOMAIN_DB_PASSWORD}" ]; then
-  DOMAIN_DB_PASSWORD="${EXISTING_DOMAIN_DB_PASSWORD}"
-fi
 {
   printf '%s\n' "[options]"
   printf 'domain = %s\n' "${DOMAIN_NAME}"
@@ -102,7 +111,7 @@ fi
 } > "${REMOTE_DOMAIN_CONF}"
 scp "${REMOTE_DOMAIN_CONF}" "$SERVER:${REMOTE_DOMAIN_CONF}"
 rm -f "${REMOTE_DOMAIN_CONF}"
-ssh "$SERVER" "cp '${REMOTE_DOMAIN_CONF}' '${DOMAIN_CONFIG_DIR}/${DOMAIN_NAME}.conf' && rm -f '${REMOTE_DOMAIN_CONF}'"
+ssh "$SERVER" "cp '${REMOTE_DOMAIN_CONF}' '${DOMAIN_CONFIG_DIR}/${DOMAIN_NAME}.conf' && cp '${REMOTE_DOMAIN_CONF}' '${REMOTE_DIR%/}/sipet.conf' && rm -f '${REMOTE_DOMAIN_CONF}'"
 
 echo "Instalando dependencias y reiniciando app..."
 ssh -tt "$SERVER" "cd '${REMOTE_DIR}' && sudo '${REMOTE_DIR%/}/.venv/bin/pip' install -r requirements.txt && bash -lc \"if [ -x '${RESTART_CMD}' ]; then sudo '${RESTART_CMD}'; else sudo systemctl restart '${SYSTEMD_SERVICE_NAME}' && sudo systemctl --no-pager --full status '${SYSTEMD_SERVICE_NAME}' || true; fi\""

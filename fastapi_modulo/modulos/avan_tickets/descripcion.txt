@@ -1,0 +1,47 @@
+Etapas para fusionar los módulos odoo_website_helpdesk y odoo_website_helpdesk_dashboard en avan_tickets:
+
+Avance: 66%
+
+✅ 1. Planificación y análisis:
+   - Revisar la estructura de ambos módulos.
+   - Identificar modelos, controladores, vistas, assets y datos a fusionar.
+   - Detectar posibles duplicidades o conflictos de nombres.
+
+✅ 2. Copia y adaptación de modelos y controladores:
+   - Copiar archivos de models y controllers a avan_tickets.
+   - Ajustar imports y referencias internas.
+   - Unificar modelos si hay solapamientos.
+
+🟩 3. Fusión de vistas, assets y datos (en proceso final):
+    - Archivos XML de vistas copiados:
+       * helpdesk_menu_views.xml
+       * dashboard_templates.xml
+       * helpdesk_category_views.xml
+       * helpdesk_tag_views.xml
+       * helpdesk_type_views.xml
+       * merge_ticket_views.xml
+       * ticket_stage_views.xml
+       * ticket_helpdesk_views.xml
+       * website_form.xml
+       * odoo_website_helpdesk_portal_templates.xml
+       * portal_templates.xml
+       * rating_form.xml
+       * helpdesk_dashboard.xml
+       * helpdesk_ticket_report_template.xml
+    - Assets JS y CSS principales copiados, incluyendo librerías d3.min.js y Chart.bundle.js.
+    - En proceso final: migración de imágenes, íconos y assets estáticos a avan_tickets/static/description/assets/.
+    - Pendiente: revisión de duplicados y verificación de carga en Odoo.
+
+⬜ 4. Actualización del archivo __manifest__.py:
+   - Una vez finalizada la copia de todos los assets, actualizar el manifest de avan_tickets para reflejar la fusión total y dependencias.
+   - Pendiente
+
+⬜ 5. Pruebas y validación:
+   - Instalar el módulo fusionado en un entorno de pruebas.
+   - Verificar que todas las funcionalidades (tickets y dashboard) funcionen correctamente.
+   - Corregir errores o conflictos detectados.
+   - Pendiente
+
+6. Limpieza y documentación:
+   - Eliminar los módulos originales si ya no son necesarios.
+   - Documentar los cambios y la nueva estructura en un archivo de descripción.

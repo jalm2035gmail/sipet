@@ -112,3 +112,18 @@ def test_restore_module_snapshot_restores_previous_state(monkeypatch, tmp_path: 
 
     assert restored_files == 1
     assert (module_root / "state.txt").read_text(encoding="utf-8") == "before"
+
+
+def test_get_module_upload_root_rejects_core_modules_under_modulos_sipet(monkeypatch, tmp_path: Path) -> None:
+    core_root = tmp_path / "fastapi_modulo" / "modulos_sipet" / "frontend"
+    core_root.mkdir(parents=True)
+    monkeypatch.setattr(
+        package_repository,
+        "_resolve_module_root_from_manifest",
+        lambda module_key: str(core_root),
+    )
+    monkeypatch.setattr(package_repository, "_resolve_module_root_from_router", lambda module_key: None)
+    monkeypatch.setattr(package_repository, "_resolve_module_root_from_key", lambda module_key: None)
+    monkeypatch.setattr(package_repository, "IMPORTABLE_MODULES_ROOT", str(tmp_path / "fastapi_modulo" / "modulos"))
+
+    assert package_repository.get_module_upload_root("frontend") is None

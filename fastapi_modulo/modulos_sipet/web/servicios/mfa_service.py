@@ -5,8 +5,11 @@ import hashlib
 import hmac
 import os
 import re
+import secrets
 import struct
 import time
+from io import BytesIO
+from urllib.parse import quote
 
 from fastapi import Request
 
@@ -28,6 +31,46 @@ def get_user_totp_secret(user, role_name: str) -> str:
 
 def normalize_totp_secret(secret: str) -> str:
     return re.sub(r"[^A-Z2-7]", "", (secret or "").strip().upper())
+
+
+def generate_totp_secret(byte_length: int = 20) -> str:
+    token = secrets.token_bytes(max(10, int(byte_length or 20)))
+    return base64.b32encode(token).decode("ascii").rstrip("=")
+
+
+def build_totp_otpauth_url(secret: str, username: str, issuer: str) -> str:
+    normalized_secret = normalize_totp_secret(secret)
+    normalized_username = str(username or "").strip() or "usuario"
+    normalized_issuer = str(issuer or "").strip() or "SIPET"
+    label = f"{normalized_issuer}:{normalized_username}"
+    return (
+        "otpauth://totp/"
+        f"{quote(label, safe='')}"
+        f"?secret={quote(normalized_secret, safe='')}"
+        f"&issuer={quote(normalized_issuer, safe='')}"
+    )
+
+
+def build_totp_qr_data_url(otpauth_url: str) -> str:
+    value = str(otpauth_url or "").strip()
+    if not value:
+        return ""
+    try:
+        import qrcode
+    except Exception:
+        return ""
+    qr = qrcode.QRCode(
+        version=None,
+        error_correction=qrcode.constants.ERROR_CORRECT_M,
+        box_size=8,
+        border=2,
+    )
+    qr.add_data(value)
+    qr.make(fit=True)
+    image = qr.make_image(fill_color="black", back_color="white")
+    buffer = BytesIO()
+    image.save(buffer, format="PNG")
+    return "data:image/png;base64," + base64.b64encode(buffer.getvalue()).decode("ascii")
 
 
 def totp_code_for_counter(secret: str, counter: int) -> str:

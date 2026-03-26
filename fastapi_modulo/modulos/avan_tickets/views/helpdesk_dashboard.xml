@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <data>
+        <template id="helpdesk_dashboard_template" name="Helpdesk Dashboard">
+            <t t-call="website.layout">
+                <div class="container">
+                    <h2>Helpdesk Dashboard</h2>
+                    <div id="dashboard_charts">
+                        <!-- Chart.js or D3.js visualizations will be rendered here -->
+                    </div>
+                </div>
+            </t>
+        </template>
+    </data>
+</odoo>

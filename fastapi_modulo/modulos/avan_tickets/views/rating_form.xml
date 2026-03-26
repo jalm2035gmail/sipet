@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo>
+    <!--    This XML file defines templates for a rating form and a thank you message in an Odoo application.-->
+    <template id="rating_form" name="Ticket Rating">
+        <t t-call="website.layout">
+            <center>
+                <h4>
+                    <b>Write Review
+                    </b>
+                </h4>
+                <form style="display: flex;
+                      justify-content: center;"
+                      t-attf-action="/rating/{{ticket}}/submit"
+                      method="post">
+                    <div class="">
+                        <div class="o_portal_chatter_header">
+                            <div class="row o_website_rating_card_container justify-content-center">
+                                <div class="col-lg-5">
+                                    <div class="starRating"
+                                         id="star">
+                                        <div>
+                                            <div>
+                                                <div>
+                                                    <div>
+                                                        <input class="starRating "
+                                                               id="rating11"
+                                                               type="radio"
+                                                               name="rating"
+                                                               value="1"
+                                                               checked="checked">
+                                                            <label for="rating11">
+                                                                <span>
+                                                                    1
+                                                                </span>
+                                                            </label>
+                                                        </input>
+                                                    </div>
+                                                    <input id="rating12"
+                                                           type="radio"
+                                                           name="rating"
+                                                           value="2">
+                                                        <label for="rating12">
+                                                            <span>
+                                                                2
+                                                            </span>
+                                                        </label>
+                                                    </input>
+                                                </div>
+                                                <input id="rating13"
+                                                       type="radio"
+                                                       name="rating"
+                                                       value="3">
+                                                    <label for="rating13">
+                                                        <span>
+                                                            3
+                                                        </span>
+                                                    </label>
+                                                </input>
+                                            </div>
+                                            <input id="rating14"
+                                                type="radio"
+                                                name="rating"
+                                                value="4">
+                                                <label for="rating14">
+                                                    <span>
+                                                        4
+                                                    </span>
+                                                </label>
+                                            </input>
+                                            <input id="rating15"
+                                                type="radio"
+                                                name="rating"
+                                                value="5">
+                                                <label for="rating15">
+                                                    <span>
+                                                        5
+                                                    </span>
+                                                </label>
+                                            </input>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-5">
+                        <textarea name="review" class="form-control" rows="3"
+                                  placeholder="Write your review here..."/>
+                    </div>
+                    <div class="col-lg-5 mt-3">
+                        <button type="submit" class="btn btn-primary">
+                            Submit
+                        </button>
+                    </div>
+                </form>
+            </center>
+        </t>
+    </template>
+</odoo>

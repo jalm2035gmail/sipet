@@ -35,21 +35,22 @@ def test_list_modules_payload_uses_manifest_fafa_when_icon_is_missing(monkeypatc
     assert payload[0]["icon"] == "fa-solid fa-building"
 
 
-def test_list_modules_payload_skips_legacy_modules(monkeypatch) -> None:
+def test_list_modules_payload_includes_modules_directory_entries(monkeypatch) -> None:
     legacy_module = module_registry.ModuleDefinition(
-        key="legacy_demo",
-        label="Legacy",
-        description="Legacy",
+        key="organizacion_demo",
+        label="Organizacion",
+        description="Organizacion",
         manifest_file="fastapi_modulo/modulos/legacy_demo/__manifest__.py",
         route="/legacy",
     )
 
     monkeypatch.setattr(module_registry, "MODULE_DEFINITIONS", [legacy_module])
     monkeypatch.setattr(module_registry, "_read_module_state_map", lambda: {})
+    monkeypatch.setattr(module_registry, "is_module_enabled", lambda key, tenant_key=None: True)
 
     payload = module_registry.list_modules_payload(tenant_key="default")
 
-    assert payload == []
+    assert [item["key"] for item in payload] == ["organizacion_demo"]
 
 
 def test_multitienda_module_is_registered() -> None:

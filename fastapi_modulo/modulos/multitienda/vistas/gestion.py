@@ -98,6 +98,21 @@ __BACKEND_SHARED_FORM_BASE_CSS__
       min-height: 1.2em;
     }
 
+    .store-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .store-table-note {
+      margin: 0 0 16px;
+      color: #6b7280;
+      font-size: 0.88rem;
+    }
+
     .admin-user-tools {
       margin-top: 8px;
       display: grid;
@@ -506,7 +521,7 @@ __BACKEND_SHARED_SIDEBAR_HTML__
 
     <div class="notebook">
       <div class="notebook-tabs" role="tablist">
-        <button class="notebook-tab active" role="tab" aria-selected="true"  aria-controls="tab-panel-1" id="tab-1" type="button">Crear nueva tienda</button>
+        <button class="notebook-tab active" role="tab" aria-selected="true"  aria-controls="tab-panel-1" id="tab-1" type="button">Tiendas</button>
         <button class="notebook-tab"        role="tab" aria-selected="false" aria-controls="tab-panel-2" id="tab-2" type="button">Acceso a AVAN</button>
         <button class="notebook-tab"        role="tab" aria-selected="false" aria-controls="tab-panel-3" id="tab-3" type="button">Publicidad</button>
         <button class="notebook-tab"        role="tab" aria-selected="false" aria-controls="tab-panel-4" id="tab-4" type="button">Institución financiera</button>
@@ -515,53 +530,90 @@ __BACKEND_SHARED_SIDEBAR_HTML__
       </div>
 
       <div class="notebook-panel" id="tab-panel-1" role="tabpanel" aria-labelledby="tab-1">
-        <section class="section">
-          <h2>Datos generales</h2>
-          <div class="section-grid">
-            <div>
-              <div class="field">
-                <label for="store-name">Nombre de la tienda</label>
-                <input class="field-input" id="store-name" type="text" placeholder="Ej. Tu Negocio" />
-              </div>
-              <div class="field">
-                <label for="store-type">Giro o tipo de negocio</label>
-                <select class="field-input field-select" id="store-type">
-                  <option value="">Selecciona un giro</option>
-                </select>
-                <div class="business-type-tools">
-                  <button class="business-type-btn" id="openBusinessTypePanelBtn" type="button">Agregar giro</button>
-                  <span class="business-type-description" id="storeTypeDescription"></span>
+        <div id="store-list-view">
+          <div class="store-toolbar">
+            <h2 style="margin:0;">Tiendas registradas</h2>
+            <button class="action-btn" id="store-new-btn" type="button">+ Nueva tienda</button>
+          </div>
+          <p class="store-table-note">Consulta todas las tiendas registradas y abre cualquiera para editarla.</p>
+          <table class="data-table" id="store-table">
+            <thead>
+              <tr>
+                <th>Tienda</th>
+                <th>Giro</th>
+                <th>Administrador</th>
+                <th>Membresía</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody id="store-tbody">
+              <tr id="store-empty-row" class="empty-row">
+                <td colspan="5" style="text-align:center;color:#9ca3af;padding:32px;">
+                  No hay tiendas registradas. Haz clic en <strong>+ Nueva tienda</strong> para agregar la primera.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div id="store-form-view" hidden>
+          <div class="panel-header-row">
+            <h2 id="store-form-title">Nueva tienda</h2>
+            <button class="action-btn action-btn--secondary" id="store-cancel-btn" type="button">← Volver a lista</button>
+          </div>
+          <section class="section">
+            <h2>Datos generales</h2>
+            <div class="section-grid">
+              <div>
+                <div class="field">
+                  <label for="store-name">Nombre de la tienda</label>
+                  <input class="field-input" id="store-name" type="text" placeholder="Ej. Tu Negocio" />
                 </div>
-                <div class="business-type-panel" id="businessTypePanel" hidden>
-                  <div class="business-type-grid">
-                    <input class="field-input" id="business-type-name" type="text" placeholder="Giro de negocio" />
-                    <input class="field-input" id="business-type-code" type="text" placeholder="Código" />
+                <div class="field">
+                  <label for="store-type">Giro o tipo de negocio</label>
+                  <select class="field-input field-select" id="store-type">
+                    <option value="">Selecciona un giro</option>
+                  </select>
+                  <div class="business-type-tools">
+                    <button class="business-type-btn" id="openBusinessTypePanelBtn" type="button">Agregar giro</button>
+                    <span class="business-type-description" id="storeTypeDescription"></span>
                   </div>
-                  <textarea class="business-type-textarea" id="business-type-description" placeholder="Descripción"></textarea>
-                  <div class="business-type-actions">
-                    <button class="business-type-btn" id="saveBusinessTypeBtn" type="button">Guardar giro</button>
-                    <button class="business-type-btn" id="cancelBusinessTypeBtn" type="button">Cancelar</button>
+                  <div class="business-type-panel" id="businessTypePanel" hidden>
+                    <div class="business-type-grid">
+                      <input class="field-input" id="business-type-name" type="text" placeholder="Giro de negocio" />
+                      <input class="field-input" id="business-type-code" type="text" placeholder="Código" />
+                    </div>
+                    <textarea class="business-type-textarea" id="business-type-description" placeholder="Descripción"></textarea>
+                    <div class="business-type-actions">
+                      <button class="business-type-btn" id="saveBusinessTypeBtn" type="button">Guardar giro</button>
+                      <button class="business-type-btn" id="cancelBusinessTypeBtn" type="button">Cancelar</button>
+                    </div>
+                    <p class="business-type-message" id="businessTypeMessage"></p>
                   </div>
-                  <p class="business-type-message" id="businessTypeMessage"></p>
                 </div>
-              </div>
-              <div class="field">
-                <label for="store-admin">Administrador de la tienda</label>
-                <select class="field-input field-select" id="store-admin">
-                  <option value="">Cargando usuarios...</option>
-                </select>
-                <div class="admin-user-tools">
-                  <p class="admin-user-note" id="storeAdminNote"></p>
-                  <button class="admin-user-btn" id="createAdminUserBtn" type="button" hidden>Crear nuevo vendedor</button>
+                <div class="field">
+                  <label for="store-admin">Administrador de la tienda</label>
+                  <select class="field-input field-select" id="store-admin">
+                    <option value="">Cargando usuarios...</option>
+                  </select>
+                  <div class="admin-user-tools">
+                    <p class="admin-user-note" id="storeAdminNote"></p>
+                    <button class="admin-user-btn" id="createAdminUserBtn" type="button" hidden>Crear administrador de tienda</button>
+                  </div>
                 </div>
-              </div>
-              <div class="field">
-                <label for="store-membership">Membresía</label>
-                <input class="field-input" id="store-membership" type="text" placeholder="Tipo de membresía" />
+                <div class="field">
+                  <label for="store-membership">Membresía</label>
+                  <select class="field-input field-select" id="store-membership">
+                    <option value="">Cargando membresías...</option>
+                  </select>
+                </div>
+                <div style="display:flex;gap:12px;margin-top:20px;">
+                  <button class="action-btn" id="store-save-btn" type="button">Guardar tienda</button>
+                </div>
               </div>
             </div>
-          </div>
-        </section>
+          </section>
+        </div>
       </div>
 
       <div class="notebook-panel" id="tab-panel-2" role="tabpanel" aria-labelledby="tab-2" hidden>
@@ -898,12 +950,245 @@ __BACKEND_SHARED_SIDEBAR_HTML__
     })();
 
     (function () {
-      const STORAGE_KEY = "store_business_types_catalog";
-      const defaults = [
-        { name: "Restaurante", code: "REST", description: "Negocios de alimentos y bebidas." },
-        { name: "Moda", code: "MODA", description: "Ropa, calzado y accesorios." },
-        { name: "Ferretería", code: "FERR", description: "Herramientas y materiales para construcción." }
-      ];
+      const STORAGE_KEY = "multitienda_stores";
+      const listView = document.getElementById("store-list-view");
+      const formView = document.getElementById("store-form-view");
+      const tbody = document.getElementById("store-tbody");
+      const emptyRow = document.getElementById("store-empty-row");
+      const newBtn = document.getElementById("store-new-btn");
+      const cancelBtn = document.getElementById("store-cancel-btn");
+      const saveBtn = document.getElementById("store-save-btn");
+      const formTitle = document.getElementById("store-form-title");
+      const nameInput = document.getElementById("store-name");
+      const typeSelect = document.getElementById("store-type");
+      const adminSelect = document.getElementById("store-admin");
+      const membershipInput = document.getElementById("store-membership");
+      const activeCheckbox = document.getElementById("store-is-active");
+      const featuredCheckbox = document.getElementById("store-is-featured");
+      const inventoryCheckbox = document.getElementById("store-inventory-enabled");
+      const validityInput = document.getElementById("store-validity");
+      const referralsInput = document.getElementById("store-referrals");
+      const appointmentsInput = document.getElementById("store-appointments");
+      const couponsInput = document.getElementById("store-coupons");
+      const whatsappInput = document.getElementById("store-whatsapp");
+      const maxInternalUsersInput = document.getElementById("max-internal-users");
+      const maxPortalUsersInput = document.getElementById("max-portal-users");
+      let stores = [];
+      let editIndex = -1;
+
+      async function loadStores() {
+        try {
+          const response = await fetch("/multitienda/api/stores", { headers: { "Accept": "application/json" } });
+          if (!response.ok) {
+            throw new Error("No se pudieron cargar las tiendas.");
+          }
+          const payload = await response.json();
+          stores = Array.isArray(payload && payload.data) ? payload.data : [];
+          saveStores();
+        } catch (error) {
+          try { stores = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); } catch (e) { stores = []; }
+        }
+      }
+
+      function saveStores() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(stores));
+      }
+
+      function escHtml(value) {
+        return String(value == null ? "" : value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      }
+
+      function adminLabel() {
+        if (!adminSelect) return "";
+        const option = adminSelect.options[adminSelect.selectedIndex];
+        return option ? String(option.textContent || "").replace(/\s+\(Administrador de tienda\)\s*$/, "") : "";
+      }
+
+      function giroLabel() {
+        if (!typeSelect) return "";
+        const option = typeSelect.options[typeSelect.selectedIndex];
+        return option ? String(option.textContent || "") : "";
+      }
+
+      function showList() {
+        if (listView) listView.hidden = false;
+        if (formView) formView.hidden = true;
+        editIndex = -1;
+      }
+
+      function showForm(index) {
+        editIndex = typeof index === "number" ? index : -1;
+        if (listView) listView.hidden = true;
+        if (formView) formView.hidden = false;
+        if (editIndex >= 0 && stores[editIndex]) {
+          const item = stores[editIndex];
+          if (formTitle) formTitle.textContent = "Editar tienda";
+          if (nameInput) nameInput.value = item.name || "";
+          if (typeSelect) typeSelect.value = item.typeCode || "";
+          if (adminSelect) adminSelect.value = item.adminId || "";
+          if (membershipInput) membershipInput.value = item.membership || "";
+          if (activeCheckbox) activeCheckbox.checked = item.isActive !== false;
+          if (featuredCheckbox) featuredCheckbox.checked = !!item.isFeatured;
+          if (inventoryCheckbox) inventoryCheckbox.checked = !!item.inventoryEnabled;
+          if (validityInput) validityInput.value = item.validity || "";
+          if (referralsInput) referralsInput.value = item.referrals || "";
+          if (appointmentsInput) appointmentsInput.value = item.appointments || "";
+          if (couponsInput) couponsInput.value = item.coupons || "";
+          if (whatsappInput) whatsappInput.value = item.whatsapp || "";
+          if (maxInternalUsersInput) maxInternalUsersInput.value = item.maxInternalUsers || "";
+          if (maxPortalUsersInput) maxPortalUsersInput.value = item.maxPortalUsers || "";
+        } else {
+          if (formTitle) formTitle.textContent = "Nueva tienda";
+          if (nameInput) nameInput.value = "";
+          if (typeSelect) typeSelect.value = "";
+          if (adminSelect) adminSelect.value = "";
+          if (membershipInput) membershipInput.value = "";
+          if (activeCheckbox) activeCheckbox.checked = true;
+          if (featuredCheckbox) featuredCheckbox.checked = true;
+          if (inventoryCheckbox) inventoryCheckbox.checked = false;
+          if (validityInput) validityInput.value = "";
+          if (referralsInput) referralsInput.value = "";
+          if (appointmentsInput) appointmentsInput.value = "";
+          if (couponsInput) couponsInput.value = "";
+          if (whatsappInput) whatsappInput.value = "";
+          if (maxInternalUsersInput) maxInternalUsersInput.value = "";
+          if (maxPortalUsersInput) maxPortalUsersInput.value = "";
+        }
+        if (typeSelect && typeof typeSelect.dispatchEvent === "function") {
+          typeSelect.dispatchEvent(new Event("change"));
+        }
+      }
+
+      function renderStores() {
+        if (!tbody || !emptyRow) return;
+        tbody.innerHTML = "";
+        if (!stores.length) {
+          tbody.appendChild(emptyRow);
+          return;
+        }
+        stores.forEach(function (item, index) {
+          const tr = document.createElement("tr");
+          tr.style.cursor = "pointer";
+          tr.innerHTML =
+            "<td>" + escHtml(item.name || "Sin nombre") + "</td>" +
+            "<td>" + escHtml(item.typeLabel || "—") + "</td>" +
+            "<td>" + escHtml(item.adminLabel || "—") + "</td>" +
+            "<td>" + escHtml(item.membership || "—") + "</td>" +
+            "<td>" + escHtml(item.isActive === false ? "Inactiva" : "Activa") + "</td>";
+          tr.setAttribute("data-store-index", String(index));
+          tbody.appendChild(tr);
+        });
+      }
+
+      window.multitiendaShowStoreForm = function (index) {
+        showForm(Number(index));
+      };
+
+      window.multitiendaShowStoreList = function () {
+        showList();
+        renderStores();
+      };
+
+      if (newBtn) newBtn.addEventListener("click", function () { showForm(-1); });
+      if (cancelBtn) cancelBtn.addEventListener("click", function () { showList(); renderStores(); });
+      async function persistStore() {
+          const payload = {
+            name: String(nameInput && nameInput.value || "").trim(),
+            typeCode: String(typeSelect && typeSelect.value || "").trim(),
+            typeLabel: giroLabel(),
+            adminId: String(adminSelect && adminSelect.value || "").trim(),
+            adminLabel: adminLabel(),
+            membership: String(membershipInput && membershipInput.value || "").trim(),
+            isActive: !!(activeCheckbox && activeCheckbox.checked),
+            isFeatured: !!(featuredCheckbox && featuredCheckbox.checked),
+            inventoryEnabled: !!(inventoryCheckbox && inventoryCheckbox.checked),
+            validity: String(validityInput && validityInput.value || "").trim(),
+            referrals: String(referralsInput && referralsInput.value || "").trim(),
+            appointments: String(appointmentsInput && appointmentsInput.value || "").trim(),
+            coupons: String(couponsInput && couponsInput.value || "").trim(),
+            whatsapp: String(whatsappInput && whatsappInput.value || "").trim(),
+            maxInternalUsers: String(maxInternalUsersInput && maxInternalUsersInput.value || "").trim(),
+            maxPortalUsers: String(maxPortalUsersInput && maxPortalUsersInput.value || "").trim(),
+          };
+          if (!payload.name) {
+            window.alert("Nombre de la tienda es obligatorio.");
+            return;
+          }
+          if (!payload.adminId) {
+            window.alert("Selecciona un administrador de tienda.");
+            return;
+          }
+          const response = await fetch("/multitienda/api/stores", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Accept": "application/json"
+            },
+            body: JSON.stringify({
+              store_name: payload.name,
+              store_type: payload.typeCode,
+              admin_user_id: payload.adminId,
+              membership: payload.membership,
+              is_active: payload.isActive,
+              is_featured: payload.isFeatured,
+              inventory_enabled: payload.inventoryEnabled,
+              validity: payload.validity,
+              referrals: payload.referrals,
+              appointments: payload.appointments,
+              coupons: payload.coupons,
+              whatsapp: payload.whatsapp,
+              max_internal_users: payload.maxInternalUsers,
+              max_portal_users: payload.maxPortalUsers,
+            })
+          });
+          const responsePayload = await response.json().catch(function () { return {}; });
+          if (!response.ok) {
+            throw new Error(responsePayload.detail || "No se pudo guardar la tienda.");
+          }
+          await loadStores();
+          renderStores();
+          showList();
+      }
+
+      if (saveBtn) {
+        saveBtn.addEventListener("click", async function () {
+          try {
+            await persistStore();
+          } catch (error) {
+            window.alert(error && error.message ? error.message : "No se pudo guardar la tienda.");
+          }
+        });
+      }
+
+      document.addEventListener("click", function (event) {
+        var newButton = event.target && event.target.closest && event.target.closest("#store-new-btn");
+        if (newButton) {
+          event.preventDefault();
+          showForm(-1);
+          return;
+        }
+        var cancelButton = event.target && event.target.closest && event.target.closest("#store-cancel-btn");
+        if (cancelButton) {
+          event.preventDefault();
+          showList();
+          renderStores();
+          return;
+        }
+        var row = event.target && event.target.closest && event.target.closest("#store-tbody tr[data-store-index]");
+        if (row) {
+          event.preventDefault();
+          showForm(Number(row.getAttribute("data-store-index")));
+        }
+      });
+
+      loadStores().then(function () {
+        renderStores();
+        showList();
+      });
+    })();
+
+    (function () {
+      const BUSINESS_TYPES_PATHS = ["/multitienda/api/business-types"];
       const select = document.getElementById("store-type");
       const description = document.getElementById("storeTypeDescription");
       const openPanelBtn = document.getElementById("openBusinessTypePanelBtn");
@@ -916,22 +1201,6 @@ __BACKEND_SHARED_SIDEBAR_HTML__
       const message = document.getElementById("businessTypeMessage");
       if (!select) {
         return;
-      }
-
-      function loadCatalog() {
-        try {
-          const raw = localStorage.getItem(STORAGE_KEY);
-          if (!raw) return defaults.slice();
-          const parsed = JSON.parse(raw);
-          if (!Array.isArray(parsed) || parsed.length === 0) return defaults.slice();
-          return parsed;
-        } catch (error) {
-          return defaults.slice();
-        }
-      }
-
-      function saveCatalog(catalog) {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(catalog));
       }
 
       function clearPanelMessage() {
@@ -974,9 +1243,46 @@ __BACKEND_SHARED_SIDEBAR_HTML__
         if (detailInput) detailInput.value = "";
       }
 
-      let catalog = loadCatalog();
-      renderOptions(catalog);
-      updateDescription();
+      let catalog = [];
+
+      async function fetchBusinessTypes(path, options) {
+        const response = await fetch(path, Object.assign({ headers: { "Accept": "application/json" } }, options || {}));
+        return response;
+      }
+
+      async function fetchBusinessTypesWithFallback(options) {
+        let lastError = null;
+        for (const path of BUSINESS_TYPES_PATHS) {
+          try {
+            const response = await fetchBusinessTypes(path, options);
+            if (response.ok) {
+              return { response: response, path: path };
+            }
+            lastError = new Error("HTTP " + response.status);
+          } catch (error) {
+            lastError = error;
+          }
+        }
+        throw lastError || new Error("No se pudo conectar con el catálogo de giros");
+      }
+
+      async function loadCatalog() {
+        try {
+          const result = await fetchBusinessTypesWithFallback();
+          const response = result.response;
+          const data = await response.json();
+          catalog = Array.isArray(data) ? data : [];
+          renderOptions(catalog);
+          updateDescription();
+        } catch (error) {
+          catalog = [];
+          renderOptions(catalog);
+          updateDescription();
+          if (message) {
+            message.textContent = "No se pudo cargar el catálogo de giros.";
+          }
+        }
+      }
 
       select.addEventListener("change", updateDescription);
 
@@ -988,7 +1294,7 @@ __BACKEND_SHARED_SIDEBAR_HTML__
       }
 
       if (saveBtn) {
-        saveBtn.addEventListener("click", function () {
+        saveBtn.addEventListener("click", async function () {
           const name = (nameInput && nameInput.value || "").trim();
           const code = (codeInput && codeInput.value || "").trim().toUpperCase();
           const detail = (detailInput && detailInput.value || "").trim();
@@ -998,26 +1304,38 @@ __BACKEND_SHARED_SIDEBAR_HTML__
             }
             return;
           }
-          const exists = catalog.some(function (item) {
-            return item.code.toUpperCase() === code || item.name.toLowerCase() === name.toLowerCase();
-          });
-          if (exists) {
-            if (message) {
-              message.textContent = "Ese giro o código ya existe.";
+          try {
+            const result = await fetchBusinessTypesWithFallback({
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+              },
+              body: JSON.stringify({ name: name, code: code, description: detail })
+            });
+            const response = result.response;
+            const payload = await response.json().catch(function () { return {}; });
+            if (!response.ok) {
+              throw new Error(payload.detail || "No se pudo guardar el giro.");
             }
-            return;
+            catalog = catalog.concat([payload]);
+            renderOptions(catalog, code);
+            updateDescription();
+            if (message) {
+              message.style.color = "#166534";
+              message.textContent = "Giro agregado correctamente.";
+            }
+            setTimeout(closePanel, 600);
+          } catch (error) {
+            if (message) {
+              message.style.color = "#b91c1c";
+              message.textContent = error && error.message ? error.message : "No se pudo guardar el giro.";
+            }
           }
-          catalog = catalog.concat([{ name: name, code: code, description: detail }]);
-          saveCatalog(catalog);
-          renderOptions(catalog, code);
-          updateDescription();
-          if (message) {
-            message.style.color = "#166534";
-            message.textContent = "Giro agregado correctamente.";
-          }
-          setTimeout(closePanel, 600);
         });
       }
+
+      loadCatalog();
     })();
 
     (function () {
@@ -1028,27 +1346,40 @@ __BACKEND_SHARED_SIDEBAR_HTML__
         return;
       }
 
+      function normalizeRole(value) {
+        return String(value || "")
+          .trim()
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .replace(/\s+/g, "_");
+      }
+
       async function loadUsers() {
         try {
-          const response = await fetch("__USERS_PATH__", { headers: { "Accept": "application/json" } });
+          const response = await fetch("/multitienda/api/store-admin-users", { headers: { "Accept": "application/json" } });
           if (!response.ok) {
             throw new Error("No se pudieron cargar usuarios");
           }
-          const users = await response.json();
+          const payload = await response.json();
+          const rawUsers = Array.isArray(payload) ? payload : (Array.isArray(payload && payload.data) ? payload.data : []);
+          const users = rawUsers.filter(function (user) {
+            return normalizeRole(user && user.rol) === "administrador_tienda";
+          });
           adminSelect.innerHTML = "";
 
           const placeholder = document.createElement("option");
           placeholder.value = "";
-          placeholder.textContent = "Selecciona un usuario";
+          placeholder.textContent = "Selecciona un administrador de tienda";
           adminSelect.appendChild(placeholder);
 
-          if (!Array.isArray(users) || users.length === 0) {
+          if (!users.length) {
             const emptyOption = document.createElement("option");
             emptyOption.value = "";
-            emptyOption.textContent = "Sin usuarios registrados";
+            emptyOption.textContent = "Sin administradores de tienda";
             adminSelect.appendChild(emptyOption);
             if (adminNote) {
-              adminNote.textContent = "No existen usuarios del sistema para asignar.";
+              adminNote.textContent = "Primero crea un usuario con rol Administrador de tienda en Usuarios.";
             }
             if (createUserBtn) {
               createUserBtn.hidden = false;
@@ -1059,12 +1390,12 @@ __BACKEND_SHARED_SIDEBAR_HTML__
           users.forEach(function (user) {
             const option = document.createElement("option");
             option.value = String(user.id || "");
-            option.textContent = (user.username || "Usuario") + " (" + (user.user_type || "sistema") + ")";
+            option.textContent = (user.usuario || user.username || "Usuario") + " (Administrador de tienda)";
             adminSelect.appendChild(option);
           });
 
           if (adminNote) {
-            adminNote.textContent = "El administrador debe ser un usuario del sistema.";
+            adminNote.textContent = "Solo se muestran usuarios con rol Administrador de tienda.";
           }
           if (createUserBtn) {
             createUserBtn.hidden = true;
@@ -1082,11 +1413,35 @@ __BACKEND_SHARED_SIDEBAR_HTML__
 
       if (createUserBtn) {
         createUserBtn.addEventListener("click", function () {
-          window.location.href = "__ADD_USER_PATH__";
+          window.location.href = "/empresa/usuarios";
         });
       }
 
       loadUsers();
+    })();
+
+    (function () {
+      const membershipSelect = document.getElementById("store-membership");
+      if (!membershipSelect) return;
+
+      fetch("/multitienda/api/memberships", { headers: { "Accept": "application/json" } })
+        .then(function (response) {
+          if (!response.ok) throw new Error("No se pudieron cargar las membresías");
+          return response.json();
+        })
+        .then(function (payload) {
+          const rows = Array.isArray(payload && payload.data) ? payload.data : [];
+          membershipSelect.innerHTML = '<option value="">Selecciona una membresía</option>';
+          rows.forEach(function (item) {
+            const option = document.createElement("option");
+            option.value = String(item.nombre || "");
+            option.textContent = String(item.nombre || item.tipo || "Membresía");
+            membershipSelect.appendChild(option);
+          });
+        })
+        .catch(function () {
+          membershipSelect.innerHTML = '<option value="">No disponible</option>';
+        });
     })();
 
   </script>
@@ -1094,16 +1449,40 @@ __BACKEND_SHARED_SIDEBAR_HTML__
   <script src="/static/js/backend-navbar.js"></script>
   <script>
     (function () {
-      var tabs   = document.querySelectorAll(".notebook-tab");
-      var panels = document.querySelectorAll(".notebook-panel");
-      tabs.forEach(function (tab, i) {
-        tab.addEventListener("click", function () {
-          tabs.forEach(function (t) { t.classList.remove("active"); t.setAttribute("aria-selected", "false"); });
-          panels.forEach(function (p) { p.hidden = true; });
+      document.querySelectorAll(".notebook").forEach(function (notebook) {
+        var tabs = notebook.querySelectorAll(".notebook-tab");
+        var panels = notebook.querySelectorAll(".notebook-panel");
+
+        function openTab(tab) {
+          var panelId = tab.getAttribute("aria-controls");
+          tabs.forEach(function (t) {
+            t.classList.remove("active");
+            t.setAttribute("aria-selected", "false");
+          });
+          panels.forEach(function (p) {
+            p.hidden = true;
+          });
           tab.classList.add("active");
           tab.setAttribute("aria-selected", "true");
-          panels[i].hidden = false;
+          if (panelId) {
+            var targetPanel = notebook.querySelector("#" + panelId);
+            if (targetPanel) {
+              targetPanel.hidden = false;
+            }
+          }
+        }
+
+        tabs.forEach(function (tab) {
+          tab.addEventListener("click", function (event) {
+            event.preventDefault();
+            openTab(tab);
+          });
         });
+
+        var activeTab = notebook.querySelector(".notebook-tab.active") || tabs[0];
+        if (activeTab) {
+          openTab(activeTab);
+        }
       });
     })();
 
@@ -1240,7 +1619,7 @@ __BACKEND_SHARED_SIDEBAR_HTML__
         if (editBtn) { showForm(Number(editBtn.dataset.edit)); }
         if (delBtn) {
           var i = Number(delBtn.dataset.del);
-          if (confirm("¿Eliminar la categoría \"" + categories[i].nombre + "\"?")) {
+          if (confirm('¿Eliminar la categoría "' + categories[i].nombre + '"?')) {
             categories.splice(i, 1);
             save();
             renderList();
@@ -1430,7 +1809,7 @@ __BACKEND_SHARED_SIDEBAR_HTML__
         if (editBtn) { showForm(Number(editBtn.dataset.attrEdit)); }
         if (delBtn) {
           var i = Number(delBtn.dataset.attrDel);
-          if (confirm("¿Eliminar el atributo \"" + attributes[i].nombre + "\" y todos sus valores?")) {
+          if (confirm('¿Eliminar el atributo "' + attributes[i].nombre + '" y todos sus valores?')) {
             attributes.splice(i, 1);
             save();
             renderList();

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <data>
+        <report
+            id="action_report_helpdesk_ticket"
+            model="helpdesk.ticket"
+            string="Helpdesk Ticket"
+            report_type="qweb-pdf"
+            name="avan_tickets.report_helpdesk_ticket"
+            file="avan_tickets.report_helpdesk_ticket"
+            print_report_name="(object.name or 'Ticket') + ' - Report'"
+        />
+        <template id="report_helpdesk_ticket">
+            <t t-call="web.html_container">
+                <t t-foreach="docs" t-as="ticket">
+                    <div class="page">
+                        <h2>Ticket: <span t-esc="ticket.name"/></h2>
+                        <p><strong>Subject:</strong> <span t-esc="ticket.subject"/></p>
+                        <p><strong>Description:</strong> <span t-esc="ticket.description"/></p>
+                        <p><strong>Stage:</strong> <span t-esc="ticket.stage_id.name"/></p>
+                        <p><strong>Assigned to:</strong> <span t-esc="ticket.user_id.name"/></p>
+                        <p><strong>Created:</strong> <span t-esc="ticket.create_date"/></p>
+                    </div>
+                </t>
+            </t>
+        </template>
+    </data>
+</odoo>

@@ -44,6 +44,12 @@ def _supports_package_management(item: dict[str, Any], target_root: str | None) 
     return bool(target_root) and bool(item.get("manageable", True))
 
 
+def _is_core_module_payload(item: dict[str, Any]) -> bool:
+    manifest_file = str(item.get("manifest_file") or "").strip()
+    module_dir = str(item.get("module_dir") or "").strip()
+    return "fastapi_modulo/modulos_sipet/" in manifest_file or "fastapi_modulo/modulos_sipet/" in module_dir
+
+
 def decorate_modules_payload(
     items: list[dict[str, Any]] | None = None,
     tenant_key: str | None = None,
@@ -73,11 +79,16 @@ def decorate_modules_payload(
         if (route or label) and fingerprint in seen_fingerprints:
             continue
         target_root = get_module_upload_root(key)
+        if _is_core_module_payload(item):
+            target_root = None
         if not _is_installed_module(item, target_root):
             continue
         state_row = persisted_state.get(key)
         if state_row is not None:
-            item["enabled"] = bool(state_row.enabled)
+            if item.get("always_enabled"):
+                item["enabled"] = True
+            else:
+                item["enabled"] = bool(state_row.enabled)
             if state_row.installed_version:
                 item["installed_version"] = state_row.installed_version
         module_icon = str(item.get("icon") or "").strip()

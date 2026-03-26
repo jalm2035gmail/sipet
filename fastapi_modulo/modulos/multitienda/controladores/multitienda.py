@@ -3,22 +3,37 @@ from __future__ import annotations
 from functools import lru_cache
 import re
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse
+from fastapi.responses import RedirectResponse
+from fastapi.responses import JSONResponse
+from sqlalchemy import text
 
+from fastapi_modulo.core import db as core_db
 from fastapi_modulo.modulos.multitienda.controladores.marketplace_backend import (
     build_marketplace_backend_app,
+    SessionLocal,
+    create_business_type,
+    list_business_types,
+    save_store_settings,
 )
+from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.vendors.models import VendorStore
+from fastapi_modulo.modulos.multitienda.servicios.access_roles import ensure_multitienda_access_roles
 from fastapi_modulo.modulos.multitienda.vistas.utils import _prefix_root_relative_urls
 from fastapi_modulo.modulos.multitienda.vistas.configuracion import configuracion_html
 from fastapi_modulo.modulos.multitienda.vistas.gestion import gestion_html
 from fastapi_modulo.modulos.multitienda.vistas.productos import productos_html
 from fastapi_modulo.modulos.multitienda.vistas.tienda import tienda_html
+from fastapi_modulo.modulos_sipet.aplicaciones.controladores.membresia import Membresia, _ensure_membresia_table, _seed_membresias
+from fastapi_modulo.modulos_sipet.web.modelos.core_models import Rol, Usuario
+from fastapi_modulo.modulos_sipet.web.servicios.access_service import normalize_role_name
+from fastapi_modulo.modulos_sipet.web.servicios.auth_service import decrypt_sensitive
 from fastapi_modulo.modulos_sipet.web.servicios.template_context_service import build_backend_context
 from fastapi_modulo.modulos_sipet.web.servicios.template_service import BACKEND_BASE_TEMPLATE, get_templates
 
 router = APIRouter()
 marketplace_app = build_marketplace_backend_app()
+ensure_multitienda_access_roles()
 
 _STYLE_RE = re.compile(r"<style>(.*?)</style>", re.IGNORECASE | re.DOTALL)
 _MAIN_RE = re.compile(r"<main\b[^>]*>(.*?)</main>", re.IGNORECASE | re.DOTALL)
@@ -220,6 +235,143 @@ def _render_official_shell(
     return get_templates(request).TemplateResponse(BACKEND_BASE_TEMPLATE, context)
 
 
+def _render_public_document(document_html: str) -> HTMLResponse:
+    return HTMLResponse(content=_prefix_root_relative_urls(document_html, "/multitienda"))
+
+
+def _db_session_for_request(request: Request):
+    return core_db.get_session_factory_for_host(core_db.get_request_host(request))()
+
+
+def _ensure_vendor_table() -> None:
+    db = SessionLocal()
+    try:
+        VendorStore.__table__.create(bind=db.bind, checkfirst=True)
+    finally:
+        db.close()
+
+
+@router.get("/multitienda/api/business-types", response_class=JSONResponse)
+def multitienda_business_types_proxy():
+    return list_business_types()
+
+
+@router.post("/multitienda/api/business-types", response_class=JSONResponse)
+async def multitienda_create_business_type_proxy(request: Request):
+    return await create_business_type(request)
+
+
+@router.get("/multitienda/api/store-admin-users", response_class=JSONResponse)
+def multitienda_store_admin_users(request: Request):
+    db = _db_session_for_request(request)
+    try:
+        roles_by_id = {role.id: normalize_role_name(role.nombre) for role in db.query(Rol).all()}
+        rows = []
+        for user in db.query(Usuario).order_by(Usuario.full_name.asc()).all():
+            role_name = roles_by_id.get(user.rol_id) or normalize_role_name(getattr(user, "role", "") or "usuario")
+            if role_name != "administrador_tienda":
+                continue
+            rows.append(
+                {
+                    "id": user.id,
+                    "usuario": (decrypt_sensitive(user.usuario) or "").strip(),
+                    "nombre": (user.full_name or "").strip(),
+                    "rol": role_name,
+                }
+            )
+        return {"success": True, "data": rows}
+    finally:
+        db.close()
+
+
+@router.get("/multitienda/api/memberships", response_class=JSONResponse)
+def multitienda_memberships():
+    _ensure_membresia_table()
+    db = SessionLocal()
+    try:
+        _seed_membresias(db)
+        memberships = db.query(Membresia).order_by(Membresia.id.asc()).all()
+        return {
+            "success": True,
+            "data": [
+                {
+                    "id": item.id,
+                    "nombre": item.nombre or "",
+                    "tipo": item.tipo or "",
+                    "descripcion": item.descripcion or "",
+                }
+                for item in memberships
+            ],
+        }
+    finally:
+        db.close()
+
+
+@router.get("/multitienda/api/stores", response_class=JSONResponse)
+def multitienda_list_stores():
+    _ensure_vendor_table()
+    db = SessionLocal()
+    try:
+        rows = db.execute(
+            text(
+                """
+                SELECT
+                    v.id,
+                    v.vendor_id,
+                    v.store_name,
+                    v.store_slug,
+                    v.store_theme,
+                    v.is_featured,
+                    v.is_active,
+                    u.full_name,
+                    u.username
+                FROM vendors v
+                LEFT JOIN users u ON u.id = v.vendor_id
+                ORDER BY lower(v.store_name) ASC, v.id ASC
+                """
+            )
+        ).mappings().all()
+        data = []
+        for row in rows:
+            theme = row["store_theme"] if isinstance(row["store_theme"], dict) else {}
+            data.append(
+                {
+                    "id": row["id"],
+                    "name": row["store_name"] or "",
+                    "slug": row["store_slug"] or "",
+                    "adminId": str(row["vendor_id"] or ""),
+                    "adminLabel": (row["full_name"] or row["username"] or "").strip(),
+                    "typeCode": str(theme.get("store_type") or ""),
+                    "typeLabel": str(theme.get("store_type") or ""),
+                    "membership": str(theme.get("membership") or ""),
+                    "isActive": bool(row["is_active"]),
+                    "isFeatured": bool(row["is_featured"]),
+                    "inventoryEnabled": bool(theme.get("inventory_enabled", False)),
+                    "validity": str(theme.get("validity") or ""),
+                    "referrals": str(theme.get("referrals") or ""),
+                    "appointments": str(theme.get("appointments") or ""),
+                    "coupons": str(theme.get("coupons") or ""),
+                    "whatsapp": str(theme.get("whatsapp") or ""),
+                    "maxInternalUsers": int(theme.get("max_internal_users") or 0),
+                    "maxPortalUsers": int(theme.get("max_portal_users") or 0),
+                }
+            )
+        return {"success": True, "data": data}
+    finally:
+        db.close()
+
+
+@router.post("/multitienda/api/stores", response_class=JSONResponse)
+async def multitienda_save_store(request: Request):
+    _ensure_vendor_table()
+    try:
+        return await save_store_settings(request)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"No se pudo guardar la tienda: {exc}") from exc
+
+
 @router.get("/multitienda", include_in_schema=False, response_class=HTMLResponse)
 def multitienda_entrypoint(request: Request):
     return _render_official_shell(request, "configuracion", configuracion_html())
@@ -240,6 +392,12 @@ def multitienda_config_entrypoint(request: Request):
     return _render_official_shell(request, "configuracion", configuracion_html())
 
 
+@router.get("/configuracion", include_in_schema=False)
+@router.get("/configuracion/", include_in_schema=False)
+def multitienda_config_legacy_redirect():
+    return RedirectResponse(url="/multitienda/configuracion", status_code=307)
+
+
 @router.get("/multitienda/productos", include_in_schema=False, response_class=HTMLResponse)
 def multitienda_productos_entrypoint(request: Request):
     return _render_official_shell(request, "productos", productos_html())
@@ -248,6 +406,26 @@ def multitienda_productos_entrypoint(request: Request):
 @router.get("/multitienda/tienda", include_in_schema=False, response_class=HTMLResponse)
 def multitienda_tienda_entrypoint(request: Request):
     return _render_official_shell(request, "tienda", tienda_html())
+
+
+@router.get("/multitienda/tiendas", include_in_schema=False, response_class=HTMLResponse)
+def multitienda_tiendas_entrypoint(request: Request):
+    return _render_official_shell(request, "tienda", tienda_html())
+
+
+@router.get("/tiendas", include_in_schema=False, response_class=HTMLResponse)
+def public_tiendas_entrypoint():
+    return _render_public_document(tienda_html())
+
+
+@router.get("/tiendas/", include_in_schema=False, response_class=HTMLResponse)
+def public_tiendas_entrypoint_slash():
+    return _render_public_document(tienda_html())
+
+
+@router.get("/multitienda/public/tiendas", include_in_schema=False, response_class=HTMLResponse)
+def public_multitienda_tiendas_entrypoint():
+    return _render_public_document(tienda_html())
 
 
 router.mount("/multitienda", marketplace_app)

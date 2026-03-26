@@ -1,0 +1,56 @@
+/* ── Tortas Module Styles ─────────────────────────────────────────────────── */
+
+:root {
+  --tortas-brown: #8B4513;
+  --tortas-brown-light: #A0522D;
+  --tortas-brown-pale: #f5ede6;
+}
+
+.tortas-container {
+  padding: 0.5rem 0;
+}
+
+/* Botón principal */
+.tortas-btn-primary {
+  background-color: var(--tortas-brown);
+  border-color: var(--tortas-brown);
+  color: #fff;
+}
+.tortas-btn-primary:hover,
+.tortas-btn-primary:focus {
+  background-color: var(--tortas-brown-light);
+  border-color: var(--tortas-brown-light);
+  color: #fff;
+}
+
+/* KPI cards */
+.tortas-kpi-card {
+  border-radius: 12px;
+  transition: transform 0.15s ease;
+}
+.tortas-kpi-card:hover {
+  transform: translateY(-2px);
+}
+
+/* Tabs */
+#tortasTabs .nav-link {
+  color: #555;
+  font-size: 0.88rem;
+}
+#tortasTabs .nav-link.active {
+  color: var(--tortas-brown);
+  border-bottom-color: var(--tortas-brown);
+  font-weight: 600;
+}
+
+/* Tabla */
+.tortas-container .table th {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #777;
+}
+.tortas-container .table td {
+  font-size: 0.88rem;
+  vertical-align: middle;
+}

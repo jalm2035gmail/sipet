@@ -96,7 +96,7 @@ def test_set_tenant_module_enabled_allows_enabling_always_enabled_manageable_mod
 
     def _list_modules_payload(tenant_key=None, include_legacy=False, **kwargs):
         if include_legacy:
-            return [{"key": "empresa", "label": "Empresa", "enabled": True}]
+            return [{"key": "empresa", "label": "Personalización", "enabled": True}]
         return []
 
     monkeypatch.setattr(app_repository, "list_modules_payload", _list_modules_payload)
@@ -120,3 +120,41 @@ def test_set_tenant_module_enabled_rejects_disabling_always_enabled_manageable_m
         assert "no se puede desactivar" in str(exc)
     else:
         raise AssertionError("Expected ValueError when disabling always_enabled module")
+
+
+def test_set_tenant_module_enabled_rejects_unsupported_module(monkeypatch) -> None:
+    monkeypatch.setattr(app_repository, "is_supported_module", lambda module: False)
+    monkeypatch.setitem(
+        app_repository.MODULES_BY_KEY,
+        "legacy_demo",
+        SimpleNamespace(key="legacy_demo", always_enabled=False, manageable=True),
+    )
+
+    try:
+        app_repository._set_tenant_module_enabled("legacy_demo", True, "default")
+    except ValueError as exc:
+        assert "legacy" in str(exc).lower()
+    else:
+        raise AssertionError("Expected ValueError when enabling unsupported module")
+
+
+def test_set_tenant_module_enabled_allows_multiempresa_importable_module(monkeypatch) -> None:
+    monkeypatch.setattr(app_repository, "_admin_session", lambda: _Session())
+    monkeypatch.setattr(app_repository, "is_supported_module", lambda module: True)
+    monkeypatch.setitem(
+        app_repository.MODULES_BY_KEY,
+        "multiempresa",
+        SimpleNamespace(key="multiempresa", always_enabled=False, manageable=True),
+    )
+
+    def _list_modules_payload(tenant_key=None, include_legacy=False, **kwargs):
+        if include_legacy:
+            return [{"key": "multiempresa", "label": "Multiempresa", "enabled": True}]
+        return []
+
+    monkeypatch.setattr(app_repository, "list_modules_payload", _list_modules_payload)
+
+    payload = app_repository._set_tenant_module_enabled("multiempresa", True, "default")
+
+    assert payload["key"] == "multiempresa"
+    assert payload["restart_required"] is False

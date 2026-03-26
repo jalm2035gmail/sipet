@@ -78,6 +78,8 @@ _FRONTEND_BUILDER_SCREEN = "frontend.builder"
 _RESERVED_SLUGS = {"", "descripcion", "funcionalidades", "login", "404", "passkey"}
 _ALLOWED_IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg"}
 _EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+_NAV_RE = re.compile(r"<nav\b[^>]*>.*?</nav>", re.IGNORECASE | re.DOTALL)
+_FOOTER_RE = re.compile(r"<footer\b[^>]*>.*?</footer>", re.IGNORECASE | re.DOTALL)
 
 # ══════════════════════════════════════════════════════════════════════════════
 # SECCIÓN 1 — PYDANTIC SCHEMAS
@@ -273,6 +275,26 @@ def _resolve_public_home_slug() -> str:
     return "inicio"
 
 
+def _extract_global_layout_segments(gjs_html: str) -> tuple[str, str, str]:
+    html = str(gjs_html or "")
+    nav_match = _NAV_RE.search(html)
+    footer_matches = list(_FOOTER_RE.finditer(html))
+    footer_match = footer_matches[-1] if footer_matches else None
+    global_nav = nav_match.group(0) if nav_match else ""
+    global_footer = footer_match.group(0) if footer_match else ""
+    body_html = html
+    if global_nav:
+        body_html = body_html.replace(global_nav, "", 1)
+    if global_footer:
+        body_html = body_html[:footer_match.start()] + body_html[footer_match.end():]
+    return body_html.strip(), global_nav.strip(), global_footer.strip()
+
+
+def _merge_global_layout(body_html: str, global_nav: str, global_footer: str) -> str:
+    clean_body, _, _ = _extract_global_layout_segments(body_html)
+    return f"{global_nav or ''}{clean_body or ''}{global_footer or ''}"
+
+
 def _is_public_frontend_page_path(path: str) -> bool:
     normalized = str(path or "").strip()
     if normalized in {"/web", "/web/"}:
@@ -438,7 +460,16 @@ _pages_router = APIRouter(prefix="/api/frontend", tags=["Pages"])
 @_pages_router.get("/pages")
 def api_pages_list(request: Request):
     require_screen_access(request, _FRONTEND_BUILDER_SCREEN, detail="Sin acceso al constructor frontend.")
-    return {"success": True, "data": store_list_pages()}
+    pages = store_list_pages()
+    brand = store_get_brand()
+    global_nav = brand.get("global_nav_html") or ""
+    global_footer = brand.get("global_footer_html") or ""
+    data = []
+    for page in pages:
+        item = dict(page)
+        item["gjs_html"] = _merge_global_layout(item.get("gjs_html") or "", global_nav, global_footer)
+        data.append(item)
+    return {"success": True, "data": data}
 
 
 @_pages_router.get("/pages/{page_id}")
@@ -447,6 +478,13 @@ def api_page_get(request: Request, page_id: str):
     page = store_get_page(page_id)
     if not page:
         return JSONResponse({"success": False, "error": "No encontrado"}, status_code=404)
+    brand = store_get_brand()
+    page = dict(page)
+    page["gjs_html"] = _merge_global_layout(
+        page.get("gjs_html") or "",
+        brand.get("global_nav_html") or "",
+        brand.get("global_footer_html") or "",
+    )
     return {"success": True, "data": page}
 
 
@@ -483,21 +521,44 @@ async def api_pages_save(request: Request, payload: PagePayload):
             status_code=400,
         )
 
+    body_html, global_nav, global_footer = _extract_global_layout_segments(payload.gjs_html)
+    if global_nav or global_footer:
+        store_save_brand({
+            "global_nav_html": global_nav,
+            "global_footer_html": global_footer,
+        })
+
     page = {
         "id":       pid,
         "title":    payload.title,
         "slug":     slug,
         "status":   payload.status,
         "is_home":  payload.is_home,
-        "gjs_html": payload.gjs_html,
+        "gjs_html": body_html,
         "gjs_css":  payload.gjs_css,
         "blocks":   payload.blocks,
         "meta":     payload.meta,
     }
 
     saved = store_upsert_page(page)
+    page_response = dict(saved["page"])
+    brand_layout = store_get_brand()
+    pages_response = []
+    for item in saved["pages"]:
+        page_item = dict(item)
+        page_item["gjs_html"] = _merge_global_layout(
+            page_item.get("gjs_html") or "",
+            brand_layout.get("global_nav_html") or "",
+            brand_layout.get("global_footer_html") or "",
+        )
+        pages_response.append(page_item)
+    page_response["gjs_html"] = _merge_global_layout(
+        page_response.get("gjs_html") or "",
+        brand_layout.get("global_nav_html") or "",
+        brand_layout.get("global_footer_html") or "",
+    )
     _cache_delete(slug, f"backend:{slug}")
-    return {"success": True, "data": saved["pages"], "page": saved["page"]}
+    return {"success": True, "data": pages_response, "page": page_response}
 
 
 @_pages_router.post("/pages/{page_id}/publish")

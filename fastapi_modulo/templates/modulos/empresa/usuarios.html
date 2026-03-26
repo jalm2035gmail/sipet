@@ -316,11 +316,53 @@
           <input type="checkbox" name="totp_enabled" class="checkbox">
           <span class="label-text font-semibold">Habilitar doble autenticación</span>
         </label>
+        <div id="usuarios-totp-panel" class="md:col-span-2 xl:col-span-3 hidden rounded-box border border-MAIN-300 bg-MAIN-100 px-4 py-4">
+          <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div class="grid gap-1">
+              <div class="font-semibold text-MAIN-content">Autenticador TOTP</div>
+              <p id="usuarios-totp-help" class="text-sm text-MAIN-content/70">Guarda primero el usuario para generar el QR del autenticador.</p>
+            </div>
+            <button type="button" id="usuarios-totp-setup-btn" class="btn btn-outline btn-primary">Generar QR</button>
+          </div>
+        </div>
         <div class="md:col-span-2 xl:col-span-3 flex items-end">
           <button type="submit" class="btn btn-primary" id="usuarios-create-submit">Dar de alta</button>
         </div>
       </form>
       <div class="pt-2 grid gap-4" id="usuarios-create-notebook-host"></div>
+      <dialog id="usuarios-totp-modal" class="modal">
+        <div class="modal-box max-w-2xl">
+          <form method="dialog">
+            <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
+          </form>
+          <div class="grid gap-5 md:grid-cols-[220px_1fr] md:items-start">
+            <div class="rounded-box border border-MAIN-300 bg-white p-4">
+              <img id="usuarios-totp-qr-image" alt="QR de autenticador" class="mx-auto h-auto w-full max-w-[188px]" />
+            </div>
+            <div class="grid gap-3">
+              <div>
+                <h3 class="text-lg font-semibold text-MAIN-content">Configurar doble autenticación</h3>
+                <p class="text-sm text-MAIN-content/70">Escanea el QR con Google Authenticator, Microsoft Authenticator o similar.</p>
+              </div>
+              <div class="grid gap-2 text-sm">
+                <div><span class="font-semibold">Usuario:</span> <span id="usuarios-totp-qr-username"></span></div>
+                <div><span class="font-semibold">Emisor:</span> <span id="usuarios-totp-qr-issuer"></span></div>
+              </div>
+              <label class="form-control">
+                <div class="label"><span class="label-text font-semibold">Clave manual</span></div>
+                <input id="usuarios-totp-secret" type="text" readonly class="input input-bordered font-mono text-sm" />
+              </label>
+              <label class="form-control">
+                <div class="label"><span class="label-text font-semibold">URL otpauth</span></div>
+                <textarea id="usuarios-totp-url" readonly class="textarea textarea-bordered min-h-[112px] font-mono text-xs"></textarea>
+              </label>
+            </div>
+          </div>
+        </div>
+        <form method="dialog" class="modal-backdrop">
+          <button>Cerrar</button>
+        </form>
+      </dialog>
     </div>
   </template>
 
@@ -448,6 +490,16 @@
   var createDescription = null;
   var createRolSelect = null;
   var createNivelAccesoSelect = null;
+  var createTotpCheckbox = null;
+  var createTotpPanel = null;
+  var createTotpHelp = null;
+  var createTotpSetupBtn = null;
+  var createTotpModal = null;
+  var createTotpQrImage = null;
+  var createTotpSecret = null;
+  var createTotpUrl = null;
+  var createTotpUsername = null;
+  var createTotpIssuer = null;
   if (!viewHost) return;
 
   var usuarios = [];
@@ -484,6 +536,16 @@
     createDescription = document.getElementById('usuarios-create-description');
     createRolSelect = document.getElementById('usuarios-create-rol');
     createNivelAccesoSelect = document.getElementById('usuarios-create-nivel-acceso');
+    createTotpCheckbox = createForm ? createForm.querySelector('input[name="totp_enabled"]') : null;
+    createTotpPanel = document.getElementById('usuarios-totp-panel');
+    createTotpHelp = document.getElementById('usuarios-totp-help');
+    createTotpSetupBtn = document.getElementById('usuarios-totp-setup-btn');
+    createTotpModal = document.getElementById('usuarios-totp-modal');
+    createTotpQrImage = document.getElementById('usuarios-totp-qr-image');
+    createTotpSecret = document.getElementById('usuarios-totp-secret');
+    createTotpUrl = document.getElementById('usuarios-totp-url');
+    createTotpUsername = document.getElementById('usuarios-totp-qr-username');
+    createTotpIssuer = document.getElementById('usuarios-totp-qr-issuer');
   }
 
   function setActiveViewButton(view) {
@@ -682,9 +744,11 @@
   function roleLabel(role) {
     return role === 'superadministrador' ? 'Superadministrador'
       : role === 'administrador' ? 'Administrador'
+      : role === 'administrador_tienda' ? 'Administrador de tienda'
       : role === 'autoridades' ? 'Autoridades'
       : role === 'departamento' ? 'Departamento'
       : role === 'administrador_multiempresa' ? 'Administrador multiempresa'
+      : role === 'vendedor_tienda' ? 'Vendedor de tienda'
       : 'Usuario';
   }
 
@@ -1253,6 +1317,70 @@
     return usuarios.find(function (item) { return getKey(item) === selectedKey; }) || null;
   }
 
+  function renderTotpControls(current) {
+    if (!createTotpPanel || !createTotpCheckbox || !createTotpSetupBtn || !createTotpHelp) return;
+    var enabled = Boolean(createTotpCheckbox.checked);
+    createTotpPanel.classList.toggle('hidden', !enabled);
+    if (!enabled) return;
+    var hasPersistedUser = Boolean(current && current.id);
+    var hasConfiguredSecret = Boolean(current && current.totp_secret_configured);
+    createTotpSetupBtn.disabled = !hasPersistedUser;
+    createTotpSetupBtn.textContent = hasConfiguredSecret ? 'Ver QR' : 'Generar QR';
+    createTotpHelp.textContent = hasPersistedUser
+      ? 'Genera o consulta el QR para vincular este usuario con tu autenticador.'
+      : 'Guarda primero el usuario para generar el QR del autenticador.';
+  }
+
+  function showTotpSetupModal(data) {
+    if (!createTotpModal || !data) return;
+    if (createTotpQrImage) {
+      createTotpQrImage.src = String(data.qr_data_url || '');
+      createTotpQrImage.classList.toggle('hidden', !String(data.qr_data_url || '').trim());
+    }
+    if (createTotpSecret) createTotpSecret.value = String(data.secret || '');
+    if (createTotpUrl) createTotpUrl.value = String(data.otpauth_url || '');
+    if (createTotpUsername) createTotpUsername.textContent = String(data.username || '');
+    if (createTotpIssuer) createTotpIssuer.textContent = String(data.issuer || '');
+    if (typeof createTotpModal.showModal === 'function') {
+      createTotpModal.showModal();
+    }
+  }
+
+  function requestTotpSetup(userId) {
+    if (!userId) {
+      window.alert('Guarda primero el usuario para generar el QR.');
+      return Promise.resolve(null);
+    }
+    if (createTotpSetupBtn) {
+      createTotpSetupBtn.disabled = true;
+      createTotpSetupBtn.textContent = 'Generando...';
+    }
+    return fetch('/api/colaboradores/' + encodeURIComponent(String(userId)) + '/totp/setup', {
+      method: 'POST',
+      headers: { Accept: 'application/json' },
+      credentials: 'same-origin'
+    })
+      .then(async function (res) {
+        var raw = await res.text();
+        var json = null;
+        try { json = raw ? JSON.parse(raw) : {}; } catch (err) {}
+        return { ok: res.ok, json: json };
+      })
+      .then(function (result) {
+        if (!result.ok || !result.json || result.json.success === false) {
+          throw new Error((result.json && (result.json.error || result.json.detail)) || 'No se pudo generar el QR');
+        }
+        var current = getCurrent();
+        if (current) current.totp_secret_configured = true;
+        renderTotpControls(current);
+        showTotpSetupModal(result.json.data || {});
+        return result.json.data || null;
+      })
+      .finally(function () {
+        renderTotpControls(getCurrent());
+      });
+  }
+
   function getVisibleUsuarios() {
     return usuarios.filter(matchesSearch);
   }
@@ -1518,6 +1646,7 @@
     }
     renderCreateNotebook();
     populateRolSelect();
+    renderTotpControls(current);
     if (createSubmitBtn) {
       createSubmitBtn.textContent = current ? 'Guardar cambios' : 'Dar de alta';
     }
@@ -1958,6 +2087,20 @@
   function bindCreateForm() {
     if (!createForm || createForm.getAttribute('data-bound') === '1') return;
     createForm.setAttribute('data-bound', '1');
+    if (createTotpCheckbox) {
+      createTotpCheckbox.addEventListener('change', function () {
+        renderTotpControls(getCurrent());
+      });
+    }
+    if (createTotpSetupBtn) {
+      createTotpSetupBtn.addEventListener('click', function () {
+        var current = getCurrent();
+        requestTotpSetup(current && current.id)
+          .catch(function (error) {
+            window.alert(error && error.message ? error.message : 'No se pudo generar el QR');
+          });
+      });
+    }
     createForm.addEventListener('submit', function (event) {
       event.preventDefault();
       if (!createSubmitBtn) return;
@@ -2025,6 +2168,9 @@
             upsertUsuario(result.json.data);
             selectedKey = getKey(result.json.data);
             renderCurrentView();
+            if (result.json.data.totp_enabled && result.json.data.id) {
+              requestTotpSetup(result.json.data.id).catch(function () {});
+            }
           }
           if (!current) {
             createForm.reset();

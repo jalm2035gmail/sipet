@@ -2,7 +2,7 @@ from typing import Any
 
 from fastapi_modulo.core import db as core_db
 from fastapi_modulo.core.db import TenantInstalledApp, ensure_tenant_admin_schema
-from fastapi_modulo.core.module_registry import MODULES_BY_KEY, list_modules_payload, set_module_enabled
+from fastapi_modulo.core.module_registry import MODULES_BY_KEY, is_supported_module, list_modules_payload, set_module_enabled
 
 GLOBAL_ROUTER_TENANT_MODULES = {
     "multitienda",
@@ -28,6 +28,8 @@ def _set_tenant_module_enabled(module_key: str, enabled: bool, tenant_key: str) 
     module = MODULES_BY_KEY.get(str(module_key or "").strip())
     if not module:
         raise KeyError("Módulo no encontrado.")
+    if not is_supported_module(module):
+        raise ValueError("Este módulo legacy está deshabilitado hasta ser migrado a modulos_sipet.")
     if not module.manageable:
         raise ValueError("Este módulo no se puede desactivar.")
     if module.always_enabled and not enabled:

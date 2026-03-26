@@ -1,0 +1,40 @@
+/*
+ * Reservaciones Module – SIPET
+ * Primary styles live inline in reservaciones.html.
+ * This file provides supplemental overrides and print rules.
+ */
+
+:root {
+  --res-primary: #1a6b3c;
+  --res-primary-dark: #14532d;
+  --res-primary-light: #d1fae5;
+}
+
+/* Shared button variant */
+.btn-res-primary {
+  background-color: var(--res-primary);
+  border-color: var(--res-primary);
+  color: #fff;
+}
+.btn-res-primary:hover,
+.btn-res-primary:focus {
+  background-color: var(--res-primary-dark);
+  border-color: var(--res-primary-dark);
+  color: #fff;
+}
+
+/* Scrollable table on small screens */
+.res-table-responsive {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Print: hide action buttons */
+@media print {
+  .res-container .btn,
+  .res-container .dropdown,
+  #res-state-filters,
+  #res-search-input {
+    display: none !important;
+  }
+}

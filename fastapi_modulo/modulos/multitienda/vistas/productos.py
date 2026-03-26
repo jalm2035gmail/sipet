@@ -787,6 +787,13 @@ __BACKEND_SHARED_SIDEBAR_HTML__
           <div class="pf-nb-panel" id="pf-panel-3" role="tabpanel" aria-labelledby="pf-tab-3" hidden>
 
             <div class="pf-ig-row">
+              <label class="pf-ig-label" for="pf-nuevo">Nuevo</label>
+              <div class="pf-ig-val" style="padding-top:7px;">
+                <input type="checkbox" id="pf-nuevo" class="cb-input" />
+              </div>
+            </div>
+
+            <div class="pf-ig-row">
               <label class="pf-ig-label" for="pf-desc-corta">Descripción corta</label>
               <div class="pf-ig-val">
                 <input class="pf-input" id="pf-desc-corta" type="text" placeholder="" />
@@ -1175,6 +1182,7 @@ __BACKEND_SHARED_SIDEBAR_HTML__
     renderMedia();
 
     /* características */
+    document.getElementById("pf-nuevo").checked     = !!p.nuevo;
     document.getElementById("pf-desc-corta").value = p.descCorta || "";
     document.getElementById("pf-desc-larga").value = p.descLarga || "";
 
@@ -1255,6 +1263,7 @@ __BACKEND_SHARED_SIDEBAR_HTML__
       descEcom:            document.getElementById("pf-desc-ecom").value.trim(),
       mediaFiles:          mediaFiles.slice(),
       /* características */
+      nuevo:               document.getElementById("pf-nuevo").checked,
       descCorta:           document.getElementById("pf-desc-corta").value.trim(),
       descLarga:           document.getElementById("pf-desc-larga").value.trim(),
       /* detalles del artículo */
