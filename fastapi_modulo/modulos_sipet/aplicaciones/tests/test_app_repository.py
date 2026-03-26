@@ -84,3 +84,39 @@ def test_set_tenant_module_enabled_promotes_intelicoop_to_global_router(monkeypa
     assert payload["key"] == "intelicoop"
     assert payload["restart_required"] is True
     assert promoted == [("intelicoop", True)]
+
+
+def test_set_tenant_module_enabled_allows_enabling_always_enabled_manageable_module(monkeypatch) -> None:
+    monkeypatch.setattr(app_repository, "_admin_session", lambda: _Session())
+    monkeypatch.setitem(
+        app_repository.MODULES_BY_KEY,
+        "empresa",
+        SimpleNamespace(key="empresa", always_enabled=True, manageable=True),
+    )
+
+    def _list_modules_payload(tenant_key=None, include_legacy=False, **kwargs):
+        if include_legacy:
+            return [{"key": "empresa", "label": "Empresa", "enabled": True}]
+        return []
+
+    monkeypatch.setattr(app_repository, "list_modules_payload", _list_modules_payload)
+
+    payload = app_repository._set_tenant_module_enabled("empresa", True, "default")
+
+    assert payload["key"] == "empresa"
+    assert payload["restart_required"] is False
+
+
+def test_set_tenant_module_enabled_rejects_disabling_always_enabled_manageable_module(monkeypatch) -> None:
+    monkeypatch.setitem(
+        app_repository.MODULES_BY_KEY,
+        "empresa",
+        SimpleNamespace(key="empresa", always_enabled=True, manageable=True),
+    )
+
+    try:
+        app_repository._set_tenant_module_enabled("empresa", False, "default")
+    except ValueError as exc:
+        assert "no se puede desactivar" in str(exc)
+    else:
+        raise AssertionError("Expected ValueError when disabling always_enabled module")

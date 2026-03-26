@@ -28,7 +28,9 @@ def _set_tenant_module_enabled(module_key: str, enabled: bool, tenant_key: str) 
     module = MODULES_BY_KEY.get(str(module_key or "").strip())
     if not module:
         raise KeyError("Módulo no encontrado.")
-    if module.always_enabled or not module.manageable:
+    if not module.manageable:
+        raise ValueError("Este módulo no se puede desactivar.")
+    if module.always_enabled and not enabled:
         raise ValueError("Este módulo no se puede desactivar.")
     normalized_tenant_key = str(tenant_key or "").strip()
     if not normalized_tenant_key:
