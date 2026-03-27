@@ -297,6 +297,7 @@
         : (item.icon ? '<i class="' + esc(item.icon) + ' text-3xl"></i>' : '<span class="text-2xl font-black">' + initials + '</span>');
       var selectedClass = selected.has(item.key) ? ' is-selected' : '';
       var actionLabel = item.enabled ? 'Activo' : 'Activar';
+      var uploadLabel = item.enabled ? 'Actualizar módulo' : 'Importar módulo';
       var actionClass = item.enabled ? ' btn-primary is-enabled' : ' btn-primary';
       var actionState = item.enabled ? ' data-state="enabled"' : '';
       return '' +
@@ -308,7 +309,7 @@
               '</button>' +
               '<ul tabindex="0" class="menu dropdown-content z-[20] mt-2 w-60 rounded-box border border-base-300 bg-base-100 p-2 shadow-lg">' +
                 '<li><button type="button" data-show-audit="' + esc(item.key) + '"><i class="fa-regular fa-circle-info"></i>Información del módulo</button></li>' +
-                (item.package_upload_enabled ? '<li><button type="button" data-open-upload="' + esc(item.key) + '"><i class="fa-solid fa-file-import"></i>Importar módulo</button></li>' : '') +
+                (item.package_upload_enabled ? '<li><button type="button" data-open-upload="' + esc(item.key) + '"><i class="fa-solid fa-file-import"></i>' + uploadLabel + '</button></li>' : '') +
                 (item.package_upload_enabled ? '<li><button type="button" class="text-error" data-uninstall-module="' + esc(item.key) + '"><i class="fa-solid fa-trash-can"></i>Desinstalar módulo</button></li>' : '') +
                 '<li><button type="button" data-select-card-module="' + esc(item.key) + '"><i class="fa-regular fa-square-check"></i>' + (selected.has(item.key) ? 'Quitar de lote' : 'Agregar a lote') + '</button></li>' +
               '</ul>' +
