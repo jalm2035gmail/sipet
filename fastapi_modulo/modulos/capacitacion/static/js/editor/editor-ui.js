@@ -14,9 +14,28 @@
 
   function bindToolbar() {
     function setActiveRail(buttonId) {
+      var activeBtn = document.querySelector('.ped-rail-btn.is-active');
+      var isSameButton = activeBtn && activeBtn.id === buttonId;
+      if (isSameButton && !sidepanelCollapsed) {
+        Array.prototype.slice.call(document.querySelectorAll('.ped-rail-btn')).forEach(function (btn) {
+          btn.classList.remove('is-active');
+        });
+        setTextPanelVisible(false);
+        setResourcePanelVisible(false);
+        setInteractivePanelVisible(false);
+        setQuestionsPanelVisible(false);
+        setWidgetsPanelVisible(false);
+        setInsertPanelVisible(false);
+        setStylePanelVisible(false);
+        setBackgroundPanelVisible(false);
+        setPagesPanelVisible(false);
+        setSidepanelCollapsed(true);
+        return;
+      }
       Array.prototype.slice.call(document.querySelectorAll('.ped-rail-btn')).forEach(function (btn) {
         btn.classList.toggle('is-active', btn.id === buttonId);
       });
+      setSidepanelCollapsed(false);
       setTextPanelVisible(buttonId === 'ped-btn-add-texto');
       setResourcePanelVisible(buttonId === 'ped-btn-add-imagen');
       setInteractivePanelVisible(buttonId === 'ped-btn-add-hotspot');
@@ -261,6 +280,20 @@
         }
       });
     }
+
+    Array.prototype.slice.call(document.querySelectorAll('.ped-rail-btn')).forEach(function (btn) {
+      btn.classList.remove('is-active');
+    });
+    setTextPanelVisible(false);
+    setResourcePanelVisible(false);
+    setInteractivePanelVisible(false);
+    setQuestionsPanelVisible(false);
+    setWidgetsPanelVisible(false);
+    setInsertPanelVisible(false);
+    setStylePanelVisible(false);
+    setBackgroundPanelVisible(false);
+    setPagesPanelVisible(false);
+    setSidepanelCollapsed(true);
   }
 
   function bindAutosave() {

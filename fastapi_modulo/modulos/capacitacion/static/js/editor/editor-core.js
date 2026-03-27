@@ -118,7 +118,7 @@ var slideSettingsPanel = el('ped-slide-settings');
 var panelTabs = el('ped-panel-tabs');
 var propsPanel = el('ped-props');
 var stageWrap = root ? root.querySelector('.ped-stage-wrap') : null;
-var sidepanelCollapsed = false;
+var sidepanelCollapsed = true;
 
 function auditActionLabel(action) {
   var labels = {
@@ -205,10 +205,13 @@ function setSidepanelCollapsed(collapsed) {
   function setSidepanelMode(mode) {
     var isBackground = mode === 'background';
     var isPages = mode === 'pages';
+    var isStyle = mode === 'style';
+    var showSlideSettings = !isBackground && !isPages && !isStyle;
+    var showPropsPanel = !isBackground && !isPages;
     if (sidepanelHead) sidepanelHead.style.display = isBackground ? 'none' : '';
-    if (slideSettingsPanel) slideSettingsPanel.style.display = (isBackground || isPages) ? 'none' : '';
-    if (panelTabs) panelTabs.style.display = (isBackground || isPages) ? 'none' : '';
-    if (propsPanel) propsPanel.style.display = (isBackground || isPages) ? 'none' : '';
+    if (slideSettingsPanel) slideSettingsPanel.style.display = showSlideSettings ? '' : 'none';
+    if (panelTabs) panelTabs.style.display = showPropsPanel ? '' : 'none';
+    if (propsPanel) propsPanel.style.display = showPropsPanel ? '' : 'none';
     if (!isBackground) setDefaultSidepanelCopy();
     refreshEditorCanvas();
   }
@@ -223,13 +226,24 @@ function setSidepanelCollapsed(collapsed) {
         var canvas = editor.Canvas;
         var frameWrap = canvas && canvas.getFrame ? canvas.getFrame() : null;
         var frameEl = canvas && canvas.getFrameEl ? canvas.getFrameEl() : null;
+        var canvasHost = el('ped-canvas');
+        if (canvasHost) {
+          canvasHost.style.width = viewport.widthPx;
+          canvasHost.style.minWidth = viewport.widthPx;
+          canvasHost.style.height = viewport.heightPx;
+          canvasHost.style.minHeight = viewport.heightPx;
+        }
         if (frameWrap && frameWrap.view && frameWrap.view.el) {
           frameWrap.view.el.style.width = viewport.widthPx;
           frameWrap.view.el.style.height = viewport.heightPx;
+          frameWrap.view.el.style.minWidth = viewport.widthPx;
+          frameWrap.view.el.style.minHeight = viewport.heightPx;
         }
         if (frameEl) {
           frameEl.style.width = viewport.widthPx;
           frameEl.style.height = viewport.heightPx;
+          frameEl.style.minWidth = viewport.widthPx;
+          frameEl.style.minHeight = viewport.heightPx;
         }
         if (canvas && canvas.getBody) {
           var body = canvas.getBody();
@@ -255,8 +269,8 @@ function setSidepanelCollapsed(collapsed) {
       var viewport = getCanvasViewport();
       var stage = root.querySelector('.ped-stage');
       var rect = (stage || stageWrap).getBoundingClientRect();
-      var availableWidth = Math.max(320, rect.width - 80);
-      var availableHeight = Math.max(180, rect.height - 80);
+      var availableWidth = Math.max(320, rect.width - 96);
+      var availableHeight = Math.max(180, rect.height - 96);
       var scale = Math.min(availableWidth / viewport.width, availableHeight / viewport.height);
       scale = clamp(scale, 0.25, 1);
 
@@ -267,6 +281,12 @@ function setSidepanelCollapsed(collapsed) {
       var frameWrap = editor.Canvas.getFrame && editor.Canvas.getFrame();
       if (frameWrap && frameWrap.view && frameWrap.view.el) {
         frameWrap.view.el.style.margin = '0 auto';
+      }
+      if (stage) {
+        stage.style.overflow = scale < 0.999 ? 'auto' : 'hidden';
+      }
+      if (stageWrap) {
+        stageWrap.style.overflow = scale < 0.999 ? 'auto' : 'hidden';
       }
     } catch (error) {}
   }

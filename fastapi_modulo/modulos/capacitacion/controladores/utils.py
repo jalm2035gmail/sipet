@@ -75,8 +75,20 @@ def render_module_page(
 
 
 def render_editor_page(*, pres_id: int, request: Request, menu_key: str | None = None) -> HTMLResponse:
-    sidebar_scroll_css = """
+    editor_shell_css = """
     <style>
+        .main-content {
+            padding: 0 !important;
+            width: 100vw !important;
+            min-height: 100vh !important;
+            overflow: hidden !important;
+            background: #ece8e1 !important;
+        }
+        .content-shell {
+            width: 100% !important;
+            max-width: none !important;
+            margin: 0 !important;
+        }
         .ui-sidebar-left, .ui-sidebar-nav {
             overflow-y: auto !important;
             max-height: calc(100vh - 60px) !important;
@@ -89,15 +101,17 @@ def render_editor_page(*, pres_id: int, request: Request, menu_key: str | None =
             background-color: rgba(255, 255, 255, 0.2);
             border-radius: 4px;
         }
+        #ped-root {
+            min-height: 100vh;
+        }
     </style>
     """
     html_content = load_module_page("capacitacion_editor.html", replacements={"__PRES_ID__": str(pres_id)})
-    menu_html = build_menu_html(menu_key)
     return render_backend_page_safe(
         request,
         title="Editor de Presentación",
         description="Capacitación y formación para colaboradores",
-        content=menu_html + sidebar_scroll_css + html_content,
+        content=editor_shell_css + html_content,
         hide_floating_actions=True,
         show_page_header=False,
         section_label="Capacitación",

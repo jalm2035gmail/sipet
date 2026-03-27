@@ -4,10 +4,8 @@ from fastapi_modulo.core import db as core_db
 from fastapi_modulo.core.db import TenantInstalledApp, ensure_tenant_admin_schema
 from fastapi_modulo.core.module_registry import MODULES_BY_KEY, is_supported_module, list_modules_payload, set_module_enabled
 
-GLOBAL_ROUTER_TENANT_MODULES = {
-    "multitienda",
-    "intelicoop",
-}
+def _requires_global_router_registration(module: Any) -> bool:
+    return bool(getattr(module, "router_specs", None))
 
 
 def _admin_session():
@@ -39,7 +37,7 @@ def _set_tenant_module_enabled(module_key: str, enabled: bool, tenant_key: str) 
         raise ValueError("Tenant inválido para cambio de estado.")
     restart_required = False
 
-    if enabled and module.key in GLOBAL_ROUTER_TENANT_MODULES:
+    if enabled and _requires_global_router_registration(module):
         set_module_enabled(module.key, True)
         restart_required = True
 

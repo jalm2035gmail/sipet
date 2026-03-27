@@ -197,3 +197,22 @@ def test_refresh_module_registry_skips_manifest_already_registered(monkeypatch, 
 
     assert discovered == []
     assert [module.key for module in module_registry.MODULE_DEFINITIONS] == ["empresa"]
+
+
+def test_is_module_enabled_returns_true_when_router_module_is_enabled_for_any_tenant(monkeypatch) -> None:
+    module = module_registry.ModuleDefinition(
+        key="encuestas",
+        label="Encuestas",
+        description="Campañas y resultados.",
+        route="/encuestas",
+        manageable=True,
+        default_enabled=False,
+        router_specs=[module_registry.RouterSpec("fastapi_modulo.modulos.encuestas.controladores.encuesta")],
+    )
+    monkeypatch.setattr(module_registry, "MODULES_BY_KEY", {"encuestas": module})
+    monkeypatch.setattr(module_registry, "is_supported_module", lambda _: True)
+    monkeypatch.setattr(module_registry, "_read_installed_app_keys_for_tenant", lambda tenant_key: None)
+    monkeypatch.setattr(module_registry, "_read_module_state_map", lambda: {"encuestas": 0})
+    monkeypatch.setattr(module_registry, "_has_enabled_tenant_installation", lambda module_key: module_key == "encuestas")
+
+    assert module_registry.is_module_enabled("encuestas") is True

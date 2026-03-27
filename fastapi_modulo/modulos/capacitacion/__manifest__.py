@@ -1,5 +1,6 @@
 MANIFEST = {
     "name": "capacitacion",
+    "label": "Capacitación",
     "summary": "Capacitacion, cursos, evaluaciones y progreso de colaboradores.",
     "description": (
         "Modulo de capacitacion con dashboard, editor de cursos, evaluaciones, "
@@ -9,8 +10,9 @@ MANIFEST = {
     "version": "1.0.0",
     "category": "Talento",
     "author": "SIPET",
-    "sequence": "",
+    "sequence": "290",
     "website": "https://avancoop.org",
+    "route": "/capacitacion",
     "depends": ["web", "encuestas"],
     "data": [
         "vistas/capacitacion.html",

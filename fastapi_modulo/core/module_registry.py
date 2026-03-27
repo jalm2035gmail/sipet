@@ -389,6 +389,19 @@ MODULE_DEFINITIONS: List[ModuleDefinition] = [
         router_specs=[RouterSpec("fastapi_modulo.modulos_sipet.frontend.controladores.frontend")],
     ),
     ModuleDefinition(
+        key="pwa",
+        label="Progressive Web App",
+        description="Módulo PWA para SIPET con soporte offline, service worker y manifest web.",
+        route="/",
+        icon="fa-solid fa-mobile-screen",
+        manifest_file="fastapi_modulo/modulos_sipet/pwa/__manifest__.py",
+        app_access_name="PWA",
+        sidebar_visible=False,
+        manageable=True,
+        always_enabled=True,
+        boot_strategy="builtin",
+    ),
+    ModuleDefinition(
         key="empresa",
         label="Personalización",
         description="Personalización institucional y estructura visual principal.",
@@ -827,6 +840,26 @@ def _read_installed_app_keys_for_tenant(tenant_key: str) -> Optional[set[str]]:
         session.close()
 
 
+def _has_enabled_tenant_installation(module_key: str) -> bool:
+    normalized_module_key = str(module_key or "").strip()
+    if not normalized_module_key:
+        return False
+    session = get_admin_session_factory()()
+    try:
+        row = (
+            session.query(TenantInstalledApp.app_key)
+            .filter(
+                TenantInstalledApp.app_key == normalized_module_key,
+                TenantInstalledApp.is_enabled == 1,
+                TenantInstalledApp.install_status == "installed",
+            )
+            .first()
+        )
+        return row is not None
+    finally:
+        session.close()
+
+
 def is_module_enabled(module_key: str, tenant_key: Optional[str] = None) -> bool:
     module = MODULES_BY_KEY.get(str(module_key or "").strip())
     if not module:
@@ -846,6 +879,13 @@ def is_module_enabled(module_key: str, tenant_key: Optional[str] = None) -> bool
 
     states = _read_module_state_map()
     enabled = bool(states.get(module.key, module.default_enabled))
+    if (
+        not enabled
+        and not tenant_key
+        and getattr(module, "router_specs", None)
+        and _has_enabled_tenant_installation(module.key)
+    ):
+        return True
     if not enabled:
         return False
     if installed_app_keys is None:

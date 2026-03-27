@@ -40,7 +40,7 @@ def test_set_tenant_module_enabled_returns_legacy_module_payload(monkeypatch) ->
     monkeypatch.setitem(
         app_repository.MODULES_BY_KEY,
         "multitienda",
-        SimpleNamespace(key="multitienda", always_enabled=False, manageable=True),
+        SimpleNamespace(key="multitienda", always_enabled=False, manageable=True, router_specs=["router"]),
     )
 
     def _list_modules_payload(tenant_key=None, include_legacy=False, **kwargs):
@@ -62,7 +62,7 @@ def test_set_tenant_module_enabled_promotes_intelicoop_to_global_router(monkeypa
     monkeypatch.setitem(
         app_repository.MODULES_BY_KEY,
         "intelicoop",
-        SimpleNamespace(key="intelicoop", always_enabled=False, manageable=True),
+        SimpleNamespace(key="intelicoop", always_enabled=False, manageable=True, router_specs=["router"]),
     )
 
     promoted = []
@@ -91,7 +91,7 @@ def test_set_tenant_module_enabled_allows_enabling_always_enabled_manageable_mod
     monkeypatch.setitem(
         app_repository.MODULES_BY_KEY,
         "empresa",
-        SimpleNamespace(key="empresa", always_enabled=True, manageable=True),
+        SimpleNamespace(key="empresa", always_enabled=True, manageable=True, router_specs=[]),
     )
 
     def _list_modules_payload(tenant_key=None, include_legacy=False, **kwargs):
@@ -111,7 +111,7 @@ def test_set_tenant_module_enabled_rejects_disabling_always_enabled_manageable_m
     monkeypatch.setitem(
         app_repository.MODULES_BY_KEY,
         "empresa",
-        SimpleNamespace(key="empresa", always_enabled=True, manageable=True),
+        SimpleNamespace(key="empresa", always_enabled=True, manageable=True, router_specs=[]),
     )
 
     try:
@@ -127,7 +127,7 @@ def test_set_tenant_module_enabled_rejects_unsupported_module(monkeypatch) -> No
     monkeypatch.setitem(
         app_repository.MODULES_BY_KEY,
         "legacy_demo",
-        SimpleNamespace(key="legacy_demo", always_enabled=False, manageable=True),
+        SimpleNamespace(key="legacy_demo", always_enabled=False, manageable=True, router_specs=[]),
     )
 
     try:
@@ -144,7 +144,7 @@ def test_set_tenant_module_enabled_allows_multiempresa_importable_module(monkeyp
     monkeypatch.setitem(
         app_repository.MODULES_BY_KEY,
         "multiempresa",
-        SimpleNamespace(key="multiempresa", always_enabled=False, manageable=True),
+        SimpleNamespace(key="multiempresa", always_enabled=False, manageable=True, router_specs=[]),
     )
 
     def _list_modules_payload(tenant_key=None, include_legacy=False, **kwargs):
@@ -158,3 +158,33 @@ def test_set_tenant_module_enabled_allows_multiempresa_importable_module(monkeyp
 
     assert payload["key"] == "multiempresa"
     assert payload["restart_required"] is False
+
+
+def test_set_tenant_module_enabled_promotes_router_module_to_global_registration(monkeypatch) -> None:
+    monkeypatch.setattr(app_repository, "_admin_session", lambda: _Session())
+    monkeypatch.setattr(app_repository, "is_supported_module", lambda module: True)
+    monkeypatch.setitem(
+        app_repository.MODULES_BY_KEY,
+        "encuestas",
+        SimpleNamespace(key="encuestas", always_enabled=False, manageable=True, router_specs=["router"]),
+    )
+
+    promoted = []
+
+    def _list_modules_payload(tenant_key=None, include_legacy=False, **kwargs):
+        if include_legacy:
+            return [{"key": "encuestas", "label": "Encuestas", "enabled": True}]
+        return []
+
+    monkeypatch.setattr(app_repository, "list_modules_payload", _list_modules_payload)
+    monkeypatch.setattr(
+        app_repository,
+        "set_module_enabled",
+        lambda module_key, enabled: promoted.append((module_key, enabled)) or {"key": module_key, "enabled": enabled},
+    )
+
+    payload = app_repository._set_tenant_module_enabled("encuestas", True, "default")
+
+    assert payload["key"] == "encuestas"
+    assert payload["restart_required"] is True
+    assert promoted == [("encuestas", True)]
