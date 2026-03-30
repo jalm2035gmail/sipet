@@ -4,6 +4,7 @@ import base64
 import hashlib
 import hmac
 import json
+import logging
 import os
 import shutil
 from html import escape
@@ -30,6 +31,7 @@ from fastapi_modulo.modulos_sipet.web.servicios.access_service import is_superad
 from fastapi_modulo.modulos_sipet.web.servicios.session_service import AUTH_COOKIE_SECRET
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 SETUP_AUTH_COOKIE_NAME = "sipet_setup_auth"
 DEFAULT_SETUP_USERNAME_B64 = "MGtvbm9taXlha2k="
 DEFAULT_SETUP_PASSWORD_B64 = "WFgsJCwyNixzaXBldCwyNiwkLFhY"
@@ -221,6 +223,8 @@ def _manager_content(can_manage_db_secrets: bool = False) -> str:
   let entries = [];
   let selected = null;
   let mode = null;
+  let databaseReady = false;
+  let runtimeSettings = {{}};
   const canManageDbSecrets = {can_manage_secrets_js};
 
   const $ = (id) => document.getElementById(id);
@@ -234,7 +238,9 @@ def _manager_content(can_manage_db_secrets: bool = False) -> str:
   }};
 
   const syncButtons = () => {{
-    $('btn-inicializar').disabled = !selected;
+    const selectedEntry = entries.find((x) => x.domain === selected);
+    const sameRuntimeDomain = selectedEntry && runtimeSettings && t(runtimeSettings.domain).trim() === t(selectedEntry.domain).trim();
+    $('btn-inicializar').disabled = !selected || !!(sameRuntimeDomain && databaseReady);
     $('btn-editar').disabled = !selected;
     $('btn-eliminar').disabled = !selected;
   }};
@@ -273,7 +279,10 @@ def _manager_content(can_manage_db_secrets: bool = False) -> str:
       const data = await res.json();
       if (!res.ok || !data.success) throw new Error(data.error || 'Error al cargar');
       entries = data.entries || [];
+      databaseReady = !!data.database_ready;
+      runtimeSettings = data.settings || {{}};
       renderList();
+      syncButtons();
     }} catch (err) {{
       showMsg($('db-msg'), t(err.message || err), true);
     }}
@@ -308,6 +317,11 @@ def _manager_content(can_manage_db_secrets: bool = False) -> str:
   $('btn-inicializar').addEventListener('click', async () => {{
     const entry = entries.find((x) => x.domain === selected);
     if (!entry) return;
+    if (databaseReady && t(runtimeSettings.domain).trim() === t(entry.domain).trim()) {{
+      showMsg($('db-msg'), 'La base actual ya está inicializada y operativa.', false);
+      syncButtons();
+      return;
+    }}
     try {{
       const payload = {{
         domain: t(entry.domain).trim(),
@@ -734,9 +748,28 @@ async def import_database_file(request: Request, domain: str, file: UploadFile =
 async def initialize_database(request: Request):
     _enforce_admin_or_setup(request, require_setup_auth=_setup_required(request))
     payload = await request.json()
+    requested_domain = str((payload or {}).get("domain") or "").strip().lower()
+    current_settings = get_sipet_conf_settings()
+    current_domain = str(current_settings.get("domain") or "").strip().lower()
+    if requested_domain and requested_domain == current_domain:
+        ok, error = can_connect_current_database()
+        if ok:
+            return JSONResponse(
+                {
+                    "success": True,
+                    "result": {
+                        "connected": True,
+                        "error": "",
+                        "noop": True,
+                        "message": "La base actual ya está inicializada.",
+                    },
+                    "settings": current_settings,
+                }
+            )
     try:
         result = bootstrap_installation(payload if isinstance(payload, dict) else {})
     except Exception as exc:
+        logger.exception("database initialization failed for payload domain=%s", requested_domain or "")
         return JSONResponse({"success": False, "error": str(exc)}, status_code=400)
     if getattr(request.app.state, "database_setup_required", False):
         request.app.state.database_setup_required = not bool(result.get("connected"))
