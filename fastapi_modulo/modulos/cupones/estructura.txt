@@ -1,0 +1,34 @@
+Estructura actualizada
+cupones_fidelizacion/
+│
+├── multitienda/
+│   ├── tenant               → Registro y configuración de cada tienda
+│   ├── contexto             → Inyecta el tenant_id en toda operación
+│   ├── aislamiento          → Garantiza que datos de un tenant no filtren a otro
+│   └── administrador        → Vista global para el operador de la plataforma
+│
+├── cupones/
+│   ├── generador            → Crea cupones SIEMPRE bajo un tenant_id
+│   ├── validador            → Verifica que el cupón pertenezca a la tienda activa
+│   ├── aplicador            → Calcula descuento en el contexto del tenant
+│   └── ciclo_de_vida        → Gestión de estados por tenant
+│
+├── fidelizacion/
+│   ├── configurador         → Cada tienda define SU propio plan (tasas, tiers, moneda de puntos)
+│   ├── acumulador           → Puntos acreditados a la cuenta del cliente EN esa tienda
+│   ├── canjeador            → Canje válido solo dentro de la misma tienda
+│   ├── nivel_motor          → Tiers calculados por historial en esa tienda
+│   └── vencimiento          → Política de caducidad configurable por tenant
+│
+├── clientes/
+│   ├── cuenta               → Un cliente puede tener cuentas en N tiendas (registros separados)
+│   ├── historial            → Historial filtrado siempre por tenant_id
+│   └── vinculacion          → Relaciona un cliente externo con su cuenta en una tienda
+│
+├── validacion/
+│   ├── reglas_negocio       → Las reglas se evalúan en el contexto del tenant
+│   └── antiabuso            → Detección por tenant + detección cruzada (fraude entre tiendas)
+│
+└── reportes/
+    ├── por_tienda           → Métricas aisladas por tenant (para el dueño de la tienda)
+    └── consolidado          → Vista agregada de toda la plataforma (solo para el administrador)

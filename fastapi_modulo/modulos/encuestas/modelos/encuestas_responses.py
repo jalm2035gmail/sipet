@@ -286,6 +286,8 @@ def _response_summary(instance: SurveyInstance, response: SurveyResponse, access
             "schedule_end_at": _dt(instance.schedule_end_at),
             "anonymity_mode": instance.anonymity_mode,
             "audience_mode": instance.audience_mode,
+            "settings_json": instance.settings_json or {},
+            "publication_rules_json": instance.publication_rules_json or {},
         },
         "response": _response_dict(response),
         "assignment": _assignment_dict(response.assignment) if response.assignment else None,
@@ -978,7 +980,7 @@ def start_internal_response(instance_id: int, tenant_id: str, user: Dict[str, An
                 )
                 .first()
             )
-        if not assignment and instance.audience_mode != "public_link":
+        if not assignment and str(instance.audience_mode or "").strip().lower() not in {"public", "public_link"}:
             raise ValueError("No tienes una asignación activa para esta encuesta.")
         now = datetime.utcnow()
         quiz = _quiz_settings(instance)
@@ -1141,13 +1143,19 @@ def start_public_response(public_token: str, tenant_id: str, response_key: str =
     try:
         token = str(public_token or "").strip()
         _refresh_instance_lifecycle(db, tenant_id=tenant_id)
-        instance = (
+        instances = (
             db.query(SurveyInstance)
             .filter(
                 SurveyInstance.tenant_id == tenant_id,
                 SurveyInstance.public_link_token == token,
             )
-            .first()
+            .order_by(SurveyInstance.updated_at.desc(), SurveyInstance.id.desc())
+            .all()
+        )
+        instance = (
+            next((row for row in instances if row.status == "published"), None)
+            or next((row for row in instances if row.status == "scheduled"), None)
+            or (instances[0] if instances else None)
         )
         if not instance:
             raise ValueError("Encuesta no encontrada.")

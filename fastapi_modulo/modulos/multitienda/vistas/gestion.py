@@ -14,12 +14,27 @@ _HTML = """
   <link rel="icon" type="image/png" href="/static/imagenes/tu-negocio.png" />
   <title>Administrar tiendas</title>
   <style>
+    :root {
+      --mt-bg: var(--page-bg, #f5f6f8);
+      --mt-surface: var(--content-bg, #ffffff);
+      --mt-surface-soft: color-mix(in srgb, var(--content-bg, #ffffff) 88%, var(--page-bg, #f5f6f8) 12%);
+      --mt-border: var(--field-border, #d1d5db);
+      --mt-border-soft: color-mix(in srgb, var(--field-border, #d1d5db) 72%, #ffffff 28%);
+      --mt-text: var(--body-text, #1f2937);
+      --mt-muted: color-mix(in srgb, var(--body-text, #1f2937) 68%, #ffffff 32%);
+      --mt-accent: var(--button-bg, #1a6b3c);
+      --mt-accent-contrast: var(--button-text, #ffffff);
+      --mt-focus: var(--field-focus, var(--button-bg, #1a6b3c));
+      --mt-danger-soft: color-mix(in srgb, #dc2626 14%, var(--content-bg, #ffffff) 86%);
+      --mt-danger-text: color-mix(in srgb, #dc2626 78%, var(--body-text, #1f2937) 22%);
+    }
+
     html, body {
       margin: 0;
       padding: 0;
-      background: #f5f6f8;
+      background: var(--mt-bg);
       font-family: Arial, sans-serif;
-      color: #1f2937;
+      color: var(--mt-text);
     }
 
     * {
@@ -38,10 +53,10 @@ __BACKEND_SHARED_FORM_BASE_CSS__
 
     .business-type-btn {
       width: fit-content;
-      border: 1px solid #d1d5db;
+      border: 1px solid var(--mt-border);
       border-radius: 8px;
-      background: #fff;
-      color: #1f2937;
+      background: var(--mt-surface);
+      color: var(--mt-text);
       font-size: 0.82rem;
       font-weight: 700;
       padding: 6px 10px;
@@ -50,14 +65,14 @@ __BACKEND_SHARED_FORM_BASE_CSS__
 
     .business-type-description {
       font-size: 0.83rem;
-      color: #475569;
+      color: var(--mt-muted);
     }
 
     .business-type-panel {
       margin-top: 10px;
-      border: 1px solid #dbe2ea;
+      border: 1px solid var(--mt-border-soft);
       border-radius: 10px;
-      background: #f8fafc;
+      background: var(--mt-surface-soft);
       padding: 10px;
       display: grid;
       gap: 8px;
@@ -76,13 +91,13 @@ __BACKEND_SHARED_FORM_BASE_CSS__
     .business-type-textarea {
       width: 100%;
       min-height: 76px;
-      border: 1px solid #eadfe2;
+      border: 1px solid var(--mt-border);
       border-radius: 10px;
       padding: 8px 10px;
       font-size: 0.95rem;
       outline: none;
-      background: #fff;
-      color: #1f2937;
+      background: var(--field-color, var(--mt-surface));
+      color: var(--field-text, var(--mt-text));
       resize: vertical;
     }
 
@@ -109,8 +124,70 @@ __BACKEND_SHARED_FORM_BASE_CSS__
 
     .store-table-note {
       margin: 0 0 16px;
-      color: #6b7280;
+      color: var(--mt-muted);
       font-size: 0.88rem;
+    }
+
+    .store-error-dialog {
+      position: fixed;
+      inset: 0;
+      z-index: 1200;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: rgba(15, 23, 42, 0.48);
+    }
+
+    .store-error-dialog[hidden] {
+      display: none;
+    }
+
+    .store-error-card {
+      width: min(760px, 100%);
+      max-height: min(80vh, 760px);
+      overflow: auto;
+      border: 1px solid var(--mt-border-soft);
+      border-radius: 18px;
+      background: var(--mt-surface);
+      box-shadow: 0 28px 70px rgba(15, 23, 42, 0.18);
+      padding: 22px;
+      display: grid;
+      gap: 14px;
+    }
+
+    .store-error-title {
+      margin: 0;
+      font-size: 1.12rem;
+      font-weight: 800;
+      color: var(--mt-danger-text);
+    }
+
+    .store-error-copy {
+      width: 100%;
+      min-height: 240px;
+      border: 1px solid var(--mt-border);
+      border-radius: 12px;
+      padding: 12px 14px;
+      resize: vertical;
+      font: 400 0.95rem/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      color: var(--mt-text);
+      background: var(--mt-surface-soft);
+    }
+
+    .store-error-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .store-error-copy-status {
+      margin: 0;
+      min-height: 1.2em;
+      font-size: 0.82rem;
+      color: var(--mt-muted);
+      text-align: right;
     }
 
     .admin-user-tools {
@@ -122,15 +199,15 @@ __BACKEND_SHARED_FORM_BASE_CSS__
     .admin-user-note {
       margin: 0;
       font-size: 0.82rem;
-      color: #475569;
+      color: var(--mt-muted);
     }
 
     .admin-user-btn {
       width: fit-content;
-      border: 1px solid #d1d5db;
+      border: 1px solid var(--mt-border);
       border-radius: 8px;
-      background: #fff;
-      color: #1f2937;
+      background: var(--mt-surface);
+      color: var(--mt-text);
       font-size: 0.82rem;
       font-weight: 700;
       padding: 6px 10px;
@@ -138,10 +215,10 @@ __BACKEND_SHARED_FORM_BASE_CSS__
     }
 
     .logo-box {
-      border: 1px solid #e7ecef;
+      border: 1px solid var(--mt-border-soft);
       border-radius: 10px;
       min-height: 260px;
-      background: #f8fbfd;
+      background: color-mix(in srgb, var(--content-bg, #ffffff) 90%, var(--page-bg, #f5f6f8) 10%);
       padding: 14px;
       display: flex;
       flex-direction: column;
@@ -155,9 +232,9 @@ __BACKEND_SHARED_FORM_BASE_CSS__
       width: 146px;
       height: 146px;
       border-radius: 2px;
-      border: 1px solid #e5e7eb;
-      background: #ffffff;
-      color: #fff;
+      border: 1px solid var(--mt-border-soft);
+      background: var(--mt-surface);
+      color: var(--mt-accent-contrast);
       font-size: 2rem;
       display: grid;
       place-items: center;
@@ -194,10 +271,10 @@ __BACKEND_SHARED_FORM_BASE_CSS__
     .logo-action-btn {
       width: 34px;
       height: 34px;
-      border: 1px solid #d9dee3;
+      border: 1px solid var(--mt-border);
       border-radius: 999px;
-      background: #fff;
-      color: #4b5563;
+      background: var(--mt-surface);
+      color: var(--mt-muted);
       cursor: pointer;
       display: inline-flex;
       align-items: center;
@@ -207,7 +284,7 @@ __BACKEND_SHARED_FORM_BASE_CSS__
     }
 
     .logo-action-btn:hover {
-      background: #f3f4f6;
+      background: color-mix(in srgb, var(--mt-surface-soft) 88%, #ffffff 12%);
     }
 
     .logo-input {
@@ -230,13 +307,13 @@ __BACKEND_SHARED_FORM_BASE_CSS__
     .url-label {
       font-size: 0.86rem;
       font-weight: 700;
-      color: #4b5563;
+      color: var(--mt-muted);
       text-transform: lowercase;
     }
 
     .url-value {
       font-size: 0.9rem;
-      color: #2563eb;
+      color: var(--mt-accent);
       text-decoration: none;
       word-break: break-all;
     }
@@ -246,7 +323,7 @@ __BACKEND_SHARED_FORM_BASE_CSS__
     }
 
     .placeholder {
-      color: #6b7280;
+      color: var(--mt-muted);
       font-size: 0.92rem;
       margin: 0;
     }
@@ -267,12 +344,12 @@ __BACKEND_SHARED_FORM_BASE_CSS__
     .avan-label {
       font-size: 1rem;
       font-weight: 700;
-      color: #2f343b;
+      color: var(--mt-text);
       margin: 0;
     }
 
     .avan-label .hint {
-      color: #1f9bb8;
+      color: var(--mt-accent);
       font-size: 1rem;
       margin-left: 6px;
     }
@@ -280,19 +357,19 @@ __BACKEND_SHARED_FORM_BASE_CSS__
     .avan-check {
       width: 28px;
       height: 28px;
-      accent-color: #5b8fab;
+      accent-color: var(--mt-accent);
       cursor: pointer;
     }
 
     .avan-input {
       width: 100%;
       height: 52px;
-      border: 1px solid #eadfe2;
+      border: 1px solid var(--mt-border);
       border-radius: 18px;
-      background: #f2e9eb;
+      background: var(--field-color, var(--mt-surface));
       padding: 0 14px;
       font-size: 1.05rem;
-      color: #374151;
+      color: var(--field-text, var(--mt-text));
       outline: none;
     }
 
@@ -315,10 +392,10 @@ __BACKEND_SHARED_FORM_BASE_CSS__
     }
 
     .pub-card {
-      border: 1px solid #e6e8ee;
+      border: 1px solid var(--mt-border-soft);
       border-radius: 10px;
       overflow: hidden;
-      background: #fff;
+      background: var(--mt-surface);
     }
 
     .pub-card-header {
@@ -326,8 +403,8 @@ __BACKEND_SHARED_FORM_BASE_CSS__
       align-items: center;
       gap: 10px;
       padding: 12px 16px;
-      background: #f7f8fa;
-      border-bottom: 1px solid #e6e8ee;
+      background: var(--mt-surface-soft);
+      border-bottom: 1px solid var(--mt-border-soft);
     }
 
     .pub-card-icon {
@@ -338,7 +415,7 @@ __BACKEND_SHARED_FORM_BASE_CSS__
       margin: 0;
       font-size: 0.95rem;
       font-weight: 600;
-      color: #1f2937;
+      color: var(--mt-text);
     }
 
     .pub-card-body {
@@ -380,8 +457,8 @@ __BACKEND_SHARED_FORM_BASE_CSS__
       align-items: center;
       gap: 6px;
       padding: 8px 16px;
-      background: #1a6b3c;
-      color: #fff;
+      background: var(--mt-accent);
+      color: var(--mt-accent-contrast);
       border: none;
       border-radius: 7px;
       font-size: 0.875rem;
@@ -389,17 +466,17 @@ __BACKEND_SHARED_FORM_BASE_CSS__
       cursor: pointer;
       transition: background 0.15s;
     }
-    .action-btn:hover { background: #155c32; }
+    .action-btn:hover { background: var(--institutional-button-hover, var(--mt-accent)); }
     .action-btn--secondary {
-      background: #f3f4f6;
-      color: #374151;
+      background: color-mix(in srgb, var(--field-color, #ffffff) 86%, var(--button-bg-opposite, #cbd5e1) 14%);
+      color: var(--mt-text);
     }
-    .action-btn--secondary:hover { background: #e5e7eb; }
+    .action-btn--secondary:hover { background: color-mix(in srgb, var(--mt-accent) 12%, var(--field-color, #ffffff) 88%); }
     .action-btn--danger {
-      background: #fee2e2;
-      color: #b91c1c;
+      background: var(--mt-danger-soft);
+      color: var(--mt-danger-text);
     }
-    .action-btn--danger:hover { background: #fecaca; }
+    .action-btn--danger:hover { background: color-mix(in srgb, #dc2626 22%, var(--content-bg, #ffffff) 78%); }
     .data-table {
       width: 100%;
       border-collapse: collapse;
@@ -408,19 +485,19 @@ __BACKEND_SHARED_FORM_BASE_CSS__
     .data-table th {
       text-align: left;
       padding: 10px 12px;
-      background: #f7f8fa;
-      border-bottom: 2px solid #e6e8ee;
+      background: var(--mt-surface-soft);
+      border-bottom: 2px solid var(--mt-border-soft);
       font-weight: 600;
-      color: #374151;
+      color: var(--mt-text);
     }
     .data-table td {
       padding: 10px 12px;
-      border-bottom: 1px solid #f0f1f3;
+      border-bottom: 1px solid color-mix(in srgb, var(--mt-border-soft) 60%, #ffffff 40%);
       vertical-align: middle;
-      color: #1f2937;
+      color: var(--mt-text);
     }
     .data-table tbody tr:last-child td { border-bottom: none; }
-    .data-table tbody tr:hover td { background: #f9fafb; }
+    .data-table tbody tr:hover td { background: color-mix(in srgb, var(--mt-surface-soft) 88%, #ffffff 12%); }
     .empty-row td { border-bottom: none !important; }
 
     /* Atributos */
@@ -434,8 +511,8 @@ __BACKEND_SHARED_FORM_BASE_CSS__
       .attr-form-grid { grid-template-columns: 1fr; }
     }
     .attr-values-col {
-      background: #f7f8fa;
-      border: 1px solid #e6e8ee;
+      background: var(--mt-surface-soft);
+      border: 1px solid var(--mt-border-soft);
       border-radius: 10px;
       padding: 16px;
     }
@@ -447,7 +524,7 @@ __BACKEND_SHARED_FORM_BASE_CSS__
     }
     .attr-values-header label {
       font-weight: 600;
-      color: #374151;
+      color: var(--mt-text);
       font-size: 0.875rem;
     }
     .attr-values-list {
@@ -461,8 +538,8 @@ __BACKEND_SHARED_FORM_BASE_CSS__
       display: flex;
       align-items: center;
       gap: 8px;
-      background: #fff;
-      border: 1px solid #e6e8ee;
+      background: var(--mt-surface);
+      border: 1px solid var(--mt-border-soft);
       border-radius: 7px;
       padding: 6px 10px;
     }
@@ -470,27 +547,27 @@ __BACKEND_SHARED_FORM_BASE_CSS__
       width: 22px;
       height: 22px;
       border-radius: 50%;
-      border: 1px solid #d1d5db;
+      border: 1px solid var(--mt-border);
       flex-shrink: 0;
       cursor: pointer;
     }
     .attr-value-row .attr-val-name {
       flex: 1;
       font-size: 0.875rem;
-      color: #1f2937;
+      color: var(--mt-text);
     }
     .attr-value-row .attr-val-del {
       background: none;
       border: none;
       cursor: pointer;
-      color: #9ca3af;
+      color: color-mix(in srgb, var(--mt-text) 38%, #ffffff 62%);
       font-size: 1rem;
       line-height: 1;
       padding: 2px 4px;
       border-radius: 4px;
       transition: color 0.15s;
     }
-    .attr-value-row .attr-val-del:hover { color: #b91c1c; }
+    .attr-value-row .attr-val-del:hover { color: var(--mt-danger-text); }
     .attr-badge {
       display: inline-flex;
       align-items: center;
@@ -499,15 +576,15 @@ __BACKEND_SHARED_FORM_BASE_CSS__
       border-radius: 12px;
       font-size: 0.78rem;
       font-weight: 500;
-      background: #e5e7eb;
-      color: #374151;
+      background: color-mix(in srgb, var(--mt-accent) 12%, var(--mt-surface) 88%);
+      color: var(--mt-text);
       margin: 1px 2px;
     }
     .attr-badge-color {
       width: 10px;
       height: 10px;
       border-radius: 50%;
-      border: 1px solid rgba(0,0,0,.15);
+      border: 1px solid color-mix(in srgb, var(--mt-text) 15%, transparent);
       flex-shrink: 0;
     }
   </style>
@@ -533,7 +610,7 @@ __BACKEND_SHARED_SIDEBAR_HTML__
         <div id="store-list-view">
           <div class="store-toolbar">
             <h2 style="margin:0;">Tiendas registradas</h2>
-            <button class="action-btn" id="store-new-btn" type="button">+ Nueva tienda</button>
+            <button class="action-btn" id="store-new-btn" type="button" onclick="if(window.multitiendaShowStoreForm){window.multitiendaShowStoreForm(-1);}else{var list=document.getElementById('store-list-view');var form=document.getElementById('store-form-view');var title=document.getElementById('store-form-title');if(list){list.hidden=true;}if(form){form.hidden=false;}if(title){title.textContent='Nueva tienda';}}">+ Nueva tienda</button>
           </div>
           <p class="store-table-note">Consulta todas las tiendas registradas y abre cualquiera para editarla.</p>
           <table class="data-table" id="store-table">
@@ -548,7 +625,7 @@ __BACKEND_SHARED_SIDEBAR_HTML__
             </thead>
             <tbody id="store-tbody">
               <tr id="store-empty-row" class="empty-row">
-                <td colspan="5" style="text-align:center;color:#9ca3af;padding:32px;">
+                <td colspan="5" style="text-align:center;color:var(--mt-muted);padding:32px;">
                   No hay tiendas registradas. Haz clic en <strong>+ Nueva tienda</strong> para agregar la primera.
                 </td>
               </tr>
@@ -559,7 +636,7 @@ __BACKEND_SHARED_SIDEBAR_HTML__
         <div id="store-form-view" hidden>
           <div class="panel-header-row">
             <h2 id="store-form-title">Nueva tienda</h2>
-            <button class="action-btn action-btn--secondary" id="store-cancel-btn" type="button">← Volver a lista</button>
+            <button class="action-btn action-btn--secondary" id="store-cancel-btn" type="button" onclick="if(window.multitiendaShowStoreList){window.multitiendaShowStoreList();}else{var list=document.getElementById('store-list-view');var form=document.getElementById('store-form-view');if(list){list.hidden=false;}if(form){form.hidden=true;}}">← Volver a lista</button>
           </div>
           <section class="section">
             <h2>Datos generales</h2>
@@ -637,8 +714,8 @@ __BACKEND_SHARED_SIDEBAR_HTML__
               <input class="avan-input" id="store-validity" type="text" placeholder="Ej. 12 meses" />
             </div>
             <div class="avan-row">
-              <p class="avan-label">Sistema de referidos</p>
-              <input class="avan-input" id="store-referrals" type="text" placeholder="Configuración de referidos" />
+              <p class="avan-label">Acceso a Referidos</p>
+              <input class="avan-input" id="store-referrals" type="text" placeholder="Ej. habilitado" />
             </div>
             <div class="avan-row">
               <p class="avan-label">Sistema de cita</p>
@@ -659,6 +736,30 @@ __BACKEND_SHARED_SIDEBAR_HTML__
             <div class="avan-row">
               <p class="avan-label">Usuarios de portal</p>
               <input class="avan-input" id="max-portal-users" type="number" min="0" step="1" placeholder="Máximo de clientes" />
+            </div>
+            <div class="avan-row">
+              <p class="avan-label">Puede subir videos</p>
+              <input class="avan-check" id="store-can-upload-videos" type="checkbox" />
+            </div>
+            <div class="avan-row">
+              <p class="avan-label">Red de proveedores</p>
+              <input class="avan-check" id="store-can-use-providers" type="checkbox" />
+            </div>
+            <div class="avan-row">
+              <p class="avan-label">Inteligencia Artificial</p>
+              <input class="avan-check" id="store-can-use-ai" type="checkbox" />
+            </div>
+            <div class="avan-row">
+              <p class="avan-label">Institución financiera</p>
+              <input class="avan-check" id="store-can-use-financial" type="checkbox" />
+            </div>
+            <div class="avan-row">
+              <p class="avan-label">Apartados</p>
+              <input class="avan-check" id="store-can-use-layaway" type="checkbox" />
+            </div>
+            <div class="avan-row">
+              <p class="avan-label">Subastas</p>
+              <input class="avan-check" id="store-can-use-auctions" type="checkbox" />
             </div>
           </div>
         </section>
@@ -806,7 +907,7 @@ __BACKEND_SHARED_SIDEBAR_HTML__
             </thead>
             <tbody id="cat-tbody">
               <tr class="empty-row" id="cat-empty-row">
-                <td colspan="5" style="text-align:center;color:#9ca3af;padding:32px;">
+                <td colspan="5" style="text-align:center;color:var(--mt-muted);padding:32px;">
                   No hay categorías registradas. Haz clic en <strong>+ Nueva categoría</strong> para agregar la primera.
                 </td>
               </tr>
@@ -822,7 +923,7 @@ __BACKEND_SHARED_SIDEBAR_HTML__
           </div>
 
           <div class="field">
-            <label for="cat-nombre">Nombre <span style="color:#e53e3e">*</span></label>
+            <label for="cat-nombre">Nombre <span style="color:var(--mt-danger-text)">*</span></label>
             <input class="field-input" id="cat-nombre" type="text" placeholder="Nombre de la categoría" />
           </div>
 
@@ -845,11 +946,11 @@ __BACKEND_SHARED_SIDEBAR_HTML__
                    style="width:100%;height:100%;object-fit:cover;border-radius:8px;" alt="Imagen categoría" />
             </div>
             <input type="file" id="cat-img-input" accept="image/*" style="display:none" />
-            <p style="font-size:0.8rem;color:#6b7280;margin-top:4px;">Haz clic en la imagen para cambiarla.</p>
+            <p style="font-size:0.8rem;color:var(--mt-muted);margin-top:4px;">Haz clic en la imagen para cambiarla.</p>
           </div>
 
           <div class="field" style="display:flex;align-items:center;gap:10px;">
-            <input type="checkbox" id="cat-activa" checked style="width:18px;height:18px;accent-color:#1a6b3c;" />
+            <input type="checkbox" id="cat-activa" checked style="width:18px;height:18px;" />
             <label for="cat-activa" style="margin:0;cursor:pointer;">Categoría activa (visible en la tienda)</label>
           </div>
 
@@ -870,7 +971,7 @@ __BACKEND_SHARED_SIDEBAR_HTML__
             <h2>Atributos de productos</h2>
             <button class="action-btn" id="attr-new-btn" type="button">+ Nuevo atributo</button>
           </div>
-          <p style="color:#6b7280;font-size:0.875rem;margin:-8px 0 16px;">
+          <p style="color:var(--mt-muted);font-size:0.875rem;margin:-8px 0 16px;">
             Define los atributos que pueden tener tus productos (Color, Talla, Material, etc.) y sus valores posibles.
           </p>
           <table class="data-table" id="attr-table">
@@ -884,7 +985,7 @@ __BACKEND_SHARED_SIDEBAR_HTML__
             </thead>
             <tbody id="attr-tbody">
               <tr class="empty-row" id="attr-empty-row">
-                <td colspan="4" style="text-align:center;color:#9ca3af;padding:32px;">
+                <td colspan="4" style="text-align:center;color:var(--mt-muted);padding:32px;">
                   No hay atributos registrados. Haz clic en <strong>+ Nuevo atributo</strong> para agregar el primero.
                 </td>
               </tr>
@@ -902,7 +1003,7 @@ __BACKEND_SHARED_SIDEBAR_HTML__
           <div class="attr-form-grid">
             <div>
               <div class="field">
-                <label for="attr-nombre">Nombre del atributo <span style="color:#e53e3e">*</span></label>
+                <label for="attr-nombre">Nombre del atributo <span style="color:var(--mt-danger-text)">*</span></label>
                 <input class="field-input" id="attr-nombre" type="text" placeholder="Ej. Color, Talla, Material…" />
               </div>
               <div class="field">
@@ -914,7 +1015,7 @@ __BACKEND_SHARED_SIDEBAR_HTML__
                 </select>
               </div>
               <div class="field" style="display:flex;align-items:center;gap:10px;">
-                <input type="checkbox" id="attr-requerido" style="width:18px;height:18px;accent-color:#1a6b3c;" />
+                <input type="checkbox" id="attr-requerido" style="width:18px;height:18px;" />
                 <label for="attr-requerido" style="margin:0;cursor:pointer;">Atributo requerido en productos</label>
               </div>
             </div>
@@ -925,7 +1026,7 @@ __BACKEND_SHARED_SIDEBAR_HTML__
                 <button class="action-btn" id="attr-add-value-btn" type="button" style="padding:5px 12px;font-size:0.8rem;">+ Agregar valor</button>
               </div>
               <div id="attr-values-list" class="attr-values-list">
-                <p id="attr-values-empty" style="color:#9ca3af;font-size:0.85rem;padding:12px 0;">
+                <p id="attr-values-empty" style="color:var(--mt-muted);font-size:0.85rem;padding:12px 0;">
                   Aún no hay valores. Haz clic en <strong>+ Agregar valor</strong>.
                 </p>
               </div>
@@ -941,6 +1042,17 @@ __BACKEND_SHARED_SIDEBAR_HTML__
       </div>
     </div>
   </main>
+  <div class="store-error-dialog" id="store-error-dialog" hidden>
+    <div class="store-error-card" role="dialog" aria-modal="true" aria-labelledby="store-error-title">
+      <h3 class="store-error-title" id="store-error-title">Error al guardar la tienda</h3>
+      <textarea class="store-error-copy" id="store-error-text" readonly></textarea>
+      <p class="store-error-copy-status" id="store-error-copy-status"></p>
+      <div class="store-error-actions">
+        <button class="action-btn action-btn--secondary" id="store-error-close-btn" type="button">Cerrar</button>
+        <button class="action-btn" id="store-error-copy-btn" type="button">Copiar</button>
+      </div>
+    </div>
+  </div>
   <script src="/static/js/backend-sidebar-core.js"></script>
   <script>
     (function () {
@@ -950,31 +1062,80 @@ __BACKEND_SHARED_SIDEBAR_HTML__
     })();
 
     (function () {
-      const STORAGE_KEY = "multitienda_stores";
-      const listView = document.getElementById("store-list-view");
-      const formView = document.getElementById("store-form-view");
-      const tbody = document.getElementById("store-tbody");
-      const emptyRow = document.getElementById("store-empty-row");
-      const newBtn = document.getElementById("store-new-btn");
-      const cancelBtn = document.getElementById("store-cancel-btn");
-      const saveBtn = document.getElementById("store-save-btn");
-      const formTitle = document.getElementById("store-form-title");
-      const nameInput = document.getElementById("store-name");
-      const typeSelect = document.getElementById("store-type");
-      const adminSelect = document.getElementById("store-admin");
-      const membershipInput = document.getElementById("store-membership");
-      const activeCheckbox = document.getElementById("store-is-active");
-      const featuredCheckbox = document.getElementById("store-is-featured");
-      const inventoryCheckbox = document.getElementById("store-inventory-enabled");
-      const validityInput = document.getElementById("store-validity");
-      const referralsInput = document.getElementById("store-referrals");
-      const appointmentsInput = document.getElementById("store-appointments");
-      const couponsInput = document.getElementById("store-coupons");
-      const whatsappInput = document.getElementById("store-whatsapp");
-      const maxInternalUsersInput = document.getElementById("max-internal-users");
-      const maxPortalUsersInput = document.getElementById("max-portal-users");
-      let stores = [];
-      let editIndex = -1;
+      try {
+        const STORAGE_KEY = "multitienda_stores";
+        const listView = document.getElementById("store-list-view");
+        const formView = document.getElementById("store-form-view");
+        const tbody = document.getElementById("store-tbody");
+        const emptyRow = document.getElementById("store-empty-row");
+        const newBtn = document.getElementById("store-new-btn");
+        const cancelBtn = document.getElementById("store-cancel-btn");
+        const saveBtn = document.getElementById("store-save-btn");
+        const formTitle = document.getElementById("store-form-title");
+        const nameInput = document.getElementById("store-name");
+        const typeSelect = document.getElementById("store-type");
+        const adminSelect = document.getElementById("store-admin");
+        const membershipInput = document.getElementById("store-membership");
+        const activeCheckbox = document.getElementById("store-is-active");
+        const featuredCheckbox = document.getElementById("store-is-featured");
+        const inventoryCheckbox = document.getElementById("store-inventory-enabled");
+        const validityInput = document.getElementById("store-validity");
+        const referralsInput = document.getElementById("store-referrals");
+        const appointmentsInput = document.getElementById("store-appointments");
+        const couponsInput = document.getElementById("store-coupons");
+        const whatsappInput = document.getElementById("store-whatsapp");
+        const maxInternalUsersInput = document.getElementById("max-internal-users");
+        const maxPortalUsersInput = document.getElementById("max-portal-users");
+        const canUploadVideosCheckbox = document.getElementById("store-can-upload-videos");
+        const canUseProvidersCheckbox = document.getElementById("store-can-use-providers");
+        const canUseAiCheckbox = document.getElementById("store-can-use-ai");
+        const canUseFinancialCheckbox = document.getElementById("store-can-use-financial");
+        const canUseLayawayCheckbox = document.getElementById("store-can-use-layaway");
+        const canUseAuctionsCheckbox = document.getElementById("store-can-use-auctions");
+        const errorDialog = document.getElementById("store-error-dialog");
+        const errorText = document.getElementById("store-error-text");
+        const errorCopyBtn = document.getElementById("store-error-copy-btn");
+        const errorCloseBtn = document.getElementById("store-error-close-btn");
+        const errorCopyStatus = document.getElementById("store-error-copy-status");
+        let stores = [];
+        let editIndex = -1;
+
+      function closeStoreErrorDialog() {
+        if (errorDialog) errorDialog.hidden = true;
+        if (errorCopyStatus) errorCopyStatus.textContent = "";
+      }
+
+      function showStoreErrorDialog(message) {
+        const text = String(message || "No se pudo guardar la tienda.");
+        if (!errorDialog || !errorText) {
+          window.alert(text);
+          return;
+        }
+        errorText.value = text;
+        errorDialog.hidden = false;
+        if (errorCopyStatus) errorCopyStatus.textContent = "Puedes copiar este error para soporte.";
+        window.setTimeout(function () {
+          errorText.focus();
+          errorText.select();
+        }, 0);
+      }
+
+      async function copyStoreErrorText() {
+        if (!errorText) return;
+        const text = errorText.value || "";
+        try {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(text);
+          } else {
+            errorText.focus();
+            errorText.select();
+            document.execCommand("copy");
+          }
+          if (errorCopyStatus) errorCopyStatus.textContent = "Error copiado.";
+        } catch (error) {
+          if (errorCopyStatus) errorCopyStatus.textContent = "No se pudo copiar automáticamente. Selecciona el texto y copia manualmente.";
+        }
+      }
 
       async function loadStores() {
         try {
@@ -1026,6 +1187,7 @@ __BACKEND_SHARED_SIDEBAR_HTML__
           if (nameInput) nameInput.value = item.name || "";
           if (typeSelect) typeSelect.value = item.typeCode || "";
           if (adminSelect) adminSelect.value = item.adminId || "";
+          if (adminSelect) adminSelect.disabled = false;
           if (membershipInput) membershipInput.value = item.membership || "";
           if (activeCheckbox) activeCheckbox.checked = item.isActive !== false;
           if (featuredCheckbox) featuredCheckbox.checked = !!item.isFeatured;
@@ -1037,11 +1199,18 @@ __BACKEND_SHARED_SIDEBAR_HTML__
           if (whatsappInput) whatsappInput.value = item.whatsapp || "";
           if (maxInternalUsersInput) maxInternalUsersInput.value = item.maxInternalUsers || "";
           if (maxPortalUsersInput) maxPortalUsersInput.value = item.maxPortalUsers || "";
+          if (canUploadVideosCheckbox) canUploadVideosCheckbox.checked = !!item.canUploadVideos;
+          if (canUseProvidersCheckbox) canUseProvidersCheckbox.checked = !!item.canUseProviders;
+          if (canUseAiCheckbox) canUseAiCheckbox.checked = !!item.canUseAi;
+          if (canUseFinancialCheckbox) canUseFinancialCheckbox.checked = !!item.canUseFinancial;
+          if (canUseLayawayCheckbox) canUseLayawayCheckbox.checked = !!item.canUseLayaway;
+          if (canUseAuctionsCheckbox) canUseAuctionsCheckbox.checked = !!item.canUseAuctions;
         } else {
           if (formTitle) formTitle.textContent = "Nueva tienda";
           if (nameInput) nameInput.value = "";
           if (typeSelect) typeSelect.value = "";
           if (adminSelect) adminSelect.value = "";
+          if (adminSelect) adminSelect.disabled = false;
           if (membershipInput) membershipInput.value = "";
           if (activeCheckbox) activeCheckbox.checked = true;
           if (featuredCheckbox) featuredCheckbox.checked = true;
@@ -1053,6 +1222,12 @@ __BACKEND_SHARED_SIDEBAR_HTML__
           if (whatsappInput) whatsappInput.value = "";
           if (maxInternalUsersInput) maxInternalUsersInput.value = "";
           if (maxPortalUsersInput) maxPortalUsersInput.value = "";
+          if (canUploadVideosCheckbox) canUploadVideosCheckbox.checked = false;
+          if (canUseProvidersCheckbox) canUseProvidersCheckbox.checked = false;
+          if (canUseAiCheckbox) canUseAiCheckbox.checked = false;
+          if (canUseFinancialCheckbox) canUseFinancialCheckbox.checked = false;
+          if (canUseLayawayCheckbox) canUseLayawayCheckbox.checked = false;
+          if (canUseAuctionsCheckbox) canUseAuctionsCheckbox.checked = false;
         }
         if (typeSelect && typeof typeSelect.dispatchEvent === "function") {
           typeSelect.dispatchEvent(new Event("change"));
@@ -1109,6 +1284,12 @@ __BACKEND_SHARED_SIDEBAR_HTML__
             whatsapp: String(whatsappInput && whatsappInput.value || "").trim(),
             maxInternalUsers: String(maxInternalUsersInput && maxInternalUsersInput.value || "").trim(),
             maxPortalUsers: String(maxPortalUsersInput && maxPortalUsersInput.value || "").trim(),
+            canUploadVideos: !!(canUploadVideosCheckbox && canUploadVideosCheckbox.checked),
+            canUseProviders: !!(canUseProvidersCheckbox && canUseProvidersCheckbox.checked),
+            canUseAi: !!(canUseAiCheckbox && canUseAiCheckbox.checked),
+            canUseFinancial: !!(canUseFinancialCheckbox && canUseFinancialCheckbox.checked),
+            canUseLayaway: !!(canUseLayawayCheckbox && canUseLayawayCheckbox.checked),
+            canUseAuctions: !!(canUseAuctionsCheckbox && canUseAuctionsCheckbox.checked),
           };
           if (!payload.name) {
             window.alert("Nombre de la tienda es obligatorio.");
@@ -1125,6 +1306,8 @@ __BACKEND_SHARED_SIDEBAR_HTML__
               "Accept": "application/json"
             },
             body: JSON.stringify({
+              is_edit: editIndex >= 0,
+              store_id: editIndex >= 0 && stores[editIndex] ? stores[editIndex].id : "",
               store_name: payload.name,
               store_type: payload.typeCode,
               admin_user_id: payload.adminId,
@@ -1139,9 +1322,21 @@ __BACKEND_SHARED_SIDEBAR_HTML__
               whatsapp: payload.whatsapp,
               max_internal_users: payload.maxInternalUsers,
               max_portal_users: payload.maxPortalUsers,
+              can_upload_videos: payload.canUploadVideos,
+              can_use_providers: payload.canUseProviders,
+              can_use_ai: payload.canUseAi,
+              can_use_financial: payload.canUseFinancial,
+              can_use_layaway: payload.canUseLayaway,
+              can_use_auctions: payload.canUseAuctions,
             })
           });
-          const responsePayload = await response.json().catch(function () { return {}; });
+          const responseText = await response.text().catch(function () { return ""; });
+          let responsePayload = {};
+          try {
+            responsePayload = responseText ? JSON.parse(responseText) : {};
+          } catch (error) {
+            responsePayload = { detail: responseText };
+          }
           if (!response.ok) {
             throw new Error(responsePayload.detail || "No se pudo guardar la tienda.");
           }
@@ -1155,10 +1350,34 @@ __BACKEND_SHARED_SIDEBAR_HTML__
           try {
             await persistStore();
           } catch (error) {
-            window.alert(error && error.message ? error.message : "No se pudo guardar la tienda.");
+            showStoreErrorDialog(error && error.message ? error.message : "No se pudo guardar la tienda.");
           }
         });
       }
+
+      if (errorCloseBtn) {
+        errorCloseBtn.addEventListener("click", function () {
+          closeStoreErrorDialog();
+        });
+      }
+
+      if (errorCopyBtn) {
+        errorCopyBtn.addEventListener("click", function () {
+          copyStoreErrorText();
+        });
+      }
+
+      if (errorDialog) {
+        errorDialog.addEventListener("click", function (event) {
+          if (event.target === errorDialog) closeStoreErrorDialog();
+        });
+      }
+
+      document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape" && errorDialog && !errorDialog.hidden) {
+          closeStoreErrorDialog();
+        }
+      });
 
       document.addEventListener("click", function (event) {
         var newButton = event.target && event.target.closest && event.target.closest("#store-new-btn");
@@ -1181,32 +1400,35 @@ __BACKEND_SHARED_SIDEBAR_HTML__
         }
       });
 
-      loadStores().then(function () {
-        renderStores();
-        showList();
-      });
+        loadStores().then(function () {
+          renderStores();
+        });
+      } catch (error) {
+        console.error("multitienda stores init failed", error);
+      }
     })();
 
     (function () {
-      const BUSINESS_TYPES_PATHS = ["/multitienda/api/business-types"];
-      const select = document.getElementById("store-type");
-      const description = document.getElementById("storeTypeDescription");
-      const openPanelBtn = document.getElementById("openBusinessTypePanelBtn");
-      const panel = document.getElementById("businessTypePanel");
-      const nameInput = document.getElementById("business-type-name");
-      const codeInput = document.getElementById("business-type-code");
-      const detailInput = document.getElementById("business-type-description");
-      const saveBtn = document.getElementById("saveBusinessTypeBtn");
-      const cancelBtn = document.getElementById("cancelBusinessTypeBtn");
-      const message = document.getElementById("businessTypeMessage");
-      if (!select) {
-        return;
-      }
+      try {
+        const BUSINESS_TYPES_PATHS = ["/multitienda/api/business-types"];
+        const select = document.getElementById("store-type");
+        const description = document.getElementById("storeTypeDescription");
+        const openPanelBtn = document.getElementById("openBusinessTypePanelBtn");
+        const panel = document.getElementById("businessTypePanel");
+        const nameInput = document.getElementById("business-type-name");
+        const codeInput = document.getElementById("business-type-code");
+        const detailInput = document.getElementById("business-type-description");
+        const saveBtn = document.getElementById("saveBusinessTypeBtn");
+        const cancelBtn = document.getElementById("cancelBusinessTypeBtn");
+        const message = document.getElementById("businessTypeMessage");
+        if (!select) {
+          return;
+        }
 
       function clearPanelMessage() {
         if (!message) return;
         message.textContent = "";
-        message.style.color = "#b91c1c";
+        message.style.color = "var(--mt-danger-text)";
       }
 
       function renderOptions(catalog, selectedCode) {
@@ -1322,29 +1544,33 @@ __BACKEND_SHARED_SIDEBAR_HTML__
             renderOptions(catalog, code);
             updateDescription();
             if (message) {
-              message.style.color = "#166534";
+              message.style.color = "var(--mt-accent)";
               message.textContent = "Giro agregado correctamente.";
             }
             setTimeout(closePanel, 600);
           } catch (error) {
             if (message) {
-              message.style.color = "#b91c1c";
+              message.style.color = "var(--mt-danger-text)";
               message.textContent = error && error.message ? error.message : "No se pudo guardar el giro.";
             }
           }
         });
       }
 
-      loadCatalog();
+        loadCatalog();
+      } catch (error) {
+        console.error("multitienda business types init failed", error);
+      }
     })();
 
     (function () {
-      const adminSelect = document.getElementById("store-admin");
-      const adminNote = document.getElementById("storeAdminNote");
-      const createUserBtn = document.getElementById("createAdminUserBtn");
-      if (!adminSelect) {
-        return;
-      }
+      try {
+        const adminSelect = document.getElementById("store-admin");
+        const adminNote = document.getElementById("storeAdminNote");
+        const createUserBtn = document.getElementById("createAdminUserBtn");
+        if (!adminSelect) {
+          return;
+        }
 
       function normalizeRole(value) {
         return String(value || "")
@@ -1355,9 +1581,9 @@ __BACKEND_SHARED_SIDEBAR_HTML__
           .replace(/\s+/g, "_");
       }
 
-      async function loadUsers() {
-        try {
-          const response = await fetch("/multitienda/api/store-admin-users", { headers: { "Accept": "application/json" } });
+        async function loadUsers() {
+          try {
+            const response = await fetch("/api/usuarios", { headers: { "Accept": "application/json" } });
           if (!response.ok) {
             throw new Error("No se pudieron cargar usuarios");
           }
@@ -1411,37 +1637,44 @@ __BACKEND_SHARED_SIDEBAR_HTML__
         }
       }
 
-      if (createUserBtn) {
-        createUserBtn.addEventListener("click", function () {
-          window.location.href = "/empresa/usuarios";
-        });
-      }
+        if (createUserBtn) {
+          createUserBtn.addEventListener("click", function () {
+            window.location.href = "/empresa/usuarios";
+          });
+        }
 
-      loadUsers();
+        loadUsers();
+      } catch (error) {
+        console.error("multitienda admin users init failed", error);
+      }
     })();
 
     (function () {
-      const membershipSelect = document.getElementById("store-membership");
-      if (!membershipSelect) return;
+      try {
+        const membershipSelect = document.getElementById("store-membership");
+        if (!membershipSelect) return;
 
-      fetch("/multitienda/api/memberships", { headers: { "Accept": "application/json" } })
-        .then(function (response) {
-          if (!response.ok) throw new Error("No se pudieron cargar las membresías");
-          return response.json();
-        })
-        .then(function (payload) {
-          const rows = Array.isArray(payload && payload.data) ? payload.data : [];
-          membershipSelect.innerHTML = '<option value="">Selecciona una membresía</option>';
-          rows.forEach(function (item) {
-            const option = document.createElement("option");
-            option.value = String(item.nombre || "");
-            option.textContent = String(item.nombre || item.tipo || "Membresía");
-            membershipSelect.appendChild(option);
+        fetch("/multitienda/api/memberships", { headers: { "Accept": "application/json" } })
+          .then(function (response) {
+            if (!response.ok) throw new Error("No se pudieron cargar las membresías");
+            return response.json();
+          })
+          .then(function (payload) {
+            const rows = Array.isArray(payload && payload.data) ? payload.data : [];
+            membershipSelect.innerHTML = '<option value="">Selecciona una membresía</option>';
+            rows.forEach(function (item) {
+              const option = document.createElement("option");
+              option.value = String(item.nombre || "");
+              option.textContent = String(item.nombre || item.tipo || "Membresía");
+              membershipSelect.appendChild(option);
+            });
+          })
+          .catch(function () {
+            membershipSelect.innerHTML = '<option value="">No disponible</option>';
           });
-        })
-        .catch(function () {
-          membershipSelect.innerHTML = '<option value="">No disponible</option>';
-        });
+      } catch (error) {
+        console.error("multitienda memberships init failed", error);
+      }
     })();
 
   </script>
@@ -1536,7 +1769,7 @@ __BACKEND_SHARED_SIDEBAR_HTML__
           tr.innerHTML =
             '<td><img src="' + (c.imagen || DEFAULT_IMG) + '" style="width:40px;height:40px;object-fit:cover;border-radius:6px;" /></td>' +
             '<td>' + escHtml(c.nombre) + '</td>' +
-            '<td style="color:#6b7280;font-size:0.85rem;">' + escHtml(c.descripcion || "") + '</td>' +
+            '<td style="color:var(--mt-muted);font-size:0.85rem;">' + escHtml(c.descripcion || "") + '</td>' +
             '<td>' + escHtml(padreNombre) + '</td>' +
             '<td style="display:flex;gap:8px;">' +
               '<button class="action-btn" style="padding:4px 10px;font-size:0.8rem;" data-edit="' + i + '" type="button">Editar</button>' +
@@ -1703,12 +1936,12 @@ __BACKEND_SHARED_SIDEBAR_HTML__
             return '<span class="attr-badge">' + dot + escHtml(v.nombre) + '</span>';
           }).join("");
           if ((a.valores || []).length > 8) {
-            badges += '<span class="attr-badge" style="color:#6b7280;">+' + ((a.valores.length - 8)) + ' más</span>';
+            badges += '<span class="attr-badge" style="color:var(--mt-muted);">+' + ((a.valores.length - 8)) + ' más</span>';
           }
           tr.innerHTML =
-            '<td style="font-weight:600;">' + escHtml(a.nombre) + (a.requerido ? ' <span style="color:#e53e3e;font-size:0.8rem;" title="Requerido">●</span>' : "") + '</td>' +
-            '<td style="color:#6b7280;font-size:0.85rem;">' + tipoLabel + '</td>' +
-            '<td>' + (badges || '<span style="color:#9ca3af;font-size:0.82rem;">Sin valores</span>') + '</td>' +
+            '<td style="font-weight:600;">' + escHtml(a.nombre) + (a.requerido ? ' <span style="color:var(--mt-danger-text);font-size:0.8rem;" title="Requerido">●</span>' : "") + '</td>' +
+            '<td style="color:var(--mt-muted);font-size:0.85rem;">' + tipoLabel + '</td>' +
+            '<td>' + (badges || '<span style="color:var(--mt-muted);font-size:0.82rem;">Sin valores</span>') + '</td>' +
             '<td style="display:flex;gap:8px;">' +
               '<button class="action-btn" style="padding:4px 10px;font-size:0.8rem;" data-attr-edit="' + i + '" type="button">Editar</button>' +
               '<button class="action-btn action-btn--danger" style="padding:4px 10px;font-size:0.8rem;" data-attr-del="' + i + '" type="button">Eliminar</button>' +

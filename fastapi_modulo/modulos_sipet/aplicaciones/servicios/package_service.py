@@ -35,8 +35,6 @@ from fastapi_modulo.modulos_sipet.aplicaciones.servicios.redis_service import (
     invalidate_catalog_cache,
     invalidate_zip_inspection,
 )
-from fastapi_modulo.modulos_sipet.aplicaciones.servicios.task_queue_service import queue_task
-
 import logging
 
 _log = logging.getLogger(__name__)
@@ -370,7 +368,6 @@ async def import_module_package(
     ip: str | None = None,
 ) -> dict:
     temp_path = ""
-    keep_temp_file = False
     try:
         temp_path, metadata = await persist_upload_to_temp(package)
         checksum = str(metadata["checksum"])
@@ -409,40 +406,21 @@ async def import_module_package(
         if get_cached_zip_inspection(module_key, checksum) is None:
             raise HTTPException(status_code=409, detail="La inspeccion previa del ZIP expiro o no existe.")
 
-        queued = queue_task(
-            "package_apply",
-            {
-                "module_key": module_key,
-                "zip_path": temp_path,
-                "original_filename": str(package.filename or "").strip(),
-                "checksum": checksum,
-                "file_size": file_size,
-                "user_id": user_id or "",
-                "tenant_id": tenant_id or "",
-                "ip": ip or "",
-            },
+        payload = apply_module_package_job(
+            module_key=module_key,
+            zip_path=temp_path,
+            original_filename=str(package.filename or "").strip(),
+            checksum=checksum,
+            file_size=file_size,
+            user_id=user_id,
+            tenant_id=tenant_id,
+            ip=ip,
         )
-        if queued["status"] == "inline":
-            payload = apply_module_package_job(
-                module_key=module_key,
-                zip_path=temp_path,
-                original_filename=str(package.filename or "").strip(),
-                checksum=checksum,
-                file_size=file_size,
-                user_id=user_id,
-                tenant_id=tenant_id,
-                ip=ip,
-            )
-            payload["status"] = "success"
-            return payload
-        keep_temp_file = True
-        payload["status"] = "queued"
-        payload["task_id"] = str(queued["task_id"])
-        payload["task_name"] = "package_apply"
+        payload["status"] = "success"
         return payload
     finally:
         await package.close()
-        if temp_path and os.path.exists(temp_path) and not keep_temp_file:
+        if temp_path and os.path.exists(temp_path):
             os.unlink(temp_path)
 
 

@@ -13,22 +13,27 @@ _HTML = """<!doctype html>
   <title>Tiendas</title>
   <style>
     :root {
-      --sl-bg: #f5f1e8;
-      --sl-surface: rgba(255, 252, 247, 0.92);
-      --sl-card: #fffdfa;
-      --sl-card-strong: #fff;
-      --sl-border: rgba(113, 84, 44, 0.14);
-      --sl-text: #271c12;
-      --sl-muted: #74675d;
-      --sl-accent: #b7791f;
-      --sl-accent-deep: #8a5b14;
-      --sl-accent-soft: #f3e5c8;
+      --sl-bg: var(--page-bg, #f5f1e8);
+      --sl-surface: color-mix(in srgb, var(--content-bg, #fffdfa) 92%, transparent);
+      --sl-card: var(--content-bg, #fffdfa);
+      --sl-card-strong: var(--content-bg, #ffffff);
+      --sl-border: color-mix(in srgb, var(--field-border, #c9b49a) 52%, transparent);
+      --sl-text: var(--body-text, #271c12);
+      --sl-muted: color-mix(in srgb, var(--body-text, #271c12) 62%, #ffffff 38%);
+      --sl-accent: var(--button-bg, #b7791f);
+      --sl-accent-deep: var(--field-focus, var(--button-bg, #8a5b14));
+      --sl-accent-soft: color-mix(in srgb, var(--button-bg, #b7791f) 16%, var(--content-bg, #fffdfa) 84%);
       --sl-shadow: 0 24px 60px rgba(62, 39, 14, 0.10);
       --sl-radius-xl: 28px;
       --sl-radius-lg: 22px;
       --sl-radius-md: 16px;
       --sl-radius-sm: 12px;
       --sl-max: 1440px;
+      --sl-button-text: var(--button-text, #ffffff);
+      --sl-field-bg: var(--field-color, #ffffff);
+      --sl-field-text: var(--field-text, var(--body-text, #271c12));
+      --sl-field-border: var(--field-border, rgba(113, 84, 44, 0.14));
+      --sl-field-focus: var(--field-focus, var(--button-bg, #b7791f));
     }
 
     *, *::before, *::after { box-sizing: border-box; }
@@ -37,9 +42,14 @@ _HTML = """<!doctype html>
       font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
       color: var(--sl-text);
       background:
-        radial-gradient(circle at top left, rgba(218, 184, 126, 0.24), transparent 28%),
-        radial-gradient(circle at 85% 10%, rgba(162, 118, 48, 0.18), transparent 22%),
-        linear-gradient(180deg, #f0eadc 0%, #f7f2e8 36%, #fbf8f2 100%);
+        radial-gradient(circle at top left, color-mix(in srgb, var(--sl-accent) 18%, transparent) 0%, transparent 28%),
+        radial-gradient(circle at 85% 10%, color-mix(in srgb, var(--sl-accent-deep) 14%, transparent) 0%, transparent 22%),
+        linear-gradient(
+          180deg,
+          color-mix(in srgb, var(--sl-bg) 84%, #eadfcb 16%) 0%,
+          color-mix(in srgb, var(--sl-bg) 92%, #f7f2e8 8%) 36%,
+          color-mix(in srgb, var(--sl-bg) 96%, #ffffff 4%) 100%
+        );
     }
 
     .sl-page {
@@ -262,15 +272,15 @@ _HTML = """<!doctype html>
     }
 
     .sl-btn {
-      background: #fff8ef;
-      color: #3d2b17;
+      background: var(--button-bg, var(--sl-accent));
+      color: var(--sl-button-text);
       box-shadow: 0 16px 30px rgba(33, 20, 10, 0.18);
     }
 
     .sl-btn-ghost {
       background: transparent;
-      color: #fff8ef;
-      border: 1px solid rgba(255, 244, 229, 0.22);
+      color: var(--sl-button-text);
+      border: 1px solid color-mix(in srgb, var(--sl-button-text) 22%, transparent);
     }
 
     .sl-btn:hover,
@@ -310,8 +320,8 @@ _HTML = """<!doctype html>
 
     .sl-chip {
       border: 1px solid transparent;
-      background: #efe7da;
-      color: #5d4630;
+      background: color-mix(in srgb, var(--sl-accent) 12%, var(--sl-card) 88%);
+      color: var(--sl-accent-deep);
       padding: 11px 16px;
       border-radius: 999px;
       font-size: 0.92rem;
@@ -321,12 +331,12 @@ _HTML = """<!doctype html>
     }
 
     .sl-chip:hover {
-      background: #e6d5b9;
+      background: color-mix(in srgb, var(--sl-accent) 20%, var(--sl-card) 80%);
     }
 
     .sl-chip.active {
-      background: linear-gradient(135deg, #d39a3b, #aa6c16);
-      color: #fff9f2;
+      background: linear-gradient(135deg, var(--sl-accent), var(--sl-accent-deep));
+      color: var(--sl-button-text);
       box-shadow: 0 14px 28px rgba(167, 107, 22, 0.22);
     }
 
@@ -464,8 +474,8 @@ _HTML = """<!doctype html>
       gap: 10px;
       padding: 12px 14px;
       border: 1px solid transparent;
-      background: #faf4ea;
-      color: #553f2c;
+      background: color-mix(in srgb, var(--sl-accent) 7%, var(--sl-card) 93%);
+      color: var(--sl-field-text);
       border-radius: 14px;
       text-decoration: none;
       cursor: pointer;
@@ -476,15 +486,15 @@ _HTML = """<!doctype html>
 
     .sl-list button:hover,
     .sl-list a:hover {
-      background: #f3e7d3;
-      border-color: rgba(183, 121, 31, 0.18);
+      background: color-mix(in srgb, var(--sl-accent) 14%, var(--sl-card) 86%);
+      border-color: color-mix(in srgb, var(--sl-accent) 22%, transparent);
     }
 
     .sl-list button.active {
-      background: linear-gradient(135deg, #fff5df, #f2dfb6);
-      border-color: rgba(183, 121, 31, 0.24);
-      color: #6f460f;
-      box-shadow: inset 0 0 0 1px rgba(183, 121, 31, 0.10);
+      background: linear-gradient(135deg, color-mix(in srgb, var(--sl-accent) 10%, var(--sl-card) 90%), color-mix(in srgb, var(--sl-accent) 24%, var(--sl-card) 76%));
+      border-color: color-mix(in srgb, var(--sl-accent) 28%, transparent);
+      color: var(--sl-accent-deep);
+      box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--sl-accent) 10%, transparent);
     }
 
     .sl-list-count {
@@ -510,8 +520,8 @@ _HTML = """<!doctype html>
       align-items: center;
       padding: 14px;
       border-radius: 22px;
-      background: linear-gradient(180deg, rgba(246, 239, 225, 0.9), rgba(255, 252, 247, 0.92));
-      border: 1px solid rgba(113, 84, 44, 0.08);
+      background: linear-gradient(180deg, color-mix(in srgb, var(--sl-accent) 8%, var(--sl-card) 92%), color-mix(in srgb, var(--sl-card) 96%, #ffffff 4%));
+      border: 1px solid color-mix(in srgb, var(--sl-field-border) 52%, transparent);
     }
 
     .sl-view-switch {
@@ -519,8 +529,8 @@ _HTML = """<!doctype html>
       gap: 8px;
       padding: 8px;
       border-radius: 18px;
-      background: #fff;
-      border: 1px solid rgba(113, 84, 44, 0.1);
+      background: var(--sl-field-bg);
+      border: 1px solid var(--sl-field-border);
     }
 
     .sl-view-btn {
@@ -536,8 +546,8 @@ _HTML = """<!doctype html>
     }
 
     .sl-view-btn.active {
-      background: linear-gradient(135deg, #d39a3b, #aa6c16);
-      color: #fff;
+      background: linear-gradient(135deg, var(--sl-accent), var(--sl-accent-deep));
+      color: var(--sl-button-text);
       box-shadow: 0 10px 22px rgba(167, 107, 22, 0.22);
     }
 
@@ -548,9 +558,9 @@ _HTML = """<!doctype html>
       min-width: 0;
       padding: 0 16px;
       height: 58px;
-      background: #fff;
+      background: var(--sl-field-bg);
       border-radius: 18px;
-      border: 1px solid rgba(113, 84, 44, 0.1);
+      border: 1px solid var(--sl-field-border);
     }
 
     .sl-search-icon {
@@ -565,11 +575,11 @@ _HTML = """<!doctype html>
       background: transparent;
       outline: none;
       font-size: 1rem;
-      color: var(--sl-text);
+      color: var(--sl-field-text);
     }
 
     .sl-search-input::placeholder {
-      color: #9d8c78;
+      color: color-mix(in srgb, var(--sl-field-text) 46%, #ffffff 54%);
     }
 
     .sl-results-meta {
@@ -587,11 +597,23 @@ _HTML = """<!doctype html>
       min-width: 220px;
       padding: 0 18px;
       border-radius: 999px;
-      border: 1px solid rgba(113, 84, 44, 0.14);
-      background: #fff;
-      color: var(--sl-text);
+      border: 1px solid var(--sl-field-border);
+      background: var(--sl-field-bg);
+      color: var(--sl-field-text);
       font-size: 0.95rem;
       outline: none;
+    }
+
+    .sl-sort-select:focus,
+    .sl-search-wrap:focus-within,
+    .sl-list button:focus-visible,
+    .sl-list a:focus-visible,
+    .sl-btn:focus-visible,
+    .sl-btn-ghost:focus-visible,
+    .sl-card-cta:focus-visible {
+      outline: 0;
+      border-color: var(--sl-field-focus);
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--sl-field-focus) 16%, transparent);
     }
 
     .sl-products-summary {
@@ -622,8 +644,8 @@ _HTML = """<!doctype html>
       gap: 8px;
       padding: 8px 12px;
       border-radius: 999px;
-      background: #f8ebd1;
-      color: #6f460f;
+      background: color-mix(in srgb, var(--sl-accent) 14%, var(--sl-card) 86%);
+      color: var(--sl-accent-deep);
       font-size: 0.84rem;
       font-weight: 700;
     }
@@ -771,7 +793,7 @@ _HTML = """<!doctype html>
       font-size: 1.45rem;
       font-weight: 800;
       letter-spacing: -0.04em;
-      color: #6f460f;
+      color: var(--sl-accent-deep);
     }
 
     .sl-card-price small {
@@ -790,8 +812,8 @@ _HTML = """<!doctype html>
       border: none;
       border-radius: 999px;
       padding: 11px 14px;
-      background: #2f2215;
-      color: #fff7ee;
+      background: var(--button-bg, #2f2215);
+      color: var(--sl-button-text);
       cursor: pointer;
       font-size: 0.88rem;
       font-weight: 700;
@@ -832,8 +854,8 @@ _HTML = """<!doctype html>
       padding: 48px 24px;
       border-radius: 24px;
       text-align: center;
-      background: linear-gradient(180deg, #fcf8f1, #f6ecdb);
-      border: 1px dashed rgba(183, 121, 31, 0.26);
+      background: linear-gradient(180deg, color-mix(in srgb, var(--sl-accent) 7%, var(--sl-card) 93%), color-mix(in srgb, var(--sl-accent) 13%, var(--sl-card) 87%));
+      border: 1px dashed color-mix(in srgb, var(--sl-accent) 30%, transparent);
       color: var(--sl-muted);
     }
 
@@ -847,7 +869,7 @@ _HTML = """<!doctype html>
     .sl-empty-icon {
       font-size: 2.6rem;
       margin-bottom: 14px;
-      color: #c5913a;
+      color: var(--sl-accent);
     }
 
     @media (max-width: 1180px) {

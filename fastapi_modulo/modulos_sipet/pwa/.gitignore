@@ -1,0 +1,51 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
+
+# Virtualenv
+.venv/
+venv/
+env/
+
+# Env
+.env
+
+# DB / migrations
+*.db
+*.sqlite3
+
+# Models (joblib)
+models/*.joblib
+
+# Media uploads
+media/
+
+# Static build (generado por Node)
+static/css/main.css
+static/js/bundle.js
+
+# Node
+frontend/node_modules/
+frontend/.cache/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+celerybeat-schedule
+celerybeat.pid

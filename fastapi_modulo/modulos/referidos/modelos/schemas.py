@@ -97,6 +97,7 @@ class ConfiguracionRead(BaseModel):
 # ──────────────────────────────── Referido ────────────────────────────────
 
 class ReferidoCreate(BaseModel):
+    program_assignment_id: Optional[int] = None
     referente_id: int
     nombre_prospecto: str
     email: Optional[str] = None
@@ -118,6 +119,7 @@ class ReferidoUpdate(BaseModel):
 class ReferidoRead(BaseModel):
     id: int
     cvr_code: str
+    program_assignment_id: Optional[int]
     referente_id: int
     referente_miu: Optional[str]
     nombre_prospecto: str
@@ -177,6 +179,7 @@ class TrackingEventRead(BaseModel):
 class ProgramAssignmentCreate(BaseModel):
     user_id: int
     business_name: Optional[str] = None
+    business_slug: Optional[str] = None
     business_type: str = "generic"
     website_url: Optional[str] = None
     max_referrals: int = 0

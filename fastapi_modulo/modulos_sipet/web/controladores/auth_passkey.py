@@ -161,6 +161,7 @@ def passkey_auth_verify(
         return JSONResponse({"success": False, "error": "Origen inválido"}, status_code=400)
 
     db = auth_service.get_session_local()()
+    redirect_url = "/inicio"
     try:
         user = auth_service.find_user_by_id(db, token_data["user_id"])
         if not user or user.backendauthn_credential_id != credential_id:
@@ -170,6 +171,7 @@ def passkey_auth_verify(
         db.commit()
         role_name = auth_service.resolve_user_role_name(db, user)
         session_username = auth_service.decrypt_sensitive(user.usuario) or ""
+        redirect_url = auth_service.resolve_post_login_redirect(db, role_name, int(user.id))
     finally:
         db.close()
 
@@ -189,7 +191,12 @@ def passkey_auth_verify(
                 mfa_gate_data["jti"],
                 mfa_gate_data["challenge"],
             )
-    response = JSONResponse({"success": True, "redirect_url": "/inicio"})
+    response = JSONResponse(
+        {
+            "success": True,
+            "redirect_url": redirect_url,
+        }
+    )
     response.delete_cookie(passkey_service.PASSKEY_COOKIE_AUTH)
     response.delete_cookie(passkey_service.PASSKEY_COOKIE_MFA_GATE)
     auth_service.apply_login_session(

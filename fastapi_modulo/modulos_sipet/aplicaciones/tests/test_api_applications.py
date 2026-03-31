@@ -24,6 +24,8 @@ def _module_item(**overrides):
         "router_count": 1,
         "module_dir": "/tmp/crm",
         "package_target_label": "fastapi_modulo/modulos/crm",
+        "is_core_module": False,
+        "package_management_note": "",
         "protocol_has_init": True,
         "protocol_has_manifest": True,
     }
@@ -39,7 +41,7 @@ def _client() -> TestClient:
 
 def test_api_list_modules_returns_catalog(monkeypatch) -> None:
     monkeypatch.setattr(api_state, "require_applications_permission", lambda request, permission: None)
-    monkeypatch.setattr(api_state, "decorate_modules_payload", lambda items=None, tenant_key=None: [_module_item()])
+    monkeypatch.setattr(api_state, "decorate_modules_payload", lambda tenant_key=None, refresh=False, include_legacy=False: [_module_item()])
     monkeypatch.setattr(api_state, "request_actor_context", lambda request: {"user_id": "tester", "tenant_id": "default", "tenant_key": "default", "ip": "127.0.0.1"})
 
     response = _client().get("/api/aplicaciones/modulos")
@@ -122,6 +124,8 @@ def test_api_upload_valid_zip(monkeypatch) -> None:
         }
 
     monkeypatch.setattr(api_packages, "require_applications_permission", lambda request, permission: None)
+    monkeypatch.setattr(api_packages, "require_superadmin", lambda request: None)
+    monkeypatch.setattr(api_packages, "_require_package_manageable_module", lambda module_key: module_key)
     monkeypatch.setattr(api_packages, "request_actor_context", lambda request: {"user_id": "tester", "tenant_id": "default", "tenant_key": "default", "ip": "127.0.0.1"})
     monkeypatch.setattr(api_packages, "import_module_package", _import_module_package)
 
@@ -137,6 +141,8 @@ def test_api_upload_valid_zip(monkeypatch) -> None:
 
 def test_api_upload_rejects_non_zip_extension(monkeypatch) -> None:
     monkeypatch.setattr(api_packages, "require_applications_permission", lambda request, permission: None)
+    monkeypatch.setattr(api_packages, "require_superadmin", lambda request: None)
+    monkeypatch.setattr(api_packages, "_require_package_manageable_module", lambda module_key: module_key)
     monkeypatch.setattr(api_packages, "request_actor_context", lambda request: {"user_id": "tester", "tenant_id": "default", "tenant_key": "default", "ip": "127.0.0.1"})
 
     response = _client().post(
@@ -154,11 +160,13 @@ def test_api_upload_propagates_invalid_module(monkeypatch) -> None:
         raise HTTPException(status_code=400, detail="Este modulo todavia no admite actualizacion por ZIP.")
 
     monkeypatch.setattr(api_packages, "require_applications_permission", lambda request, permission: None)
+    monkeypatch.setattr(api_packages, "require_superadmin", lambda request: None)
+    monkeypatch.setattr(api_packages, "_require_package_manageable_module", lambda module_key: module_key)
     monkeypatch.setattr(api_packages, "request_actor_context", lambda request: {"user_id": "tester", "tenant_id": "default", "tenant_key": "default", "ip": "127.0.0.1"})
     monkeypatch.setattr(api_packages, "import_module_package", _import_module_package)
 
     response = _client().post(
-        "/api/aplicaciones/modulos/desconocido/upload",
+        "/api/aplicaciones/modulos/crm/upload",
         files={"package": ("crm.zip", b"PK\x03\x04", "application/zip")},
         data={"dry_run": "true"},
     )
@@ -169,37 +177,16 @@ def test_api_upload_propagates_invalid_module(monkeypatch) -> None:
 
 def test_api_upload_allows_manageable_alias_module(monkeypatch) -> None:
     monkeypatch.setattr(api_packages, "require_applications_permission", lambda request, permission: None)
+    monkeypatch.setattr(api_packages, "require_superadmin", lambda request: None)
     monkeypatch.setattr(api_packages, "request_actor_context", lambda request: {"user_id": "tester", "tenant_id": "default", "tenant_key": "default", "ip": "127.0.0.1"})
     monkeypatch.setitem(api_packages.MODULES_BY_KEY, "empresa", SimpleNamespace(manageable=True))
-    monkeypatch.setattr(api_packages, "get_module_upload_root", lambda module_key: "/tmp/project/fastapi_modulo/modulos/identidad_institucional")
-    captured: dict[str, str] = {}
-
-    async def _import_module_package(module_key, package, **kwargs):
-        captured["module_key"] = module_key
-        return {
-            "module_key": module_key,
-            "target_root": "/tmp/project/fastapi_modulo/modulos/identidad_institucional",
-            "dry_run": True,
-            "status": "success",
-            "task_id": "",
-            "task_name": "",
-            "checksum": "abc",
-            "file_size": 3,
-            "content_type": "application/zip",
-            "updated_files": 0,
-            "total_files": 1,
-            "total_uncompressed_size": 3,
-            "new_files": 1,
-            "changed_files": 0,
-            "unchanged_files": 0,
-            "preview_files": [],
-            "warnings": [],
-            "architecture_ok": True,
-            "architecture_errors": [],
-            "architecture_warnings": [],
-        }
-
-    monkeypatch.setattr(api_packages, "import_module_package", _import_module_package)
+    monkeypatch.setattr(
+        api_packages,
+        "_require_package_manageable_module",
+        lambda module_key: (_ for _ in ()).throw(
+            HTTPException(status_code=400, detail="Este módulo no admite instalación o actualización por importación.")
+        ),
+    )
 
     response = _client().post(
         "/api/aplicaciones/modulos/empresa/upload",
@@ -207,13 +194,31 @@ def test_api_upload_allows_manageable_alias_module(monkeypatch) -> None:
         data={"dry_run": "true"},
     )
 
-    assert response.status_code == 200
-    assert response.json()["module_key"] == "empresa"
-    assert captured["module_key"] == "empresa"
+    assert response.status_code == 400
+    assert "no admite instalación" in response.json()["detail"]
+
+
+def test_api_upload_requires_superadmin(monkeypatch) -> None:
+    monkeypatch.setattr(api_packages, "require_applications_permission", lambda request, permission: None)
+    monkeypatch.setattr(
+        api_packages,
+        "require_superadmin",
+        lambda request: (_ for _ in ()).throw(HTTPException(status_code=403, detail="Acceso restringido a superadministrador")),
+    )
+
+    response = _client().post(
+        "/api/aplicaciones/modulos/crm/upload",
+        files={"package": ("crm.zip", b"PK\x03\x04", "application/zip")},
+        data={"dry_run": "true"},
+    )
+
+    assert response.status_code == 403
+    assert "superadministrador" in response.json()["detail"]
 
 
 def test_api_uninstall_module(monkeypatch) -> None:
     monkeypatch.setattr(api_packages, "require_applications_permission", lambda request, permission: None)
+    monkeypatch.setattr(api_packages, "_require_package_manageable_module", lambda module_key: module_key)
     monkeypatch.setattr(api_packages, "request_actor_context", lambda request: {"user_id": "tester", "tenant_id": "default", "tenant_key": "default", "ip": "127.0.0.1"})
     monkeypatch.setattr(api_packages, "verify_sensitive_action_token", lambda **kwargs: None)
     monkeypatch.setattr(

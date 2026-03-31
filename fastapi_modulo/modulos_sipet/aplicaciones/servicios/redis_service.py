@@ -27,6 +27,7 @@ REDIS_RETRY_INTERVAL = int((os.environ.get("APPLICATIONS_REDIS_RETRY_SECONDS") o
 _REDIS_CLIENT: Optional[Redis] = None
 _REDIS_UNAVAILABLE = False
 _REDIS_LAST_ATTEMPT: float = 0.0
+_LOCAL_CACHE: dict[str, tuple[float, Any]] = {}
 
 
 def get_redis_client() -> Optional[Redis]:
@@ -62,41 +63,67 @@ def _key(*parts: str) -> str:
     return ":".join([REDIS_PREFIX, *safe_parts])
 
 
+def _local_cache_set(namespace: str, identifier: str, payload: Any, ttl_seconds: int) -> None:
+    expires_at = time.monotonic() + max(1, int(ttl_seconds))
+    _LOCAL_CACHE[_key("local", namespace, identifier)] = (expires_at, payload)
+
+
+def _local_cache_get(namespace: str, identifier: str) -> Any | None:
+    cache_key = _key("local", namespace, identifier)
+    entry = _LOCAL_CACHE.get(cache_key)
+    if entry is None:
+        return None
+    expires_at, payload = entry
+    if time.monotonic() >= expires_at:
+        _LOCAL_CACHE.pop(cache_key, None)
+        return None
+    return payload
+
+
+def _local_cache_delete(namespace: str, identifier: str) -> None:
+    _LOCAL_CACHE.pop(_key("local", namespace, identifier), None)
+
+
 def set_cached_payload(namespace: str, identifier: str, payload: Any, ttl_seconds: int) -> None:
     client = get_redis_client()
     if client is None:
+        _local_cache_set(namespace, identifier, payload, ttl_seconds)
         return
     try:
         client.setex(_key("cache", namespace, identifier), max(1, int(ttl_seconds)), json.dumps(payload, ensure_ascii=True))
     except Exception:
         _mark_unavailable()
+        _local_cache_set(namespace, identifier, payload, ttl_seconds)
 
 
 def get_cached_payload(namespace: str, identifier: str) -> Any | None:
     client = get_redis_client()
     if client is None:
-        return None
+        return _local_cache_get(namespace, identifier)
     try:
         raw = client.get(_key("cache", namespace, identifier))
     except Exception:
         _mark_unavailable()
-        return None
+        return _local_cache_get(namespace, identifier)
     if not raw:
-        return None
+        return _local_cache_get(namespace, identifier)
     try:
         return json.loads(raw)
     except Exception:
-        return None
+        return _local_cache_get(namespace, identifier)
 
 
 def delete_cached_payload(namespace: str, identifier: str) -> None:
     client = get_redis_client()
     if client is None:
+        _local_cache_delete(namespace, identifier)
         return
     try:
         client.delete(_key("cache", namespace, identifier))
     except Exception:
         _mark_unavailable()
+    finally:
+        _local_cache_delete(namespace, identifier)
 
 
 def _mark_unavailable() -> None:

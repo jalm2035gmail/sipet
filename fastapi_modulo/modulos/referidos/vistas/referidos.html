@@ -1,8 +1,3 @@
-{% extends "modulos_sipet/web/vistas/backend_base.html" %}
-
-{% block title %}Referidos{% endblock %}
-
-{% block content %}
 <div class="referidos-container" x-data="referidosApp()" x-init="init()">
 
   <!-- Header -->
@@ -27,10 +22,18 @@
       ("Rechazados", stats.by_state.rejected, "fa-ban", "danger"),
     ] %}
     {% for label, value, icon, color in kpi_items %}
+    {% set kpi_icon_class = {
+      "primary": "text-primary",
+      "secondary": "text-secondary",
+      "info": "text-info",
+      "success": "text-success",
+      "warning": "text-warning",
+      "danger": "text-danger",
+    }.get(color, "text-secondary") %}
     <div class="col-6 col-md-4 col-xl-2">
       <div class="card border-0 shadow-sm h-100">
         <div class="card-body text-center py-3">
-          <i class="fa-solid {{ icon }} fa-2x text-{{ color }} mb-2"></i>
+          <i class="fa-solid {{ icon }} fa-2x {{ kpi_icon_class }} mb-2"></i>
           <div class="h4 mb-0 fw-bold">{{ value or 0 }}</div>
           <small class="text-muted">{{ label }}</small>
         </div>
@@ -45,6 +48,7 @@
     <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-referentes">Referentes</a></li>
     <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-incentivos">Incentivos</a></li>
     <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-embajadores">Embajadores</a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-tiendas">Tiendas</a></li>
     <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-config">Configuración</a></li>
   </ul>
 
@@ -62,8 +66,15 @@
           ('paid', 'Liquidados', 'warning'),
           ('rejected', 'Rechazados', 'danger'),
         ] %}
+        {% set filter_button_class = {
+          "secondary": "btn btn-sm btn-outline-secondary",
+          "info": "btn btn-sm btn-outline-info",
+          "success": "btn btn-sm btn-outline-success",
+          "warning": "btn btn-sm btn-outline-warning",
+          "danger": "btn btn-sm btn-outline-danger",
+        }.get(color, "btn btn-sm btn-outline-secondary") %}
         <a href="/referidos{% if state %}?state={{ state }}{% endif %}"
-           class="btn btn-sm btn-outline-{{ color }}">{{ label }}</a>
+           class="{{ filter_button_class }}">{{ label }}</a>
         {% endfor %}
       </div>
 
@@ -109,7 +120,14 @@
                   'paid': 'Liquidado',
                   'rejected': 'Rechazado'
                 } %}
-                <span class="badge bg-{{ state_classes.get(r.state, 'secondary') }}">
+                {% set state_badge_class = {
+                  "secondary": "badge bg-secondary",
+                  "info": "badge bg-info",
+                  "success": "badge bg-success",
+                  "warning": "badge bg-warning",
+                  "danger": "badge bg-danger",
+                }.get(state_classes.get(r.state, 'secondary'), "badge bg-secondary") %}
+                <span class="{{ state_badge_class }}">
                   {{ state_labels.get(r.state, r.state) }}
                 </span>
                 {% if r.is_excluded %}<span class="badge bg-dark ms-1">Excluido</span>{% endif %}
@@ -245,6 +263,99 @@
       <p class="text-muted">Gestión de embajadores de marca por negocio. Configura desde la API o próximamente aquí.</p>
     </div>
 
+    <!-- ─── TAB: TIENDAS ───────────────────────────────────────────── -->
+    <div class="tab-pane fade" id="tab-tiendas">
+      <div class="row g-4">
+        <div class="col-lg-5">
+          <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+              <h5 class="fw-bold mb-2">Alta de tienda para referidos</h5>
+              <p class="text-muted small mb-3">Las tiendas y sus programas se administran aquí. Multitienda solo concede acceso a este módulo por slug.</p>
+              <form id="formProgramaTienda" class="row g-3" onsubmit="guardarProgramaTienda(event)">
+                <div class="col-md-6">
+                  <label class="form-label">Usuario administrador</label>
+                  <input type="number" class="form-control" name="user_id" required>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Tipo de negocio</label>
+                  <select class="form-select" name="business_type">
+                    {% for value, label in [('generic','Genérico'),('commerce','Comercio'),('credit','Crédito'),('health','Salud')] %}
+                    <option value="{{ value }}">{{ label }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <div class="col-12">
+                  <label class="form-label">Nombre del negocio</label>
+                  <input type="text" class="form-control" name="business_name" required>
+                </div>
+                <div class="col-12">
+                  <label class="form-label">Slug de negocio</label>
+                  <input type="text" class="form-control" name="business_slug" placeholder="mi-tienda-principal">
+                  <div class="form-text">Este slug es el identificador público que puede usar `multitienda` para abrir `referidos`.</div>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Máximo de referidos</label>
+                  <input type="number" class="form-control" name="max_referrals" value="0" min="0">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Comisión (%)</label>
+                  <input type="number" step="0.01" class="form-control" name="commission_rate" value="0">
+                </div>
+                <div class="col-12">
+                  <label class="form-label">Sitio web</label>
+                  <input type="url" class="form-control" name="website_url" placeholder="https://">
+                </div>
+                <div class="col-12">
+                  <button type="submit" class="btn btn-primary">
+                    <i class="fa-solid fa-store me-1"></i> Guardar alta
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-7">
+          <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+              <h5 class="fw-bold mb-3">Tiendas registradas en Referidos</h5>
+              <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                  <thead class="table-light">
+                    <tr>
+                      <th>Tienda</th>
+                      <th>Slug</th>
+                      <th>Administrador</th>
+                      <th>Configuración</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for program in programas %}
+                    <tr>
+                      <td>
+                        <div class="fw-semibold">{{ program.business_name or ('Programa #' ~ program.id) }}</div>
+                        <small class="text-muted">{{ program.business_type or 'generic' }}</small>
+                      </td>
+                      <td><code>{{ program.business_slug or 'sin-slug' }}</code></td>
+                      <td><code>{{ program.user_id }}</code></td>
+                      <td>
+                        <span class="badge bg-success">Programa #{{ program.id }}</span>
+                        <small class="d-block text-muted mt-1">
+                          Máx. {{ program.max_referrals or 0 }} referidos | Comisión {{ program.commission_rate or 0 }}%
+                        </small>
+                      </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="4" class="text-center text-muted py-4">No hay tiendas registradas en Referidos</td></tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- ─── TAB: CONFIGURACION ────────────────────────────────────── -->
     <div class="tab-pane fade" id="tab-config">
       {% if configuracion %}
@@ -319,7 +430,17 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <form id="formNuevoReferido" onsubmit="crearReferido(event)">
+        {% if selected_program %}
+        <input type="hidden" name="program_assignment_id" value="{{ selected_program.id }}">
+        {% endif %}
         <div class="modal-body row g-3">
+          {% if selected_program %}
+          <div class="col-12">
+            <div class="alert alert-info mb-0">
+              Este referido se registrará para la tienda <strong>{{ selected_program.business_name or selected_program.business_slug or ('Programa #' ~ selected_program.id) }}</strong>.
+            </div>
+          </div>
+          {% endif %}
           <div class="col-12">
             <label class="form-label">Referente <span class="text-danger">*</span></label>
             <select class="form-select" name="referente_id" required>
@@ -504,9 +625,4 @@
     </div>
   </div>
 </div>
-
-{% endblock %}
-
-{% block scripts %}
 <script src="/static/referidos/js/referidos.js"></script>
-{% endblock %}

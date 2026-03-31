@@ -1854,16 +1854,20 @@
       var sel = document.getElementById("user-store");
       if (!sel) return;
       try {
-        var r = await fetch("/multitienda/vendors/", { headers: { Accept: "application/json" } });
+        var r = await fetch("/multitienda/api/stores", { headers: { Accept: "application/json" } });
         if (!r.ok) throw new Error();
-        var stores = await r.json();
+        var payload = await r.json();
+        var stores = Array.isArray(payload && payload.data) ? payload.data : [];
         sel.innerHTML = '<option value="">Selecciona una tienda</option>';
         (stores || []).forEach(function (s) {
           var o = document.createElement("option");
           o.value = s.id || "";
-          o.textContent = s.store_name || ("Tienda #" + s.id);
+          o.textContent = s.name || s.store_name || ("Tienda #" + s.id);
           sel.appendChild(o);
         });
+        if (stores.length === 1 && stores[0] && stores[0].id) {
+          sel.value = String(stores[0].id);
+        }
       } catch (e) {
         sel.innerHTML = '<option value="">No disponible</option>';
       }

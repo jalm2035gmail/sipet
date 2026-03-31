@@ -16,6 +16,10 @@
     assignableUsers: [],
     chart: null,
     questionModalType: null,
+    presentationEditor: null,
+    draggingPresentationPageIndex: null,
+    draggingPageBlockIndex: null,
+    draggingLayoutSectionIndex: null,
   };
 
   const navButtons = Array.from(root.querySelectorAll("[data-enc-nav]"));
@@ -62,6 +66,9 @@
   const questionsEmpty = document.getElementById("enc-questions-empty");
   const previewRoot = document.getElementById("enc-preview-root");
   const validationBox = document.getElementById("enc-publish-validation");
+  const publishCampaignButton = root.querySelector('[data-enc-action="publish-campaign"]');
+  const closeCampaignButton = root.querySelector('[data-enc-action="close-campaign"]');
+  const addStructureButton = root.querySelector('[data-enc-action="add-section"]');
 
   const generalForm = document.getElementById("enc-general-form");
   const audienceForm = document.getElementById("enc-audience-form");
@@ -73,17 +80,44 @@
   const surveyFinalMessageForm = document.getElementById("enc-survey-final-message-form");
   const surveyImagenForm = document.getElementById("enc-imagen-form");
   const editorImagenUrl = document.getElementById("enc-imagen-url");
+  const imagenFileInput = document.getElementById("enc-imagen-file");
+  const imagenUploadArea = document.getElementById("enc-imagen-upload-area");
+  const imagenUploadPrompt = document.getElementById("enc-imagen-upload-prompt");
+  const imagenUploadPreview = document.getElementById("enc-imagen-upload-preview");
+  const imagenPreviewImg = document.getElementById("enc-imagen-preview-img");
+  const imagenUploadClear = document.getElementById("enc-imagen-upload-clear");
+  const imagenUploadMsg = document.getElementById("enc-imagen-upload-msg");
   const editorTitle = document.getElementById("enc-editor-title");
   const editorParticipaciones = document.getElementById("enc-editor-participaciones");
   const editorResponsable = document.getElementById("enc-editor-responsable");
   const editorRestringido = document.getElementById("enc-editor-restringido");
+  const publicLinkSummary = document.getElementById("enc-public-link-summary");
+  const publicLinkAnchor = document.getElementById("enc-public-link-anchor");
+  const openPublicLink = document.getElementById("enc-open-public-link");
+  const presenterLinkAnchor = document.getElementById("enc-presenter-link-anchor");
+  const openPresenterLink = document.getElementById("enc-open-presenter-link");
+  const surveyInstanceId = document.getElementById("enc-survey-instance-id");
+  const surveyIntegrationToken = document.getElementById("enc-survey-integration-token");
   const editorAudienceMode = document.getElementById("enc-editor-audience-mode");
   const editorAnonymityMode = document.getElementById("enc-editor-anonymity-mode");
   const editorScoringMode = document.getElementById("enc-editor-scoring-mode");
   const editorPublicationMode = document.getElementById("enc-editor-publication-mode");
+  const editorResponseMode = document.getElementById("enc-editor-response-mode");
   const editorDescription = document.getElementById("enc-editor-description");
+  const editorHeaderHtml = document.getElementById("enc-editor-header-html");
+  const editorFooterHtml = document.getElementById("enc-editor-footer-html");
+  const insertHeaderImageButton = document.getElementById("enc-insert-header-image");
+  const insertFooterImageButton = document.getElementById("enc-insert-footer-image");
+  const presentationPagesNode = document.getElementById("enc-presentation-pages");
+  const presentationAddPageButton = document.getElementById("enc-presentation-add-page");
+  const presentationSaveButton = document.getElementById("enc-presentation-save");
   const editorInitialMessage = document.getElementById("enc-editor-initial-message");
   const editorFinalMessage = document.getElementById("enc-editor-final-message");
+  const audienceModeInput = document.getElementById("enc-audience-mode");
+  const publicLinkEnabledInput = document.getElementById("enc-public-link-enabled");
+  const manualGroupsField = document.getElementById("enc-audience-manual-group");
+  const manualGroupsList = document.getElementById("enc-manual-groups-list");
+  const manualGroupAdd = document.getElementById("enc-manual-group-add");
   const questionModal = document.getElementById("enc-question-modal");
   const questionModalTitle = document.getElementById("enc-modal-question-title");
   const questionModalTypes = document.getElementById("enc-modal-question-types");
@@ -95,6 +129,36 @@
   const questionModalSaveNew = document.getElementById("enc-modal-question-save-new");
   const questionModalTabs = Array.from(root.querySelectorAll("[data-enc-question-tab]"));
   const questionModalPanels = Array.from(root.querySelectorAll("[data-enc-question-panel]"));
+
+  const optionsPopup = document.getElementById("enc-options-popup");
+  const optionsPopupTitle = document.getElementById("enc-options-popup-title");
+  const optionsPopupTextarea = document.getElementById("enc-options-popup-textarea");
+  const optionsPopupConfirm = document.getElementById("enc-options-popup-confirm");
+  const optionsPopupCancel = document.getElementById("enc-options-popup-cancel");
+  const optionsPopupClose = document.getElementById("enc-options-popup-close");
+  const optionsPopupBackdrop = document.getElementById("enc-options-popup-backdrop");
+
+  const inlineOptionsPanel = document.getElementById("enc-modal-inline-options");
+  const inlineOptionsLabel = document.getElementById("enc-modal-inline-options-label");
+  const inlineOptionsTa = document.getElementById("enc-modal-inline-options-ta");
+  const pageModal = document.getElementById("enc-page-modal");
+  const pageTitleInput = document.getElementById("enc-page-title");
+  const pageSectionCountInput = document.getElementById("enc-page-section-count");
+  const pageDescriptionInput = document.getElementById("enc-page-description");
+  const pageBgColorInput = document.getElementById("enc-page-bg-color");
+  const pageBgImageInput = document.getElementById("enc-page-bg-image");
+  const pageFooterTextInput = document.getElementById("enc-page-footer-text");
+  const pageFooterColorInput = document.getElementById("enc-page-footer-color");
+  const pageBlocksNode = document.getElementById("enc-page-blocks");
+  const pagePreviewNode = document.getElementById("enc-page-preview");
+  const pageSaveCloseButton = document.getElementById("enc-page-save-close");
+
+  if (inlineOptionsTa) {
+    inlineOptionsTa.addEventListener("input", function () {
+      if (questionModalOptions) questionModalOptions.value = inlineOptionsTa.value;
+      renderQuestionModalPreview();
+    });
+  }
 
   function parseBootstrapState() {
     try {
@@ -138,10 +202,21 @@
     });
     if (response.status === 204) return null;
     const text = await response.text();
-    const data = text ? JSON.parse(text) : null;
+    let data = null;
+    if (text) {
+      try {
+        data = JSON.parse(text);
+      } catch (_error) {
+        data = text;
+      }
+    }
     if (!response.ok) {
       const detail = data && data.detail ? data.detail : data;
-      throw new Error(typeof detail === "string" ? detail : JSON.stringify(detail));
+      throw new Error(
+        typeof detail === "string"
+          ? detail
+          : (detail ? JSON.stringify(detail) : `HTTP ${response.status}`)
+      );
     }
     return data;
   }
@@ -191,6 +266,836 @@
     questionModalPanels.forEach((panel) => {
       panel.classList.toggle("is-active", panel.dataset.encQuestionPanel === tabId);
     });
+  }
+
+  function isPublicLinkAudience(value) {
+    return String(value || "").trim().toLowerCase() === "public_link";
+  }
+
+  function syncPublicLinkControls() {
+    if (!publicLinkEnabledInput) return;
+    const shouldEnable = isPublicLinkAudience(audienceModeInput ? audienceModeInput.value : "")
+      || isPublicLinkAudience(editorAudienceMode ? editorAudienceMode.value : "");
+    if (shouldEnable) {
+      publicLinkEnabledInput.value = "true";
+    }
+  }
+
+  function responseMode() {
+    return String(
+      (state.builder && state.builder.publication_rules_json && state.builder.publication_rules_json.response_mode)
+      || "standard"
+    ).trim().toLowerCase();
+  }
+
+  function normalizeSectionCount(value) {
+    const safe = Number(value);
+    if (safe === 2 || safe === 4) return safe;
+    return 1;
+  }
+
+  const EMBEDDED_EFFECT_OPTIONS = [
+    { value: "none", label: "Sin efecto" },
+    { value: "fade_in", label: "Aparecer" },
+    { value: "slide_up", label: "Subir" },
+    { value: "slide_left", label: "Entrar lateral" },
+    { value: "zoom_in", label: "Zoom" },
+    { value: "bounce_in", label: "Rebote" },
+  ];
+
+  const EMBEDDED_CLICK_EFFECT_OPTIONS = [
+    { value: "none", label: "Sin efecto" },
+    { value: "pulse", label: "Pulso" },
+    { value: "pop", label: "Pop" },
+    { value: "shake", label: "Sacudir" },
+    { value: "highlight", label: "Resaltar" },
+    { value: "flip", label: "Giro" },
+  ];
+
+  const EMBEDDED_HIGHLIGHT_EFFECT_OPTIONS = [
+    { value: "none", label: "Sin efecto" },
+    { value: "highlight", label: "Resaltar" },
+    { value: "pulse", label: "Pulso" },
+    { value: "zoom_in", label: "Zoom" },
+    { value: "shake", label: "Sacudir" },
+  ];
+
+  function renderEffectOptions(options, selectedValue) {
+    return options.map((option) => `<option value="${option.value}" ${String(selectedValue || "none") === option.value ? "selected" : ""}>${option.label}</option>`).join("");
+  }
+
+  function normalizeEmbeddedContent(rawHtml, rawCss) {
+    const html = String(rawHtml || "").trim();
+    const css = String(rawCss || "").trim();
+    if (!html) return { html: "", css };
+    if (!/(<!doctype|<html\b|<body\b|<head\b)/i.test(html)) return { html, css };
+    try {
+      const doc = new DOMParser().parseFromString(html, "text/html");
+      const body = doc.body;
+      const bodyContent = body ? body.innerHTML.trim() : "";
+      const extractedCss = Array.from(doc.head ? doc.head.querySelectorAll("style") : [])
+        .map((node) => node.textContent || "")
+        .join("\n")
+        .trim();
+      const bodyClass = body && body.className ? ` class="${escapeHtml(body.className)}"` : "";
+      const bodyStyle = body && body.getAttribute("style") ? ` style="${escapeHtml(body.getAttribute("style"))}"` : "";
+      if (!bodyContent) return { html, css: css || extractedCss };
+      return {
+        html: `<div${bodyClass}${bodyStyle}>${bodyContent}</div>`,
+        css: css || extractedCss,
+      };
+    } catch (_error) {
+      return { html, css };
+    }
+  }
+
+  function renderEmbeddedSectionHtml(section) {
+    const normalized = normalizeEmbeddedContent(section && section.html, section && section.css);
+    const jsInput = String((section && section.js_input) || "").trim();
+    const jsHighlight = String((section && section.js_highlight) || "").trim();
+    const jsOutput = String((section && section.js_output) || "").trim();
+    const inputEffect = escapeHtml(String((section && section.js_input_effect) || "none"));
+    const highlightEffect = escapeHtml(String((section && section.js_highlight_effect) || "none"));
+    const outputEffect = escapeHtml(String((section && section.js_output_effect) || "none"));
+    const inputCode = jsInput ? escapeHtml(encodeURIComponent(jsInput)) : "";
+    const highlightCode = jsHighlight ? escapeHtml(encodeURIComponent(jsHighlight)) : "";
+    const outputCode = jsOutput ? escapeHtml(encodeURIComponent(jsOutput)) : "";
+    return `<div class="enc-embedded-runtime" data-enc-js-input-effect="${inputEffect}" data-enc-js-highlight-effect="${highlightEffect}" data-enc-js-output-effect="${outputEffect}" data-enc-js-input="${inputCode}" data-enc-js-highlight="${highlightCode}" data-enc-js-output="${outputCode}">${normalized.css ? `<style>${normalized.css}</style>` : ""}${normalized.html}</div>`;
+  }
+
+  function renderImageSection(section) {
+    const imageUrl = escapeHtml(section.image_url || "");
+    const imageFit = escapeHtml(section.image_fit || "cover");
+    const imageAlt = escapeHtml(section.image_alt || "");
+    if (!imageUrl) return '<div class="enc-placeholder">Imagen no configurada.</div>';
+    return `<div class="enc-presentation-image-surface" role="img" aria-label="${imageAlt}" style="background-image:url('${imageUrl}');background-size:${imageFit};background-position:center;background-repeat:no-repeat;"></div>`;
+  }
+
+  function runEmbeddedEffect(node, effectName) {
+    if (!(node instanceof HTMLElement) || !node.animate) return;
+    const effect = String(effectName || "none");
+    if (effect === "none") return;
+    const animations = {
+      fade_in: { keyframes: [{ opacity: 0 }, { opacity: 1 }], options: { duration: 360, easing: "ease-out", fill: "both" } },
+      slide_up: { keyframes: [{ opacity: 0, transform: "translateY(32px)" }, { opacity: 1, transform: "translateY(0)" }], options: { duration: 420, easing: "cubic-bezier(.2,.8,.2,1)", fill: "both" } },
+      slide_left: { keyframes: [{ opacity: 0, transform: "translateX(40px)" }, { opacity: 1, transform: "translateX(0)" }], options: { duration: 420, easing: "cubic-bezier(.2,.8,.2,1)", fill: "both" } },
+      zoom_in: { keyframes: [{ opacity: 0, transform: "scale(.9)" }, { opacity: 1, transform: "scale(1)" }], options: { duration: 320, easing: "ease-out", fill: "both" } },
+      bounce_in: { keyframes: [{ opacity: 0, transform: "scale(.82)" }, { opacity: 1, transform: "scale(1.04)" }, { opacity: 1, transform: "scale(1)" }], options: { duration: 520, easing: "ease-out", fill: "both" } },
+      pulse: { keyframes: [{ transform: "scale(1)" }, { transform: "scale(1.03)" }, { transform: "scale(1)" }], options: { duration: 260, easing: "ease-in-out" } },
+      pop: { keyframes: [{ transform: "scale(1)" }, { transform: "scale(1.08)" }, { transform: "scale(1)" }], options: { duration: 220, easing: "ease-out" } },
+      shake: { keyframes: [{ transform: "translateX(0)" }, { transform: "translateX(-6px)" }, { transform: "translateX(6px)" }, { transform: "translateX(-4px)" }, { transform: "translateX(0)" }], options: { duration: 280, easing: "ease-in-out" } },
+      highlight: { keyframes: [{ boxShadow: "0 0 0 rgba(59,130,246,0)" }, { boxShadow: "0 0 0 8px rgba(59,130,246,.18)" }, { boxShadow: "0 0 0 rgba(59,130,246,0)" }], options: { duration: 520, easing: "ease-out" } },
+      flip: { keyframes: [{ transform: "rotateY(0deg)" }, { transform: "rotateY(14deg)" }, { transform: "rotateY(0deg)" }], options: { duration: 340, easing: "ease-in-out" } },
+    };
+    const config = animations[effect];
+    if (!config) return;
+    node.animate(config.keyframes, config.options);
+  }
+
+  function hydrateEmbeddedRuntime(scope) {
+    if (!scope) return;
+    scope.querySelectorAll(".enc-embedded-runtime").forEach((node) => {
+      if (!(node instanceof HTMLElement)) return;
+      const inputCode = node.dataset.encJsInput ? decodeURIComponent(node.dataset.encJsInput) : "";
+      const highlightCode = node.dataset.encJsHighlight ? decodeURIComponent(node.dataset.encJsHighlight) : "";
+      const outputCode = node.dataset.encJsOutput ? decodeURIComponent(node.dataset.encJsOutput) : "";
+      const inputEffect = node.dataset.encJsInputEffect || "none";
+      const highlightEffect = node.dataset.encJsHighlightEffect || "none";
+      const outputEffect = node.dataset.encJsOutputEffect || "none";
+      if (inputCode && node.dataset.encJsInputRan !== "1") {
+        node.dataset.encJsInputRan = "1";
+        try {
+          new Function("root", inputCode)(node);
+        } catch (error) {
+          console.warn("encuestas js entrada invalido", error);
+        }
+      }
+      if (node.dataset.encJsEntryEffectRan !== "1") {
+        node.dataset.encJsEntryEffectRan = "1";
+        runEmbeddedEffect(node, inputEffect);
+      }
+      if ((highlightCode || highlightEffect !== "none") && node.dataset.encJsHighlightBound !== "1") {
+        node.dataset.encJsHighlightBound = "1";
+        const highlightHandler = function (event) {
+          const target = event.target;
+          if (!(target instanceof Element)) return;
+          if (!target.closest("p,span,h1,h2,h3,h4,h5,h6,li,a,strong,em,small,div")) return;
+          if (target.closest("img,svg,canvas,video")) return;
+          runEmbeddedEffect(node, highlightEffect);
+          if (highlightCode) {
+            try {
+              new Function("root", "event", highlightCode)(node, event);
+            } catch (error) {
+              console.warn("encuestas js destacar invalido", error);
+            }
+          }
+        };
+        node.addEventListener("mouseover", highlightHandler);
+        node.addEventListener("focusin", highlightHandler);
+      }
+      if (outputCode && node.dataset.encJsOutputBound !== "1") {
+        node.dataset.encJsOutputBound = "1";
+        node.addEventListener("click", function (event) {
+          const target = event.target;
+          if (!(target instanceof Element)) return;
+          if (!target.closest("p,span,h1,h2,h3,h4,h5,h6,li,a,strong,em,small,div")) return;
+          if (target.closest("img,svg,canvas,video")) return;
+          runEmbeddedEffect(node, outputEffect);
+          try {
+            new Function("root", "event", outputCode)(node, event);
+          } catch (error) {
+            console.warn("encuestas js salida invalido", error);
+          }
+        });
+      } else if (outputCode === "" && outputEffect !== "none" && node.dataset.encJsOutputBound !== "1") {
+        node.dataset.encJsOutputBound = "1";
+        node.addEventListener("click", function (event) {
+          const target = event.target;
+          if (!(target instanceof Element)) return;
+          if (!target.closest("p,span,h1,h2,h3,h4,h5,h6,li,a,strong,em,small,div")) return;
+          if (target.closest("img,svg,canvas,video")) return;
+          runEmbeddedEffect(node, outputEffect);
+        });
+      }
+    });
+  }
+
+  function createPresentationSection(data) {
+    const normalized = normalizeEmbeddedContent(data && data.html, data && data.css);
+    const questionIds = Array.isArray(data && data.question_ids)
+      ? data.question_ids.map((value) => Number(value)).filter((value) => Number.isFinite(value))
+      : (data && data.question_id != null && data.question_id !== "" ? [Number(data.question_id)] : []);
+    return {
+      id: String((data && data.id) || `section_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`),
+      type: String((data && data.type) || "html"),
+      html: normalized.html,
+      css: normalized.css,
+      js_input: String((data && data.js_input) || ""),
+      js_highlight: String((data && data.js_highlight) || ""),
+      js_output: String((data && data.js_output) || ""),
+      js_input_effect: String((data && data.js_input_effect) || "none"),
+      js_highlight_effect: String((data && data.js_highlight_effect) || "none"),
+      js_output_effect: String((data && data.js_output_effect) || "none"),
+      image_url: String((data && data.image_url) || ""),
+      image_alt: String((data && data.image_alt) || ""),
+      image_fit: String((data && data.image_fit) || "cover"),
+      question_id: questionIds.length ? questionIds[0] : null,
+      question_ids: questionIds,
+    };
+  }
+
+  function ensureLayoutSections(count, sections) {
+    const safeCount = normalizeSectionCount(count);
+    const source = Array.isArray(sections) ? sections.map(createPresentationSection).slice(0, safeCount) : [];
+    while (source.length < safeCount) {
+      source.push(createPresentationSection({ type: "html" }));
+    }
+    return source;
+  }
+
+  function legacyBlocksToLayoutSections(blocks, count) {
+    const source = Array.isArray(blocks) ? blocks : [];
+    return ensureLayoutSections(count || source.length || 1, source.map((block) => ({
+      type: block.type,
+      html: block.html,
+      css: block.css,
+      js_input: block.js_input,
+      js_highlight: block.js_highlight,
+      js_output: block.js_output,
+      js_input_effect: block.js_input_effect,
+      js_highlight_effect: block.js_highlight_effect,
+      js_output_effect: block.js_output_effect,
+      image_url: block.image_url,
+      image_alt: block.image_alt,
+      image_fit: block.image_fit,
+      question_id: block.question_id,
+      question_ids: block.question_id != null ? [block.question_id] : [],
+    })));
+  }
+
+  function createPresentationPage(data) {
+    const rawSectionCount = data && data.section_count;
+    const legacyBlocks = Array.isArray(data && data.blocks) ? data.blocks.map(createPresentationBlock) : [];
+    const sectionCount = rawSectionCount != null
+      ? normalizeSectionCount(rawSectionCount)
+      : normalizeSectionCount(legacyBlocks.length || 1);
+    const layoutSections = Array.isArray(data && data.layout_sections)
+      ? ensureLayoutSections(sectionCount, data.layout_sections)
+      : legacyBlocks.length
+        ? legacyBlocksToLayoutSections(legacyBlocks, sectionCount)
+        : ensureLayoutSections(sectionCount || 1, []);
+    return {
+      id: String((data && data.id) || `page_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`),
+      title: String((data && data.title) || "Nueva página"),
+      description: String((data && data.description) || ""),
+      bg_color: String((data && data.bg_color) || "#ffffff"),
+      bg_image_url: String((data && data.bg_image_url) || ""),
+      section_count: sectionCount || 1,
+      layout_sections: layoutSections,
+      footer_text: String((data && data.footer_text) || ""),
+      footer_color: String((data && data.footer_color) || "#0f172a"),
+      blocks: Array.isArray(data && data.blocks) ? data.blocks.map(createPresentationBlock) : [],
+    };
+  }
+
+  function createPresentationBlock(data) {
+    return {
+      id: String((data && data.id) || `block_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`),
+      type: String((data && data.type) || "html"),
+      width: String((data && data.width) || "full"),
+      html: String((data && data.html) || ""),
+      css: String((data && data.css) || ""),
+      js_input: String((data && data.js_input) || ""),
+      js_highlight: String((data && data.js_highlight) || ""),
+      js_output: String((data && data.js_output) || ""),
+      js_input_effect: String((data && data.js_input_effect) || "none"),
+      js_highlight_effect: String((data && data.js_highlight_effect) || "none"),
+      js_output_effect: String((data && data.js_output_effect) || "none"),
+      image_url: String((data && data.image_url) || ""),
+      image_alt: String((data && data.image_alt) || ""),
+      image_fit: String((data && data.image_fit) || "cover"),
+      question_id: data && data.question_id != null ? Number(data.question_id) : null,
+    };
+  }
+
+  function getPresentationPages() {
+    const rules = (state.builder && state.builder.publication_rules_json) || {};
+    return Array.isArray(rules.presentation_pages) ? rules.presentation_pages.map(createPresentationPage) : [];
+  }
+
+  function setPresentationPages(pages) {
+    if (!state.builder) return;
+    state.builder.publication_rules_json = {
+      ...(state.builder.publication_rules_json || {}),
+      presentation_pages: pages.map(createPresentationPage),
+    };
+  }
+
+  function presentationTemplates() {
+    return {
+      hero: function () {
+        return createPresentationPage({
+          title: "Portada de encuesta",
+          description: "Introduce el tema y prepara a la audiencia.",
+          bg_color: "#f8fafc",
+          blocks: [
+            createPresentationBlock({
+              type: "html",
+              html: '<section style="padding:72px 68px;background:linear-gradient(135deg,#ff8a00 0%,#ffd166 42%,#22d3ee 100%);color:#081120;border-radius:28px;"><div style="max-width:520px;"><div style="font-size:12px;letter-spacing:.18em;text-transform:uppercase;font-weight:800;margin-bottom:18px;">Encuesta en vivo</div><h1 style="font-size:54px;line-height:.95;margin:0 0 16px;font-weight:800;">Abre la conversación</h1><p style="font-size:19px;line-height:1.55;margin:0;">Usa esta página para dar contexto, reglas o detonar la participación.</p></div></section>',
+            }),
+          ],
+        });
+      },
+      split: function () {
+        return createPresentationPage({
+          title: "Idea principal",
+          description: "Texto con apoyo visual en dos columnas.",
+          bg_color: "#ffffff",
+          blocks: [
+            createPresentationBlock({
+              type: "html",
+              width: "half",
+              html: '<section style="padding:52px 56px;background:#ffffff;border-radius:24px;"><h2 style="margin:0 0 10px;font-size:38px;">Explica una idea</h2><p style="margin:0;font-size:18px;line-height:1.7;color:#475569;">Usa este bloque para narrativa, instrucciones o contexto antes de mostrar la pregunta.</p></section>',
+            }),
+            createPresentationBlock({
+              type: "image",
+              width: "half",
+              image_url: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1200&q=80",
+              image_fit: "cover",
+            }),
+          ],
+        });
+      },
+      stats: function () {
+        return createPresentationPage({
+          title: "Indicadores",
+          description: "Muestra datos rápidos antes de la interacción.",
+          bg_color: "#f8fafc",
+          blocks: [
+            createPresentationBlock({
+              type: "html",
+              html: '<section style="padding:42px 52px;background:#f8fafc;border-radius:24px;"><div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;"><div style="padding:22px;background:#fff;border-radius:20px;"><div style="font-size:13px;color:#64748b;">Cobertura</div><strong style="font-size:42px;">92%</strong></div><div style="padding:22px;background:#fff;border-radius:20px;"><div style="font-size:13px;color:#64748b;">Participación</div><strong style="font-size:42px;">4.8</strong></div><div style="padding:22px;background:#fff;border-radius:20px;"><div style="font-size:13px;color:#64748b;">NPS</div><strong style="font-size:42px;">67</strong></div></div></section>',
+            }),
+          ],
+        });
+      },
+      "question-focus": function () {
+        return createPresentationPage({
+          title: "Pregunta destacada",
+          description: "Combina introducción con la pregunta principal.",
+          bg_color: "#ffffff",
+          blocks: [
+            createPresentationBlock({
+              type: "html",
+              html: '<section style="padding:40px 56px;border-radius:24px;background:#0f172a;color:#eff6ff;"><div style="font-size:12px;text-transform:uppercase;letter-spacing:.18em;opacity:.72;margin-bottom:12px;">Momento interactivo</div><h2 style="margin:0 0 12px;font-size:38px;">Prepara a la audiencia</h2><p style="margin:0;font-size:18px;line-height:1.65;color:rgba(255,255,255,.82);">Agrega debajo una pregunta de la encuesta para capturar respuestas en vivo.</p></section>',
+            }),
+            createPresentationBlock({
+              type: "question",
+              width: "full",
+            }),
+          ],
+        });
+      },
+    };
+  }
+
+  function mergePresentationTemplate(templateKey) {
+    const templates = presentationTemplates();
+    const factory = templates[templateKey];
+    if (!factory) return createPresentationPage({ blocks: [] });
+    return factory();
+  }
+
+  function getAllBuilderQuestions() {
+    const sections = (state.builder && state.builder.sections) || [];
+    const rows = [];
+    sections.forEach((section) => {
+      (section.questions || []).forEach((question) => {
+        rows.push({
+          id: question.id,
+          label: `${section.titulo || "Sección"} · ${question.titulo || "Pregunta"}`,
+        });
+      });
+    });
+    return rows;
+  }
+
+  function buildQuestionOptionsHtml(selectedId) {
+    const options = ['<option value="">Selecciona una pregunta</option>'].concat(
+      getAllBuilderQuestions().map((item) =>
+        `<option value="${item.id}" ${String(selectedId) === String(item.id) ? "selected" : ""}>${escapeHtml(item.label)}</option>`
+      )
+    );
+    return options.join("");
+  }
+
+  function buildQuestionCheckboxesHtml(selectedIds, sectionIndex) {
+    const selected = new Set((Array.isArray(selectedIds) ? selectedIds : []).map((value) => String(value)));
+    const items = getAllBuilderQuestions();
+    if (!items.length) {
+      return `
+        <div class="enc-placeholder">
+          <strong>No hay preguntas disponibles.</strong>
+          <span>Crea primero una pregunta para poder agregarla a esta página.</span>
+          <div class="enc-form-actions" style="margin-top:12px;">
+            <button type="button" class="enc-button enc-button-secondary" data-enc-open-question-library="true">Crear pregunta ahora</button>
+          </div>
+        </div>
+      `;
+    }
+    return items.map((item) => `
+      <label class="enc-preview-choice">
+        <input type="checkbox" data-enc-layout-section-question="${sectionIndex}" value="${item.id}" ${selected.has(String(item.id)) ? "checked" : ""}>
+        <span>${escapeHtml(item.label)}</span>
+      </label>
+    `).join("");
+  }
+
+  function focusPresentationQuestionPicker(sectionIndex) {
+    if (!pageBlocksNode) return;
+    window.requestAnimationFrame(() => {
+      const firstQuestion = pageBlocksNode.querySelector(`[data-enc-layout-section-question="${sectionIndex}"]`);
+      const picker = pageBlocksNode.querySelector(".enc-page-question-picker");
+      if (firstQuestion) {
+        firstQuestion.focus();
+        firstQuestion.scrollIntoView({ behavior: "smooth", block: "center" });
+      } else if (picker) {
+        picker.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    });
+  }
+
+  function renderPresentationBuilder() {
+    if (!presentationPagesNode) return;
+    const pages = getPresentationPages();
+    if (!pages.length) {
+      presentationPagesNode.innerHTML = '<div class="enc-placeholder">No hay páginas definidas. Agrega la primera.</div>';
+      return;
+    }
+    presentationPagesNode.innerHTML = pages.map((page, pageIndex) => `
+      <article class="enc-card enc-presentation-page" data-enc-presentation-page="${pageIndex}" draggable="true">
+        <div class="enc-section-head">
+          <div>
+            <h3>Página ${pageIndex + 1}</h3>
+            <p>${escapeHtml(page.description || "Define el contenido y distribución de esta página.")}</p>
+          </div>
+          <div class="enc-builder-toolbar">
+            <button type="button" class="enc-button enc-button-secondary" data-enc-open-presentation-page="${pageIndex}">Editar página</button>
+            <button type="button" class="enc-button enc-button-secondary" data-enc-remove-presentation-page="${pageIndex}">Eliminar página</button>
+          </div>
+        </div>
+        <div class="enc-presentation-page-summary">
+          <div class="enc-presentation-page-meta">
+            <span class="enc-pill is-draft">${escapeHtml(page.title || `Página ${pageIndex + 1}`)}</span>
+            <span class="enc-question-meta">${page.section_count || 1} sección(es)</span>
+          </div>
+          <div class="enc-presentation-page-live-preview">
+            ${renderPresentationPageCanvas(page, true)}
+          </div>
+        </div>
+      </article>
+    `).join("");
+  }
+
+  function movePresentationPage(fromIndex, toIndex) {
+    const pages = getPresentationPages();
+    if (fromIndex < 0 || toIndex < 0 || fromIndex >= pages.length || toIndex >= pages.length || fromIndex === toIndex) return;
+    const temp = pages[fromIndex];
+    pages[fromIndex] = pages[toIndex];
+    pages[toIndex] = temp;
+    setPresentationPages(pages);
+    renderPresentationBuilder();
+    setMessage(builderMsg, "Orden de páginas actualizado.", false);
+  }
+
+  function presentationCanvasStyle(page) {
+    const layers = [];
+    if (page && page.bg_image_url) {
+      layers.push(`linear-gradient(180deg, rgba(15,23,42,0.12), rgba(15,23,42,0.18)), url("${String(page.bg_image_url).replace(/"/g, '\\"')}") center / cover`);
+    }
+    layers.push(page && page.bg_color ? page.bg_color : "#ffffff");
+    return `background:${layers.join(",")};`;
+  }
+
+  function renderLayoutSectionSummary(section) {
+    const type = String((section && section.type) || "html");
+    if (type === "question") {
+      const labels = (Array.isArray(section.question_ids) ? section.question_ids : [])
+        .map((questionId) => getAllBuilderQuestions().find((item) => Number(item.id) === Number(questionId)))
+        .filter(Boolean)
+        .map((item) => item.label);
+      return `<div class="enc-presentation-mini-item"><strong>Preguntas</strong><span>${escapeHtml(labels.length ? labels.join(" · ") : "Selecciona una o varias preguntas")}</span></div>`;
+    }
+    if (type === "image") {
+      return `<div class="enc-presentation-mini-item"><strong>Imagen</strong><span>${escapeHtml(section.image_url || "Sin URL")}</span></div>`;
+    }
+    const sanitizedHtml = String(section.html || "")
+      .replace(/<style[\s\S]*?<\/style>/gi, " ")
+      .replace(/<script[\s\S]*?<\/script>/gi, " ");
+    const htmlText = sanitizedHtml.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+    const previewText = htmlText ? htmlText.slice(0, 140) : "Bloque visual HTML";
+    return `<div class="enc-presentation-mini-item"><strong>HTML</strong><span>${escapeHtml(previewText)}${htmlText.length > 140 ? "..." : ""}</span></div>`;
+  }
+
+  function sectionGridClass(sectionCount) {
+    return `is-sections-${normalizeSectionCount(sectionCount)}`;
+  }
+
+  function renderPresentationSectionPreview(section, sectionIndex, interactive) {
+    const type = String((section && section.type) || "html");
+    const isSelected = Boolean(
+      interactive
+      && state.presentationEditor
+      && Number(state.presentationEditor.selectedSectionIndex) === Number(sectionIndex)
+    );
+    const attrs = interactive
+      ? `data-enc-layout-section="${sectionIndex}" draggable="true"`
+      : "";
+    if (type === "question") {
+      const labels = (Array.isArray(section.question_ids) ? section.question_ids : [])
+        .map((questionId) => getAllBuilderQuestions().find((item) => Number(item.id) === Number(questionId)))
+        .filter(Boolean)
+        .map((item) => item.label);
+      return `<article class="enc-presentation-layout-slot ${isSelected ? "is-selected" : ""}" ${attrs}><div class="enc-presentation-mini-item"><strong>Preguntas</strong><span>${escapeHtml(labels.length ? labels.join(" · ") : "Selecciona una o varias preguntas")}</span></div></article>`;
+    }
+    if (type === "image") {
+      return `<article class="enc-presentation-layout-slot ${isSelected ? "is-selected" : ""}" ${attrs}>${renderImageSection(section)}</article>`;
+    }
+    const html = renderEmbeddedSectionHtml(section);
+    return `<article class="enc-presentation-layout-slot ${isSelected ? "is-selected" : ""}" ${attrs}>${html ? `<article class="enc-card enc-response-richtext">${html}</article>` : `<div class="enc-placeholder">Haz clic para elegir contenido</div>`}</article>`;
+  }
+
+  function renderPresentationPageCanvas(page, compact) {
+    const sections = ensureLayoutSections(page.section_count, page.layout_sections);
+    const title = String((page && page.title) || "").trim();
+    const footerText = String((page && page.footer_text) || "").trim();
+    return `
+      <div class="enc-presentation-stage ${compact ? "is-compact" : ""}">
+        <div class="enc-presentation-stage-ratio">
+          <div class="enc-presentation-stage-canvas" style="${presentationCanvasStyle(page)}">
+            <div class="enc-presentation-layout">
+              ${title ? `<header class="enc-presentation-layout-header"><h1>${escapeHtml(title)}</h1></header>` : ""}
+              <div class="enc-presentation-layout-body ${sectionGridClass(page.section_count)}">
+                ${sections.map((section, index) => renderPresentationSectionPreview(section, index, !compact)).join("")}
+              </div>
+              ${footerText ? `<footer class="enc-presentation-layout-footer" style="background:${escapeHtml(page.footer_color || "#0f172a")};"><span>${escapeHtml(footerText)}</span></footer>` : ""}
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderPresentationPagePreview(page) {
+    if (!pagePreviewNode) return;
+    pagePreviewNode.innerHTML = renderPresentationPageCanvas(page, false);
+    hydrateEmbeddedRuntime(pagePreviewNode);
+  }
+
+  function syncPresentationEditorPage() {
+    if (!state.presentationEditor) return null;
+    const page = createPresentationPage({
+      ...(state.presentationEditor.page || {}),
+      title: pageTitleInput ? pageTitleInput.value : "",
+      section_count: pageSectionCountInput ? normalizeSectionCount(pageSectionCountInput.value) : 1,
+      description: pageDescriptionInput ? pageDescriptionInput.value : "",
+      bg_color: pageBgColorInput ? pageBgColorInput.value : "#ffffff",
+      bg_image_url: pageBgImageInput ? pageBgImageInput.value : "",
+      footer_text: pageFooterTextInput ? pageFooterTextInput.value : "",
+      footer_color: pageFooterColorInput ? pageFooterColorInput.value : "#0f172a",
+    });
+    page.layout_sections = ensureLayoutSections(page.section_count, page.layout_sections);
+    state.presentationEditor.page = page;
+    renderPresentationPagePreview(page);
+    return page;
+  }
+
+  function renderPageBlocksEditor() {
+    if (!pageBlocksNode || !state.presentationEditor) return;
+    const page = state.presentationEditor.page || createPresentationPage({});
+    const sectionIndex = Number(state.presentationEditor.selectedSectionIndex || 0);
+    const sections = ensureLayoutSections(page.section_count, page.layout_sections);
+    const section = sections[sectionIndex] || createPresentationSection({});
+    pageBlocksNode.innerHTML = `
+      <article class="enc-card enc-presentation-block">
+        <div class="enc-builder-toolbar">
+          <strong>Sección ${sectionIndex + 1} de ${page.section_count}</strong>
+          <span class="enc-question-meta">Haz clic en otra sección del canvas para editarla.</span>
+        </div>
+        <div class="enc-form-grid">
+          <label class="enc-field">
+            <span>Tipo de contenido</span>
+            <select class="enc-input enc-select" data-enc-layout-section-type="${sectionIndex}">
+              <option value="html" ${section.type === "html" ? "selected" : ""}>HTML</option>
+              <option value="image" ${section.type === "image" ? "selected" : ""}>Imagen</option>
+              <option value="question" ${section.type === "question" ? "selected" : ""}>Pregunta</option>
+            </select>
+          </label>
+          ${section.type === "question" ? `
+            <label class="enc-field enc-field-span-2">
+              <span>Preguntas</span>
+              <div class="enc-page-question-picker">
+                ${buildQuestionCheckboxesHtml(section.question_ids, sectionIndex)}
+              </div>
+            </label>
+          ` : section.type === "image" ? `
+            <label class="enc-field enc-field-span-2">
+              <span>URL de imagen</span>
+              <input class="enc-input" type="url" data-enc-layout-section-image-url="${sectionIndex}" value="${escapeHtml(section.image_url)}" placeholder="https://ejemplo.com/imagen.jpg">
+            </label>
+            <label class="enc-field">
+              <span>Texto alternativo</span>
+              <input class="enc-input" type="text" data-enc-layout-section-image-alt="${sectionIndex}" value="${escapeHtml(section.image_alt)}" placeholder="Descripción corta de la imagen">
+            </label>
+            <label class="enc-field">
+              <span>Ajuste</span>
+              <select class="enc-input enc-select" data-enc-layout-section-image-fit="${sectionIndex}">
+                <option value="cover" ${section.image_fit === "cover" ? "selected" : ""}>Cubrir</option>
+                <option value="contain" ${section.image_fit === "contain" ? "selected" : ""}>Contener</option>
+              </select>
+            </label>
+          ` : `
+            <label class="enc-field enc-field-span-2">
+              <span>HTML</span>
+              <textarea class="enc-input enc-textarea" data-enc-layout-section-html="${sectionIndex}" placeholder="<div>Contenido libre</div>">${escapeHtml(section.html)}</textarea>
+            </label>
+            <label class="enc-field enc-field-span-2">
+              <span>CSS</span>
+              <textarea class="enc-input enc-textarea" data-enc-layout-section-css="${sectionIndex}" placeholder=".bloque { color: #0f172a; }">${escapeHtml(section.css || "")}</textarea>
+            </label>
+            <label class="enc-field enc-field-span-2">
+              <span>Efecto de entrada</span>
+              <select class="enc-input enc-select" data-enc-layout-section-js-input-effect="${sectionIndex}">
+                ${renderEffectOptions(EMBEDDED_EFFECT_OPTIONS, section.js_input_effect)}
+              </select>
+            </label>
+            <label class="enc-field enc-field-span-2">
+              <span>Efecto destacar</span>
+              <select class="enc-input enc-select" data-enc-layout-section-js-highlight-effect="${sectionIndex}">
+                ${renderEffectOptions(EMBEDDED_HIGHLIGHT_EFFECT_OPTIONS, section.js_highlight_effect)}
+              </select>
+            </label>
+            <label class="enc-field enc-field-span-2">
+              <span>Efecto de salida</span>
+              <select class="enc-input enc-select" data-enc-layout-section-js-output-effect="${sectionIndex}">
+                ${renderEffectOptions(EMBEDDED_CLICK_EFFECT_OPTIONS, section.js_output_effect)}
+              </select>
+            </label>
+            <label class="enc-field enc-field-span-2">
+              <span>JS Entrada</span>
+              <textarea class="enc-input enc-textarea" data-enc-layout-section-js-input="${sectionIndex}" placeholder="console.log('entrada');">${escapeHtml(section.js_input || "")}</textarea>
+            </label>
+            <label class="enc-field enc-field-span-2">
+              <span>JS Destacar</span>
+              <textarea class="enc-input enc-textarea" data-enc-layout-section-js-highlight="${sectionIndex}" placeholder="root.classList.add('resaltado');">${escapeHtml(section.js_highlight || "")}</textarea>
+            </label>
+            <label class="enc-field enc-field-span-2">
+              <span>JS Salida</span>
+              <textarea class="enc-input enc-textarea" data-enc-layout-section-js-output="${sectionIndex}" placeholder="console.log('salida');">${escapeHtml(section.js_output || "")}</textarea>
+            </label>
+            <div class="enc-form-actions enc-field-span-2">
+              <button type="button" class="enc-button enc-button-secondary" data-enc-layout-section-insert-image="${sectionIndex}">Insertar imagen</button>
+            </div>
+          `}
+        </div>
+      </article>
+    `;
+    renderPresentationPagePreview(page);
+  }
+
+  function collectLayoutSectionsFromModal() {
+    if (!state.presentationEditor) return [];
+    const page = state.presentationEditor.page || createPresentationPage({});
+    const sections = ensureLayoutSections(page.section_count, page.layout_sections);
+    const sectionIndex = Number(state.presentationEditor.selectedSectionIndex || 0);
+    const section = createPresentationSection(sections[sectionIndex] || {});
+    const typeNode = pageBlocksNode ? pageBlocksNode.querySelector(`[data-enc-layout-section-type="${sectionIndex}"]`) : null;
+    const htmlNode = pageBlocksNode ? pageBlocksNode.querySelector(`[data-enc-layout-section-html="${sectionIndex}"]`) : null;
+    const cssNode = pageBlocksNode ? pageBlocksNode.querySelector(`[data-enc-layout-section-css="${sectionIndex}"]`) : null;
+    const jsInputEffectNode = pageBlocksNode ? pageBlocksNode.querySelector(`[data-enc-layout-section-js-input-effect="${sectionIndex}"]`) : null;
+    const jsHighlightEffectNode = pageBlocksNode ? pageBlocksNode.querySelector(`[data-enc-layout-section-js-highlight-effect="${sectionIndex}"]`) : null;
+    const jsOutputEffectNode = pageBlocksNode ? pageBlocksNode.querySelector(`[data-enc-layout-section-js-output-effect="${sectionIndex}"]`) : null;
+    const jsInputNode = pageBlocksNode ? pageBlocksNode.querySelector(`[data-enc-layout-section-js-input="${sectionIndex}"]`) : null;
+    const jsHighlightNode = pageBlocksNode ? pageBlocksNode.querySelector(`[data-enc-layout-section-js-highlight="${sectionIndex}"]`) : null;
+    const jsOutputNode = pageBlocksNode ? pageBlocksNode.querySelector(`[data-enc-layout-section-js-output="${sectionIndex}"]`) : null;
+    const questionNodes = pageBlocksNode ? Array.from(pageBlocksNode.querySelectorAll(`[data-enc-layout-section-question="${sectionIndex}"]`)) : [];
+    const imageUrlNode = pageBlocksNode ? pageBlocksNode.querySelector(`[data-enc-layout-section-image-url="${sectionIndex}"]`) : null;
+    const imageAltNode = pageBlocksNode ? pageBlocksNode.querySelector(`[data-enc-layout-section-image-alt="${sectionIndex}"]`) : null;
+    const imageFitNode = pageBlocksNode ? pageBlocksNode.querySelector(`[data-enc-layout-section-image-fit="${sectionIndex}"]`) : null;
+    section.type = typeNode ? typeNode.value : section.type;
+    const normalized = normalizeEmbeddedContent(htmlNode ? htmlNode.value : section.html, cssNode ? cssNode.value : section.css);
+    section.html = normalized.html;
+    section.css = normalized.css;
+    section.js_input = jsInputNode ? jsInputNode.value : section.js_input;
+    section.js_highlight = jsHighlightNode ? jsHighlightNode.value : section.js_highlight;
+    section.js_output = jsOutputNode ? jsOutputNode.value : section.js_output;
+    section.js_input_effect = jsInputEffectNode ? jsInputEffectNode.value : section.js_input_effect;
+    section.js_highlight_effect = jsHighlightEffectNode ? jsHighlightEffectNode.value : section.js_highlight_effect;
+    section.js_output_effect = jsOutputEffectNode ? jsOutputEffectNode.value : section.js_output_effect;
+    section.question_ids = questionNodes.filter((node) => node.checked).map((node) => Number(node.value)).filter((value) => Number.isFinite(value));
+    section.question_id = section.question_ids.length ? section.question_ids[0] : null;
+    section.image_url = imageUrlNode ? imageUrlNode.value : section.image_url;
+    section.image_alt = imageAltNode ? imageAltNode.value : section.image_alt;
+    section.image_fit = imageFitNode ? imageFitNode.value : section.image_fit;
+    sections[sectionIndex] = section;
+    return sections;
+  }
+
+  function updatePresentationEditorPage() {
+    if (!state.presentationEditor) return;
+    const page = syncPresentationEditorPage() || createPresentationPage({});
+    page.layout_sections = collectLayoutSectionsFromModal();
+    state.presentationEditor.page = createPresentationPage(page);
+    renderPresentationPagePreview(state.presentationEditor.page);
+  }
+
+  function moveLayoutSection(fromIndex, toIndex) {
+    if (!state.presentationEditor) return;
+    updatePresentationEditorPage();
+    const sections = ensureLayoutSections(state.presentationEditor.page.section_count, state.presentationEditor.page.layout_sections);
+    if (fromIndex < 0 || toIndex < 0 || fromIndex >= sections.length || toIndex >= sections.length || fromIndex === toIndex) return;
+    const temp = sections[fromIndex];
+    sections[fromIndex] = sections[toIndex];
+    sections[toIndex] = temp;
+    state.presentationEditor.page.layout_sections = sections;
+    state.presentationEditor.selectedSectionIndex = toIndex;
+    renderPageBlocksEditor();
+  }
+
+  function appendHtmlBlockFromPaste(rawHtml, rawText) {
+    if (!state.presentationEditor) return;
+    const html = String(rawHtml || "").trim();
+    const text = String(rawText || "").trim();
+    if (!html && !text) return;
+    updatePresentationEditorPage();
+    const sections = ensureLayoutSections(state.presentationEditor.page.section_count, state.presentationEditor.page.layout_sections);
+    const targetIndex = Number(state.presentationEditor.selectedSectionIndex || 0);
+    sections[targetIndex] = createPresentationSection({
+      ...(sections[targetIndex] || {}),
+      type: "html",
+      ...normalizeEmbeddedContent(html || `<section style="padding:24px;"><p>${escapeHtml(text)}</p></section>`, ""),
+      js_input: "",
+      js_highlight: "",
+      js_output: "",
+      js_input_effect: "none",
+      js_highlight_effect: "none",
+      js_output_effect: "none",
+    });
+    state.presentationEditor.page.layout_sections = sections;
+    renderPageBlocksEditor();
+    setMessage(builderMsg, "Contenido pegado en la sección seleccionada.", false);
+  }
+
+  function openPresentationPageBuilder(pageIndex) {
+    if (!pageModal) return;
+    const pages = getPresentationPages();
+    const page = pages[pageIndex];
+    if (!page) return;
+    state.presentationEditor = {
+      pageIndex,
+      page: createPresentationPage(page),
+      selectedSectionIndex: 0,
+    };
+    if (pageTitleInput) pageTitleInput.value = state.presentationEditor.page.title || "";
+    if (pageSectionCountInput) pageSectionCountInput.value = String(state.presentationEditor.page.section_count || 1);
+    if (pageDescriptionInput) pageDescriptionInput.value = state.presentationEditor.page.description || "";
+    if (pageBgColorInput) pageBgColorInput.value = state.presentationEditor.page.bg_color || "#ffffff";
+    if (pageBgImageInput) pageBgImageInput.value = state.presentationEditor.page.bg_image_url || "";
+    if (pageFooterTextInput) pageFooterTextInput.value = state.presentationEditor.page.footer_text || "";
+    if (pageFooterColorInput) pageFooterColorInput.value = state.presentationEditor.page.footer_color || "#0f172a";
+    renderPageBlocksEditor();
+    pageModal.hidden = false;
+    document.body.style.overflow = "hidden";
+    if (pagePreviewNode) pagePreviewNode.focus();
+  }
+
+  function closePresentationPageBuilder() {
+    if (!pageModal) return;
+    pageModal.hidden = true;
+    state.presentationEditor = null;
+    document.body.style.overflow = "";
+  }
+
+  function persistPresentationEditorPage() {
+    if (!state.presentationEditor) return;
+    updatePresentationEditorPage();
+    const pages = getPresentationPages();
+    pages[state.presentationEditor.pageIndex] = createPresentationPage(state.presentationEditor.page);
+    setPresentationPages(pages);
+    renderPresentationBuilder();
+  }
+
+  function addPresentationPage() {
+    const pages = getPresentationPages();
+    pages.push(createPresentationPage({
+      title: "Nueva página",
+      section_count: 1,
+      layout_sections: [],
+      footer_text: "",
+      footer_color: "#0f172a",
+    }));
+    setPresentationPages(pages);
+    showSurveyTab("presentation");
+    renderPresentationBuilder();
+    setMessage(builderMsg, "Página agregada. Ahora puedes construir su contenido.", false);
+    openPresentationPageBuilder(pages.length - 1);
+  }
+
+  function collectPresentationPagesFromEditor() {
+    return getPresentationPages();
+  }
+
+  async function savePresentationPages() {
+    const pages = getPresentationPages();
+    await saveDraft(
+      {
+        publication_rules_json: {
+          ...(state.builder && state.builder.publication_rules_json ? state.builder.publication_rules_json : {}),
+          presentation_pages: pages,
+        },
+      },
+      "Presentación guardada."
+    );
   }
 
   function paintMetrics() {
@@ -408,10 +1313,20 @@
     if (editorAnonymityMode) editorAnonymityMode.value = builder.anonymity_mode || "identified";
     if (editorScoringMode) editorScoringMode.value = settings.scoring_mode || "none";
     if (editorPublicationMode) editorPublicationMode.value = builder.publication_mode || "manual";
+    if (editorResponseMode) editorResponseMode.value = publicationRules.response_mode || "standard";
+    if (addStructureButton) {
+      addStructureButton.textContent = publicationRules.response_mode === "presentation"
+        ? "+ Agregar página"
+        : "+ Agregar sección";
+    }
     if (editorDescription) editorDescription.value = builder.descripcion || "";
+    if (editorHeaderHtml) editorHeaderHtml.value = publicationRules.header_html || "";
+    if (editorFooterHtml) editorFooterHtml.value = publicationRules.footer_html || "";
     if (editorInitialMessage) editorInitialMessage.value = publicationRules.initial_message || "";
     if (editorFinalMessage) editorFinalMessage.value = publicationRules.final_message || "";
     if (editorImagenUrl) editorImagenUrl.value = publicationRules.image_url || "";
+    renderPublicLinkSummary(builder);
+    renderPresentationBuilder();
     const imgPosRadio = document.querySelector(`[name="enc-image-position"][value="${publicationRules.image_position || "background"}"]`);
     if (imgPosRadio) imgPosRadio.checked = true;
   }
@@ -453,8 +1368,9 @@
         </span>
       </button>
     `).join("");
+    const supportsOpts = typeSupportsOptions(state.questionModalType);
     if (questionModalOptions) {
-      if (typeSupportsOptions(state.questionModalType)) {
+      if (supportsOpts) {
         questionModalOptions.disabled = false;
         if (!questionModalOptions.value.trim()) {
           questionModalOptions.value = defaultOptionsText(state.questionModalType);
@@ -464,6 +1380,18 @@
         questionModalOptions.value = "";
       }
     }
+    if (inlineOptionsPanel) {
+      inlineOptionsPanel.hidden = !supportsOpts;
+      if (supportsOpts) {
+        if (inlineOptionsLabel) {
+          inlineOptionsLabel.textContent = `Alternativas — ${questionTypeLabel(state.questionModalType)}`;
+        }
+        if (inlineOptionsTa) {
+          inlineOptionsTa.value = (questionModalOptions && questionModalOptions.value) || defaultOptionsText(state.questionModalType);
+        }
+      }
+    }
+    if (questionModalPreview) questionModalPreview.hidden = supportsOpts;
     renderQuestionModalPreview();
   }
 
@@ -473,6 +1401,7 @@
     if (questionModalDescription) questionModalDescription.value = "";
     if (questionModalRequired) questionModalRequired.value = "false";
     if (questionModalOptions) questionModalOptions.value = defaultOptionsText(state.questionModalType);
+    if (inlineOptionsTa) inlineOptionsTa.value = defaultOptionsText(state.questionModalType);
     showQuestionModalTab("answers");
     renderQuestionModalTypeList();
   }
@@ -491,6 +1420,49 @@
     document.body.style.overflow = "";
   }
 
+  function openOptionsPopup(type) {
+    if (!optionsPopup || !optionsPopupTextarea) return;
+    const existing = questionModalOptions ? questionModalOptions.value.trim() : "";
+    optionsPopupTextarea.value = existing || defaultOptionsText(type) || "";
+    if (optionsPopupTitle) {
+      optionsPopupTitle.textContent = `Alternativas — ${questionTypeLabel(type)}`;
+    }
+    optionsPopup.hidden = false;
+    optionsPopupTextarea.focus();
+  }
+
+  function closeOptionsPopup() {
+    if (!optionsPopup) return;
+    optionsPopup.hidden = true;
+  }
+
+  function confirmOptionsPopup() {
+    if (questionModalOptions && optionsPopupTextarea) {
+      questionModalOptions.value = optionsPopupTextarea.value;
+    }
+    closeOptionsPopup();
+    renderQuestionModalPreview();
+  }
+
+  if (optionsPopupConfirm) optionsPopupConfirm.addEventListener("click", confirmOptionsPopup);
+  if (optionsPopupCancel) optionsPopupCancel.addEventListener("click", closeOptionsPopup);
+  if (optionsPopupClose) optionsPopupClose.addEventListener("click", closeOptionsPopup);
+  if (optionsPopupBackdrop) optionsPopupBackdrop.addEventListener("click", closeOptionsPopup);
+  document.addEventListener("keydown", function (e) {
+    if (e.key !== "Escape") return;
+    if (optionsPopup && !optionsPopup.hidden) {
+      closeOptionsPopup();
+      return;
+    }
+    if (pageModal && !pageModal.hidden) {
+      closePresentationPageBuilder();
+      return;
+    }
+    if (questionModal && !questionModal.hidden) {
+      closeQuestionModal();
+    }
+  });
+
   function parseCsvValues(rawText) {
     return String(rawText || "")
       .split(",")
@@ -503,12 +1475,270 @@
     return JSON.stringify(groups, null, 2);
   }
 
+  function normalizeManualGroups(groups) {
+    if (!Array.isArray(groups)) return [];
+    return groups
+      .map(function (group) {
+        const members = Array.isArray(group && group.members) ? group.members : [];
+        return {
+          name: String(group && group.name || "").trim(),
+          description: String(group && group.description || "").trim(),
+          members: members
+            .map(function (member) {
+              return {
+                user_id: String(member && member.user_id || "").trim(),
+                nombre: String(member && member.nombre || "").trim(),
+                role: String(member && member.role || "").trim(),
+                department: String(member && member.department || "").trim(),
+              };
+            })
+            .filter(function (member) {
+              return member.user_id || member.nombre || member.role || member.department;
+            }),
+        };
+      })
+      .filter(function (group) {
+        return group.name || group.description || group.members.length;
+      });
+  }
+
   function parseManualGroups(rawText) {
     const text = String(rawText || "").trim();
     if (!text) return [];
     const parsed = JSON.parse(text);
-    if (Array.isArray(parsed)) return parsed;
-    return [parsed];
+    if (Array.isArray(parsed)) return normalizeManualGroups(parsed);
+    return normalizeManualGroups([parsed]);
+  }
+
+  function createManualMember(member) {
+    return {
+      user_id: String(member && member.user_id || "").trim(),
+      nombre: String(member && member.nombre || "").trim(),
+      role: String(member && member.role || "").trim(),
+      department: String(member && member.department || "").trim(),
+    };
+  }
+
+  function createManualGroup(group) {
+    const normalizedMembers = Array.isArray(group && group.members) && group.members.length
+      ? group.members.map(createManualMember)
+      : [createManualMember({})];
+    return {
+      name: String(group && group.name || "").trim(),
+      description: String(group && group.description || "").trim(),
+      members: normalizedMembers,
+    };
+  }
+
+  function readManualGroupsFromEditor() {
+    if (!manualGroupsList) {
+      return parseManualGroups(manualGroupsField ? manualGroupsField.value : "");
+    }
+    const groups = Array.from(manualGroupsList.querySelectorAll("[data-enc-manual-group]"))
+      .map(function (groupNode) {
+        const group = {
+          name: String((groupNode.querySelector("[data-enc-manual-group-name]") || {}).value || "").trim(),
+          description: String((groupNode.querySelector("[data-enc-manual-group-description]") || {}).value || "").trim(),
+          members: Array.from(groupNode.querySelectorAll("[data-enc-manual-member]")).map(function (memberNode) {
+            return {
+              user_id: String((memberNode.querySelector("[data-enc-member-user-id]") || {}).value || "").trim(),
+              nombre: String((memberNode.querySelector("[data-enc-member-name]") || {}).value || "").trim(),
+              role: String((memberNode.querySelector("[data-enc-member-role]") || {}).value || "").trim(),
+              department: String((memberNode.querySelector("[data-enc-member-department]") || {}).value || "").trim(),
+            };
+          }),
+        };
+        return group;
+      });
+    return normalizeManualGroups(groups);
+  }
+
+  function syncManualGroupsField() {
+    if (!manualGroupsField) return;
+    manualGroupsField.value = stringifyManualGroups(readManualGroupsFromEditor());
+  }
+
+  function renderManualGroupsEditor(groups) {
+    if (!manualGroupsList) return;
+    const normalizedGroups = Array.isArray(groups) && groups.length
+      ? normalizeManualGroups(groups).map(createManualGroup)
+      : [];
+    manualGroupsList.innerHTML = normalizedGroups.length
+      ? normalizedGroups.map(function (group, groupIndex) {
+          return `
+            <section class="enc-manual-group-card" data-enc-manual-group="${groupIndex}">
+              <div class="enc-manual-group-head">
+                <strong>Grupo ${groupIndex + 1}</strong>
+                <button type="button" class="enc-mini-btn" data-enc-remove-group="${groupIndex}">Quitar grupo</button>
+              </div>
+              <div class="enc-manual-group-grid">
+                <label class="enc-field">
+                  <span>Nombre del grupo</span>
+                  <input data-enc-manual-group-name class="enc-input" type="text" value="${escapeHtml(group.name)}" placeholder="Grupo especial">
+                </label>
+                <label class="enc-field">
+                  <span>Descripción</span>
+                  <input data-enc-manual-group-description class="enc-input" type="text" value="${escapeHtml(group.description)}" placeholder="Grupo manual de encuesta">
+                </label>
+              </div>
+              <div class="enc-manual-members">
+                ${group.members.map(function (member, memberIndex) {
+                  return `
+                    <div class="enc-manual-member-row" data-enc-manual-member="${memberIndex}">
+                      <input data-enc-member-user-id class="enc-input" type="text" value="${escapeHtml(member.user_id)}" placeholder="user_id">
+                      <input data-enc-member-name class="enc-input" type="text" value="${escapeHtml(member.nombre)}" placeholder="Nombre">
+                      <input data-enc-member-role class="enc-input" type="text" value="${escapeHtml(member.role)}" placeholder="Rol">
+                      <input data-enc-member-department class="enc-input" type="text" value="${escapeHtml(member.department)}" placeholder="Departamento">
+                      <button type="button" class="enc-mini-btn" data-enc-remove-member="${memberIndex}">Quitar</button>
+                    </div>
+                  `;
+                }).join("")}
+              </div>
+              <div class="enc-manual-groups-actions">
+                <button type="button" class="enc-mini-btn is-primary" data-enc-add-member="${groupIndex}">Agregar miembro</button>
+              </div>
+            </section>
+          `;
+        }).join("")
+      : '<div class="enc-placeholder">No hay grupos manuales. Agrega uno para materializar miembros específicos.</div>';
+    syncManualGroupsField();
+  }
+
+  function ensureManualGroupsEditor() {
+    renderManualGroupsEditor(parseManualGroups(manualGroupsField ? manualGroupsField.value : ""));
+  }
+
+  function escapeHtml(value) {
+    return String(value == null ? "" : value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  function getPublicSurveyUrl(builder) {
+    if (!builder) return "";
+    const token = String(builder.public_link_token || "").trim();
+    const isPublic = Boolean(builder.is_public_link_enabled) || isPublicLinkAudience(builder.audience_mode);
+    const isPublished = ["published", "scheduled"].includes(String(builder.status || "").trim().toLowerCase());
+    if (!token || !isPublic || !isPublished) return "";
+    return `${window.location.origin}/api/public/encuestas/${encodeURIComponent(token)}`;
+  }
+
+  function getPresenterUrl(builder) {
+    if (!builder || builder.id == null) return "";
+    return `${window.location.origin}/encuestas/presentador/${encodeURIComponent(builder.id)}`;
+  }
+
+  async function copyText(text) {
+    if (!text) return;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(text);
+      return;
+    }
+    const temp = document.createElement("textarea");
+    temp.value = text;
+    temp.setAttribute("readonly", "readonly");
+    temp.style.position = "absolute";
+    temp.style.left = "-9999px";
+    document.body.appendChild(temp);
+    temp.select();
+    document.execCommand("copy");
+    document.body.removeChild(temp);
+  }
+
+  function appendHtmlImage(textarea, imageUrl) {
+    if (!textarea || !imageUrl) return;
+    const snippet = `<img src="${imageUrl}" alt="" style="max-width:100%;height:auto;border-radius:16px;">`;
+    const current = String(textarea.value || "").trim();
+    textarea.value = current ? `${current}\n${snippet}` : snippet;
+  }
+
+  async function uploadSurveyImageFile(file) {
+    if (!state.currentInstanceId) {
+      throw new Error("Selecciona una campaña primero.");
+    }
+    if (!file) {
+      throw new Error("Selecciona una imagen.");
+    }
+    const formData = new FormData();
+    formData.append("file", file);
+    const resp = await fetch(
+      `/api/encuestas/campanas/${state.currentInstanceId}/upload-image`,
+      { method: "POST", body: formData, credentials: "same-origin" }
+    );
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({ detail: resp.statusText }));
+      throw new Error(err.detail || resp.statusText);
+    }
+    return resp.json();
+  }
+
+  async function promptAndInsertHtmlImage(targetTextarea) {
+    if (!targetTextarea) return;
+    if (!state.currentInstanceId) {
+      throw new Error("Selecciona una campaña primero.");
+    }
+    const picker = document.createElement("input");
+    picker.type = "file";
+    picker.accept = "image/jpeg,image/png,image/gif,image/webp,image/svg+xml";
+    const file = await new Promise((resolve) => {
+      picker.addEventListener("change", function () {
+        resolve(picker.files && picker.files[0] ? picker.files[0] : null);
+      }, { once: true });
+      picker.click();
+    });
+    if (!file) return;
+    setMessage(builderMsg, "Subiendo imagen...", false);
+    const data = await uploadSurveyImageFile(file);
+    appendHtmlImage(targetTextarea, data.url || "");
+    setMessage(builderMsg, "Imagen insertada en el HTML. Guarda el contenido para aplicarla.", false);
+  }
+
+  function renderPublicLinkSummary(builder) {
+    if (!publicLinkSummary || !publicLinkAnchor || !surveyInstanceId || !surveyIntegrationToken) return;
+    const publicUrl = getPublicSurveyUrl(builder);
+    const presenterUrl = getPresenterUrl(builder);
+    const instanceId = builder && builder.id != null ? String(builder.id) : "";
+    const integrationToken = String((builder && builder.settings_json && builder.settings_json.live_integration_token) || "").trim();
+    if (!publicUrl && !presenterUrl && !instanceId && !integrationToken) {
+      publicLinkSummary.hidden = true;
+      publicLinkAnchor.textContent = "";
+      publicLinkAnchor.removeAttribute("href");
+      if (openPublicLink) openPublicLink.hidden = true;
+      if (presenterLinkAnchor) {
+        presenterLinkAnchor.textContent = "";
+        presenterLinkAnchor.removeAttribute("href");
+      }
+      if (openPresenterLink) openPresenterLink.hidden = true;
+      surveyInstanceId.textContent = "";
+      surveyIntegrationToken.textContent = "";
+      return;
+    }
+    publicLinkSummary.hidden = false;
+    surveyInstanceId.textContent = instanceId || "Sin ID";
+    surveyIntegrationToken.textContent = integrationToken || "Sin token";
+    const status = String((builder && builder.status) || "").trim().toLowerCase();
+    const publicLinkHint = ["published", "scheduled"].includes(status)
+      ? "Habilita el enlace público para abrir la encuesta interactiva."
+      : "Publica la encuesta para habilitar el acceso público.";
+    publicLinkAnchor.href = publicUrl || "#";
+    publicLinkAnchor.textContent = publicUrl || publicLinkHint;
+    publicLinkAnchor.title = publicUrl || "";
+    if (openPublicLink) {
+      openPublicLink.href = publicUrl || "#";
+      openPublicLink.hidden = !publicUrl;
+    }
+    if (presenterLinkAnchor) {
+      presenterLinkAnchor.href = presenterUrl || "#";
+      presenterLinkAnchor.textContent = presenterUrl || "Disponible al guardar la encuesta.";
+      presenterLinkAnchor.title = presenterUrl || "";
+    }
+    if (openPresenterLink) {
+      openPresenterLink.href = presenterUrl || "#";
+      openPresenterLink.hidden = !presenterUrl;
+    }
   }
 
   function getCurrentSection() {
@@ -773,20 +2003,24 @@
     document.getElementById("enc-general-publication-mode").value = builder.publication_mode || "manual";
     document.getElementById("enc-general-start-at").value = formatDateForInput(builder.schedule_start_at);
     document.getElementById("enc-general-end-at").value = formatDateForInput(builder.schedule_end_at);
-    document.getElementById("enc-audience-mode").value = builder.audience_mode || "internal";
+    if (audienceModeInput) audienceModeInput.value = builder.audience_mode || "internal";
     document.getElementById("enc-audience-source-app").value = builder.source_app || "";
     document.getElementById("enc-audience-assignment-type").value = settings.assignment_type || "user";
     document.getElementById("enc-audience-values").value = Array.isArray(settings.assignment_values)
       ? settings.assignment_values.join(", ")
       : "";
     document.getElementById("enc-audience-group-note").value = settings.audience_note || "";
-    document.getElementById("enc-audience-manual-group").value = stringifyManualGroups(settings.manual_groups);
+    if (manualGroupsField) manualGroupsField.value = stringifyManualGroups(settings.manual_groups);
+    renderManualGroupsEditor(settings.manual_groups);
     document.getElementById("enc-rules-anonymity-mode").value = builder.anonymity_mode || "identified";
     document.getElementById("enc-rules-scoring-mode").value = settings.scoring_mode || "none";
     document.getElementById("enc-rules-json").value = JSON.stringify(builder.publication_rules_json || {}, null, 2);
-    document.getElementById("enc-public-link-enabled").value = builder.is_public_link_enabled ? "true" : "false";
+    if (publicLinkEnabledInput) {
+      publicLinkEnabledInput.value = builder.is_public_link_enabled || isPublicLinkAudience(builder.audience_mode) ? "true" : "false";
+    }
     document.getElementById("enc-public-link-token").value = builder.public_link_token || "";
     document.getElementById("enc-publication-due-at").value = formatDateForInput(settings.assignment_due_at);
+    syncPublicLinkControls();
   }
 
   function renderSections() {
@@ -848,6 +2082,8 @@
   }
 
   function renderValidation() {
+    if (publishCampaignButton) publishCampaignButton.disabled = !state.currentInstanceId;
+    if (closeCampaignButton) closeCampaignButton.disabled = !state.currentInstanceId;
     if (!validationBox) return;
     const validation = (state.builder && state.builder.publish_validation) || null;
     if (!validation) {
@@ -871,11 +2107,14 @@
     state.campaigns = await fetchJSON("/api/encuestas/campanas");
     renderCampaigns();
     renderBuilderSelect();
-    if (focusBuilder && state.campaigns.length) {
+    const shouldAutoloadBuilder = !state.currentInstanceId && state.campaigns.length;
+    if ((focusBuilder || shouldAutoloadBuilder) && state.campaigns.length) {
       const candidate = state.currentInstanceId || state.campaigns[0].id;
       await loadBuilder(candidate);
-      showPanel("constructor");
+      if (focusBuilder) showPanel("constructor");
+      return;
     }
+    renderValidation();
   }
 
   async function loadQuestionTypes() {
@@ -1233,7 +2472,11 @@
             return;
           }
           if (action === "add-section") {
-            await addSection();
+            if (responseMode() === "presentation") {
+              addPresentationPage();
+            } else {
+              await addSection();
+            }
             return;
           }
           if (action === "add-question") {
@@ -1254,12 +2497,21 @@
     });
 
     root.addEventListener("click", async function (event) {
+      const closer = event.target.closest("[data-enc-close-modal]");
+      if (closer) {
+        if (closer.dataset.encCloseModal === "question") {
+          closeQuestionModal();
+          return;
+        }
+        if (closer.dataset.encCloseModal === "page") {
+          closePresentationPageBuilder();
+          return;
+        }
+      }
       const target = event.target.closest("button");
       if (!target) return;
       try {
-        if (target.dataset.encCloseModal === "question") {
-          closeQuestionModal();
-        } else if (target.dataset.encModalType) {
+        if (target.dataset.encModalType) {
           state.questionModalType = String(target.dataset.encModalType);
           if (questionModalOptions) {
             questionModalOptions.value = defaultOptionsText(state.questionModalType);
@@ -1290,6 +2542,104 @@
           await reorderQuestion(Number(target.dataset.encQuestionUp), -1);
         } else if (target.dataset.encQuestionDown) {
           await reorderQuestion(Number(target.dataset.encQuestionDown), 1);
+        } else if (target.dataset.encOpenPresentationPage !== undefined) {
+          openPresentationPageBuilder(Number(target.dataset.encOpenPresentationPage));
+        } else if (target.dataset.encPageTemplate) {
+          if (!state.presentationEditor) throw new Error("Abre una página primero.");
+          state.presentationEditor.page = mergePresentationTemplate(String(target.dataset.encPageTemplate));
+          if (pageTitleInput) pageTitleInput.value = state.presentationEditor.page.title || "";
+          if (pageSectionCountInput) pageSectionCountInput.value = String(state.presentationEditor.page.section_count || 1);
+          if (pageDescriptionInput) pageDescriptionInput.value = state.presentationEditor.page.description || "";
+          if (pageBgColorInput) pageBgColorInput.value = state.presentationEditor.page.bg_color || "#ffffff";
+          if (pageBgImageInput) pageBgImageInput.value = state.presentationEditor.page.bg_image_url || "";
+          if (pageFooterTextInput) pageFooterTextInput.value = state.presentationEditor.page.footer_text || "";
+          if (pageFooterColorInput) pageFooterColorInput.value = state.presentationEditor.page.footer_color || "#0f172a";
+          state.presentationEditor.selectedSectionIndex = 0;
+          renderPageBlocksEditor();
+        } else if (target.dataset.encLayoutSectionInsertImage !== undefined) {
+          const index = Number(target.dataset.encLayoutSectionInsertImage);
+          const area = pageBlocksNode
+            ? pageBlocksNode.querySelector(`[data-enc-layout-section-html="${index}"]`)
+            : null;
+          if (!area) throw new Error("No se encontró la sección HTML para insertar la imagen.");
+          await promptAndInsertHtmlImage(area);
+          updatePresentationEditorPage();
+        } else if (target.dataset.encPageBlock) {
+          if (!state.presentationEditor) throw new Error("Abre una página primero.");
+          const type = String(target.dataset.encPageBlock || "html");
+          const availableQuestions = getAllBuilderQuestions();
+          if (type === "question" && !availableQuestions.length) {
+            closePresentationPageBuilder();
+            showSurveyTab("questions");
+            if (!getCurrentSection()) {
+              const firstSection = ((state.builder && state.builder.sections) || [])[0];
+              if (firstSection) {
+                state.selectedSectionId = Number(firstSection.id);
+                renderSections();
+              }
+            }
+            if (!getCurrentSection()) {
+              setMessage(builderMsg, "Primero crea una sección y luego una pregunta.", true);
+              return;
+            }
+            await addQuestion();
+            setMessage(builderMsg, "Crea la pregunta y luego podrás seleccionarla en la página.", false);
+            return;
+          }
+          const sectionIndex = Number(state.presentationEditor.selectedSectionIndex || 0);
+          updatePresentationEditorPage();
+          const sections = ensureLayoutSections(state.presentationEditor.page.section_count, state.presentationEditor.page.layout_sections);
+          sections[sectionIndex] = createPresentationSection({
+            ...(sections[sectionIndex] || {}),
+            type,
+            image_fit: "cover",
+          });
+          state.presentationEditor.page.layout_sections = sections;
+          renderPageBlocksEditor();
+          if (type === "question") {
+            focusPresentationQuestionPicker(sectionIndex);
+          }
+        } else if (target.dataset.encOpenQuestionLibrary !== undefined) {
+          closePresentationPageBuilder();
+          showSurveyTab("questions");
+          if (!getCurrentSection()) {
+            const firstSection = ((state.builder && state.builder.sections) || [])[0];
+            if (firstSection) {
+              state.selectedSectionId = Number(firstSection.id);
+              renderSections();
+            }
+          }
+          if (!getCurrentSection()) {
+            setMessage(builderMsg, "Primero crea una sección y luego una pregunta.", true);
+            return;
+          }
+          await addQuestion();
+          setMessage(builderMsg, "Crea la pregunta y luego vuelve a la página para seleccionarla.", false);
+        } else if (target.dataset.encRemovePresentationPage !== undefined) {
+          const pages = getPresentationPages();
+          pages.splice(Number(target.dataset.encRemovePresentationPage), 1);
+          setPresentationPages(pages);
+          renderPresentationBuilder();
+        } else if (target.dataset.encCopyInstanceId !== undefined) {
+          const instanceId = state.builder && state.builder.id != null ? String(state.builder.id) : "";
+          if (!instanceId) throw new Error("La encuesta no tiene ID disponible.");
+          await copyText(instanceId);
+          setMessage(builderMsg, "ID de encuesta copiado.");
+        } else if (target.dataset.encCopyIntegrationToken !== undefined) {
+          const integrationToken = String((state.builder && state.builder.settings_json && state.builder.settings_json.live_integration_token) || "").trim();
+          if (!integrationToken) throw new Error("La encuesta no tiene token de integración disponible.");
+          await copyText(integrationToken);
+          setMessage(builderMsg, "Token de integración copiado.");
+        } else if (target.dataset.encCopyPublicLink !== undefined) {
+          const publicUrl = getPublicSurveyUrl(state.builder);
+          if (!publicUrl) throw new Error("La encuesta no tiene enlace publico disponible.");
+          await copyText(publicUrl);
+          setMessage(builderMsg, "Enlace publico copiado.");
+        } else if (target.dataset.encCopyPresenterLink !== undefined) {
+          const presenterUrl = getPresenterUrl(state.builder);
+          if (!presenterUrl) throw new Error("La encuesta no tiene panel en vivo disponible.");
+          await copyText(presenterUrl);
+          setMessage(builderMsg, "Acceso al panel en vivo copiado.");
         }
       } catch (error) {
         setMessage(builderMsg, error.message, true);
@@ -1322,9 +2672,164 @@
     if (questionModalOptions) {
       questionModalOptions.addEventListener("input", renderQuestionModalPreview);
     }
+
+    [pageTitleInput, pageSectionCountInput, pageDescriptionInput, pageBgColorInput, pageBgImageInput, pageFooterTextInput, pageFooterColorInput].forEach((node) => {
+      if (!node) return;
+      node.addEventListener("input", function () {
+        if (node === pageSectionCountInput && state.presentationEditor) {
+          const page = syncPresentationEditorPage();
+          page.layout_sections = ensureLayoutSections(page.section_count, page.layout_sections);
+          state.presentationEditor.page = createPresentationPage(page);
+          const maxIndex = Math.max(0, state.presentationEditor.page.section_count - 1);
+          state.presentationEditor.selectedSectionIndex = Math.min(Number(state.presentationEditor.selectedSectionIndex || 0), maxIndex);
+          renderPageBlocksEditor();
+          return;
+        }
+        syncPresentationEditorPage();
+      });
+    });
+
+    if (pageBlocksNode) {
+      pageBlocksNode.addEventListener("input", function () {
+        updatePresentationEditorPage();
+      });
+      pageBlocksNode.addEventListener("change", function () {
+        updatePresentationEditorPage();
+      });
+    }
+
+    if (presentationPagesNode) {
+      presentationPagesNode.addEventListener("dragstart", function (event) {
+        const pageNode = event.target.closest("[data-enc-presentation-page]");
+        if (!pageNode) return;
+        state.draggingPresentationPageIndex = Number(pageNode.dataset.encPresentationPage);
+        pageNode.classList.add("is-dragging");
+        if (event.dataTransfer) {
+          event.dataTransfer.effectAllowed = "move";
+          event.dataTransfer.setData("text/plain", String(state.draggingPresentationPageIndex));
+        }
+      });
+      presentationPagesNode.addEventListener("dragend", function () {
+        state.draggingPresentationPageIndex = null;
+        presentationPagesNode.querySelectorAll(".is-dragging").forEach((node) => node.classList.remove("is-dragging"));
+        presentationPagesNode.querySelectorAll(".is-drop-target").forEach((node) => node.classList.remove("is-drop-target"));
+      });
+      presentationPagesNode.addEventListener("dragover", function (event) {
+        if (state.draggingPresentationPageIndex == null) return;
+        event.preventDefault();
+        const pageNode = event.target.closest("[data-enc-presentation-page]");
+        presentationPagesNode.querySelectorAll(".is-drop-target").forEach((node) => node.classList.remove("is-drop-target"));
+        if (pageNode) pageNode.classList.add("is-drop-target");
+      });
+      presentationPagesNode.addEventListener("dragleave", function (event) {
+        const related = event.relatedTarget;
+        if (related && presentationPagesNode.contains(related)) return;
+        presentationPagesNode.querySelectorAll(".is-drop-target").forEach((node) => node.classList.remove("is-drop-target"));
+      });
+      presentationPagesNode.addEventListener("drop", function (event) {
+        if (state.draggingPresentationPageIndex == null) return;
+        event.preventDefault();
+        const pageNode = event.target.closest("[data-enc-presentation-page]");
+        presentationPagesNode.querySelectorAll(".is-drop-target").forEach((node) => node.classList.remove("is-drop-target"));
+        if (!pageNode) return;
+        movePresentationPage(Number(state.draggingPresentationPageIndex), Number(pageNode.dataset.encPresentationPage));
+      });
+    }
+
+    if (pageSaveCloseButton) {
+      pageSaveCloseButton.addEventListener("click", async function () {
+        try {
+          persistPresentationEditorPage();
+          await savePresentationPages();
+          closePresentationPageBuilder();
+          setMessage(builderMsg, "Página actualizada en el constructor.", false);
+        } catch (error) {
+          setMessage(builderMsg, error.message, true);
+        }
+      });
+    }
+
+    if (pagePreviewNode) {
+      pagePreviewNode.addEventListener("click", function (event) {
+        const sectionNode = event.target.closest("[data-enc-layout-section]");
+        if (!sectionNode || !state.presentationEditor) return;
+        updatePresentationEditorPage();
+        state.presentationEditor.selectedSectionIndex = Number(sectionNode.dataset.encLayoutSection);
+        renderPageBlocksEditor();
+      });
+      pagePreviewNode.addEventListener("dragstart", function (event) {
+        const sectionNode = event.target.closest("[data-enc-layout-section]");
+        if (!sectionNode || !state.presentationEditor) return;
+        state.draggingLayoutSectionIndex = Number(sectionNode.dataset.encLayoutSection);
+        sectionNode.classList.add("is-dragging");
+        if (event.dataTransfer) {
+          event.dataTransfer.effectAllowed = "move";
+          event.dataTransfer.setData("text/plain", String(state.draggingLayoutSectionIndex));
+        }
+      });
+      pagePreviewNode.addEventListener("dragend", function () {
+        state.draggingLayoutSectionIndex = null;
+        pagePreviewNode.querySelectorAll(".is-dragging").forEach((node) => node.classList.remove("is-dragging"));
+        pagePreviewNode.querySelectorAll(".is-drop-target").forEach((node) => node.classList.remove("is-drop-target"));
+        pagePreviewNode.classList.remove("is-drop-target");
+      });
+      pagePreviewNode.addEventListener("dragover", function (event) {
+        if (state.draggingLayoutSectionIndex == null) return;
+        event.preventDefault();
+        const sectionNode = event.target.closest("[data-enc-layout-section]");
+        pagePreviewNode.querySelectorAll(".is-drop-target").forEach((node) => node.classList.remove("is-drop-target"));
+        if (sectionNode) sectionNode.classList.add("is-drop-target");
+        else pagePreviewNode.classList.add("is-drop-target");
+      });
+      pagePreviewNode.addEventListener("dragleave", function () {
+        pagePreviewNode.classList.remove("is-drop-target");
+      });
+      pagePreviewNode.addEventListener("drop", function (event) {
+        if (state.draggingLayoutSectionIndex == null || !state.presentationEditor) return;
+        event.preventDefault();
+        pagePreviewNode.classList.remove("is-drop-target");
+        const sectionNode = event.target.closest("[data-enc-layout-section]");
+        if (!sectionNode) return;
+        moveLayoutSection(Number(state.draggingLayoutSectionIndex), Number(sectionNode.dataset.encLayoutSection));
+      });
+      pagePreviewNode.addEventListener("paste", function (event) {
+        if (!state.presentationEditor) return;
+        const clipboard = event.clipboardData;
+        if (!clipboard) return;
+        const html = clipboard.getData("text/html");
+        const text = clipboard.getData("text/plain");
+        if (!html && !text) return;
+        event.preventDefault();
+        appendHtmlBlockFromPaste(html, text);
+      });
+    }
+
+    if (pageModal) {
+      pageModal.addEventListener("paste", function (event) {
+        if (!state.presentationEditor) return;
+        const target = event.target;
+        if (
+          target instanceof HTMLTextAreaElement
+          || target instanceof HTMLInputElement
+          || target instanceof HTMLSelectElement
+          || (target instanceof HTMLElement && target.isContentEditable)
+        ) {
+          return;
+        }
+        const clipboard = event.clipboardData;
+        if (!clipboard) return;
+        const html = clipboard.getData("text/html");
+        const text = clipboard.getData("text/plain");
+        if (!html && !text) return;
+        event.preventDefault();
+        appendHtmlBlockFromPaste(html, text);
+      });
+    }
   }
 
   function bindForms() {
+    ensureManualGroupsEditor();
+
     builderSelect.addEventListener("change", async function () {
       if (!builderSelect.value) return;
       await loadBuilder(builderSelect.value);
@@ -1351,9 +2856,10 @@
     audienceForm.addEventListener("submit", async function (event) {
       event.preventDefault();
       try {
+        syncPublicLinkControls();
         const assignmentType = document.getElementById("enc-audience-assignment-type").value;
         const assignmentValues = parseCsvValues(document.getElementById("enc-audience-values").value);
-        const manualGroups = parseManualGroups(document.getElementById("enc-audience-manual-group").value);
+        const manualGroups = readManualGroupsFromEditor();
         const nextSettings = {
           ...(state.builder && state.builder.settings_json ? state.builder.settings_json : {}),
           audience_note: document.getElementById("enc-audience-group-note").value,
@@ -1363,7 +2869,7 @@
         };
         await saveDraft(
           {
-            audience_mode: document.getElementById("enc-audience-mode").value,
+            audience_mode: audienceModeInput ? audienceModeInput.value : "internal",
             source_app: document.getElementById("enc-audience-source-app").value,
             settings_json: nextSettings,
           },
@@ -1408,13 +2914,14 @@
     publicationForm.addEventListener("submit", async function (event) {
       event.preventDefault();
       try {
+        syncPublicLinkControls();
         const nextSettings = {
           ...(state.builder && state.builder.settings_json ? state.builder.settings_json : {}),
           assignment_due_at: document.getElementById("enc-publication-due-at").value || null,
         };
         await saveDraft(
           {
-            is_public_link_enabled: document.getElementById("enc-public-link-enabled").value === "true",
+            is_public_link_enabled: publicLinkEnabledInput ? publicLinkEnabledInput.value === "true" : false,
             public_link_token: document.getElementById("enc-public-link-token").value,
             settings_json: nextSettings,
           },
@@ -1429,11 +2936,16 @@
       surveyOptionsForm.addEventListener("submit", async function (event) {
         event.preventDefault();
         try {
+          syncPublicLinkControls();
           await saveDraft(
             {
               audience_mode: editorAudienceMode ? editorAudienceMode.value : "internal",
               anonymity_mode: editorAnonymityMode ? editorAnonymityMode.value : "identified",
               publication_mode: editorPublicationMode ? editorPublicationMode.value : "manual",
+              publication_rules_json: {
+                ...(state.builder && state.builder.publication_rules_json ? state.builder.publication_rules_json : {}),
+                response_mode: editorResponseMode ? editorResponseMode.value : "standard",
+              },
               settings_json: {
                 ...(state.builder && state.builder.settings_json ? state.builder.settings_json : {}),
                 scoring_mode: editorScoringMode ? editorScoringMode.value : "none",
@@ -1441,6 +2953,87 @@
             },
             "Opciones guardadas."
           );
+        } catch (error) {
+          setMessage(builderMsg, error.message, true);
+        }
+      });
+    }
+
+    if (audienceModeInput) audienceModeInput.addEventListener("change", syncPublicLinkControls);
+    if (editorAudienceMode) editorAudienceMode.addEventListener("change", syncPublicLinkControls);
+    if (manualGroupAdd) {
+      manualGroupAdd.addEventListener("click", function () {
+        const groups = readManualGroupsFromEditor();
+        groups.push(createManualGroup({}));
+        renderManualGroupsEditor(groups);
+      });
+    }
+    if (manualGroupsList) {
+      manualGroupsList.addEventListener("input", syncManualGroupsField);
+      manualGroupsList.addEventListener("click", function (event) {
+        const addMemberButton = event.target.closest("[data-enc-add-member]");
+        if (addMemberButton) {
+          const groups = readManualGroupsFromEditor();
+          const groupIndex = Number(addMemberButton.getAttribute("data-enc-add-member"));
+          if (groups[groupIndex]) {
+            groups[groupIndex].members.push(createManualMember({}));
+            renderManualGroupsEditor(groups);
+          }
+          return;
+        }
+        const removeMemberButton = event.target.closest("[data-enc-remove-member]");
+        if (removeMemberButton) {
+          const groupNode = event.target.closest("[data-enc-manual-group]");
+          const groupIndex = Number(groupNode ? groupNode.getAttribute("data-enc-manual-group") : -1);
+          const memberIndex = Number(removeMemberButton.getAttribute("data-enc-remove-member"));
+          const groups = readManualGroupsFromEditor();
+          if (groups[groupIndex]) {
+            groups[groupIndex].members.splice(memberIndex, 1);
+            if (!groups[groupIndex].members.length) groups[groupIndex].members.push(createManualMember({}));
+            renderManualGroupsEditor(groups);
+          }
+          return;
+        }
+        const removeGroupButton = event.target.closest("[data-enc-remove-group]");
+        if (removeGroupButton) {
+          const groupIndex = Number(removeGroupButton.getAttribute("data-enc-remove-group"));
+          const groups = readManualGroupsFromEditor();
+          groups.splice(groupIndex, 1);
+          renderManualGroupsEditor(groups);
+        }
+      });
+    }
+
+    if (insertHeaderImageButton) {
+      insertHeaderImageButton.addEventListener("click", async function () {
+        try {
+          await promptAndInsertHtmlImage(editorHeaderHtml);
+        } catch (error) {
+          setMessage(builderMsg, error.message, true);
+        }
+      });
+    }
+
+    if (insertFooterImageButton) {
+      insertFooterImageButton.addEventListener("click", async function () {
+        try {
+          await promptAndInsertHtmlImage(editorFooterHtml);
+        } catch (error) {
+          setMessage(builderMsg, error.message, true);
+        }
+      });
+    }
+
+    if (presentationAddPageButton) {
+      presentationAddPageButton.addEventListener("click", function () {
+        addPresentationPage();
+      });
+    }
+
+    if (presentationSaveButton) {
+      presentationSaveButton.addEventListener("click", async function () {
+        try {
+          await savePresentationPages();
         } catch (error) {
           setMessage(builderMsg, error.message, true);
         }
@@ -1455,8 +3048,13 @@
             {
               nombre: editorTitle ? editorTitle.value : "",
               descripcion: editorDescription ? editorDescription.value : "",
+              publication_rules_json: {
+                ...(state.builder && state.builder.publication_rules_json ? state.builder.publication_rules_json : {}),
+                header_html: editorHeaderHtml ? editorHeaderHtml.value : "",
+                footer_html: editorFooterHtml ? editorFooterHtml.value : "",
+              },
             },
-            "Descripción guardada."
+            "Contenido guardado."
           );
         } catch (error) {
           setMessage(builderMsg, error.message, true);
@@ -1502,6 +3100,45 @@
       });
     }
     if (surveyImagenForm) {
+      // File preview on selection
+      if (imagenFileInput) {
+        imagenFileInput.addEventListener("change", function () {
+          const file = imagenFileInput.files && imagenFileInput.files[0];
+          if (!file) return;
+          _showImagePreview(file);
+        });
+      }
+      // Drag-and-drop on upload area
+      if (imagenUploadArea) {
+        imagenUploadArea.addEventListener("dragover", function (e) {
+          e.preventDefault();
+          imagenUploadArea.classList.add("is-dragover");
+        });
+        imagenUploadArea.addEventListener("dragleave", function () {
+          imagenUploadArea.classList.remove("is-dragover");
+        });
+        imagenUploadArea.addEventListener("drop", function (e) {
+          e.preventDefault();
+          imagenUploadArea.classList.remove("is-dragover");
+          const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+          if (file) {
+            const dt = new DataTransfer();
+            dt.items.add(file);
+            imagenFileInput.files = dt.files;
+            _showImagePreview(file);
+          }
+        });
+      }
+      // Clear button
+      if (imagenUploadClear) {
+        imagenUploadClear.addEventListener("click", function () {
+          if (imagenFileInput) imagenFileInput.value = "";
+          if (imagenUploadPrompt) imagenUploadPrompt.hidden = false;
+          if (imagenUploadPreview) imagenUploadPreview.hidden = true;
+          if (imagenUploadMsg) imagenUploadMsg.hidden = true;
+        });
+      }
+
       surveyImagenForm.addEventListener("submit", async function (e) {
         e.preventDefault();
         if (!state.currentInstanceId) {
@@ -1509,12 +3146,41 @@
           return;
         }
         const checkedPos = document.querySelector('[name="enc-image-position"]:checked');
+        let imageUrl = editorImagenUrl ? editorImagenUrl.value.trim() : "";
+
+        // If a file is selected, upload it first
+        const file = imagenFileInput && imagenFileInput.files && imagenFileInput.files[0];
+        if (file) {
+          if (imagenUploadMsg) { imagenUploadMsg.textContent = "Subiendo imagen..."; imagenUploadMsg.hidden = false; }
+          try {
+            const formData = new FormData();
+            formData.append("file", file);
+            const resp = await fetch(
+              `/api/encuestas/campanas/${state.currentInstanceId}/upload-image`,
+              { method: "POST", body: formData, credentials: "same-origin" }
+            );
+            if (!resp.ok) {
+              const err = await resp.json().catch(() => ({ detail: resp.statusText }));
+              throw new Error(err.detail || resp.statusText);
+            }
+            const data = await resp.json();
+            imageUrl = data.url || imageUrl;
+            if (editorImagenUrl) editorImagenUrl.value = imageUrl;
+            if (imagenUploadMsg) { imagenUploadMsg.textContent = "Imagen subida correctamente."; }
+            if (imagenFileInput) imagenFileInput.value = "";
+          } catch (uploadErr) {
+            if (imagenUploadMsg) { imagenUploadMsg.textContent = "Error al subir: " + uploadErr.message; imagenUploadMsg.hidden = false; }
+            setMessage(builderMsg, uploadErr.message, true);
+            return;
+          }
+        }
+
         try {
           await saveDraft(
             {
               publication_rules_json: {
                 ...(state.builder && state.builder.publication_rules_json ? state.builder.publication_rules_json : {}),
-                image_url: editorImagenUrl ? editorImagenUrl.value.trim() : "",
+                image_url: imageUrl,
                 image_position: checkedPos ? checkedPos.value : "background",
               },
             },
@@ -1524,6 +3190,18 @@
           setMessage(builderMsg, error.message, true);
         }
       });
+    }
+
+    function _showImagePreview(file) {
+      if (!imagenPreviewImg || !imagenUploadPrompt || !imagenUploadPreview) return;
+      const reader = new FileReader();
+      reader.onload = function (ev) {
+        imagenPreviewImg.src = ev.target.result;
+        imagenUploadPrompt.hidden = true;
+        imagenUploadPreview.hidden = false;
+        if (imagenUploadMsg) imagenUploadMsg.hidden = true;
+      };
+      reader.readAsDataURL(file);
     }
   }
 

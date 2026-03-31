@@ -1,0 +1,184 @@
+<style>
+  .sipet-global-error-overlay[hidden] {
+    display: none !important;
+  }
+
+  .sipet-global-error-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10050;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    background: rgba(15, 23, 42, 0.56);
+  }
+
+  .sipet-global-error-card {
+    width: min(780px, 100%);
+    max-height: min(84vh, 820px);
+    overflow: auto;
+    border-radius: 24px;
+    border: 1px solid rgba(148, 163, 184, 0.32);
+    background: #ffffff;
+    box-shadow: 0 28px 72px rgba(15, 23, 42, 0.28);
+    padding: 22px;
+    display: grid;
+    gap: 14px;
+  }
+
+  .sipet-global-error-title {
+    margin: 0;
+    color: #0f172a;
+    font-size: 1.15rem;
+    font-weight: 800;
+  }
+
+  .sipet-global-error-text {
+    width: 100%;
+    min-height: 240px;
+    border-radius: 14px;
+    border: 1px solid rgba(148, 163, 184, 0.48);
+    background: #f8fafc;
+    color: #0f172a;
+    padding: 14px;
+    resize: vertical;
+    font: 400 0.95rem/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+
+  .sipet-global-error-status {
+    margin: 0;
+    min-height: 1.2em;
+    color: #475569;
+    font-size: 0.84rem;
+  }
+
+  .sipet-global-error-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .sipet-global-error-btn {
+    min-height: 42px;
+    padding: 0 16px;
+    border-radius: 999px;
+    border: 1px solid #cbd5e1;
+    cursor: pointer;
+    font-weight: 700;
+    background: #ffffff;
+    color: #0f172a;
+  }
+
+  .sipet-global-error-btn-primary {
+    background: #0f172a;
+    border-color: #0f172a;
+    color: #ffffff;
+  }
+</style>
+
+<div id="sipet-global-error-overlay" class="sipet-global-error-overlay" hidden>
+  <div class="sipet-global-error-card" role="dialog" aria-modal="true" aria-labelledby="sipet-global-error-title">
+    <h3 id="sipet-global-error-title" class="sipet-global-error-title">Detalle del sistema</h3>
+    <textarea id="sipet-global-error-text" class="sipet-global-error-text" readonly></textarea>
+    <p id="sipet-global-error-status" class="sipet-global-error-status"></p>
+    <div class="sipet-global-error-actions">
+      <button id="sipet-global-error-close" class="sipet-global-error-btn" type="button">Cerrar</button>
+      <button id="sipet-global-error-copy" class="sipet-global-error-btn sipet-global-error-btn-primary" type="button">Copiar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function () {
+    if (window.__sipetGlobalErrorDialogInstalled) return;
+    window.__sipetGlobalErrorDialogInstalled = true;
+
+    var overlay = document.getElementById('sipet-global-error-overlay');
+    var titleEl = document.getElementById('sipet-global-error-title');
+    var textEl = document.getElementById('sipet-global-error-text');
+    var statusEl = document.getElementById('sipet-global-error-status');
+    var closeBtn = document.getElementById('sipet-global-error-close');
+    var copyBtn = document.getElementById('sipet-global-error-copy');
+    var nativeAlert = window.alert ? window.alert.bind(window) : function () {};
+
+    function normalizeMessage(value) {
+      if (value == null) return '';
+      if (typeof value === 'string') return value;
+      if (value instanceof Error) return value.stack || value.message || String(value);
+      try {
+        return JSON.stringify(value, null, 2);
+      } catch (error) {
+        return String(value);
+      }
+    }
+
+    function closeDialog() {
+      if (!overlay) return;
+      overlay.hidden = true;
+      if (statusEl) statusEl.textContent = '';
+    }
+
+    async function copyText() {
+      if (!textEl) return;
+      var text = String(textEl.value || '');
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(text);
+        } else {
+          textEl.focus();
+          textEl.select();
+          document.execCommand('copy');
+        }
+        if (statusEl) statusEl.textContent = 'Texto copiado.';
+      } catch (error) {
+        if (statusEl) statusEl.textContent = 'No se pudo copiar automáticamente. Selecciona el texto y copia manualmente.';
+      }
+    }
+
+    function showDialog(message, options) {
+      var text = normalizeMessage(message) || 'Sin detalle disponible.';
+      var title = options && options.title ? String(options.title) : 'Detalle del sistema';
+      if (!overlay || !textEl || !titleEl) {
+        nativeAlert(text);
+        return;
+      }
+      titleEl.textContent = title;
+      textEl.value = text;
+      if (statusEl) statusEl.textContent = 'Puedes copiar este texto para soporte.';
+      overlay.hidden = false;
+      window.setTimeout(function () {
+        textEl.focus();
+        textEl.select();
+      }, 0);
+    }
+
+    window.SIPET = window.SIPET || {};
+    window.SIPET.nativeAlert = nativeAlert;
+    window.SIPET.showErrorDialog = showDialog;
+    window.SIPET.copyErrorText = copyText;
+
+    window.alert = function (message) {
+      showDialog(message, { title: 'Mensaje del sistema' });
+    };
+
+    if (closeBtn) {
+      closeBtn.addEventListener('click', closeDialog);
+    }
+    if (copyBtn) {
+      copyBtn.addEventListener('click', function () {
+        copyText();
+      });
+    }
+    if (overlay) {
+      overlay.addEventListener('click', function (event) {
+        if (event.target === overlay) closeDialog();
+      });
+    }
+    document.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape' && overlay && !overlay.hidden) {
+        closeDialog();
+      }
+    });
+  })();
+</script>

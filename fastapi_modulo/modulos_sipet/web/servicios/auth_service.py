@@ -12,6 +12,7 @@ from typing import Any, Optional
 from cryptography.fernet import Fernet, InvalidToken
 from fastapi import Request, Response
 from fastapi_modulo.core.security_compat import ensure_bcrypt_passlib_compat
+from sqlalchemy import text
 
 ensure_bcrypt_passlib_compat()
 
@@ -19,6 +20,7 @@ from passlib.context import CryptContext
 
 from fastapi_modulo.core import db as core_db
 from fastapi_modulo.core.database_router import get_sipet_superadmin_settings
+from fastapi_modulo.modulos_sipet.web.modelos.core_models import Usuario
 from fastapi_modulo.modulos_sipet.web.repositorios.core_repository import (
     find_role_name_by_id,
     find_user_by_id as repository_find_user_by_id,
@@ -50,7 +52,7 @@ LOGIN_RATE_LIMIT_WINDOW_SECONDS = int((os.environ.get("LOGIN_RATE_LIMIT_WINDOW_S
 LOGIN_RATE_LIMIT_MAX_ATTEMPTS = int((os.environ.get("LOGIN_RATE_LIMIT_MAX_ATTEMPTS") or "7").strip() or "7")
 SENSITIVE_ENDPOINT_RATE_LIMIT_MAX_ATTEMPTS = int((os.environ.get("SENSITIVE_ENDPOINT_RATE_LIMIT_MAX_ATTEMPTS") or "20").strip() or "20")
 BCRYPT_ROUNDS = int((os.environ.get("AUTH_BCRYPT_ROUNDS") or "12").strip() or "12")
-PASSWORD_MIN_LENGTH = int((os.environ.get("PASSWORD_MIN_LENGTH") or "10").strip() or "10")
+PASSWORD_MIN_LENGTH = int((os.environ.get("PASSWORD_MIN_LENGTH") or "8").strip() or "8")
 SENSITIVE_DATA_SECRET = (
     os.environ.get("SENSITIVE_DATA_SECRET")
     or os.environ.get("AUTH_COOKIE_SECRET")
@@ -59,18 +61,6 @@ SENSITIVE_DATA_SECRET = (
 ).strip()
 _LOGIN_ATTEMPTS: dict[str, list[float]] = {}
 def _build_password_context() -> CryptContext:
-    preferred = CryptContext(
-        schemes=["bcrypt_sha256", "pbkdf2_sha256"],
-        deprecated="auto",
-        bcrypt__rounds=BCRYPT_ROUNDS,
-        pbkdf2_sha256__default_rounds=120_000,
-    )
-    try:
-        probe = preferred.hash("Abcd1234!!")
-        if preferred.verify("Abcd1234!!", probe):
-            return preferred
-    except Exception:
-        pass
     return CryptContext(
         schemes=["pbkdf2_sha256"],
         deprecated="auto",
@@ -282,11 +272,65 @@ def record_login_attempt(request: Request, username: str, success: bool) -> None
     )
 
 
+def _repair_user_identity_fields(db, user, username: str = "", email: str = "") -> None:
+    updated = False
+    normalized_username = (username or "").strip().lower()
+    normalized_email = (email or "").strip().lower()
+    decrypted_username = decrypt_sensitive(getattr(user, "usuario", "") or "")
+    decrypted_email = decrypt_sensitive(getattr(user, "correo", "") or "")
+
+    if normalized_username:
+        expected_username_hash = sensitive_lookup_hash(normalized_username)
+        if getattr(user, "usuario_hash", "") != expected_username_hash:
+            user.usuario_hash = expected_username_hash
+            updated = True
+        if decrypted_username != normalized_username:
+            user.usuario = encrypt_sensitive(normalized_username)
+            updated = True
+
+    if normalized_email:
+        expected_email_hash = sensitive_lookup_hash(normalized_email)
+        if getattr(user, "correo_hash", "") != expected_email_hash:
+            user.correo_hash = expected_email_hash
+            updated = True
+        if decrypted_email != normalized_email:
+            user.correo = encrypt_sensitive(normalized_email)
+            updated = True
+
+    if updated:
+        db.add(user)
+        db.commit()
+
+
+def _find_user_by_login_fallback(db, normalized_login: str):
+    if not normalized_login:
+        return None
+    for user in db.query(Usuario).all():
+        decrypted_username = decrypt_sensitive(getattr(user, "usuario", "") or "").strip().lower()
+        decrypted_email = decrypt_sensitive(getattr(user, "correo", "") or "").strip().lower()
+        if normalized_login in {decrypted_username, decrypted_email}:
+            _repair_user_identity_fields(
+                db,
+                user,
+                username=decrypted_username or normalized_login,
+                email=decrypted_email,
+            )
+            return user
+    return None
+
+
 def find_user_by_login(db, login_value: str):
     normalized_login = (login_value or "").strip().lower()
     if not normalized_login:
         return None
-    return repository_find_user_by_login(db, login_value=normalized_login, login_hash=sensitive_lookup_hash(normalized_login))
+    user = repository_find_user_by_login(
+        db,
+        login_value=normalized_login,
+        login_hash=sensitive_lookup_hash(normalized_login),
+    )
+    if user:
+        return user
+    return _find_user_by_login_fallback(db, normalized_login)
 
 
 def find_user_by_id(db, user_id: int):
@@ -405,6 +449,31 @@ def rehash_user_password_if_needed(db, user, plain_password: str) -> bool:
         db.add(user)
         db.commit()
     return True
+
+
+def resolve_post_login_redirect(db, role_name: str, user_id: int | None = None) -> str:
+    normalized_role = normalize_role_name(role_name)
+    if normalized_role not in {"administrador_tienda", "vendedor_tienda"}:
+        return "/inicio"
+    if not user_id:
+        return "/web/inicio"
+    try:
+        store_row = db.execute(
+            text(
+                """
+                SELECT id
+                FROM vendors
+                WHERE vendor_id = :vendor_id
+                LIMIT 1
+                """
+            ),
+            {"vendor_id": int(user_id)},
+        ).mappings().first()
+    except Exception:
+        return "/web/inicio"
+    if store_row and store_row.get("id") is not None:
+        return "/multitienda/configuracion"
+    return "/web/inicio"
 
 
 def resolve_user_role_name(db, user) -> str:

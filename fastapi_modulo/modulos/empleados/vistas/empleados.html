@@ -1154,10 +1154,10 @@
           return;
         }
         setActionButtonBusy(saveBtn, 'Guardando', true);
-        fetch('/api/colaboradores', {
+        fetch('/api/colaboradores/' + encodeURIComponent(String(passwordOnlyPayload.id)) + '/password', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-          body: JSON.stringify(passwordOnlyPayload)
+          body: JSON.stringify({ contrasena: passwordOnlyPayload.contrasena })
         })
           .then(function (res) { return res.json().then(function (json) { return { ok: res.ok, json: json }; }); })
           .then(function (result) {
@@ -1657,7 +1657,7 @@
             '</div>' +
             '<div class="grid grid-cols-1 md:grid-cols-2 gap-3">' +
               '<label class="form-control w-full"><div class="label"><span class="label-text font-semibold">Celular</span></div><input class="input input-bordered w-full" type="text" value="' + esc(current.celular || '') + '" autocomplete="off" data-col-main-celular ' + (isMainEditMode ? '' : 'readonly') + '></label>' +
-              '<label class="form-control w-full"><div class="label"><span class="label-text font-semibold">Contraseña</span></div><div class="relative"><input class="input input-bordered w-full pr-12" type="password" placeholder="' + (isNewRecord ? 'Mínimo 8 caracteres' : 'Dejar vacía para conservar la actual') + '" value="" autocomplete="new-password" data-col-identidad-password ' + ((isMainEditMode || canSelfManageCredentials) ? '' : 'readonly') + '><button type="button" class="absolute inset-y-0 right-3 my-auto flex h-8 w-8 items-center justify-center rounded-full border border-transparent bg-transparent p-0" data-col-password-toggle title="Mostrar contraseña" aria-label="Mostrar contraseña"><img src="/templates/icon/boton/ojo.svg" alt="" class="h-5 w-5" data-col-password-icon></button></div></label>' +
+              '<label class="form-control w-full"><div class="label"><span class="label-text font-semibold">Contraseña</span></div><div class="relative"><input class="input input-bordered w-full pr-12" type="password" placeholder="' + (isNewRecord ? 'Mínimo 8 caracteres' : 'Dejar vacía para conservar la actual') + '" value="" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" data-col-identidad-password ' + ((isMainEditMode || canSelfManageCredentials) ? '' : 'readonly') + '><button type="button" class="absolute inset-y-0 right-3 my-auto flex h-8 w-8 items-center justify-center rounded-full border border-transparent bg-transparent p-0" data-col-password-toggle title="Mostrar contraseña" aria-label="Mostrar contraseña"><img src="/templates/icon/boton/ojo.svg" alt="" class="h-5 w-5" data-col-password-icon></button></div></label>' +
               '<label class="form-control w-full"><div class="label"><span class="label-text font-semibold">Usuario</span></div><input class="input input-bordered w-full" type="text" value="' + esc(current.usuario || '') + '" autocomplete="off" data-col-identidad-usuario data-col-main-usuario ' + (isMainEditMode ? '' : 'readonly') + '></label>' +
               '<label class="form-control w-full"><div class="label"><span class="label-text font-semibold">Correo electrónico</span></div><input class="input input-bordered w-full" type="text" value="' + esc(current.correo || '') + '" autocomplete="off" data-col-identidad-correo data-col-main-correo ' + (isMainEditMode ? '' : 'readonly') + '></label>' +
               '<label class="form-control w-full"><div class="label"><span class="label-text font-semibold">Área organizacional</span></div><input class="input input-bordered w-full" type="text" value="' + esc(puestoDerived.area || '') + '" data-col-area readonly></label>' +

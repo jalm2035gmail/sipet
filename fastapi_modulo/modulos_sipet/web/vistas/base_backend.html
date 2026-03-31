@@ -5,6 +5,9 @@
     <link rel="icon" type="image/png" href="{{ app_favicon_url | default('/templates/icon/icon.png') }}">
     <link rel="shortcut icon" type="image/x-icon" href="{{ app_favicon_url | default('/templates/icon/icon.png') }}">
     <meta name="csrf-token" content="{{ csrf_token | default('', true) }}">
+    <meta name="theme-color" content="{{ pwa_theme_color | default('#0f172a', true) }}">
+    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="apple-touch-icon" href="/modulos_sipet/pwa/static/icons/icon-192x192.png">
     <title>{{ title }}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="/static/vendor/fontawesome/css/all.min.css">
@@ -28,6 +31,65 @@
             gap: initial !important;
             font-size: inherit !important;
         }
+        .pwa-install-overlay[hidden] {
+            display: none !important;
+        }
+        .pwa-install-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            display: grid;
+            place-items: center;
+            padding: 24px;
+            background:
+                radial-gradient(circle at top, rgba(255,255,255,.18), transparent 34%),
+                linear-gradient(180deg, {{ pwa_background_color_start | default('#0f172a', true) }}, {{ pwa_background_color_end | default('#1d4ed8', true) }});
+        }
+        .pwa-install-card {
+            width: min(100%, 560px);
+            padding: 28px;
+            border-radius: 28px;
+            background: rgba(255,255,255,.96);
+            color: #0f172a;
+            box-shadow: 0 24px 80px rgba(15,23,42,.28);
+            border: 1px solid rgba(255,255,255,.45);
+        }
+        .pwa-install-logo {
+            width: min(144px, 42vw);
+            height: auto;
+            display: block;
+            margin: 0 auto 18px;
+            object-fit: contain;
+        }
+        .pwa-install-actions {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 18px;
+        }
+        .pwa-install-btn {
+            min-height: 44px;
+            padding: 0 16px;
+            border-radius: 999px;
+            border: 1px solid #0f172a;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .pwa-install-btn-primary {
+            background: #0f172a;
+            color: #fff;
+        }
+        .pwa-install-btn-secondary {
+            background: #fff;
+            color: #0f172a;
+        }
+        .pwa-install-list {
+            margin: 14px 0 0 18px;
+            color: #475569;
+            line-height: 1.55;
+            display: grid;
+            gap: 6px;
+        }
 {% include "modulos/web/backend_shell.css" %}
     </style>
     <script>
@@ -45,6 +107,11 @@
             current_section: {{ current_section | default('', true) | tojson }},
             module_sections: {{ module_sections | default([], true) | tojson }}
         };
+        window.__SIPET_PWA_CONTEXT = {
+            app_name: {{ pwa_app_name | default('SIPET', true) | tojson }},
+            description: {{ pwa_description | default('Que bueno verte aqui', true) | tojson }},
+            logo_url: {{ pwa_logo_url | default('', true) | tojson }}
+        };
     </script>
     <script>
         (function() {
@@ -56,8 +123,35 @@
             } catch (e) {}
         })();
     </script>
+    <script>
+        (function() {
+            if (!('serviceWorker' in navigator)) return;
+            var host = String(window.location.hostname || '');
+            if (!(window.isSecureContext || host === 'localhost' || host === '127.0.0.1')) return;
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function(error) {
+                    console.warn('PWA service worker registration failed', error);
+                });
+            });
+        })();
+    </script>
 </head>
 <body class="app-shell min-h-screen bg-base-200 text-base-content">
+    <section id="pwa-install-overlay" class="pwa-install-overlay" hidden>
+        <div class="pwa-install-card">
+            {% if pwa_logo_url %}
+            <img class="pwa-install-logo" src="{{ pwa_logo_url }}" alt="{{ pwa_app_name | default('SIPET', true) }}">
+            {% endif %}
+            <p style="margin:0 0 8px;color:#1d4ed8;font-size:.9rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;">{{ pwa_app_name | default('SIPET', true) }}</p>
+            <h2 style="margin:0;font-size:clamp(1.52rem,3.2vw,2.08rem);line-height:1.05;">Instala y accede a más funcionalidades</h2>
+            <p style="margin:12px 0 0;color:#475569;line-height:1.6;">{{ pwa_description | default('Que bueno verte aqui', true) }}</p>
+            <ul id="pwa-install-instructions" class="pwa-install-list" hidden></ul>
+            <div class="pwa-install-actions">
+                <button id="pwa-install-button" type="button" class="pwa-install-btn pwa-install-btn-primary">Instalar app</button>
+                <button id="pwa-install-dismiss" type="button" class="pwa-install-btn pwa-install-btn-secondary">Ahora no</button>
+            </div>
+        </div>
+    </section>
     <div class="sidebar-mobile-backdrop" id="sidebar-mobile-backdrop" hidden></div>
     <script>
         (function() {
@@ -69,9 +163,102 @@
             }
         })();
     </script>
+    <script>
+        (function() {
+            var overlay = document.getElementById('pwa-install-overlay');
+            var installButton = document.getElementById('pwa-install-button');
+            var dismissButton = document.getElementById('pwa-install-dismiss');
+            var instructions = document.getElementById('pwa-install-instructions');
+            var deferredPrompt = null;
+            var dismissedKey = 'sipet_pwa_install_dismissed';
+            if (!overlay || !installButton || !dismissButton) return;
+
+            function isInstalled() {
+                var standaloneMedia = window.matchMedia && window.matchMedia('(display-mode: standalone)').matches;
+                var standaloneNavigator = window.navigator.standalone === true;
+                var androidReferrer = document.referrer && document.referrer.indexOf('android-app://') === 0;
+                return Boolean(standaloneMedia || standaloneNavigator || androidReferrer);
+            }
+
+            function hideOverlay() {
+                overlay.hidden = true;
+            }
+
+            function showOverlay() {
+                overlay.hidden = false;
+            }
+
+            function dismissedForSession() {
+                try {
+                    return window.sessionStorage.getItem(dismissedKey) === '1';
+                } catch (error) {
+                    return false;
+                }
+            }
+
+            function dismissForSession() {
+                try {
+                    window.sessionStorage.setItem(dismissedKey, '1');
+                } catch (error) {}
+            }
+
+            function updateInstallCopy() {
+                if (!instructions) return;
+                instructions.innerHTML = '';
+                instructions.hidden = true;
+                installButton.hidden = false;
+            }
+
+            function syncInstallScreen() {
+                if (isInstalled()) {
+                    hideOverlay();
+                    return;
+                }
+                if (dismissedForSession()) {
+                    hideOverlay();
+                    return;
+                }
+                updateInstallCopy();
+                showOverlay();
+            }
+
+            window.addEventListener('beforeinstallprompt', function(event) {
+                event.preventDefault();
+                deferredPrompt = event;
+                syncInstallScreen();
+            });
+
+            window.addEventListener('appinstalled', function() {
+                deferredPrompt = null;
+                hideOverlay();
+            });
+
+            installButton.addEventListener('click', async function() {
+                if (!deferredPrompt) {
+                    syncInstallScreen();
+                    return;
+                }
+                deferredPrompt.prompt();
+                try {
+                    await deferredPrompt.userChoice;
+                } catch (error) {}
+                deferredPrompt = null;
+            });
+
+            dismissButton.addEventListener('click', function() {
+                dismissForSession();
+                hideOverlay();
+            });
+
+            window.addEventListener('DOMContentLoaded', syncInstallScreen);
+            window.addEventListener('focus', syncInstallScreen);
+            syncInstallScreen();
+        })();
+    </script>
     {% set hide_floating_actions = hide_floating_actions | default(false) %}
     {% include "modulos_sipet/web/vistas/partials/sidebar.html" %}
     {% include "modulos_sipet/web/vistas/partials/navbar.html" %}
+    {% include "modulos_sipet/web/vistas/partials/global_error_dialog.html" %}
     {% include "modulos_sipet/web/vistas/partials/page_shell.html" %}
     {% include "modulos_sipet/web/vistas/partials/floating_actions.html" %}
     {% include "modulos_sipet/web/vistas/backend_nav_catalog.html" %}

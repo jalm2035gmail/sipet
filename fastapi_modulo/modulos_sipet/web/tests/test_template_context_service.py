@@ -44,6 +44,25 @@ def test_build_login_context_includes_request_and_error() -> None:
     assert context["request"].url.path == "/backend/demo"
 
 
+def test_build_login_context_falls_back_to_query_error() -> None:
+    scope = {
+        "type": "http",
+        "method": "GET",
+        "path": "/backend/login",
+        "headers": [(b"host", b"example.test")],
+        "query_string": b"error=Datos+incorrectos&usuario=dumas",
+        "scheme": "https",
+        "server": ("example.test", 443),
+        "client": ("127.0.0.1", 1234),
+    }
+    request = Request(scope)
+    request._cookies = {}
+
+    context = build_login_context(request, title="Acceso")
+
+    assert context["login_error"] == "Datos incorrectos"
+
+
 def test_build_not_found_context_includes_branding_keys() -> None:
     context = build_not_found_context(_build_request(), title="No existe")
     assert context["title"] == "No existe"

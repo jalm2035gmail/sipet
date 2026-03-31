@@ -2,16 +2,18 @@ from __future__ import annotations
 
 from fastapi import Request
 from fastapi.responses import JSONResponse
+from fastapi.responses import RedirectResponse
+from urllib.parse import urlencode
 
 from fastapi_modulo.modulos_sipet.web.servicios import template_service
 
 
 def auth_page_error(request: Request, message: str, status_code: int):
-    return template_service.render_login_template(
-        request,
-        login_error=message,
-        status_code=status_code,
-    )
+    username = str(getattr(request.state, "pending_username", "") or "").strip()
+    query = {"error": message}
+    if username:
+        query["usuario"] = username
+    return RedirectResponse(url=f"/backend/login?{urlencode(query)}", status_code=303)
 
 
 def auth_json_error(message: str, status_code: int = 400) -> JSONResponse:

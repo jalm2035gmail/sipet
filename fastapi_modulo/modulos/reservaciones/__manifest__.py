@@ -26,6 +26,7 @@ MANIFEST = {
     'data': ['vistas/reservaciones.html'],
     'assets': {
         'css': ['static/css/reservaciones.css'],
+        'js': ['static/src/js/appointment_dynamic.js'],
         'description': ['static/description/reservaciones.svg'],
         'img': [],
     },

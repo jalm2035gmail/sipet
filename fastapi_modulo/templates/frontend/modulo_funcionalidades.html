@@ -67,7 +67,7 @@
       </a>
 
       <nav class="topbar__actions" aria-label="Acciones">
-        <a class="btn btn--ghost" href="/backend/login">Ingresar</a>
+        <a class="btn btn--ghost" data-backend-panel-link="1" href="/backend/login">Ingresar</a>
         <a class="btn btn--ghost" href="/backend/login?usuario=demo&contrasena=demodemo">Ingresar como demo</a>
         <a class="btn btn--wa" href="https://wa.me/523327633869?text=Necesito%20m%C3%A1s%20informaci%C3%B3n%20de%20SIPET%20y%20como%20mi%20cooperativs%20se%20beneficia%2C%20por%20favor%20ponerse%20en%20contacto" target="_blank" rel="noopener">WhatsApp</a>
         <a class="btn btn--primary" href="#solicitar-info">Solicitar información</a>
@@ -660,7 +660,7 @@
 
         <div class="footer__right">
           <a href="/web/funcionalidades" class="footer__link">Funcionalidades</a>
-          <a href="/backend/login" class="footer__link">Ingresar</a>
+          <a data-backend-panel-link="1" href="/backend/login" class="footer__link">Ingresar</a>
           <a href="/backend/login?usuario=demo&contrasena=demodemo" class="footer__link">Demo</a>
           <a href="https://wa.me/523327633869?text=Necesito%20m%C3%A1s%20informaci%C3%B3n%20de%20SIPET%20y%20como%20mi%20cooperativs%20se%20beneficia%2C%20por%20favor%20ponerse%20en%20contacto" target="_blank" rel="noopener" class="footer__link">WhatsApp</a>
           <a href="mailto:contacto@avancoop.org" class="footer__link">Correo</a>
@@ -859,13 +859,24 @@
       fetch('/api/backend/me',{credentials:'include'})
         .then(function(r){return r.ok?r.json():null;})
         .then(function(d){
-          if(!d||!d.authenticated) return;
+          if(!d||!d.can_use_bar) return;
           var bar=document.getElementById('sipet-admin-bar');
           if(!bar) return;
           bar.style.background=d.bar_color||'#0f172a';
           bar.style.display='flex';
           var rl=document.getElementById('sab-role');
           if(rl) rl.textContent=d.is_superadmin?'Superadministrador':(d.backend_roles||[]).join(' · ');
+          var home=document.getElementById('sab-home');
+          if(home) home.href=d.panel_url||'/inicio';
+          document.querySelectorAll('[data-backend-panel-link="1"]').forEach(function(link){
+            link.href=d.panel_url||'/inicio';
+            if(link.textContent && link.textContent.trim()==='Ingresar'){
+              link.textContent='Panel';
+            }
+          });
+          document.querySelectorAll('[data-backend-panel-label="1"]').forEach(function(label){
+            label.textContent='Panel';
+          });
           document.body.style.paddingTop='44px';
         })
         .catch(function(){});
@@ -876,7 +887,7 @@
     <a href="/web/inicio"><span class="sipet-mobile-bottom-nav__icon">🏠</span><span class="sipet-mobile-bottom-nav__label">Inicio</span></a>
     <a href="/web/funcionalidades" class="is-active"><span class="sipet-mobile-bottom-nav__icon">💳</span><span class="sipet-mobile-bottom-nav__label">Servicios</span></a>
     <a href="/web/descripcion"><span class="sipet-mobile-bottom-nav__icon">🔍</span><span class="sipet-mobile-bottom-nav__label">Buscar</span></a>
-    <a href="/backend/login"><span class="sipet-mobile-bottom-nav__icon">👤</span><span class="sipet-mobile-bottom-nav__label">Perfil</span></a>
+    <a data-backend-panel-link="1" href="/backend/login"><span class="sipet-mobile-bottom-nav__icon">👤</span><span class="sipet-mobile-bottom-nav__label" data-backend-panel-label="1">Perfil</span></a>
   </nav>
   {% endif %}
 </body>

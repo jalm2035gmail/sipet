@@ -69,3 +69,15 @@ def test_zip_inspection_cache_roundtrip(monkeypatch) -> None:
     assert cached is not None
     assert cached["checksum"] == "ABC123"
     assert cached["total_files"] == 4
+
+
+def test_zip_inspection_cache_falls_back_to_local_memory(monkeypatch) -> None:
+    monkeypatch.setattr(redis_service, "get_redis_client", lambda: None)
+
+    redis_service.cache_zip_inspection("crm", "ABC123", {"checksum": "ABC123", "total_files": 4}, ttl_seconds=60)
+    cached = redis_service.get_cached_zip_inspection("crm", "abc123")
+
+    assert cached is not None
+    assert cached["checksum"] == "ABC123"
+    redis_service.invalidate_zip_inspection("crm", "abc123")
+    assert redis_service.get_cached_zip_inspection("crm", "abc123") is None

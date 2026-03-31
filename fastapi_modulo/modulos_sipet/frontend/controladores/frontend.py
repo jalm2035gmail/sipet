@@ -47,6 +47,7 @@ from fastapi_modulo.modulos_sipet.frontend.modelos.frontend_store import (
     upsert_page as store_upsert_page,
 )
 from fastapi_modulo.modulos_sipet.frontend.servicios.render_service import render_page as render_public_page
+from fastapi_modulo.modulos_sipet.web.servicios import auth_service
 from fastapi_modulo.modulos_sipet.web.servicios.access_service import (
     get_user_app_access_level,
     get_user_backend_roles,
@@ -337,18 +338,38 @@ def api_backend_me(request: Request):
     session_token = request.cookies.get(AUTH_COOKIE_NAME, "")
     session_data  = read_session_cookie(session_token) if session_token else None
     if not session_data:
-        return {"authenticated": False, "is_superadmin": False, "backend_roles": [], "role": "", "username": ""}
+        return {
+            "authenticated": False,
+            "can_use_bar": False,
+            "is_superadmin": False,
+            "backend_roles": [],
+            "role": "",
+            "username": "",
+            "image_url": "",
+            "panel_url": "/backend/login",
+        }
 
     role       = normalize_role_name(session_data.get("role") or "")
     username   = (session_data.get("username") or "").strip()
     superadmin = role == "superadministrador"
+    image_url = ""
+    panel_url = "/inicio"
 
     if not superadmin:
         request.state.user_name = username
         request.state.user_role = role
         backend_roles = get_user_backend_roles(request, username)
+        db = auth_service.get_session_local()()
+        try:
+            user = auth_service.find_user_by_login(db, username)
+            if user is not None:
+                panel_url = auth_service.resolve_post_login_redirect(db, role, int(user.id))
+            image_url = str(getattr(user, "imagen", "") or "").strip()
+        finally:
+            db.close()
     else:
         backend_roles = ["editor", "designer"]
+        panel_url = "/inicio"
 
     app_level  = "full_access" if superadmin else get_user_app_access_level(request, _FRONTEND_APP_NAME)
     can_use_bar = superadmin or app_level != "no_access" or bool(backend_roles)
@@ -362,11 +383,14 @@ def api_backend_me(request: Request):
         pass
 
     return {
-        "authenticated":  can_use_bar,
+        "authenticated":  True,
+        "can_use_bar":    can_use_bar,
         "is_superadmin":  superadmin,
         "backend_roles":  backend_roles,
         "role":           role,
         "username":       username,
+        "image_url":      image_url,
+        "panel_url":      panel_url,
         "builder_url":    "/frontend/builder",
         "bar_color":      bar_color,
     }

@@ -1,0 +1,293 @@
+<link rel="stylesheet" href="/identidad-institucional/css/identidad_institucional.css">
+<section class="id-page">
+    <div class="id-wrap">
+        <form id="identity-form" method="post" action="/identidad-institucional" enctype="multipart/form-data">
+            <input type="hidden" id="remove_favicon" name="remove_favicon" value="0">
+            <input type="hidden" id="remove_logo" name="remove_logo" value="0">
+            <input type="hidden" id="remove_login_logo" name="remove_login_logo" value="0">
+            <input type="hidden" id="remove_desktop" name="remove_desktop" value="0">
+            <input type="hidden" id="remove_mobile" name="remove_mobile" value="0">
+            <div style="display:none;">
+                <input type="file" id="favicon" name="favicon" accept="image/*">
+                <input type="file" id="logo_empresa" name="logo_empresa" accept="image/*">
+                <input type="file" id="logo_login" name="logo_login" accept="image/*">
+                <input type="file" id="fondo_escritorio" name="fondo_escritorio" accept="image/*">
+                <input type="file" id="fondo_movil" name="fondo_movil" accept="image/*">
+            </div>
+            {% if saved %}
+            <p class="id-flash">Identidad institucional actualizada.</p>
+            {% endif %}
+            {% if error_message %}
+            <p class="id-flash" style="background:#fef2f2;color:#991b1b;border:1px solid #fecaca;">{{ error_message }}</p>
+            {% endif %}
+            <section class="id-card id-card--pad" style="margin-bottom:14px;">
+                <div class="flex flex-wrap items-center justify-between gap-4">
+                    <div>
+                        <h2 style="margin:0;font-size:18px;">Estilo visual del sistema</h2>
+                        <p style="margin:6px 0 0;color:var(--muted);font-size:13px;">Elige entre estilo original o estilo moderno para sidebar y contenedor principal.</p>
+                    </div>
+                    <label class="label cursor-pointer gap-3">
+                        <span id="identity-sidebar-style-label" class="font-semibold text-sm" style="color:#0f3d2e;">Original</span>
+                        <input id="identity-sidebar-style-switch" type="checkbox" class="toggle toggle-success">
+                    </label>
+                </div>
+            </section>
+            <script>
+                (function () {
+                    var apply = function (variant) {
+                        var modern = variant === 'modern';
+                        document.documentElement.classList.toggle('ui-sidebar-modern', modern);
+                        var sw = document.getElementById('identity-sidebar-style-switch');
+                        var label = document.getElementById('identity-sidebar-style-label');
+                        if (sw) sw.checked = modern;
+                        if (label) label.textContent = modern ? 'Moderno' : 'Original';
+                    };
+                    var bind = function () {
+                        var sw = document.getElementById('identity-sidebar-style-switch');
+                        if (!sw) return;
+                        try {
+                            apply(window.localStorage.getItem('sipet_sidebar_style_variant') || 'original');
+                        } catch (e) {
+                            apply('original');
+                        }
+                        sw.addEventListener('change', function () {
+                            var variant = sw.checked ? 'modern' : 'original';
+                            apply(variant);
+                            try { window.localStorage.setItem('sipet_sidebar_style_variant', variant); } catch (e) {}
+                        });
+                    };
+                    if (document.readyState === 'loading') {
+                        document.addEventListener('DOMContentLoaded', bind);
+                    } else {
+                        bind();
+                    }
+                })();
+            </script>
+            <section class="id-card id-card--pad" style="margin-bottom:14px;">
+                <div class="flex flex-wrap items-center justify-between gap-4">
+                    <div>
+                        <h2 style="margin:0;font-size:18px;">Posición del menu</h2>
+                        <p style="margin:6px 0 0;color:var(--muted);font-size:13px;">Arriba mantiene el menú actual. Abajo activa la barra móvil inferior en páginas públicas.</p>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <label class="label cursor-pointer gap-2">
+                            <input type="radio" name="menu_position" value="arriba" {% if menu_position == "arriba" %}checked{% endif %}>
+                            <span class="font-semibold text-sm" style="color:#0f3d2e;">Arriba</span>
+                        </label>
+                        <label class="label cursor-pointer gap-2">
+                            <input type="radio" name="menu_position" value="abajo" {% if menu_position == "abajo" %}checked{% endif %}>
+                            <span class="font-semibold text-sm" style="color:#0f3d2e;">Abajo</span>
+                        </label>
+                    </div>
+                </div>
+            </section>
+            <section class="id-stats">
+                <article class="id-stat">
+                    <div class="id-stat__k">Nombre corto</div>
+                    <div class="id-stat__v">{{ company_short_name }}</div>
+                    <div class="id-stat__meta"><span class="id-chip">Activo</span></div>
+                </article>
+                <article class="id-stat">
+                    <div class="id-stat__k">Recursos cargados</div>
+                    <div class="id-stat__v">{{ loaded_assets }}</div>
+                    <div class="id-stat__meta"><span class="id-chip id-chip--ok">Completo</span></div>
+                </article>
+                <article class="id-stat">
+                    <div class="id-stat__k">Formato recomendado</div>
+                    <div class="id-stat__v">SVG/PNG</div>
+                    <div class="id-stat__meta"><span class="id-chip">Alta nitidez</span></div>
+                </article>
+                <article class="id-stat">
+                    <div class="id-stat__k">Consistencia visual</div>
+                    <div class="id-stat__v">{{ consistency }}%</div>
+                    <div class="id-stat__meta">
+                        <div class="id-bar"><div class="id-bar__fill" style="width:{{ consistency }}%"></div></div>
+                        <span class="id-chip id-chip--ok">Optimo</span>
+                    </div>
+                </article>
+            </section>
+            <section class="id-grid">
+                <section class="id-card id-card--pad">
+                    <header class="id-card__head">
+                        <div>
+                            <h2>Datos institucionales</h2>
+                            <p>Estos datos se muestran en login y en elementos de marca del sistema.</p>
+                        </div>
+                        <div class="id-card__tools">
+                            <span class="id-pill id-pill--soft">Configuracion</span>
+                            <button class="id-iconbtn" type="button" title="Ayuda">?</button>
+                        </div>
+                    </header>
+                    <div class="id-form">
+                        <div class="id-field">
+                            <label for="company_short_name">Nombre corto de la empresa</label>
+                            <input class="campo campo-personalizado" id="company_short_name" name="company_short_name" type="text" value="{{ company_short_name }}" placeholder="Ej. AVAN" maxlength="60">
+                            <div class="id-help">Se usa en titulos, encabezados y login. Recomendado: 3-18 caracteres.</div>
+                        </div>
+                        <div class="id-field">
+                            <label for="login_message">Mensaje para pantalla de login</label>
+                            <textarea class="campo campo-personalizado" id="login_message" name="login_message" placeholder="Ej. Incrementando el nivel de eficiencia" maxlength="200">{{ login_message }}</textarea>
+                            <div class="id-help">Sugerencia: frase corta y orientada a valor.</div>
+                        </div>
+                        <div class="id-actions">
+                            <button class="id-btn id-btn--primary" type="submit" form="identity-form">Guardar</button>
+                            <button class="id-btn id-btn--soft" type="reset">Restablecer</button>
+                        </div>
+                    </div>
+                </section>
+                <aside class="id-card id-card--pad">
+                    <header class="id-card__head">
+                        <div>
+                            <h2>Recomendaciones</h2>
+                            <p>Buenas practicas para mantener calidad visual en backend y movil.</p>
+                        </div>
+                        <div class="id-card__tools"><span class="id-pill">Guia rapida</span></div>
+                    </header>
+                    <div class="id-tips">
+                        <div class="id-tip"><div class="id-tip__icon">L</div><div class="id-tip__text"><strong>Logo</strong><p>Preferible SVG; si usas PNG que sea transparente y amplio.</p></div></div>
+                        <div class="id-tip"><div class="id-tip__icon">F</div><div class="id-tip__text"><strong>Favicon</strong><p>Usa 32x32 y 64x64 con buena legibilidad.</p></div></div>
+                        <div class="id-tip"><div class="id-tip__icon">M</div><div class="id-tip__text"><strong>Fondo movil</strong><p>Formato vertical con punto focal centrado.</p></div></div>
+                        <div class="id-tip"><div class="id-tip__icon">E</div><div class="id-tip__text"><strong>Fondo escritorio</strong><p>Recomendado 1920x1080 y buen contraste.</p></div></div>
+                        <div class="id-divider"></div>
+                        <div class="id-cta">
+                            <div><strong>Vista previa</strong><p>Valida como se vera el login con los recursos actuales.</p></div>
+                            <button class="id-btn id-btn--ghost2" type="button">Abrir preview</button>
+                        </div>
+                    </div>
+                </aside>
+            </section>
+            <section class="id-card id-card--pad id-assets">
+                <header class="id-card__head">
+                    <div>
+                        <h2>Recursos visuales</h2>
+                        <p>Administra favicon, logo y fondos para backend y movil.</p>
+                    </div>
+                    <div class="id-card__tools">
+                        <span class="id-pill">5 recursos</span>
+                    </div>
+                </header>
+                <div class="id-assets__grid">
+                    <article class="id-asset">
+                        <div class="id-asset__left">
+                            <div class="id-asset__label"><span class="id-dot id-dot--ok"></span><strong>Favicon</strong></div>
+                            <div class="id-asset__meta">Recomendado: 32x32 / 64x64 - PNG/ICO</div>
+                        </div>
+                        <div class="id-asset__preview id-asset__preview--square">
+                            <img src="{{ favicon_url }}" alt="Favicon">
+                        </div>
+                        <div class="id-asset__actions identity-asset-actions">
+                            <button class="id-btn id-btn--ghost3 identity-asset-edit" data-target-input="favicon" type="button">Editar</button>
+                            <button class="id-btn id-btn--danger identity-asset-delete" data-target-remove="remove_favicon" type="button">Eliminar</button>
+                        </div>
+                    </article>
+                    <article class="id-asset">
+                        <div class="id-asset__left">
+                            <div class="id-asset__label"><span class="id-dot id-dot--ok"></span><strong>Logo de la empresa</strong></div>
+                            <div class="id-asset__meta">Preferible SVG - alternativa PNG transparente</div>
+                        </div>
+                        <div class="id-asset__preview id-asset__preview--logo">
+                            <img src="{{ logo_url }}" alt="Logo">
+                        </div>
+                        <div class="id-asset__actions identity-asset-actions">
+                            <button class="id-btn id-btn--ghost3 identity-asset-edit" data-target-input="logo_empresa" type="button">Editar</button>
+                            <button class="id-btn id-btn--danger identity-asset-delete" data-target-remove="remove_logo" type="button">Eliminar</button>
+                        </div>
+                    </article>
+                    <article class="id-asset">
+                        <div class="id-asset__left">
+                            <div class="id-asset__label"><span class="id-dot id-dot--ok"></span><strong>Logo del login</strong></div>
+                            <div class="id-asset__meta">Se mostrará en la pantalla /backend/login</div>
+                        </div>
+                        <div class="id-asset__preview id-asset__preview--logo">
+                            <img src="{{ login_logo_url }}" alt="Logo del login">
+                        </div>
+                        <div class="id-asset__actions identity-asset-actions">
+                            <button class="id-btn id-btn--ghost3 identity-asset-edit" data-target-input="logo_login" type="button">Editar</button>
+                            <button class="id-btn id-btn--danger identity-asset-delete" data-target-remove="remove_login_logo" type="button">Eliminar</button>
+                        </div>
+                    </article>
+                    <article class="id-asset">
+                        <div class="id-asset__left">
+                            <div class="id-asset__label"><span class="id-dot id-dot--ok"></span><strong>Fondo de escritorio</strong></div>
+                            <div class="id-asset__meta">Recomendado: 1920x1080 - JPG/PNG</div>
+                        </div>
+                        <div class="id-asset__preview id-asset__preview--wide">
+                            <img src="{{ desktop_bg_url }}" alt="Fondo de escritorio">
+                        </div>
+                        <div class="id-asset__actions identity-asset-actions">
+                            <button class="id-btn id-btn--ghost3 identity-asset-edit" data-target-input="fondo_escritorio" type="button">Editar</button>
+                            <button class="id-btn id-btn--danger identity-asset-delete" data-target-remove="remove_desktop" type="button">Eliminar</button>
+                        </div>
+                    </article>
+                    <article class="id-asset">
+                        <div class="id-asset__left">
+                            <div class="id-asset__label"><span class="id-dot id-dot--ok"></span><strong>Fondo movil</strong></div>
+                            <div class="id-asset__meta">Recomendado: 1080x1920 - JPG/PNG</div>
+                        </div>
+                        <div class="id-asset__preview id-asset__preview--wide">
+                            <img src="{{ mobile_bg_url }}" alt="Fondo movil">
+                        </div>
+                        <div class="id-asset__actions identity-asset-actions">
+                            <button class="id-btn id-btn--ghost3 identity-asset-edit" data-target-input="fondo_movil" type="button">Editar</button>
+                            <button class="id-btn id-btn--danger identity-asset-delete" data-target-remove="remove_mobile" type="button">Eliminar</button>
+                        </div>
+                    </article>
+                </div>
+            </section>
+        </form>
+        <script>
+            (function () {
+                var form = document.getElementById('identity-form');
+                if (!form) return;
+
+                function byId(id) {
+                    return document.getElementById(id);
+                }
+
+                function bindFileInput(inputId) {
+                    var input = byId(inputId);
+                    if (!input) return;
+                    input.addEventListener('change', function () {
+                        if (!input.files || !input.files.length) return;
+                        form.requestSubmit ? form.requestSubmit() : form.submit();
+                    });
+                }
+
+                document.querySelectorAll('.identity-asset-edit[data-target-input]').forEach(function (button) {
+                    button.addEventListener('click', function () {
+                        var inputId = button.getAttribute('data-target-input') || '';
+                        var input = byId(inputId);
+                        if (!input) return;
+                        var removeId = {
+                            favicon: 'remove_favicon',
+                            logo_empresa: 'remove_logo',
+                            logo_login: 'remove_login_logo',
+                            fondo_escritorio: 'remove_desktop',
+                            fondo_movil: 'remove_mobile'
+                        }[inputId];
+                        if (removeId && byId(removeId)) {
+                            byId(removeId).value = '0';
+                        }
+                        input.click();
+                    });
+                });
+
+                document.querySelectorAll('.identity-asset-delete[data-target-remove]').forEach(function (button) {
+                    button.addEventListener('click', function () {
+                        var removeId = button.getAttribute('data-target-remove') || '';
+                        var removeInput = byId(removeId);
+                        if (!removeInput) return;
+                        removeInput.value = '1';
+                        form.requestSubmit ? form.requestSubmit() : form.submit();
+                    });
+                });
+
+                bindFileInput('favicon');
+                bindFileInput('logo_empresa');
+                bindFileInput('logo_login');
+                bindFileInput('fondo_escritorio');
+                bindFileInput('fondo_movil');
+            })();
+        </script>
+    </div>
+</section>

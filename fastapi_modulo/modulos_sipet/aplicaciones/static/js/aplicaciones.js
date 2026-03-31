@@ -27,6 +27,7 @@
   var activeUploadModule = "";
   var pendingUploadFile = null;
   var pendingUploadInspection = null;
+  var uploadInFlight = false;
 
   function csrfToken() {
     return String(window.__sipet_csrf_token || "").trim();
@@ -99,6 +100,10 @@
     pendingUploadFile = null;
     pendingUploadInspection = null;
     if (uploadInput) uploadInput.value = "";
+    clearUploadResults();
+  }
+
+  function clearUploadResults() {
     if (uploadApplyButton) uploadApplyButton.disabled = true;
     if (uploadSummary) uploadSummary.classList.add("hidden");
     if (uploadArchitecture) {
@@ -196,6 +201,91 @@
     };
   }
 
+  function explainError(error, fallback) {
+    var base = String((error && error.message) || fallback || "Error inesperado");
+    if (error && error.cause) {
+      return base + " Causa: " + String(error.cause);
+    }
+    return base;
+  }
+
+  function showUploadError(message, detail) {
+    var resolved = String(message || "No se pudo completar la operación.");
+    if (uploadSummary) uploadSummary.classList.remove("hidden");
+    if (uploadWarnings) {
+      uploadWarnings.textContent = resolved;
+      uploadWarnings.classList.remove("hidden");
+    }
+    if (detail) {
+      renderArchitectureBox(detail, uploadArchitecture);
+    }
+    showStatusModal({
+      kicker: "Error de importación",
+      title: "No se pudo aplicar el ZIP",
+      tone: "alert-error",
+      message: resolved,
+      moduleLabel: activeUploadModule || "Modulo",
+      statusLabel: "Error"
+    });
+  }
+
+  async function readJsonSafe(res) {
+    try {
+      return await res.json();
+    } catch (_error) {
+      return {};
+    }
+  }
+
+  function extractTextCause(rawText) {
+    var text = String(rawText || "").trim();
+    if (!text) return "";
+    text = text.replace(/<script[\s\S]*?<\/script>/gi, " ");
+    text = text.replace(/<style[\s\S]*?<\/style>/gi, " ");
+    text = text.replace(/<[^>]+>/g, " ");
+    text = text.replace(/\s+/g, " ").trim();
+    return text.slice(0, 220);
+  }
+
+  async function buildHttpError(res, fallback) {
+    var rawText = "";
+    try {
+      rawText = await res.text();
+    } catch (_error) {
+      rawText = "";
+    }
+    var data = {};
+    try {
+      data = rawText ? JSON.parse(rawText) : {};
+    } catch (_error) {
+      data = {};
+    }
+    var parsed = parseApiError(data, "");
+    var statusLabel = "HTTP " + String(res.status || 0) + (res.statusText ? " " + String(res.statusText) : "");
+    var textCause = extractTextCause(rawText);
+    var message = parsed.message || fallback || statusLabel;
+    if (!parsed.message && res.status) {
+      message = (fallback ? fallback + ". " : "") + statusLabel;
+    }
+    if (!parsed.message && textCause && textCause !== statusLabel) {
+      message += ". " + textCause;
+    }
+    return {
+      message: message,
+      detail: parsed.detail,
+      cause: !parsed.message
+        ? (textCause && textCause !== statusLabel ? textCause : statusLabel)
+        : ""
+    };
+  }
+
+  function setUploadBusy(isBusy) {
+    uploadInFlight = !!isBusy;
+    if (!uploadApplyButton) return;
+    uploadApplyButton.disabled = !!isBusy || !pendingUploadFile || !pendingUploadInspection;
+    uploadApplyButton.classList.toggle("loading", !!isBusy);
+  }
+
   function selectedSet() {
     return new Set(state.selected);
   }
@@ -259,7 +349,11 @@
     pill.textContent = item.label || item.key;
     panel.innerHTML = [
       '<div class="space-y-4">',
-      '<div><h3 class="text-xl font-black">' + esc(item.label) + '</h3><p class="mt-1 text-sm text-base-content/60">' + esc(item.description || "Sin descripcion") + '</p></div>',
+      '<div><div class="flex flex-wrap items-center gap-2"><h3 class="text-xl font-black">' + esc(item.label) + '</h3>' +
+        (item.is_core_module ? '<span class="badge badge-neutral">Núcleo SIPET</span>' : '') +
+      '</div><p class="mt-1 text-sm text-base-content/60">' + esc(item.description || "Sin descripcion") + '</p>' +
+      (item.package_management_note ? '<p class="mt-2 text-sm text-base-content/70">' + esc(item.package_management_note) + '</p>' : '') +
+      '</div>',
       '<div class="grid gap-2 sm:grid-cols-2">',
       '<div class="rounded-2xl bg-base-200 p-3"><div class="text-xs uppercase tracking-[0.18em] text-base-content/50">Ruta</div><div class="mt-1 font-semibold">' + esc(item.route || "Sin ruta") + '</div></div>',
       '<div class="rounded-2xl bg-base-200 p-3"><div class="text-xs uppercase tracking-[0.18em] text-base-content/50">Directorio</div><div class="mt-1 break-all font-semibold text-sm">' + esc(item.module_dir || "-") + '</div></div>',
@@ -300,6 +394,12 @@
       var uploadLabel = item.enabled ? 'Actualizar módulo' : 'Importar módulo';
       var actionClass = item.enabled ? ' btn-primary is-enabled' : ' btn-primary';
       var actionState = item.enabled ? ' data-state="enabled"' : '';
+      var deployNote = item.is_core_module
+        ? '<li class="menu-title pointer-events-none opacity-80"><span><i class="fa-solid fa-rocket"></i>Se actualiza con deploy</span></li>'
+        : '';
+      var deployBadge = item.is_core_module
+        ? '<div class="mt-2"><span class="badge badge-neutral badge-outline">Se actualiza con deploy</span></div>'
+        : '';
       return '' +
         '<article class="gov-app-card card border border-base-300 bg-base-100 shadow-sm' + selectedClass + '" data-focus-module="' + esc(item.key) + '">' +
           '<div class="card-body">' +
@@ -311,6 +411,7 @@
                 '<li><button type="button" data-show-audit="' + esc(item.key) + '"><i class="fa-regular fa-circle-info"></i>Información del módulo</button></li>' +
                 (item.package_upload_enabled ? '<li><button type="button" data-open-upload="' + esc(item.key) + '"><i class="fa-solid fa-file-import"></i>' + uploadLabel + '</button></li>' : '') +
                 (item.package_upload_enabled ? '<li><button type="button" class="text-error" data-uninstall-module="' + esc(item.key) + '"><i class="fa-solid fa-trash-can"></i>Desinstalar módulo</button></li>' : '') +
+                (!item.package_upload_enabled && item.is_core_module ? deployNote : '') +
                 '<li><button type="button" data-select-card-module="' + esc(item.key) + '"><i class="fa-regular fa-square-check"></i>' + (selected.has(item.key) ? 'Quitar de lote' : 'Agregar a lote') + '</button></li>' +
               '</ul>' +
             '</div>' +
@@ -319,6 +420,9 @@
               '<div class="gov-app-main min-w-0">' +
                 '<h3 class="gov-app-title">' + esc(item.label) + '</h3>' +
                 '<p class="gov-app-key">' + esc(item.key) + '</p>' +
+                (item.is_core_module ? '<div class="mt-2"><span class="badge badge-neutral badge-outline">Núcleo SIPET</span></div>' : '') +
+                deployBadge +
+                (!item.package_upload_enabled && item.package_management_note ? '<p class="mt-2 text-xs text-base-content/60">' + esc(item.package_management_note) + '</p>' : '') +
               '</div>' +
               '<div class="gov-app-actions">' +
                 '<button class="gov-app-action-btn btn btn-sm' + actionClass + '" type="button"' + actionState + ' data-toggle-module-action="' + esc(item.key) + '">' + actionLabel + '</button>' +
@@ -494,6 +598,7 @@
   }
 
   async function inspectModulePackage(key, file) {
+    clearUploadResults();
     try {
       var formData = new FormData();
       formData.append("package", file);
@@ -501,23 +606,28 @@
       var res = await fetch("/api/aplicaciones/modulos/" + encodeURIComponent(key) + "/upload", {
         method: "POST",
         credentials: "same-origin",
+        headers: { "x-csrf-token": csrfToken() },
         body: formData
       });
-      var data = await res.json();
       if (!res.ok) {
-        var inspectError = parseApiError(data, "No se pudo inspeccionar el módulo.");
+        var inspectError = await buildHttpError(res, "No se pudo inspeccionar el módulo");
         throw inspectError;
       }
+      var data = await readJsonSafe(res.clone());
       pendingUploadFile = file;
       renderUploadInspection(data);
       toast("ZIP inspeccionado. Revisa el resumen antes de aplicar.", "alert-success");
     } catch (error) {
-      resetUploadState();
+      pendingUploadFile = file;
+      pendingUploadInspection = null;
+      if (uploadApplyButton) uploadApplyButton.disabled = true;
       if (error.detail) {
         if (uploadSummary) uploadSummary.classList.remove("hidden");
         renderArchitectureBox(error.detail, uploadArchitecture);
       }
-      toast(error.message || "No se pudo inspeccionar el módulo.", "alert-error");
+      var inspectMessage = explainError(error, "No se pudo inspeccionar el módulo.");
+      showUploadError(inspectMessage, error.detail);
+      toast(inspectMessage, "alert-error");
     }
   }
 
@@ -526,54 +636,53 @@
       toast("Primero inspecciona un ZIP válido.", "alert-warning");
       return;
     }
+    var appliedSuccessfully = false;
     try {
-      var uploadPassword = window.prompt("Confirma tu contraseña para aplicar el ZIP inspeccionado:");
-      if (!uploadPassword) {
-        toast("Confirmación cancelada.", "alert-warning");
-        return;
-      }
-      var challengeRes = await fetch("/api/aplicaciones/security/challenge", {
-        method: "POST",
-        credentials: "same-origin",
-        headers: {
-          "Content-Type": "application/json",
-          "x-csrf-token": csrfToken()
-        },
-        body: JSON.stringify({ action: "package_upload", password: uploadPassword, module_key: key })
-      });
-      var challengeData = await challengeRes.json();
-      if (!challengeRes.ok) throw new Error(challengeData.detail || "No se pudo confirmar la operación.");
+      setUploadBusy(true);
+      toast("Aplicando ZIP...", "alert-info");
       var formData = new FormData();
       formData.append("package", pendingUploadFile);
       formData.append("dry_run", "false");
       formData.append("expected_checksum", String(pendingUploadInspection.checksum || ""));
-      formData.append("challenge_token", challengeData.token || "");
       var res = await fetch("/api/aplicaciones/modulos/" + encodeURIComponent(key) + "/upload", {
         method: "POST",
         credentials: "same-origin",
+        headers: { "x-csrf-token": csrfToken() },
         body: formData
       });
-      var data = await res.json();
       if (!res.ok) {
-        var applyError = parseApiError(data, "No se pudo importar el módulo.");
+        var applyError = await buildHttpError(res, "No se pudo importar el módulo");
         throw applyError;
       }
+      var data = await readJsonSafe(res.clone());
       if (data.status === "queued" && data.task_id) {
         toast("Importación encolada. Esperando resultado...", "alert-info");
         data = await pollTask(String(data.task_name || "package_apply"), String(data.task_id || ""));
       }
       if (uploadModal) uploadModal.close();
       await refreshModules();
+      appliedSuccessfully = true;
+      showStatusModal({
+        kicker: "Importación completada",
+        title: "ZIP aplicado correctamente",
+        tone: "alert-success",
+        message: "Se actualizaron " + String(data.updated_files || 0) + " archivo(s).",
+        moduleLabel: key,
+        route: data.target_root || "",
+        statusLabel: "Completado"
+      });
       toast("Paquete aplicado en " + String(data.updated_files || 0) + " archivo(s).", "alert-success");
     } catch (error) {
-      if (error.detail) {
-        if (uploadSummary) uploadSummary.classList.remove("hidden");
-        renderArchitectureBox(error.detail, uploadArchitecture);
-      }
-      toast(error.message || "No se pudo importar el módulo.", "alert-error");
+      var applyMessage = explainError(error, "No se pudo importar el módulo.");
+      showUploadError(applyMessage, error.detail);
+      toast(applyMessage, "alert-error");
     } finally {
-      activeUploadModule = "";
-      resetUploadState();
+      if (appliedSuccessfully) {
+        activeUploadModule = "";
+        resetUploadState();
+      } else {
+        setUploadBusy(false);
+      }
     }
   }
 
@@ -612,7 +721,7 @@
       await refreshModules();
       toast("Módulo desinstalado. Se eliminaron " + String(data.removed_files || 0) + " archivo(s).", "alert-success");
     } catch (error) {
-      toast(error.message || "No se pudo desinstalar el módulo.", "alert-error");
+      toast(explainError(error, "No se pudo desinstalar el módulo."), "alert-error");
     }
   }
 
@@ -780,6 +889,7 @@
 
   if (uploadModal) {
     uploadModal.addEventListener("close", function () {
+      if (uploadInFlight) return;
       activeUploadModule = "";
       resetUploadState();
     });

@@ -199,7 +199,7 @@ def get_request_host() -> str:
 
 
 def get_admin_dataMAIN_url() -> str:
-    return DEFAULT_DATABASE_ROUTER.default_database_url
+    return DEFAULT_DATABASE_ROUTER.get_global_database_url()
 
 
 def _should_block_implicit_admin_host(host: Optional[str]) -> bool:

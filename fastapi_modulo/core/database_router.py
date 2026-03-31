@@ -178,6 +178,12 @@ def _load_conf_options(file_path: Path) -> Optional[configparser.SectionProxy]:
     return parser["options"]
 
 
+def _load_global_conf_options() -> Optional[configparser.SectionProxy]:
+    if not SIPET_CONFIG_PATH.exists():
+        return None
+    return _load_conf_options(SIPET_CONFIG_PATH)
+
+
 def resolve_sipet_config_path(host: Optional[str] = None) -> Path:
     normalized_host = _resolve_preferred_host(host)
     if normalized_host:
@@ -805,7 +811,8 @@ def load_domain_database_map() -> Dict[str, str]:
 
 
 def resolve_default_database_url() -> str:
-    conf_url = resolve_database_url_from_sipet_conf()
+    global_options = _load_global_conf_options()
+    conf_url = _build_url_from_options(global_options, "") if global_options is not None else None
     if conf_url:
         return conf_url
 
@@ -881,6 +888,45 @@ class DatabaseRouter:
     def get_request_host(self) -> str:
         return _REQUEST_HOST.get("")
 
+    def get_global_database_url(self) -> str:
+        return normalize_sqlite_url_for_runtime(self.default_database_url)
+
+    def _host_variants(self, host: str) -> list[str]:
+        normalized_host = normalize_host(host)
+        if not normalized_host:
+            return []
+        if normalized_host.startswith("www."):
+            return [normalized_host, normalized_host[4:]]
+        return [normalized_host, f"www.{normalized_host}"]
+
+    def _resolve_host_database_sources(self, host: str) -> Dict[str, str]:
+        normalized_host = normalize_host(host)
+        if not normalized_host:
+            return {}
+        resolved: Dict[str, str] = {}
+        conf_url = resolve_database_url_from_sipet_conf(normalized_host)
+        if conf_url:
+            resolved["domain_conf"] = normalize_database_url(conf_url)
+        for candidate in self._host_variants(normalized_host):
+            mapped = self._host_database_map.get(candidate)
+            if mapped:
+                resolved[f"host_map:{candidate}"] = coerce_database_target_to_url(mapped)
+        tenant_db_url = self._resolve_tenant_registry_database_url(normalized_host)
+        if tenant_db_url:
+            resolved["tenant_registry"] = normalize_database_url(tenant_db_url)
+        return resolved
+
+    def _assert_host_resolution_consistency(self, host: str) -> Dict[str, str]:
+        resolved = self._resolve_host_database_sources(host)
+        distinct_urls = {normalize_database_url(value) for value in resolved.values() if str(value).strip()}
+        if len(distinct_urls) > 1:
+            details = ", ".join(f"{source}={url}" for source, url in sorted(resolved.items()))
+            raise RuntimeError(
+                f"El host '{normalize_host(host)}' tiene múltiples bases configuradas. "
+                f"Use una sola BD por dominio. Detalle: {details}"
+            )
+        return resolved
+
     def _resolve_tenant_registry_database_url(self, host: str) -> Optional[str]:
         normalized_host = normalize_host(host)
         if not normalized_host:
@@ -893,14 +939,10 @@ class DatabaseRouter:
                 return self._tenant_db_url_cache[normalized_host]
 
             resolved_url: Optional[str] = None
-            admin_db_url = normalize_sqlite_url_for_runtime(self.default_database_url)
+            admin_db_url = self.get_global_database_url()
             connect_args = {"check_same_thread": False} if admin_db_url.startswith("sqlite:///") else {}
             engine = create_engine(admin_db_url, connect_args=connect_args, echo=False)
-            variants = [normalized_host]
-            if normalized_host.startswith("www."):
-                variants.append(normalized_host[4:])
-            else:
-                variants.append(f"www.{normalized_host}")
+            variants = self._host_variants(normalized_host)
 
             try:
                 with engine.connect() as connection:
@@ -965,7 +1007,7 @@ class DatabaseRouter:
                 return self._tenant_registry_present
 
             present = False
-            admin_db_url = normalize_sqlite_url_for_runtime(self.default_database_url)
+            admin_db_url = self.get_global_database_url()
             connect_args = {"check_same_thread": False} if admin_db_url.startswith("sqlite:///") else {}
             engine = create_engine(admin_db_url, connect_args=connect_args, echo=False)
             try:
@@ -1000,14 +1042,9 @@ class DatabaseRouter:
 
     def get_database_url_for_host(self, host: Optional[str] = None) -> str:
         normalized_host = normalize_host(host) or self.get_request_host()
-        conf_url = resolve_database_url_from_sipet_conf(normalized_host)
-        if conf_url:
-            return conf_url
-        if normalized_host and normalized_host in self._host_database_map:
-            return coerce_database_target_to_url(self._host_database_map[normalized_host])
-        tenant_db_url = self._resolve_tenant_registry_database_url(normalized_host)
-        if tenant_db_url:
-            return tenant_db_url
+        resolved = self._assert_host_resolution_consistency(normalized_host)
+        if resolved:
+            return next(iter(resolved.values()))
         if self._should_block_default_fallback(normalized_host):
             raise RuntimeError(
                 f"No hay una base de datos configurada para el host '{normalized_host}'. "

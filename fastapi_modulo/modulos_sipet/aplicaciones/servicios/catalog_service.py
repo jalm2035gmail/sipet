@@ -50,6 +50,16 @@ def _is_core_module_payload(item: dict[str, Any]) -> bool:
     return "fastapi_modulo/modulos_sipet/" in manifest_file or "fastapi_modulo/modulos_sipet/" in module_dir
 
 
+def _package_management_note(item: dict[str, Any], *, target_root: str | None, is_core_module: bool) -> str:
+    if is_core_module:
+        return "Módulo núcleo de SIPET. Se actualiza con el deploy del core y no admite importación por ZIP."
+    if not bool(item.get("manageable", True)):
+        return "Módulo administrado por el sistema. No admite importación por ZIP."
+    if not target_root:
+        return "Este módulo no tiene un destino importable por paquetes ZIP."
+    return ""
+
+
 def decorate_modules_payload(
     items: list[dict[str, Any]] | None = None,
     tenant_key: str | None = None,
@@ -79,7 +89,8 @@ def decorate_modules_payload(
         if (route or label) and fingerprint in seen_fingerprints:
             continue
         target_root = get_module_upload_root(key)
-        if _is_core_module_payload(item):
+        is_core_module = _is_core_module_payload(item)
+        if is_core_module:
             target_root = None
         if not _is_installed_module(item, target_root):
             continue
@@ -96,6 +107,12 @@ def decorate_modules_payload(
         package_upload_enabled = _supports_package_management(item, target_root)
         item["package_upload_enabled"] = package_upload_enabled
         item["package_target_label"] = os.path.relpath(target_root, PROJECT_ROOT) if package_upload_enabled and target_root else ""
+        item["is_core_module"] = is_core_module
+        item["package_management_note"] = _package_management_note(
+            item,
+            target_root=target_root,
+            is_core_module=is_core_module,
+        )
         item["image_url"] = get_module_catalog_image_url(key) if module_image_path else None
         item["icon"] = module_icon
         upload_row = get_latest_package_upload(key)

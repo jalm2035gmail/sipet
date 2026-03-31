@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 import re
 from pathlib import Path
@@ -75,11 +76,29 @@ def _slugify_store_name(value: str) -> str:
     return raw or "tienda"
 
 
+def _serialize_store_theme(theme: dict) -> str:
+    return json.dumps(theme, ensure_ascii=True)
+
+
+def _deserialize_store_theme(raw_value) -> dict:
+    if isinstance(raw_value, dict):
+        return raw_value
+    if isinstance(raw_value, str):
+        try:
+            parsed = json.loads(raw_value)
+        except Exception:
+            return {}
+        return parsed if isinstance(parsed, dict) else {}
+    return {}
+
+
 @marketplace_router.post(f"{BACKEND_ROUTE_PREFIX}/admin/store-settings")
-async def save_store_settings(request: Request):
-    payload = await request.json()
+async def save_store_settings(request: Request, payload_override: dict | None = None):
+    payload = payload_override if isinstance(payload_override, dict) else await request.json()
     store_name = str(payload.get("store_name") or "").strip()
     admin_id_raw = str(payload.get("admin_user_id") or "").strip()
+    store_id_raw = str(payload.get("store_id") or "").strip()
+    is_edit = bool(payload.get("is_edit", False))
     if not store_name:
         raise HTTPException(status_code=422, detail="Store name is required")
     if not admin_id_raw:
@@ -98,18 +117,62 @@ async def save_store_settings(request: Request):
         if not admin_user:
             raise HTTPException(status_code=404, detail="Admin user not found")
 
-        store = db.execute(
-            text(
-                """
-                SELECT id, vendor_id, store_name, store_slug, store_theme, is_featured, is_active
-                FROM vendors
-                WHERE vendor_id = :admin_user_id
-                LIMIT 1
-                """
-            ),
-            {"admin_user_id": admin_user_id},
-        ).mappings().first()
-        theme = dict(store["store_theme"] or {}) if store and isinstance(store["store_theme"], dict) else {}
+        store = None
+        if is_edit:
+            if not store_id_raw:
+                raise HTTPException(status_code=422, detail="Falta el identificador de la tienda a editar.")
+            try:
+                store_id = int(store_id_raw)
+            except ValueError as exc:
+                raise HTTPException(status_code=422, detail="El identificador de la tienda es inválido.") from exc
+            store = db.execute(
+                text(
+                    """
+                    SELECT id, vendor_id, store_name, store_slug, store_theme, is_featured, is_active
+                    FROM vendors
+                    WHERE id = :store_id
+                    LIMIT 1
+                    """
+                ),
+                {"store_id": store_id},
+            ).mappings().first()
+            if not store:
+                raise HTTPException(status_code=404, detail="No se encontró la tienda a editar.")
+            conflicting_store = db.execute(
+                text(
+                    """
+                    SELECT id, store_name
+                    FROM vendors
+                    WHERE vendor_id = :admin_user_id
+                      AND id <> :store_id
+                    LIMIT 1
+                    """
+                ),
+                {"admin_user_id": admin_user_id, "store_id": store_id},
+            ).mappings().first()
+            if conflicting_store:
+                raise HTTPException(
+                    status_code=409,
+                    detail=f"El administrador seleccionado ya tiene una tienda asignada: {conflicting_store['store_name'] or 'Sin nombre'}. Usa otro usuario o edita esa tienda.",
+                )
+        else:
+            store = db.execute(
+                text(
+                    """
+                    SELECT id, vendor_id, store_name, store_slug, store_theme, is_featured, is_active
+                    FROM vendors
+                    WHERE vendor_id = :admin_user_id
+                    LIMIT 1
+                    """
+                ),
+                {"admin_user_id": admin_user_id},
+            ).mappings().first()
+        if store and not is_edit:
+            raise HTTPException(
+                status_code=409,
+                detail=f"El usuario seleccionado ya tiene una tienda asignada: {store['store_name'] or 'Sin nombre'}. No puede tener dos tiendas.",
+            )
+        theme = _deserialize_store_theme(store["store_theme"]) if store else {}
         theme.update(
             {
                 "store_type": str(payload.get("store_type") or "").strip(),
@@ -122,6 +185,12 @@ async def save_store_settings(request: Request):
                 "whatsapp": str(payload.get("whatsapp") or "").strip(),
                 "max_internal_users": max(0, int(payload.get("max_internal_users") or 0)),
                 "max_portal_users": max(0, int(payload.get("max_portal_users") or 0)),
+                "can_upload_videos": bool(payload.get("can_upload_videos", False)),
+                "can_use_providers": bool(payload.get("can_use_providers", False)),
+                "can_use_ai": bool(payload.get("can_use_ai", False)),
+                "can_use_financial": bool(payload.get("can_use_financial", False)),
+                "can_use_layaway": bool(payload.get("can_use_layaway", False)),
+                "can_use_auctions": bool(payload.get("can_use_auctions", False)),
             }
         )
 
@@ -150,7 +219,7 @@ async def save_store_settings(request: Request):
                     "vendor_id": admin_user_id,
                     "store_name": store_name,
                     "store_slug": slug,
-                    "store_theme": theme,
+                    "store_theme": _serialize_store_theme(theme),
                     "is_featured": bool(payload.get("is_featured", False)),
                     "status": "approved" if bool(payload.get("is_active", True)) else "pending",
                     "is_active": bool(payload.get("is_active", True)),
@@ -161,7 +230,8 @@ async def save_store_settings(request: Request):
                 text(
                     """
                     UPDATE vendors
-                    SET store_name = :store_name,
+                    SET vendor_id = :vendor_id,
+                        store_name = :store_name,
                         store_theme = :store_theme,
                         is_featured = :is_featured,
                         is_active = :is_active,
@@ -171,8 +241,9 @@ async def save_store_settings(request: Request):
                 ),
                 {
                     "id": store["id"],
+                    "vendor_id": admin_user_id,
                     "store_name": store_name,
-                    "store_theme": theme,
+                    "store_theme": _serialize_store_theme(theme),
                     "is_featured": bool(payload.get("is_featured", False)),
                     "is_active": bool(payload.get("is_active", True)),
                     "status": "approved" if bool(payload.get("is_active", True)) else "pending",

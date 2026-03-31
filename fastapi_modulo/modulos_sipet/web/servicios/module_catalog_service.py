@@ -7,6 +7,7 @@ from fastapi import Request
 
 from fastapi_modulo.core.module_registry import get_active_app_access_names, get_active_module_keys, is_module_enabled, list_modules_payload
 from fastapi_modulo.modulos_sipet.web.servicios.access_service import (
+    get_current_role,
     get_user_app_access,
     get_user_screen_access_levels,
     is_admin_or_superadmin,
@@ -48,10 +49,15 @@ def _has_capacitacion_role_assignment(request: Request) -> bool:
     return False
 
 
+def _is_store_scoped_role(request: Request) -> bool:
+    return str(get_current_role(request) or "").strip().lower() in {"administrador_tienda", "vendedor_tienda"}
+
+
 def build_sidebar_modules(request: Request) -> List[Dict[str, str]]:
     user_access = set(get_user_app_access(request))
     superadmin = is_superadmin(request)
     tenant_key = str(getattr(request.state, "tenant_key", "") or "")
+    store_scoped_role = _is_store_scoped_role(request)
     sidebar_modules: List[Dict[str, str]] = []
     for item in _cached_modules_payload():
         key = str(item.get("key") or "").strip()
@@ -67,6 +73,8 @@ def build_sidebar_modules(request: Request) -> List[Dict[str, str]]:
         if key == "capacitacion" and not _has_capacitacion_role_assignment(request):
             continue
         app_access_name = str(item.get("app_access_name") or "").strip()
+        if store_scoped_role and app_access_name and app_access_name != "Multitienda":
+            continue
         if app_access_name and not superadmin and app_access_name not in user_access:
             continue
         sidebar_modules.append(

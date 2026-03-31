@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}Inicio · {{ app_name }}{% endblock %}
+
+{% block content %}
+<section class="hero">
+  <div>
+    <span class="badge">SIPET · FastAPI · PWA</span>
+    <h1>SIPET PWA · base real para planeación, seguimiento y evidencia</h1>
+    <p class="lead">
+      Base real para SIPET: planes estratégicos, objetivos, KPIs, actividades, evidencias, autenticación y despliegue como PWA.
+    </p>
+    <div class="hero-actions">
+      <a class="btn" href="/register">Probar registro</a>
+      {% if debug %}<a class="btn btn-ghost" href="/api/docs">Ver API</a>{% endif %}
+      <button class="btn btn-secondary" type="button" id="health-check-btn">Validar backend</button>
+    </div>
+    <p id="health-result" class="muted status-line"></p>
+  </div>
+</section>
+
+<section class="grid cols-3">
+  <article class="card">
+    <h2>Autenticación</h2>
+    <p>Registro, login, refresh token y endpoint <code>/me</code>.</p>
+  </article>
+  <article class="card">
+    <h2>PWA</h2>
+    <p>Manifest, service worker en scope raíz, fallback offline e instalación.</p>
+  </article>
+  <article class="card">
+    <h2>Gestión SIPET</h2>
+    <p>Planes, objetivos, indicadores, actividades, presupuesto y evidencias.</p>
+  </article>
+</section>
+
+<section class="card">
+  <h2>Qué ya es funcional como SIPET</h2>
+  <ul class="clean-list">
+    <li>Refresh token compatible con el frontend.</li>
+    <li>Repositorio de usuarios funcional.</li>
+    <li>Service worker con scope correcto para controlar <code>/</code>.</li>
+    <li>Rutas reales para login, registro y modo offline.</li>
+    <li>Plantillas sin dependencias rotas de Flask/Tailwind.</li>
+    <li>Modelo de dominio SIPET con planes, objetivos, KPIs, actividades y evidencias.</li>
+    <li>Dashboard resumido en <code>/api/v1/sipet/dashboard</code>.</li>
+  </ul>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.getElementById('health-check-btn')?.addEventListener('click', async () => {
+    const result = document.getElementById('health-result');
+    result.textContent = 'Validando…';
+    try {
+      const response = await fetch('/health');
+      const data = await response.json();
+      result.textContent = `OK · versión ${data.version} · entorno ${data.env}`;
+    } catch (error) {
+      result.textContent = 'No se pudo consultar /health';
+    }
+  });
+</script>
+{% endblock %}

@@ -11,6 +11,7 @@ from fastapi_modulo.modulos_sipet.aplicaciones.controladores.dependencies import
     APPLICATIONS_PERMISSION_PACKAGES_UPLOAD,
     APPLICATIONS_PERMISSION_VIEW,
     require_applications_permission,
+    require_superadmin,
     request_actor_context,
 )
 from fastapi_modulo.modulos_sipet.aplicaciones.modelos.schemas import ModuleRollbackResponse, ModuleUninstallResponse, ModuleUploadResponse
@@ -25,7 +26,6 @@ from fastapi_modulo.modulos_sipet.aplicaciones.servicios.package_service import 
 from fastapi_modulo.modulos_sipet.aplicaciones.servicios.security_service import (
     SENSITIVE_ACTION_PACKAGE_ROLLBACK,
     SENSITIVE_ACTION_PACKAGE_UNINSTALL,
-    SENSITIVE_ACTION_PACKAGE_UPLOAD,
     verify_sensitive_action_token,
 )
 from fastapi_modulo.modulos_sipet.aplicaciones.servicios.task_queue_service import queue_task
@@ -56,23 +56,14 @@ async def aplicaciones_upload(
     package: UploadFile = File(...),
     dry_run: bool = Form(True),
     expected_checksum: str = Form(""),
-    challenge_token: str = Form(""),
 ):
     require_applications_permission(request, APPLICATIONS_PERMISSION_PACKAGES_UPLOAD)
+    require_superadmin(request)
     module_key = _require_package_manageable_module(module_key)
     actor = request_actor_context(request)
     filename = str(package.filename or "").strip()
     if not filename.lower().endswith(".zip"):
         raise HTTPException(status_code=400, detail="Debes subir un archivo .zip.")
-    if not dry_run:
-        if not challenge_token:
-            raise HTTPException(status_code=400, detail="Debes confirmar la aplicacion del ZIP.")
-        verify_sensitive_action_token(
-            token=challenge_token,
-            username=actor["user_id"],
-            action=SENSITIVE_ACTION_PACKAGE_UPLOAD,
-            module_key=module_key,
-        )
     return await import_module_package(
         module_key,
         package,

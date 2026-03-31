@@ -7,11 +7,11 @@ from typing import Optional
 
 from sqlalchemy import (
     Boolean, Column, DateTime, Date, Float, ForeignKey,
-    Integer, Numeric, String, Text, func,
+    Integer, Numeric, String, Text, func, inspect, text,
 )
 from sqlalchemy.orm import relationship
 
-from fastapi_modulo.core.db import Base
+from fastapi_modulo.core.db import MAIN, get_current_engine
 
 
 def _gen_miu_code() -> str:
@@ -20,7 +20,7 @@ def _gen_miu_code() -> str:
     return "CGT" + "".join(random.choices(chars, k=5))
 
 
-class RefReferente(Base):
+class RefReferente(MAIN):
     """Socio Referente: persona que refiere nuevos prospectos."""
     __tablename__ = "ref_referente"
 
@@ -36,7 +36,7 @@ class RefReferente(Base):
     referidos = relationship("RefReferido", back_populates="referente", cascade="all, delete-orphan")
 
 
-class RefIncentivo(Base):
+class RefIncentivo(MAIN):
     """Regla de incentivo/beneficio del programa."""
     __tablename__ = "ref_incentivo"
 
@@ -61,7 +61,7 @@ class RefIncentivo(Base):
     created_at = Column(DateTime, default=func.now())
 
 
-class RefConfiguracion(Base):
+class RefConfiguracion(MAIN):
     """Configuración global del programa de referidos."""
     __tablename__ = "ref_configuracion"
 
@@ -83,12 +83,13 @@ class RefConfiguracion(Base):
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 
 
-class RefReferido(Base):
+class RefReferido(MAIN):
     """Prospecto Referido: ciclo de vida completo del referido."""
     __tablename__ = "ref_referido"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     cvr_code = Column(String(20), unique=True, index=True)  # CVR202500001
+    program_assignment_id = Column(Integer, ForeignKey("ref_program_assignment.id"), nullable=True, index=True)
     referente_id = Column(Integer, ForeignKey("ref_referente.id"), nullable=False)
     referente_miu = Column(String(20), index=True)
     nombre_prospecto = Column(String(255), nullable=False)
@@ -113,12 +114,13 @@ class RefReferido(Base):
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 
     referente = relationship("RefReferente", back_populates="referidos")
+    program_assignment = relationship("RefProgramAssignment", foreign_keys=[program_assignment_id])
     incentive_rule = relationship("RefIncentivo", foreign_keys=[incentive_rule_id])
     tracking_events = relationship("RefTrackingEvent", back_populates="referido", cascade="all, delete-orphan")
     registros = relationship("RefRegistro", back_populates="referido", cascade="all, delete-orphan")
 
 
-class RefTrackingEvent(Base):
+class RefTrackingEvent(MAIN):
     """Historial de eventos / auditoría de un referido."""
     __tablename__ = "ref_tracking_event"
 
@@ -136,7 +138,7 @@ class RefTrackingEvent(Base):
     referido = relationship("RefReferido", back_populates="tracking_events")
 
 
-class RefRegistro(Base):
+class RefRegistro(MAIN):
     """Notas manuales y registros sobre un referido."""
     __tablename__ = "ref_registro"
 
@@ -151,7 +153,7 @@ class RefRegistro(Base):
     referido = relationship("RefReferido", back_populates="registros")
 
 
-class RefProgramAssignment(Base):
+class RefProgramAssignment(MAIN):
     """Asignación de usuario a un negocio con su programa de referidos."""
     __tablename__ = "ref_program_assignment"
 
@@ -171,7 +173,7 @@ class RefProgramAssignment(Base):
     ambassador_requests = relationship("RefAmbassadorRequest", back_populates="business", cascade="all, delete-orphan")
 
 
-class RefBrandAmbassador(Base):
+class RefBrandAmbassador(MAIN):
     """Embajador de Marca vinculado a un negocio."""
     __tablename__ = "ref_brand_ambassador"
 
@@ -188,7 +190,7 @@ class RefBrandAmbassador(Base):
     referidos = relationship("RefReferido", foreign_keys="RefReferido.ambassador_id")
 
 
-class RefAmbassadorRequest(Base):
+class RefAmbassadorRequest(MAIN):
     """Solicitud pública para convertirse en embajador de marca."""
     __tablename__ = "ref_ambassador_request"
 
@@ -206,3 +208,27 @@ class RefAmbassadorRequest(Base):
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 
     business = relationship("RefProgramAssignment", back_populates="ambassador_requests")
+
+
+def ensure_referidos_schema(bind=None) -> None:
+    target = bind or get_current_engine()
+    RefReferente.__table__.create(bind=target, checkfirst=True)
+    RefProgramAssignment.__table__.create(bind=target, checkfirst=True)
+    RefIncentivo.__table__.create(bind=target, checkfirst=True)
+    RefConfiguracion.__table__.create(bind=target, checkfirst=True)
+    RefBrandAmbassador.__table__.create(bind=target, checkfirst=True)
+    RefAmbassadorRequest.__table__.create(bind=target, checkfirst=True)
+    RefReferido.__table__.create(bind=target, checkfirst=True)
+    RefTrackingEvent.__table__.create(bind=target, checkfirst=True)
+    RefRegistro.__table__.create(bind=target, checkfirst=True)
+    inspector = inspect(target)
+    referido_columns = {column["name"] for column in inspector.get_columns("ref_referido")}
+    if "program_assignment_id" not in referido_columns:
+        with target.begin() as conn:
+            conn.execute(text("ALTER TABLE ref_referido ADD COLUMN program_assignment_id INTEGER"))
+            conn.execute(
+                text(
+                    "CREATE INDEX IF NOT EXISTS ix_ref_referido_program_assignment_id "
+                    "ON ref_referido (program_assignment_id)"
+                )
+            )

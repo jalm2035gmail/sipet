@@ -1,0 +1,26 @@
+{
+  "timeZone": "America/Mexico_City",
+  "dependencies": {},
+  "exceptionLogging": "STACKDRIVER",
+  "runtimeVersion": "V8",
+  "oauthScopes": [
+    "https://www.googleapis.com/auth/presentations.currentonly",
+    "https://www.googleapis.com/auth/script.container.ui",
+    "https://www.googleapis.com/auth/userinfo.email"
+  ],
+  "addOns": {
+    "common": {
+      "name": "Encuestas en vivo",
+      "logoUrl": "https://www.gstatic.com/images/icons/material/system/1x/poll_black_48dp.png",
+      "useLocaleFromApp": true
+    },
+    "slides": {
+      "homepageTrigger": {
+        "runFunction": "onSlidesHomepage"
+      },
+      "onFileScopeGrantedTrigger": {
+        "runFunction": "onFileScopeGranted"
+      }
+    }
+  }
+}

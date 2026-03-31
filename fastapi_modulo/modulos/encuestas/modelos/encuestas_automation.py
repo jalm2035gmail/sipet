@@ -658,7 +658,7 @@ def sync_assignments(instance_id: int, tenant_id: str, payload: Dict[str, Any]) 
                 "source_app": source_app,
                 "external_entity_type": external_entity_type,
                 "external_entity_id": external_entity_id or key,
-                "channel": channel or ("public_link" if instance.audience_mode == "public_link" else "internal"),
+                "channel": channel or ("public_link" if str(instance.audience_mode or "").strip().lower() in {"public", "public_link"} else "internal"),
             }
 
         for entry in entries:

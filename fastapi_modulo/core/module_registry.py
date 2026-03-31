@@ -392,14 +392,14 @@ MODULE_DEFINITIONS: List[ModuleDefinition] = [
         key="pwa",
         label="Progressive Web App",
         description="Módulo PWA para SIPET con soporte offline, service worker y manifest web.",
-        route="/",
+        route="/ajustes/pwa",
         icon="fa-solid fa-mobile-screen",
         manifest_file="fastapi_modulo/modulos_sipet/pwa/__manifest__.py",
         app_access_name="PWA",
         sidebar_visible=False,
         manageable=True,
         always_enabled=True,
-        boot_strategy="builtin",
+        router_specs=[RouterSpec("fastapi_modulo.modulos_sipet.pwa.controladores.pwa")],
     ),
     ModuleDefinition(
         key="empresa",
@@ -407,14 +407,14 @@ MODULE_DEFINITIONS: List[ModuleDefinition] = [
         description="Personalización institucional y estructura visual principal.",
         route="/identidad-institucional",
         icon="fa-solid fa-building",
-        manifest_file="fastapi_modulo/modulos/identidad_institucional/__manifest__.py",
+        manifest_file="fastapi_modulo/modulos_sipet/identidad_institucional/__manifest__.py",
         app_access_name="Personalización",
         sidebar_visible=True,
         manageable=True,
         always_enabled=True,
         boot_strategy="builtin",
         router_specs=[
-            RouterSpec("fastapi_modulo.modulos.identidad_institucional.controladores.identidad_institucional"),
+            RouterSpec("fastapi_modulo.modulos_sipet.identidad_institucional.controladores.identidad_institucional"),
         ],
     ),
     ModuleDefinition(
@@ -825,10 +825,14 @@ def _read_installed_app_keys_for_tenant(tenant_key: str) -> Optional[set[str]]:
         return None
     session = get_admin_session_factory()()
     try:
+        base_query = session.query(TenantInstalledApp.app_key).filter(
+            TenantInstalledApp.tenant_key == resolved_tenant_key,
+        )
+        if base_query.first() is None:
+            return None
         rows = (
-            session.query(TenantInstalledApp.app_key)
+            base_query
             .filter(
-                TenantInstalledApp.tenant_key == resolved_tenant_key,
                 TenantInstalledApp.is_enabled == 1,
                 TenantInstalledApp.install_status == "installed",
             )
@@ -1046,6 +1050,27 @@ def list_modules_payload(
             }
         )
     payload.sort(key=lambda item: (int(item.get("sequence_sort", 10_000)), str(item.get("label") or "").lower(), str(item.get("key") or "")))
+    return payload
+
+
+def list_enabled_module_manifests(tenant_key: Optional[str] = None) -> List[Dict[str, Any]]:
+    resolved_tenant_key = _resolve_tenant_key(tenant_key)
+    payload: List[Dict[str, Any]] = []
+    for module in MODULE_DEFINITIONS:
+        if not is_supported_module(module) or not is_module_enabled(module.key, tenant_key=resolved_tenant_key):
+            continue
+        metadata = _load_module_metadata(module)
+        manifest = metadata.get("manifest")
+        if not isinstance(manifest, dict):
+            continue
+        payload.append(
+            {
+                "key": module.key,
+                "label": module.label,
+                "route": module.route,
+                "manifest": manifest,
+            }
+        )
     return payload
 
 

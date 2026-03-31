@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Encuestas en vivo</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 13px;
+      color: #1f2937;
+      background: #fff;
+      padding: 0;
+    }
+    .section { padding: 14px 16px; border-bottom: 1px solid #e5e7eb; }
+    .section:last-child { border-bottom: none; }
+    .label {
+      font-size: 11px;
+      font-weight: 600;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 8px;
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 7px 10px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    input[type="text"]:focus { border-color: #3b82f6; }
+    .field { margin-bottom: 10px; }
+    .field-label { font-size: 12px; color: #374151; margin-bottom: 4px; }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8px 14px;
+      border-radius: 7px;
+      font-size: 13px;
+      font-weight: 500;
+      border: none;
+      cursor: pointer;
+      width: 100%;
+      transition: background 0.15s;
+    }
+    .btn-primary { background: #3b82f6; color: #fff; }
+    .btn-primary:hover { background: #2563eb; }
+    .btn-danger { background: #ef4444; color: #fff; }
+    .btn-danger:hover { background: #dc2626; }
+    .btn-ghost { background: #f3f4f6; color: #374151; }
+    .btn-ghost:hover { background: #e5e7eb; }
+    .btn + .btn { margin-top: 6px; }
+    .badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: #f3f4f6;
+      color: #6b7280;
+    }
+    .badge-running { background: #dcfce7; color: #166534; }
+    .badge-ended { background: #fef2f2; color: #991b1b; }
+    .status-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+    .status-label { font-weight: 600; }
+    .q-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .q-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 7px 8px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.12s;
+    }
+    .q-item:hover { background: #f9fafb; }
+    .q-item.is-active { background: #eff6ff; }
+    .q-num {
+      min-width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #e5e7eb;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 700;
+    }
+    .q-item.is-active .q-num { background: #3b82f6; color: #fff; }
+    .q-text { font-size: 12px; line-height: 1.4; color: #374151; }
+    .results-bar { margin-top: 8px; }
+    .bar-item { margin-bottom: 8px; }
+    .bar-label { font-size: 12px; margin-bottom: 3px; }
+    .bar-track { height: 10px; border-radius: 5px; background: #e5e7eb; overflow: hidden; }
+    .bar-fill { height: 100%; background: #3b82f6; border-radius: 5px; transition: width 0.5s ease; }
+    .bar-meta { font-size: 11px; color: #6b7280; margin-top: 2px; }
+    .msg { font-size: 12px; color: #6b7280; padding: 4px 0; }
+    #config-section { display: none; }
+    #config-section.visible { display: block; }
+    .toggle-config {
+      font-size: 11px;
+      color: #3b82f6;
+      cursor: pointer;
+      text-decoration: underline;
+      margin-top: 8px;
+      display: inline-block;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="section" id="config-section">
+    <p class="label">Configuración</p>
+    <div class="field">
+      <div class="field-label">URL de la aplicación</div>
+      <input type="text" id="cfg-base-url" placeholder="https://miapp.example.com">
+    </div>
+    <div class="field">
+      <div class="field-label">ID de la encuesta (instance_id)</div>
+      <input type="text" id="cfg-instance-id" placeholder="42">
+    </div>
+    <div class="field">
+      <div class="field-label">Token de integración</div>
+      <input type="text" id="cfg-integration-token" placeholder="Cópialo desde el constructor">
+    </div>
+    <div class="field">
+      <div class="field-label">Token de presentador</div>
+      <input type="text" id="cfg-token" placeholder="Se llena al iniciar sesión">
+    </div>
+    <button class="btn btn-ghost" id="btn-save-config">Guardar configuración</button>
+    <div id="config-msg" class="msg"></div>
+  </div>
+
+  <div class="section">
+    <div class="status-row">
+      <span class="status-label">Estado:</span>
+      <span class="badge" id="status-badge">—</span>
+    </div>
+    <button class="btn btn-primary" id="btn-start">Iniciar sesión en vivo</button>
+    <button class="btn btn-danger" id="btn-stop" style="display:none">Finalizar sesión</button>
+    <div id="session-msg" class="msg"></div>
+    <span class="toggle-config" id="toggle-config">⚙ Configuración</span>
+  </div>
+
+  <div class="section" id="questions-section" style="display:none">
+    <p class="label">Preguntas — <span id="q-counter">0/0</span></p>
+    <ul class="q-list" id="q-list"></ul>
+  </div>
+
+  <div class="section" id="results-section" style="display:none">
+    <p class="label">Resultados en vivo</p>
+    <div id="results-content" class="results-bar">
+      <p class="msg">Sin datos aún.</p>
+    </div>
+  </div>
+
+  <script>
+    var state = {
+      status: "idle",
+      questions: [],
+      currentIdx: 0,
+      showResults: true,
+      currentResults: null,
+      pollTimer: null
+    };
+
+    var statusBadge = document.getElementById("status-badge");
+    var btnStart = document.getElementById("btn-start");
+    var btnStop = document.getElementById("btn-stop");
+    var sessionMsg = document.getElementById("session-msg");
+    var qCounter = document.getElementById("q-counter");
+    var qList = document.getElementById("q-list");
+    var questionsSection = document.getElementById("questions-section");
+    var resultsSection = document.getElementById("results-section");
+    var resultsContent = document.getElementById("results-content");
+    var configSection = document.getElementById("config-section");
+    var toggleConfig = document.getElementById("toggle-config");
+    var configMsg = document.getElementById("config-msg");
+
+    toggleConfig.addEventListener("click", function () {
+      configSection.classList.toggle("visible");
+    });
+
+    document.getElementById("btn-save-config").addEventListener("click", function () {
+      var baseUrl = document.getElementById("cfg-base-url").value.trim();
+      var instanceId = document.getElementById("cfg-instance-id").value.trim();
+      var integrationToken = document.getElementById("cfg-integration-token").value.trim();
+      var token = document.getElementById("cfg-token").value.trim();
+
+      google.script.run
+        .withSuccessHandler(function () {
+          configMsg.textContent = "Guardado.";
+        })
+        .withFailureHandler(function (e) {
+          configMsg.textContent = "Error: " + e.message;
+        })
+        .saveConfig(baseUrl, instanceId, integrationToken, token);
+    });
+
+    google.script.run
+      .withSuccessHandler(function (cfg) {
+        document.getElementById("cfg-base-url").value = cfg.baseUrl || "";
+        document.getElementById("cfg-instance-id").value = cfg.instanceId || "";
+        document.getElementById("cfg-integration-token").value = cfg.integrationToken || "";
+        document.getElementById("cfg-token").value = cfg.presenterToken || "";
+        if (!cfg.baseUrl || !cfg.instanceId || !cfg.integrationToken) {
+          configSection.classList.add("visible");
+        } else {
+          fetchStatus();
+        }
+      })
+      .getConfig();
+
+    btnStart.addEventListener("click", function () {
+      sessionMsg.textContent = "Iniciando...";
+      google.script.run
+        .withSuccessHandler(function (s) {
+          if (s.error) {
+            sessionMsg.textContent = s.error;
+            return;
+          }
+          sessionMsg.textContent = "";
+          if (s.presenter_token) {
+            document.getElementById("cfg-token").value = s.presenter_token;
+          }
+          applyState(s);
+          startPolling();
+        })
+        .withFailureHandler(function (e) {
+          sessionMsg.textContent = e.message;
+        })
+        .startLiveSession();
+    });
+
+    btnStop.addEventListener("click", function () {
+      if (!confirm("¿Finalizar la sesión en vivo?")) return;
+      google.script.run
+        .withSuccessHandler(function (s) {
+          if (s.error) {
+            sessionMsg.textContent = s.error;
+            return;
+          }
+          stopPolling();
+          applyState(s);
+        })
+        .withFailureHandler(function (e) {
+          sessionMsg.textContent = e.message;
+        })
+        .stopLiveSession();
+    });
+
+    function clickQuestion(questionId, idx) {
+      state.currentIdx = idx;
+      google.script.run
+        .withSuccessHandler(applyState)
+        .withFailureHandler(function (e) {
+          sessionMsg.textContent = e.message;
+        })
+        .setLiveQuestion(questionId, state.showResults);
+    }
+
+    function applyState(s) {
+      if (!s) return;
+      if (s.error) {
+        sessionMsg.textContent = s.error;
+        return;
+      }
+
+      state.status = s.live_status || "idle";
+      state.currentIdx = s.live_current_question_index || 0;
+      state.showResults = s.live_show_results !== false;
+      state.currentResults = s.current_results || null;
+
+      if (s.questions && s.questions.length) {
+        state.questions = s.questions;
+      }
+
+      renderHeader();
+      renderQuestions();
+      renderResults();
+    }
+
+    function renderHeader() {
+      var labels = { idle: "Inactiva", running: "En vivo", ended: "Finalizada" };
+      statusBadge.textContent = labels[state.status] || state.status;
+      statusBadge.className = "badge" +
+        (state.status === "running" ? " badge-running" :
+         state.status === "ended" ? " badge-ended" : "");
+
+      if (state.status === "running") {
+        btnStart.style.display = "none";
+        btnStop.style.display = "";
+      } else {
+        btnStart.style.display = "";
+        btnStop.style.display = "none";
+      }
+    }
+
+    function renderQuestions() {
+      var qs = state.questions;
+      if (!qs || !qs.length) {
+        questionsSection.style.display = "none";
+        return;
+      }
+
+      questionsSection.style.display = "";
+      qCounter.textContent = (state.currentIdx + 1) + "/" + qs.length;
+      qList.innerHTML = "";
+
+      qs.forEach(function (q, idx) {
+        var li = document.createElement("li");
+        li.className = "q-item" + (idx === state.currentIdx ? " is-active" : "");
+        li.innerHTML =
+          '<span class="q-num">' + (idx + 1) + '</span>' +
+          '<span class="q-text">' + escHtml(q.titulo || "") + '</span>';
+
+        if (state.status === "running") {
+          (function (qid, i) {
+            li.addEventListener("click", function () {
+              clickQuestion(qid, i);
+            });
+          })(q.id, idx);
+        }
+
+        qList.appendChild(li);
+      });
+    }
+
+    function renderResults() {
+      var r = state.currentResults;
+      if (!r || state.status !== "running") {
+        resultsSection.style.display = "none";
+        return;
+      }
+
+      resultsSection.style.display = "";
+      var total = r.total_responses || 0;
+      var counts = r.counts || {};
+      var q = state.questions[state.currentIdx];
+      var html = '<p class="msg"><strong>' + total + '</strong> respuesta' + (total !== 1 ? "s" : "") + "</p>";
+
+      if (q && q.options && q.options.length) {
+        var maxCount = 1;
+        q.options.forEach(function (o) {
+          var c = counts[String(o.value)] || 0;
+          if (c > maxCount) maxCount = c;
+        });
+
+        q.options.forEach(function (o) {
+          var c = counts[String(o.value)] || 0;
+          var pct = Math.round((c / maxCount) * 100);
+          var pctTotal = total > 0 ? Math.round((c / total) * 100) : 0;
+          html += '<div class="bar-item">' +
+            '<div class="bar-label">' + escHtml(o.label || String(o.value)) + '</div>' +
+            '<div class="bar-track"><div class="bar-fill" style="width:' + pct + '%"></div></div>' +
+            '<div class="bar-meta">' + c + ' (' + pctTotal + '%)</div>' +
+            '</div>';
+        });
+      } else if (r.texts && r.texts.length) {
+        r.texts.slice(0, 8).forEach(function (t) {
+          html += '<div class="bar-item"><div class="bar-label">' + escHtml(t) + '</div></div>';
+        });
+      }
+
+      resultsContent.innerHTML = html;
+    }
+
+    function fetchStatus() {
+      google.script.run
+        .withSuccessHandler(function (s) {
+          if (s && !s.error) {
+            applyState(s);
+          }
+          if (state.status === "running") {
+            startPolling();
+          }
+        })
+        .withFailureHandler(function (e) {
+          sessionMsg.textContent = e.message;
+        })
+        .fetchLiveStatus();
+    }
+
+    function startPolling() {
+      if (state.pollTimer) return;
+      state.pollTimer = setInterval(function () {
+        google.script.run
+          .withSuccessHandler(applyState)
+          .withFailureHandler(function (e) {
+            sessionMsg.textContent = e.message;
+          })
+          .fetchLiveStatus();
+      }, 3000);
+    }
+
+    function stopPolling() {
+      if (state.pollTimer) {
+        clearInterval(state.pollTimer);
+        state.pollTimer = null;
+      }
+    }
+
+    function escHtml(str) {
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+  </script>
+</body>
+</html>

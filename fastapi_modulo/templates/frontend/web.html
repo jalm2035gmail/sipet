@@ -145,7 +145,7 @@
                     al facilitar el control y seguimiento de su POA (Plan Operativo Anual).
                 </p>
                 <div class="actions">
-                    <a class="btn btn-primary" href="/backend/login">Ingresar al panel</a>
+                    <a class="btn btn-primary" data-backend-panel-link="1" href="/backend/login">Ingresar al panel</a>
                     <a class="btn btn-ghost" href="/web/funcionalidades">Ver funcionalidades</a>
                     <p class="access-note">Acceso permitido solo para usuarios registrados.</p>
                 </div>
@@ -179,7 +179,7 @@
       <a href="/web/inicio"><span class="sipet-mobile-bottom-nav__icon">🏠</span><span class="sipet-mobile-bottom-nav__label">Inicio</span></a>
       <a href="/web/funcionalidades"><span class="sipet-mobile-bottom-nav__icon">💳</span><span class="sipet-mobile-bottom-nav__label">Servicios</span></a>
       <a href="/web/descripcion" class="is-active"><span class="sipet-mobile-bottom-nav__icon">🔍</span><span class="sipet-mobile-bottom-nav__label">Buscar</span></a>
-      <a href="/backend/login"><span class="sipet-mobile-bottom-nav__icon">👤</span><span class="sipet-mobile-bottom-nav__label">Perfil</span></a>
+      <a data-backend-panel-link="1" href="/backend/login"><span class="sipet-mobile-bottom-nav__icon">👤</span><span class="sipet-mobile-bottom-nav__label" data-backend-panel-label="1">Perfil</span></a>
     </nav>
     {% endif %}
 
@@ -194,13 +194,21 @@
       fetch('/api/backend/me',{credentials:'include'})
         .then(function(r){return r.ok?r.json():null;})
         .then(function(d){
-          if(!d||!d.authenticated) return;
+          if(!d||!d.can_use_bar) return;
           var bar=document.getElementById('sipet-admin-bar');
           if(!bar) return;
           bar.style.background=d.bar_color||'#0f172a';
           bar.style.display='flex';
           var rl=document.getElementById('sab-role');
           if(rl) rl.textContent=d.is_superadmin?'Superadministrador':(d.backend_roles||[]).join(' · ');
+          var home=document.getElementById('sab-home');
+          if(home) home.href=d.panel_url||'/inicio';
+          document.querySelectorAll('[data-backend-panel-link="1"]').forEach(function(link){
+            link.href=d.panel_url||'/inicio';
+          });
+          document.querySelectorAll('[data-backend-panel-label="1"]').forEach(function(label){
+            label.textContent='Panel';
+          });
           document.body.style.paddingTop='44px';
         })
         .catch(function(){});

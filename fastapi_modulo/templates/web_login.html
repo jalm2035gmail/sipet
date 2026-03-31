@@ -8,6 +8,10 @@
     <link rel="shortcut icon" type="image/x-icon" href="{{ login_favicon_url | default('/templates/icon/icon.png') }}">
     <link rel="stylesheet" href="/static/vendor/fontawesome/css/all.min.css">
     <style>
+:root, * , *::before, *::after {
+            box-sizing: border-box;
+        }
+
 :root {
             color-scheme: dark;
             --login-bg-desktop: url("{{ login_bg_desktop_url }}");
@@ -191,6 +195,8 @@
             display: flex;
             flex-direction: column;
             gap: 14px;
+            width: 100%;
+            min-width: 0;
         }
 
         .login-error {
@@ -221,6 +227,8 @@
         }
 
         .field input {
+            width: 100%;
+            min-width: 0;
             border: none;
             border-radius: 12px;
             padding: 14px 18px;
@@ -252,6 +260,7 @@
         }
 
         .form-panel button {
+            width: 100%;
             margin-top: 8px;
             padding: 14px 0;
             border-radius: 12px;
@@ -315,17 +324,21 @@
                 animation: focusBlurMobile 4s ease-in-out forwards;
             }
             .login-frame {
-                padding: 24px 16px 32px;
+                padding: max(18px, env(safe-area-inset-top)) 14px max(24px, env(safe-area-inset-bottom));
                 min-height: 100dvh;
             }
             .login-header {
                 flex-direction: column;
                 align-items: flex-start;
+                gap: 14px;
+                margin-top: 0;
             }
             .main-content {
                 flex-direction: column;
-                align-items: stretch;
-                gap: 16px;
+                align-items: center;
+                justify-content: flex-start;
+                gap: 14px;
+                margin-top: 1rem;
             }
             .description {
                 position: static;
@@ -334,23 +347,90 @@
                 width: 100%;
                 max-width: none;
                 text-align: left;
-                font-size: 1.3rem;
+                font-size: 1rem;
+                line-height: 1.45;
             }
             .logo-block {
                 align-items: flex-start;
             }
+            .logo-block img {
+                width: 76px;
+                height: 76px;
+            }
+            .company-name {
+                font-size: 1rem;
+                letter-spacing: 0.16em;
+            }
             .form-panel {
-                position: fixed;
-                inset: 0;
-                width: 100%;
+                position: relative;
+                inset: auto;
+                width: min(100%, 420px);
                 max-width: 100%;
-                margin: 0;
-                min-height: 100dvh;
-                border-radius: 0;
-                border: none;
+                margin: 0 auto;
+                min-height: auto;
+                max-height: none;
+                padding: 22px 18px;
+                border-radius: 24px;
+                border: 1px solid rgba(255, 255, 255, 0.16);
                 transform: translateY(100%);
                 opacity: 1;
                 animation: panelEnterMobile 1.35s cubic-bezier(0.22, 0.7, 0.22, 1) forwards;
+                overflow: hidden;
+            }
+            .form-panel h2 {
+                letter-spacing: 0.28em;
+                font-size: 0.8rem;
+            }
+            .form-icon {
+                width: 72px;
+                height: 72px;
+            }
+            .form-icon svg {
+                width: 36px;
+                height: 36px;
+            }
+            .field label {
+                letter-spacing: 0.22em;
+                line-height: 1.35;
+            }
+            .field input {
+                padding: 13px 15px;
+            }
+            .form-footer {
+                gap: 10px;
+                flex-wrap: wrap;
+                justify-content: space-between;
+                font-size: 0.76rem;
+                letter-spacing: 0.08em;
+            }
+            .form-footer > * {
+                min-width: 0;
+            }
+            .passkey-btn,
+            .login-submit {
+                letter-spacing: 0.22em;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .login-frame {
+                padding-left: 12px;
+                padding-right: 12px;
+            }
+            .form-panel {
+                width: 100%;
+                padding: 20px 16px;
+                border-radius: 20px;
+            }
+            .description {
+                font-size: 0.95rem;
+            }
+            .form-footer {
+                flex-direction: row;
+                align-items: center;
+            }
+            .passkey-btn {
+                font-size: 0.72rem;
             }
         }
 
@@ -456,7 +536,7 @@
                 <form class="login-form" method="post" action="/backend/login">
                     <div class="field">
                         <label for="usuario">Usuario</label>
-                        <input id="usuario" name="usuario" type="text" placeholder="Nombre de usuario" autocomplete="username" enterkeyhint="next" required>
+                        <input id="usuario" name="usuario" type="text" placeholder="Nombre de usuario" autocomplete="username" enterkeyhint="next" value="{{ request.query_params.get('usuario', '') }}" required>
                     </div>
                     <div class="field">
                         <label for="contrasena">Contraseña</label>

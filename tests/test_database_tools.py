@@ -8,7 +8,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.testclient import TestClient
 
 from fastapi_modulo.core import db as core_db
-from fastapi_modulo.modulos.identidad_institucional.controladores import identidad_institucional
+from fastapi_modulo.modulos_sipet.identidad_institucional.controladores import identidad_institucional
 from fastapi_modulo.modulos_sipet.modulo_base.controladores import settings
 
 

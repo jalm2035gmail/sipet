@@ -1,5 +1,5 @@
 [startup] static mount skipped /modulos/activo_fijo/static: directory 'fastapi_modulo/modulos/activo_fijo/static' does not exist
-INFO:     Started server process [25622]
+INFO:     Started server process [4997]
 INFO:     Waiting for application startup.
 [startup] core_schema begin
 [startup] create_all ok
@@ -19,14 +19,30 @@ INFO:     Waiting for application startup.
 [startup] import fastapi_modulo.modulos_sipet.instalacion.controladores.instalacion
 [startup] import fastapi_modulo.modulos_sipet.instalacion.controladores.instalacion done
 [startup] module startup instalacion_core done
+[startup] module startup organizacion begin
+[startup] import fastapi_modulo.modulos.empleados.controladores.empleados
+[startup] import fastapi_modulo.modulos.empleados.controladores.empleados done
+[startup] import fastapi_modulo.modulos.empleados.controladores.regiones
+[startup] import fastapi_modulo.modulos.empleados.controladores.regiones done
+[startup] import fastapi_modulo.modulos.empleados.controladores.departamentos
+[startup] import fastapi_modulo.modulos.empleados.controladores.departamentos done
+[startup] module startup organizacion done
 [startup] module startup intelicoop begin
 [startup] import fastapi_modulo.modulos.intelicoop.controladores.intelicoop
 [startup] import fastapi_modulo.modulos.intelicoop.controladores.intelicoop done
 [startup] module startup intelicoop done
+[startup] module startup encuestas begin
+[startup] import fastapi_modulo.modulos.encuestas.controladores.encuesta
+[startup] import fastapi_modulo.modulos.encuestas.controladores.encuesta done
+[startup] module startup encuestas done
 [startup] module startup bsc begin
 [startup] import fastapi_modulo.modulos_sipet.aplicaciones.controladores.pages
 [startup] import fastapi_modulo.modulos_sipet.aplicaciones.controladores.pages done
 [startup] module startup bsc done
+[startup] module startup referidos begin
+[startup] import fastapi_modulo.modulos.referidos.controladores.referidos
+[startup] import fastapi_modulo.modulos.referidos.controladores.referidos done
+[startup] module startup referidos done
 [startup] module startup multitienda begin
 [startup] import fastapi_modulo.modulos.multitienda.controladores.multitienda
 [startup] import fastapi_modulo.modulos.multitienda.controladores.multitienda done
@@ -35,14 +51,44 @@ INFO:     Waiting for application startup.
 [startup] import fastapi_modulo.modulos_sipet.frontend.controladores.frontend
 [startup] import fastapi_modulo.modulos_sipet.frontend.controladores.frontend done
 [startup] module startup frontend done
+[startup] module startup pwa begin
+[startup] import fastapi_modulo.modulos_sipet.pwa.controladores.pwa
+[startup] import fastapi_modulo.modulos_sipet.pwa.controladores.pwa done
+[startup] module startup pwa done
+[startup] module startup empresa begin
+[startup] import fastapi_modulo.modulos_sipet.identidad_institucional.controladores.identidad_institucional
+[startup] import fastapi_modulo.modulos_sipet.identidad_institucional.controladores.identidad_institucional done
+[startup] module startup empresa done
+[startup] module startup capacitacion begin
+[startup] import fastapi_modulo.modulos.capacitacion.controladores.capacitacion
+[startup] import fastapi_modulo.modulos.capacitacion.controladores.capacitacion done
+[startup] module startup capacitacion done
+[startup] module startup multiempresa begin
+[startup] import fastapi_modulo.modulos.multiempresa.controladores.multiempresa
+[startup] import fastapi_modulo.modulos.multiempresa.controladores.multiempresa done
+[startup] module startup multiempresa done
 [startup] module startup system_admin begin
 [startup] import fastapi_modulo.modulos_sipet.aplicaciones.controladores.aplicaciones
 [startup] import fastapi_modulo.modulos_sipet.aplicaciones.controladores.aplicaciones done
 [startup] module startup system_admin done
+[startup] module startup personalizacion_core begin
+[startup] import fastapi_modulo.modulos.personalizacion.controladores.personalizar
+[startup] import fastapi_modulo.modulos.personalizacion.controladores.personalizar done
+[startup] module startup personalizacion_core done
 [startup] module startup membresia_core begin
 [startup] import fastapi_modulo.modulos_sipet.aplicaciones.controladores.membresia
 [startup] import fastapi_modulo.modulos_sipet.aplicaciones.controladores.membresia done
 [startup] module startup membresia_core done
+[startup] module startup roles_core begin
+[startup] import fastapi_modulo.modulos.personalizacion.controladores.roles
+[startup] import fastapi_modulo.modulos.personalizacion.controladores.roles done
+[startup] module startup roles_core done
+[startup] module startup plantillas_core begin
+[startup] import fastapi_modulo.modulos.plantillas.controladores.plantillas_forms
+[startup] module plantillas_core not installed or incomplete — skipped: No module named 'fastapi_modulo.modulos.plantillas'
+[startup] module startup diagnostico_core begin
+[startup] import fastapi_modulo.modulos.diagnostico.controladores.diagnostico
+[startup] module diagnostico_core not installed or incomplete — skipped: No module named 'fastapi_modulo.modulos.diagnostico'
 [startup] module startup ajustes_ia_core begin
 [startup] import fastapi_modulo.modulos_sipet.web.controladores.ajustes_ia
 [startup] import fastapi_modulo.modulos_sipet.web.controladores.ajustes_ia done
@@ -51,6 +97,35 @@ INFO:     Waiting for application startup.
 [startup] import fastapi_modulo.modulos_sipet.modulo_base.controladores.settings
 [startup] import fastapi_modulo.modulos_sipet.modulo_base.controladores.settings done
 [startup] module startup ajustes_core done
+[startup] module startup ia_core begin
+[startup] import fastapi_modulo.modulos.ia.controladores.ia_router
+[startup] module ia_core not installed or incomplete — skipped: No module named 'fastapi_modulo.modulos.ia'
 [startup] register startup routers done
 [startup] frontend legacy migration skipped: no request host
 [startup] register late routers begin
+[startup] register late routers done
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     127.0.0.1:50044 - "GET /api/notificaciones/resumen HTTP/1.1" 303 See Other
+INFO:     127.0.0.1:50044 - "GET /backend/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50052 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:50058 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:50070 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:50076 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:50095 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:50108 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:50116 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:50136 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:50143 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:50151 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:50157 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:50163 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:50169 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:50179 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:50196 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:50202 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:50225 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:50243 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:50251 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:50266 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:50278 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized

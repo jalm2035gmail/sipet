@@ -108,3 +108,27 @@ def test_sidebar_preserves_expected_module_order(monkeypatch) -> None:
         "system_admin",
         "backend",
     ]
+
+
+def test_sidebar_store_roles_only_see_multitienda(monkeypatch) -> None:
+    request = _request()
+    request.state.user_role = "administrador_tienda"
+    monkeypatch.setattr(
+        module_catalog_service,
+        "_cached_modules_payload",
+        lambda: (
+            {"key": "frontend", "label": "Web", "route": "/web", "icon": "", "icon_url": "", "sidebar_visible": True, "app_access_name": "Frontend", "sequence": "200"},
+            {"key": "multitienda", "label": "Multitienda", "route": "/multitienda", "icon": "", "icon_url": "", "sidebar_visible": True, "app_access_name": "Multitienda", "sequence": "300"},
+            {"key": "empresa", "label": "Empresa", "route": "/identidad-institucional", "icon": "", "icon_url": "", "sidebar_visible": True, "app_access_name": "Empresa", "sequence": "400"},
+        ),
+    )
+    monkeypatch.setattr(module_catalog_service, "is_module_enabled", lambda key, tenant_key=None: True)
+    monkeypatch.setattr(module_catalog_service, "get_user_app_access", lambda request: ["Frontend", "Multitienda", "Empresa"])
+    monkeypatch.setattr(module_catalog_service, "get_user_screen_access_levels", lambda request: {})
+    monkeypatch.setattr(module_catalog_service, "get_current_role", lambda request: "administrador_tienda")
+    monkeypatch.setattr(module_catalog_service, "is_superadmin", lambda request: False)
+    monkeypatch.setattr(module_catalog_service, "is_admin_or_superadmin", lambda request: False)
+
+    modules = module_catalog_service.build_sidebar_modules(request)
+
+    assert [item["key"] for item in modules] == ["multitienda"]

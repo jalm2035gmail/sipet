@@ -1,0 +1,23 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+@layer components {
+  .btn-loading {
+    @apply opacity-70 pointer-events-none;
+  }
+
+  .card-hover {
+    @apply transition-transform duration-200 hover:-translate-y-1 hover:shadow-lg;
+  }
+
+  .input-error-msg {
+    @apply text-error text-sm mt-1;
+  }
+}

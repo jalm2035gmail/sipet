@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import os
+import re
+import unicodedata
 from io import BytesIO, StringIO
 from datetime import datetime
 from uuid import uuid4
@@ -252,6 +254,13 @@ DEFAULT_SURVEY_TEMPLATES: List[Dict[str, Any]] = [
         ],
     },
 ]
+
+
+def _local_slugify_value(value: str) -> str:
+    normalized = unicodedata.normalize("NFKD", str(value or ""))
+    ascii_value = normalized.encode("ascii", "ignore").decode("ascii")
+    slug = re.sub(r"[^a-zA-Z0-9]+", "-", ascii_value).strip("-").lower()
+    return slug
 
 
 def ensure_survey_schema() -> None:
@@ -758,6 +767,9 @@ def create_instance(data: Dict[str, Any]) -> Dict[str, Any]:
     try:
         template_id = data.get("template_id")
         if not template_id:
+            template_settings = dict(data.get("settings_json") or {})
+            if not str(template_settings.get("live_integration_token") or "").strip():
+                template_settings["live_integration_token"] = f"{uuid4().hex}{uuid4().hex}"
             template = SurveyTemplate(
                 tenant_id=str(data.get("tenant_id") or "default"),
                 nombre=str(data.get("nombre") or "Nueva encuesta"),
@@ -769,15 +781,20 @@ def create_instance(data: Dict[str, Any]) -> Dict[str, Any]:
                 source_app=data.get("source_app"),
                 external_entity_type=data.get("external_entity_type"),
                 external_entity_id=data.get("external_entity_id"),
-                scoring_mode=str((data.get("settings_json") or {}).get("scoring_mode") or "none"),
-                settings_json=data.get("settings_json") or {},
+                scoring_mode=str(template_settings.get("scoring_mode") or "none"),
+                settings_json=template_settings,
                 validation_rules_json={},
                 created_by=data.get("created_by"),
             )
             db.add(template)
             db.flush()
             template_id = template.id
-        obj = SurveyInstance(**{**data, "template_id": template_id})
+        instance_payload = {**data, "template_id": template_id}
+        instance_settings = dict(instance_payload.get("settings_json") or {})
+        if not str(instance_settings.get("live_integration_token") or "").strip():
+            instance_settings["live_integration_token"] = f"{uuid4().hex}{uuid4().hex}"
+        instance_payload["settings_json"] = instance_settings
+        obj = SurveyInstance(**instance_payload)
         db.add(obj)
         db.commit()
         db.refresh(obj)
@@ -811,12 +828,16 @@ def create_instance_from_template(
         payload.setdefault("source_app", template.source_app)
         payload.setdefault("external_entity_type", template.external_entity_type)
         payload.setdefault("external_entity_id", template.external_entity_id)
-        payload.setdefault("settings_json", template.settings_json or {})
+        payload.setdefault("settings_json", dict(template.settings_json or {}))
         payload.setdefault("publication_rules_json", {})
         payload.setdefault(
             "anonymity_mode",
             "restricted" if str(template.survey_type or "").strip().lower() in {"360", "evaluation_360", "evaluacion_360"} else "identified",
         )
+        payload_settings = dict(payload.get("settings_json") or {})
+        if not str(payload_settings.get("live_integration_token") or "").strip():
+            payload_settings["live_integration_token"] = f"{uuid4().hex}{uuid4().hex}"
+        payload["settings_json"] = payload_settings
         instance = SurveyInstance(**payload)
         db.add(instance)
         db.flush()
@@ -1003,6 +1024,13 @@ def get_instance_builder(instance_id: int, tenant_id: str) -> Optional[Dict[str,
         )
         if not obj:
             return None
+        _normalize_public_link_state(obj)
+        token_changed = _ensure_live_integration_token(obj)
+        if token_changed:
+            db.commit()
+            db.refresh(obj)
+        else:
+            db.flush()
         payload = _instance_dict(obj)
         payload["sections"] = [_section_dict(section) for section in (obj.sections or [])]
         payload["publish_validation"] = validate_instance_for_publish_db(obj)
@@ -1022,9 +1050,22 @@ def update_instance_draft(instance_id: int, tenant_id: str, data: Dict[str, Any]
         )
         if not obj:
             return None
+        allowed_when_live = {
+            "audience_mode",
+            "publication_mode",
+            "schedule_start_at",
+            "schedule_end_at",
+            "is_public_link_enabled",
+            "public_link_token",
+            "source_app",
+            "settings_json",
+            "publication_rules_json",
+        }
+        live_mode_update = obj.status in {"published", "scheduled"} and all(key in allowed_when_live for key in data.keys())
         if obj.status not in {"draft", "archived"}:
-            raise ValueError("Solo se puede editar una encuesta en borrador o archivada.")
-        if not obj.template_id:
+            if not live_mode_update:
+                raise ValueError("Solo se puede editar una encuesta en borrador o archivada.")
+        if not obj.template_id and not live_mode_update:
             template = SurveyTemplate(
                 tenant_id=tenant_id,
                 nombre=str(data.get("nombre") or obj.nombre or "Nueva encuesta"),
@@ -1046,7 +1087,9 @@ def update_instance_draft(instance_id: int, tenant_id: str, data: Dict[str, Any]
         for key, value in data.items():
             if value is not None:
                 setattr(obj, key, value)
-        if obj.template:
+        _normalize_public_link_state(obj)
+        _ensure_live_integration_token(obj)
+        if obj.template and not live_mode_update:
             template = obj.template
             template.nombre = obj.nombre
             template.descripcion = obj.descripcion
@@ -1067,6 +1110,27 @@ def update_instance_draft(instance_id: int, tenant_id: str, data: Dict[str, Any]
         db.close()
 
 
+def _normalize_public_link_state(obj: SurveyInstance) -> None:
+    audience_mode = str(obj.audience_mode or "").strip().lower()
+    if audience_mode not in {"public", "public_link"}:
+        return
+    obj.audience_mode = "public_link"
+    obj.is_public_link_enabled = True
+    if not str(obj.public_link_token or "").strip():
+        base_name = str(obj.nombre or obj.codigo or f"encuesta_{obj.id}").strip()
+        obj.public_link_token = _local_slugify_value(base_name)[:80] or str(obj.codigo or f"encuesta-{obj.id}").strip().lower()
+
+
+def _ensure_live_integration_token(obj: SurveyInstance) -> bool:
+    settings = dict(obj.settings_json or {})
+    token = str(settings.get("live_integration_token") or "").strip()
+    if token:
+        return False
+    settings["live_integration_token"] = f"{uuid4().hex}{uuid4().hex}"
+    obj.settings_json = settings
+    return True
+
+
 def publish_instance(instance_id: int, tenant_id: str) -> Optional[Dict[str, Any]]:
     db = get_db()
     try:
@@ -1077,6 +1141,7 @@ def publish_instance(instance_id: int, tenant_id: str) -> Optional[Dict[str, Any
         )
         if not obj:
             return None
+        _normalize_public_link_state(obj)
         if obj.status == "closed":
             raise ValueError("No se puede publicar una encuesta cerrada.")
         now = datetime.utcnow()
@@ -1090,6 +1155,8 @@ def publish_instance(instance_id: int, tenant_id: str) -> Optional[Dict[str, Any
             obj.template.published_at = obj.published_at
             obj.template.updated_at = now
         if obj.status in {"published", "scheduled"} and obj.assignments:
+            from fastapi_modulo.modulos.encuestas.modelos.encuestas_automation import _send_assignment_notifications
+
             has_sent_notifications = any(assignment.first_sent_at for assignment in (obj.assignments or []))
             _send_assignment_notifications(
                 db,
@@ -1541,6 +1608,8 @@ def validate_instance_for_publish(instance_id: int, tenant_id: str) -> Dict[str,
         )
         if not obj:
             return {"ok": False, "errors": ["Encuesta no encontrada."]}
+        _normalize_public_link_state(obj)
+        db.flush()
         return validate_instance_for_publish_db(obj)
     finally:
         db.close()
@@ -1549,14 +1618,18 @@ def validate_instance_for_publish(instance_id: int, tenant_id: str) -> Dict[str,
 def validate_instance_for_publish_db(obj: SurveyInstance) -> Dict[str, Any]:
     errors: List[str] = []
     sections = obj.sections or []
+    publication_rules = obj.publication_rules_json or {}
+    response_mode = str(publication_rules.get("response_mode") or "standard").strip().lower()
+    presentation_pages = publication_rules.get("presentation_pages") or []
+    has_presentation_pages = response_mode == "presentation" and isinstance(presentation_pages, list) and len(presentation_pages) > 0
     if not str(obj.nombre or "").strip():
         errors.append("La encuesta requiere nombre.")
-    if not sections:
+    if not sections and not has_presentation_pages:
         errors.append("La encuesta debe tener al menos una sección.")
-    if sections and not any((section.questions or []) for section in sections):
+    if sections and not any((section.questions or []) for section in sections) and not has_presentation_pages:
         errors.append("La encuesta debe tener al menos una pregunta.")
-    if obj.audience_mode != "public_link" and len(obj.assignments or []) == 0:
-        errors.append("La encuesta requiere al menos una asignación materializada o enlace público.")
+    if str(obj.audience_mode or "").strip().lower() in {"public", "public_link"} and not obj.is_public_link_enabled:
+        errors.append("El modo de audiencia es 'público' pero el enlace público no está habilitado.")
     for section in sections:
         if not str(section.titulo or "").strip():
             errors.append("Todas las secciones deben tener título.")
@@ -1571,6 +1644,104 @@ def validate_instance_for_publish_db(obj: SurveyInstance) -> Dict[str, Any]:
                 if correct_count != 1:
                     errors.append(f"La pregunta '{question.titulo}' requiere exactamente una opción correcta.")
     return {"ok": len(errors) == 0, "errors": errors}
+
+
+def get_response_review_results(response_id: int, tenant_id: str) -> Optional[Dict[str, Any]]:
+    db = get_db()
+    try:
+        response = (
+            db.query(SurveyResponse)
+            .options(
+                joinedload(SurveyResponse.instance)
+                .joinedload(SurveyInstance.sections)
+                .joinedload(SurveySection.questions)
+                .joinedload(SurveyQuestion.options)
+            )
+            .filter(
+                SurveyResponse.id == response_id,
+                SurveyResponse.tenant_id == tenant_id,
+            )
+            .first()
+        )
+        if not response or not response.instance:
+            return None
+
+        answered_question_ids = []
+        for key in (response.answers_json or {}).keys():
+            try:
+                answered_question_ids.append(int(key))
+            except (TypeError, ValueError):
+                continue
+        answered_question_ids = list(dict.fromkeys(answered_question_ids))
+
+        if not answered_question_ids:
+            return {
+                "response_id": response.id,
+                "instance_id": response.instance_id,
+                "questions": [],
+            }
+
+        questions_map: Dict[int, SurveyQuestion] = {}
+        for section in response.instance.sections or []:
+            for question in section.questions or []:
+                questions_map[question.id] = question
+
+        items = (
+            db.query(SurveyResponseItem)
+            .join(SurveyResponse, SurveyResponseItem.response_id == SurveyResponse.id)
+            .filter(
+                SurveyResponse.instance_id == response.instance_id,
+                SurveyResponse.tenant_id == tenant_id,
+                SurveyResponse.status == "submitted",
+                SurveyResponseItem.question_id.in_(answered_question_ids),
+            )
+            .order_by(SurveyResponseItem.question_id.asc(), SurveyResponseItem.id.asc())
+            .all()
+        )
+
+        grouped: Dict[int, Dict[str, Any]] = {}
+        for question_id in answered_question_ids:
+            question = questions_map.get(question_id)
+            if not question:
+                continue
+            grouped[question_id] = {
+                "question_id": question_id,
+                "titulo": question.titulo,
+                "descripcion": question.descripcion,
+                "question_type": question.question_type,
+                "options": [_option_dict(option) for option in (question.options or [])],
+                "total_responses": 0,
+                "counts": {},
+                "texts": [],
+                "data_rows": [],
+            }
+
+        seen_response_ids: Dict[int, set] = {question_id: set() for question_id in grouped.keys()}
+        for item in items:
+            bucket = grouped.get(item.question_id)
+            if not bucket:
+                continue
+            if item.response_id not in seen_response_ids[item.question_id]:
+                seen_response_ids[item.question_id].add(item.response_id)
+                bucket["total_responses"] += 1
+
+            val = str(item.answer_value or "").strip()
+            text = str(item.answer_text or "").strip()
+            if val:
+                bucket["counts"][val] = bucket["counts"].get(val, 0) + 1
+            row_value = text or val or json.dumps(item.answer_json or {}, ensure_ascii=False)
+            if row_value:
+                bucket["data_rows"].append(row_value)
+            if text and len(bucket["texts"]) < 20:
+                bucket["texts"].append(text)
+
+        return {
+            "response_id": response.id,
+            "instance_id": response.instance_id,
+            "questions": [grouped[qid] for qid in answered_question_ids if qid in grouped],
+        }
+    finally:
+        db.close()
 
 
 def _refresh_instance_lifecycle(

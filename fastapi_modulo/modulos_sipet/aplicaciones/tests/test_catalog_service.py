@@ -44,6 +44,8 @@ def test_decorate_modules_payload_marks_upload_root_and_state(monkeypatch) -> No
     assert payload[0]["uploaded_filename"] == "crm.zip"
     assert payload[0]["architecture_ok"] is False
     assert payload[0]["architecture_errors"][0]["code"] == "db.raw_engine"
+    assert payload[0]["is_core_module"] is False
+    assert payload[0]["package_management_note"] == ""
     assert captured
 
 
@@ -98,6 +100,8 @@ def test_decorate_modules_payload_never_exposes_modulos_sipet_as_importable(monk
     assert payload[0]["key"] == "frontend"
     assert payload[0]["package_upload_enabled"] is False
     assert payload[0]["package_target_label"] == ""
+    assert payload[0]["is_core_module"] is True
+    assert "núcleo de SIPET" in payload[0]["package_management_note"]
 
 
 def test_decorate_modules_payload_filters_uninstalled_modules(monkeypatch) -> None:
@@ -200,7 +204,7 @@ def test_decorate_modules_payload_enables_package_actions_for_empresa_alias(monk
     monkeypatch.setattr(catalog_service, "list_registry_state", lambda tenant_id=None: {})
     monkeypatch.setattr(catalog_service, "get_protocol_audit_map", lambda: {})
     monkeypatch.setattr(catalog_service, "get_module_architecture_report", lambda key, target_root=None: {"architecture_ok": True, "architecture_errors": [], "architecture_warnings": []})
-    monkeypatch.setattr(catalog_service, "get_module_upload_root", lambda key: "/tmp/project/fastapi_modulo/modulos/identidad_institucional")
+    monkeypatch.setattr(catalog_service, "get_module_upload_root", lambda key: None)
     monkeypatch.setattr(catalog_service, "get_module_image_path", lambda key: "")
     monkeypatch.setattr(catalog_service, "get_module_catalog_image_url", lambda key: None)
     monkeypatch.setattr(catalog_service, "get_latest_package_upload", lambda key: None)
@@ -208,8 +212,9 @@ def test_decorate_modules_payload_enables_package_actions_for_empresa_alias(monk
     payload = catalog_service.decorate_modules_payload()
 
     assert payload[0]["key"] == "empresa"
-    assert payload[0]["package_upload_enabled"] is True
-    assert payload[0]["package_target_label"] == "fastapi_modulo/modulos/identidad_institucional"
+    assert payload[0]["package_upload_enabled"] is False
+    assert payload[0]["package_target_label"] == ""
+    assert payload[0]["package_management_note"] == "Este módulo no tiene un destino importable por paquetes ZIP."
 
 
 def test_decorate_modules_payload_keeps_always_enabled_alias_active_with_stale_registry_state(monkeypatch) -> None:
@@ -228,7 +233,7 @@ def test_decorate_modules_payload_keeps_always_enabled_alias_active_with_stale_r
     )
     monkeypatch.setattr(catalog_service, "get_protocol_audit_map", lambda: {})
     monkeypatch.setattr(catalog_service, "get_module_architecture_report", lambda key, target_root=None: {"architecture_ok": True, "architecture_errors": [], "architecture_warnings": []})
-    monkeypatch.setattr(catalog_service, "get_module_upload_root", lambda key: "/tmp/project/fastapi_modulo/modulos/identidad_institucional")
+    monkeypatch.setattr(catalog_service, "get_module_upload_root", lambda key: None)
     monkeypatch.setattr(catalog_service, "get_module_image_path", lambda key: "")
     monkeypatch.setattr(catalog_service, "get_module_catalog_image_url", lambda key: None)
     monkeypatch.setattr(catalog_service, "get_latest_package_upload", lambda key: None)
@@ -238,3 +243,4 @@ def test_decorate_modules_payload_keeps_always_enabled_alias_active_with_stale_r
     assert payload[0]["key"] == "empresa"
     assert payload[0]["enabled"] is True
     assert payload[0]["installed_version"] == "1.0.0"
+    assert payload[0]["package_management_note"] == "Este módulo no tiene un destino importable por paquetes ZIP."

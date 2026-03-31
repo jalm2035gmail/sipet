@@ -86,6 +86,13 @@ window.__SIPET_BACKEND_NAVBAR_SUBMENU_CATALOG = {
         { href: "/crm/notas", label: "Notas" },
         { href: "/crm/campanias", label: "Campañas" },
     ],
+    "Multitienda": [
+        { href: "/multitienda/productos", label: "Productos" },
+        { href: "/multitienda/configuracion", label: "Configuración" },
+        {% if current_role in ['superadministrador', 'superadmin'] %}
+        { href: "/multitienda/administracion_tiendas", label: "Administración de tiendas" },
+        {% endif %}
+    ],
     "Auditoría": [
         { href: "/auditoria", label: "Resumen" },
     ],
@@ -190,6 +197,7 @@ window.__SIPET_BACKEND_NAVBAR_SUBMENU_CATALOG = {
     ],
     "Configuración": [
         { href: "/ajustes/configuracion", label: "General" },
+        { href: "/ajustes/pwa", label: "PWA" },
         { href: "/ajustes/configuracion#seguridad", label: "Seguridad" },
         { href: "/ajustes/configuracion#integraciones", label: "Integraciones" },
     ],

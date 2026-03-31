@@ -30,6 +30,7 @@ def test_inspect_module_zip_reports_new_changed_and_unchanged(monkeypatch, tmp_p
         },
     )
     monkeypatch.setattr(package_repository, "get_module_upload_root", lambda module_key: str(module_root))
+    monkeypatch.setattr(package_repository, "_validate_staged_module_architecture", lambda module_key, target_root, staging_root: None)
 
     inspection = package_repository.inspect_module_zip("modulo", str(zip_path))
 
@@ -76,6 +77,7 @@ def test_apply_module_zip_uses_staging_before_target(monkeypatch, tmp_path: Path
     zip_path = tmp_path / "package.zip"
     _build_zip(zip_path, {"modulo/edit.txt": b"new", "modulo/new.txt": b"fresh"})
     monkeypatch.setattr(package_repository, "get_module_upload_root", lambda module_key: str(module_root))
+    monkeypatch.setattr(package_repository, "_validate_staged_module_architecture", lambda module_key, target_root, staging_root: None)
 
     inspection = package_repository.inspect_module_zip("modulo", str(zip_path))
     package_repository.apply_module_zip(str(zip_path), inspection)
@@ -91,11 +93,33 @@ def test_inspect_module_zip_accepts_alias_root_named_after_module_key(monkeypatc
     zip_path = tmp_path / "package.zip"
     _build_zip(zip_path, {"organizacion/empleados.txt": b"fresh"})
     monkeypatch.setattr(package_repository, "get_module_upload_root", lambda module_key: str(module_root))
+    monkeypatch.setattr(package_repository, "_validate_staged_module_architecture", lambda module_key, target_root, staging_root: None)
 
     inspection = package_repository.inspect_module_zip("organizacion", str(zip_path))
 
     preview_paths = [entry["path"] for entry in inspection["preview_files"]]
     assert preview_paths == ["empleados.txt"]
+    package_repository.cleanup_staging_dir(str(inspection["staging_root"]))
+
+
+def test_inspect_module_zip_accepts_wrapper_directory_around_module_root(monkeypatch, tmp_path: Path) -> None:
+    module_root = tmp_path / "capacitacion"
+    module_root.mkdir()
+    zip_path = tmp_path / "package.zip"
+    _build_zip(
+        zip_path,
+        {
+            "capacitacion-main/capacitacion/__manifest__.py": b"MANIFEST = {'name': 'capacitacion'}",
+            "capacitacion-main/capacitacion/static/js/app.js": b"console.log('ok');",
+        },
+    )
+    monkeypatch.setattr(package_repository, "get_module_upload_root", lambda module_key: str(module_root))
+    monkeypatch.setattr(package_repository, "_validate_staged_module_architecture", lambda module_key, target_root, staging_root: None)
+
+    inspection = package_repository.inspect_module_zip("capacitacion", str(zip_path))
+
+    preview_paths = [entry["path"] for entry in inspection["preview_files"]]
+    assert preview_paths == ["__manifest__.py", "static/js/app.js"]
     package_repository.cleanup_staging_dir(str(inspection["staging_root"]))
 
 

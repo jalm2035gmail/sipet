@@ -71,6 +71,13 @@ def _slugify(text: str) -> str:
     return text or ""
 
 
+def get_program_assignment_by_business_slug(db: Session, business_slug: str) -> Optional[RefProgramAssignment]:
+    normalized_slug = _slugify(business_slug)
+    if not normalized_slug:
+        return None
+    return db.query(RefProgramAssignment).filter_by(business_slug=normalized_slug).first()
+
+
 def _compute_incentive(rule: RefIncentivo, conversion_amount: Decimal) -> Decimal:
     if rule.incentive_type == "percent":
         amount = conversion_amount * Decimal(str(rule.percentage_value)) / 100
@@ -257,6 +264,7 @@ def create_referido(db: Session, data: ReferidoCreate, user_id: Optional[int] = 
     referente = db.query(RefReferente).filter_by(id=data.referente_id).first()
     obj = RefReferido(
         cvr_code=_gen_cvr_code(db),
+        program_assignment_id=data.program_assignment_id,
         referente_id=data.referente_id,
         referente_miu=referente.miu_code if referente else None,
         nombre_prospecto=data.nombre_prospecto,
@@ -291,6 +299,7 @@ def list_referidos(
     db: Session,
     state: Optional[str] = None,
     referente_id: Optional[int] = None,
+    program_assignment_id: Optional[int] = None,
     skip: int = 0,
     limit: int = 100,
 ) -> List[RefReferido]:
@@ -299,6 +308,8 @@ def list_referidos(
         q = q.filter(RefReferido.state == state)
     if referente_id:
         q = q.filter(RefReferido.referente_id == referente_id)
+    if program_assignment_id:
+        q = q.filter(RefReferido.program_assignment_id == program_assignment_id)
     return q.order_by(RefReferido.created_at.desc()).offset(skip).limit(limit).all()
 
 
@@ -445,23 +456,29 @@ def get_dashboard_stats(db: Session) -> dict:
 # ─── ProgramAssignment ─────────────────────────────────────────────────────
 
 def create_program_assignment(db: Session, data: ProgramAssignmentCreate) -> RefProgramAssignment:
-    obj = RefProgramAssignment(
-        user_id=data.user_id,
-        business_name=data.business_name,
-        business_slug=_slugify(data.business_name or ""),
-        business_type=data.business_type,
-        website_url=data.website_url,
-        max_referrals=data.max_referrals,
-        commission_rate=data.commission_rate,
-    )
-    db.add(obj)
+    resolved_user_id = int(data.user_id)
+    resolved_business_name = str(data.business_name or "").strip()
+    resolved_business_slug = str(data.business_slug or "").strip() or _slugify(resolved_business_name)
+    existing = db.query(RefProgramAssignment).filter_by(user_id=resolved_user_id).first()
+    if existing is None and resolved_business_slug:
+        existing = db.query(RefProgramAssignment).filter_by(business_slug=resolved_business_slug).first()
+    if existing is None:
+        existing = RefProgramAssignment(user_id=resolved_user_id)
+        db.add(existing)
+    existing.user_id = resolved_user_id
+    existing.business_name = resolved_business_name or None
+    existing.business_slug = resolved_business_slug or None
+    existing.business_type = data.business_type
+    existing.website_url = data.website_url
+    existing.max_referrals = data.max_referrals
+    existing.commission_rate = data.commission_rate
     db.commit()
-    db.refresh(obj)
-    return obj
+    db.refresh(existing)
+    return existing
 
 
 def list_program_assignments(db: Session) -> List[RefProgramAssignment]:
-    return db.query(RefProgramAssignment).all()
+    return db.query(RefProgramAssignment).order_by(RefProgramAssignment.created_at.desc()).all()
 
 
 # ─── BrandAmbassador ───────────────────────────────────────────────────────

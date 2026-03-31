@@ -259,3 +259,9 @@
       '</article>';
     }).join('');
   }
+
+  window.pedCanvas = window.pedCanvas || {};
+  window.pedCanvas.initEditor = initEditor;
+
+  /* Compatibilidad con llamadas existentes del loader */
+  window.initEditor = initEditor;

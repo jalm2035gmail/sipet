@@ -213,7 +213,7 @@ body.sipet-menu-bottom{padding-bottom:76px}
   <a href="/backend/inicio"><span class="sipet-mobile-bottom-nav__icon">🏠</span><span class="sipet-mobile-bottom-nav__label">Inicio</span></a>
   <a href="/backend/funcionalidades"><span class="sipet-mobile-bottom-nav__icon">💳</span><span class="sipet-mobile-bottom-nav__label">Servicios</span></a>
   <a href="/backend/descripcion"><span class="sipet-mobile-bottom-nav__icon">🔍</span><span class="sipet-mobile-bottom-nav__label">Buscar</span></a>
-  <a href="/backend/login"><span class="sipet-mobile-bottom-nav__icon">👤</span><span class="sipet-mobile-bottom-nav__label">Perfil</span></a>
+  <a href="/web/inicio"><span class="sipet-mobile-bottom-nav__icon">👤</span><span class="sipet-mobile-bottom-nav__label">Perfil</span></a>
 </nav>
 <script>
 (function(){
@@ -437,6 +437,15 @@ def _render_inline(ctx: Dict[str, Any]) -> HTMLResponse:
   <style>
     *{{box-sizing:border-box;margin:0;padding:0}}
     body{{font-family:system-ui,sans-serif;color:#1e293b;position:relative;isolation:isolate}}
+    .sipet-auth-corner{{position:fixed;top:14px;right:14px;z-index:4300;display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:999px;border:1px solid rgba(255,255,255,.22);background:rgba(15,23,42,.82);color:#ffffff;text-decoration:none;box-shadow:0 18px 40px rgba(15,23,42,.22);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);transition:transform .18s ease,box-shadow .18s ease,background .18s ease}}
+    .sipet-auth-corner:hover{{transform:translateY(-1px);box-shadow:0 24px 52px rgba(15,23,42,.28);background:rgba(15,23,42,.92)}}
+    .sipet-auth-corner:focus-visible{{outline:3px solid rgba(59,130,246,.28);outline-offset:3px}}
+    .sipet-auth-corner__icon{{font-size:.56rem;line-height:1}}
+    .sipet-auth-corner__avatar{{display:none;width:100%;height:100%;border-radius:inherit;object-fit:cover}}
+    .sipet-auth-corner.is-user-image{{padding:0;overflow:hidden;border-color:rgba(255,255,255,.34);background:rgba(255,255,255,.92)}}
+    .sipet-auth-corner.is-user-image .sipet-auth-corner__icon{{display:none}}
+    .sipet-auth-corner.is-user-image .sipet-auth-corner__avatar{{display:block}}
+    .sipet-auth-corner__label{{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}}
     .promo-bar{{position:relative;z-index:4200 !important}}
     .topbar{{position:relative;z-index:4100 !important}}
     body nav[style*="position:sticky"],
@@ -444,10 +453,11 @@ def _render_inline(ctx: Dict[str, Any]) -> HTMLResponse:
     body nav[style*="position:fixed"],
     body nav[style*="position:absolute"][style*="top:0"],
     body nav[style*="position: absolute"][style*="top: 0"]{{z-index:4100 !important}}
+    @media (max-width:560px){{.sipet-auth-corner{{top:10px;right:10px;width:24px;height:24px}}}}
   </style>
   {ctx["extra_style"]}
 </head>
-<body>{ctx["body_content"]}{ctx["bottom_menu"]}{ctx["form_script"]}
+<body><a class="sipet-auth-corner" data-sipet-auth-link="1" href="/backend/login" title="Ingresar" aria-label="Ingresar"><i class="sipet-auth-corner__icon fa-solid fa-right-to-bracket" aria-hidden="true"></i><img class="sipet-auth-corner__avatar" data-sipet-auth-avatar alt=""><span class="sipet-auth-corner__label" data-sipet-auth-label>Ingresar</span></a>{ctx["body_content"]}{ctx["bottom_menu"]}{ctx["form_script"]}
 <script>
 (function(){{
   var links=document.querySelectorAll('[data-sipet-auth-link]');
@@ -457,14 +467,29 @@ def _render_inline(ctx: Dict[str, Any]) -> HTMLResponse:
     .then(function(data){{
       var authenticated=!!(data&&data.authenticated);
       var username=authenticated?String(data.username||data.user_name||'').trim():'';
+      var imageUrl=authenticated?String(data.image_url||data.imagen||'').trim():'';
       links.forEach(function(link){{
         var label=link.querySelector('[data-sipet-auth-label]');
+        var avatar=link.querySelector('[data-sipet-auth-avatar]');
+        var accessibleLabel=authenticated?'Abrir panel':'Ingresar';
+        var targetHref=authenticated?String(data.panel_url||'/inicio').trim()||'/inicio':'/backend/login';
         if(label){{
-          label.textContent=authenticated?(username||''):'';
-          label.style.display=authenticated&&username?'':'none';
+          label.textContent=authenticated?(username||accessibleLabel):accessibleLabel;
         }}
-        link.setAttribute('href', authenticated?'/inicio':'/backend/login');
-        link.setAttribute('title', authenticated?(username||'Mi cuenta'):'Ingresar');
+        if(avatar){{
+          if(authenticated&&imageUrl){{
+            avatar.src=imageUrl;
+            avatar.alt=username||accessibleLabel;
+            link.classList.add('is-user-image');
+          }} else {{
+            avatar.removeAttribute('src');
+            avatar.alt='';
+            link.classList.remove('is-user-image');
+          }}
+        }}
+        link.setAttribute('href',targetHref);
+        link.setAttribute('title', authenticated?'Abrir panel del backend':accessibleLabel);
+        link.setAttribute('aria-label', authenticated?'Abrir panel del backend':accessibleLabel);
       }});
     }})
     .catch(function(){{}});

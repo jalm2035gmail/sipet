@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% block title %}Sin conexión · {{ app_name }}{% endblock %}
+
+{% block content %}
+<section class="card offline-card">
+  <h1>Sin conexión</h1>
+  <p>La app no pudo llegar al servidor, pero la shell PWA sigue disponible.</p>
+  <a class="btn" href="/">Intentar nuevamente</a>
+</section>
+{% endblock %}

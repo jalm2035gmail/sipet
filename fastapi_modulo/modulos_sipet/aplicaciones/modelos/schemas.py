@@ -66,6 +66,8 @@ class ModuleCatalogItem(BaseModel):
     router_count: int = 0
     module_dir: str = ""
     package_target_label: str = ""
+    is_core_module: bool = False
+    package_management_note: str = ""
     protocol_has_init: bool = False
     protocol_has_manifest: bool = False
     architecture_ok: bool = True

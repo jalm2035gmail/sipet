@@ -33,6 +33,10 @@ PUBLIC_PATHS = {
     "/health",
     "/healthz",
     "/favicon.ico",
+    "/manifest.webmanifest",
+    "/sw.js",
+    "/offline",
+    "/api/ajustes/pwa/logo",
     "/api/backend/me",
     "/tiendas",
     "/tiendas/",
@@ -53,6 +57,17 @@ def _path_analytics_context(path: str) -> dict[str, str]:
         elif parts[0] not in {"api", "backend"}:
             module_name = parts[0]
     return {"module_name": module_name, "screen_name": screen_name}
+
+
+def _is_live_integration_path(request: Request, path: str) -> bool:
+    if not path.startswith("/api/encuestas/campanas/"):
+        return False
+    if not any(path.endswith(suffix) for suffix in ("/live/start", "/live/status", "/live/question", "/live/stop")):
+        return False
+    return bool(
+        str(request.headers.get("X-Encuestas-Integration-Token") or "").strip()
+        or str(request.headers.get("X-SIPET-Integration-Token") or "").strip()
+    )
 
 
 def is_public_backend_path(request: Request, path: str) -> bool:
@@ -80,6 +95,7 @@ def is_public_backend_path(request: Request, path: str) -> bool:
         or path.startswith("/web/")
         or frontend_public
         or path.startswith("/api/public/")
+        or _is_live_integration_path(request, path)
         or path.startswith("/backend/passkey/")
         or path.startswith("/identidad-institucional")
         or path.startswith("/templates/")

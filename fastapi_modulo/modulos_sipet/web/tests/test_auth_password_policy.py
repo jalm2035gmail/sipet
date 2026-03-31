@@ -59,6 +59,41 @@ def test_validate_password_strength_rejects_weak_password() -> None:
     assert any(error.startswith("min_length") for error in errors)
 
 
+class _FakeResult:
+    def __init__(self, row):
+        self._row = row
+
+    def mappings(self):
+        return self
+
+    def first(self):
+        return self._row
+
+
+class _FakeDbRedirect:
+    def __init__(self, row=None) -> None:
+        self.row = row
+
+    def execute(self, statement, params):
+        return _FakeResult(self.row)
+
+
+def test_resolve_post_login_redirect_uses_multitienda_config_when_store_exists() -> None:
+    db = _FakeDbRedirect({"id": 9})
+
+    target = auth_service.resolve_post_login_redirect(db, "administrador_tienda", 5)
+
+    assert target == "/multitienda/configuracion"
+
+
+def test_resolve_post_login_redirect_falls_back_to_web_inicio_when_store_missing() -> None:
+    db = _FakeDbRedirect(None)
+
+    target = auth_service.resolve_post_login_redirect(db, "administrador_tienda", 5)
+
+    assert target == "/web/inicio"
+
+
 def test_authenticate_global_superadmin_accepts_sipet_conf_credentials(monkeypatch) -> None:
     monkeypatch.setattr(
         auth_service,
@@ -162,3 +197,39 @@ def test_apply_login_session_persists_global_superadmin_zero_user_id(monkeypatch
 
     assert stored["store"]["user_id"] == 0
     assert stored["active"]["payload"]["user_id"] == 0
+
+
+def test_find_user_by_login_recovers_missing_identity_hashes() -> None:
+    user = SimpleNamespace(
+        usuario=auth_service.encrypt_sensitive("dumas"),
+        correo=auth_service.encrypt_sensitive("dumas@dumas.com"),
+        usuario_hash="",
+        correo_hash="",
+    )
+
+    class _Query:
+        def all(self):
+            return [user]
+
+    class _Db:
+        def __init__(self) -> None:
+            self.added = []
+            self.commits = 0
+
+        def query(self, model):
+            return _Query()
+
+        def add(self, obj) -> None:
+            self.added.append(obj)
+
+        def commit(self) -> None:
+            self.commits += 1
+
+    db = _Db()
+
+    result = auth_service.find_user_by_login(db, "dumas")
+
+    assert result is user
+    assert user.usuario_hash == auth_service.sensitive_lookup_hash("dumas")
+    assert user.correo_hash == auth_service.sensitive_lookup_hash("dumas@dumas.com")
+    assert db.commits == 1

@@ -1,14 +1,17 @@
+<script>
+  window.__ENCUESTA_RESPONSE_BOOTSTRAP = __ENCUESTA_RESPONSE_BOOTSTRAP__;
+</script>
 <section
   id="enc-response-root"
   class="enc-response-shell"
-  data-enc-response-js-url="/api/public/encuestas/assets/encuesta_response.js"
-  data-enc-response-bootstrap='__ENCUESTA_RESPONSE_BOOTSTRAP__'
+  data-enc-response-js-url="/modulos/encuestas/encuesta_response.js"
 >
   <div class="enc-response-hero">
     <p class="enc-response-kicker">SIPET · Respuesta</p>
     <h1 id="enc-response-title" class="enc-response-title">Encuesta</h1>
     <p id="enc-response-description" class="enc-response-description"></p>
   </div>
+  <div id="enc-response-header-html" class="enc-card enc-response-card enc-response-richtext" hidden></div>
 
   <div class="enc-response-layout">
     <div class="enc-response-col-img" id="enc-response-col-img" aria-hidden="true" hidden></div>
@@ -35,7 +38,7 @@
 
     <main class="enc-response-main">
       <section id="enc-response-start" class="enc-response-screen is-active">
-        <article class="enc-card enc-response-card">
+        <article id="enc-response-form-card" class="enc-card enc-response-card">
           <figure class="enc-response-box-img" id="enc-response-box-img" aria-hidden="true" hidden>
             <img id="enc-response-box-img-el" alt="">
           </figure>
@@ -57,6 +60,10 @@
               <h2 id="enc-response-section-title"></h2>
               <p id="enc-response-section-description" class="enc-response-section-description"></p>
             </div>
+            <div id="enc-response-orientation" class="enc-response-orientation" hidden>
+              <button type="button" id="enc-response-orientation-vertical" class="enc-mini-btn">Vertical</button>
+              <button type="button" id="enc-response-orientation-horizontal" class="enc-mini-btn is-primary">Horizontal</button>
+            </div>
           </header>
 
           <div id="enc-response-message" class="enc-inline-msg" aria-live="polite"></div>
@@ -70,6 +77,10 @@
             </div>
           </form>
         </article>
+        <div id="enc-response-presentation-nav" class="enc-response-presentation-nav" hidden>
+          <button type="button" id="enc-response-presentation-prev" class="enc-response-presentation-arrow is-prev" aria-label="Pantalla anterior" title="Pantalla anterior">‹</button>
+          <button type="button" id="enc-response-presentation-next" class="enc-response-presentation-arrow is-next" aria-label="Pantalla siguiente" title="Pantalla siguiente">›</button>
+        </div>
       </section>
 
       <section id="enc-response-closed" class="enc-response-screen">
@@ -77,8 +88,18 @@
           <h2>Encuesta finalizada</h2>
           <p id="enc-response-closed-copy"></p>
           <p id="enc-response-closed-score" class="enc-response-closed-score"></p>
+          <div class="enc-form-actions">
+            <button type="button" id="enc-response-review-toggle" class="enc-button enc-button-secondary" hidden>Ver respuestas</button>
+          </div>
+          <div id="enc-response-review" class="enc-response-review" hidden></div>
+          <div id="enc-response-review-mode" class="enc-form-actions" hidden>
+            <button type="button" id="enc-response-review-chart" class="enc-mini-btn is-primary">Gráfica</button>
+            <button type="button" id="enc-response-review-data" class="enc-mini-btn">Datos</button>
+          </div>
         </article>
       </section>
+
+      <div id="enc-response-footer-html" class="enc-card enc-response-card enc-response-richtext" hidden></div>
     </main>
   </div>
 </section>

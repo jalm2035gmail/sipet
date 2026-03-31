@@ -10,11 +10,12 @@ import re
 import secrets
 import unicodedata
 
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, File, HTTPException, Query, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response as FastAPIResponse
 from datetime import datetime
 from pydantic import BaseModel, Field, field_validator, model_validator
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import SQLAlchemyError
 
 from fastapi_modulo.modulos.encuestas.modelos.encuestas_question_catalog import (
     list_question_types,
@@ -46,8 +47,11 @@ from fastapi_modulo.modulos.encuestas.modelos.encuestas_store import (
     update_section,
     close_instance,
     duplicate_question,
+    get_db,
+    get_response_review_results,
     validate_instance_for_publish,
 )
+from fastapi_modulo.modulos.encuestas.modelos.encuestas_models import SurveyInstance
 from fastapi_modulo.modulos.encuestas.modelos.encuestas_automation import (
     dispatch_backendhook_event,
     queue_automation_job,
@@ -76,6 +80,19 @@ from fastapi_modulo.modulos.encuestas.modelos.encuestas_tasks import (
     export_pdf_task,
     get_celery_app,
     get_export_result,
+)
+from fastapi_modulo.modulos.encuestas.modelos.encuestas_io import (
+    export_instance_structure,
+    export_template_structure,
+    import_survey,
+)
+from fastapi_modulo.modulos.encuestas.modelos.encuestas_live import (
+    get_live_status_audience,
+    get_live_status_presenter,
+    set_live_page,
+    set_live_question,
+    start_live_session,
+    stop_live_session,
 )
 
 router = APIRouter()
@@ -113,7 +130,13 @@ _ENCUESTA_JS_PATH = _STATIC_DIR / "js" / "encuesta.js"
 _ENCUESTA_CSS_PATH = _STATIC_DIR / "css" / "encuesta.css"
 _ENCUESTA_RESPONSE_TEMPLATE_PATH = _VIEWS_DIR / "encuesta_response.html"
 _ENCUESTA_RESPONSE_JS_PATH = _STATIC_DIR / "js" / "encuesta_response.js"
+_ENCUESTA_PRESENTER_TEMPLATE_PATH = _VIEWS_DIR / "encuesta_presenter.html"
+_ENCUESTA_PRESENTER_JS_PATH = _STATIC_DIR / "js" / "encuesta_presenter.js"
 _ENCUESTAS_IMAGE_DIR = _MODULE_DIR / "imagenes"
+
+
+def _load_presenter_template() -> str:
+    return _ENCUESTA_PRESENTER_TEMPLATE_PATH.read_text(encoding="utf-8")
 
 _ENCUESTA_BOOTSTRAP_STATE = {
     "navigation": [
@@ -145,7 +168,7 @@ def _encuestas_bootstrap(panel_id: str = "dashboard") -> Dict[str, Any]:
 _SURVEY_TYPES = {"general", "quiz", "360", "evaluation_360", "evaluacion_360", "nps", "csat", "ces", "pulse"}
 _SCORING_MODES = {"none", "sum", "average", "weighted", "percentage"}
 _PUBLICATION_MODES = {"manual", "scheduled", "immediate"}
-_AUDIENCE_MODES = {"internal", "external", "mixed", "public"}
+_AUDIENCE_MODES = {"internal", "external", "mixed", "public", "public_link"}
 _ANONYMITY_MODES = {"identified", "anonymous", "restricted"}
 
 _360_SURVEY_TYPES = {"360", "evaluation_360", "evaluacion_360"}
@@ -155,6 +178,15 @@ def _is_360(survey_type: Optional[str], external_entity_type: Optional[str]) -> 
     st = str(survey_type or "").strip().lower()
     eet = str(external_entity_type or "").strip().lower()
     return st in _360_SURVEY_TYPES or "360" in eet
+
+
+def _normalize_audience_mode(value: Optional[str]) -> Optional[str]:
+    raw = str(value or "").strip().lower()
+    if not raw:
+        return None if value is None else ""
+    if raw == "public":
+        return "public_link"
+    return raw
 
 
 def _parse_schedule_dt(value: Optional[str]) -> Optional[datetime]:
@@ -239,9 +271,10 @@ class SurveyInstanceCreateIn(BaseModel):
     @field_validator("audience_mode")
     @classmethod
     def validate_audience_mode(cls, v: str) -> str:
-        if v not in _AUDIENCE_MODES:
+        normalized = _normalize_audience_mode(v)
+        if normalized not in _AUDIENCE_MODES:
             raise ValueError(f"audience_mode inválido: {v!r}. Valores permitidos: {sorted(_AUDIENCE_MODES)}")
-        return v
+        return str(normalized)
 
     @field_validator("anonymity_mode")
     @classmethod
@@ -288,9 +321,10 @@ class SurveyInstanceDraftUpdateIn(BaseModel):
     @field_validator("audience_mode")
     @classmethod
     def validate_audience_mode(cls, v: Optional[str]) -> Optional[str]:
-        if v is not None and v not in _AUDIENCE_MODES:
+        normalized = _normalize_audience_mode(v)
+        if normalized is not None and normalized not in _AUDIENCE_MODES:
             raise ValueError(f"audience_mode inválido: {v!r}. Valores permitidos: {sorted(_AUDIENCE_MODES)}")
-        return v
+        return normalized
 
     @field_validator("anonymity_mode")
     @classmethod
@@ -457,6 +491,38 @@ def _require_encuestas_permission(request: Request, permission: str) -> None:
         raise HTTPException(status_code=403, detail="No tienes permiso para realizar esta acción en Encuestas.")
 
 
+def _has_live_integration_token(instance: SurveyInstance, token: str) -> bool:
+    stored = str((instance.settings_json or {}).get("live_integration_token") or "").strip()
+    candidate = str(token or "").strip()
+    return bool(stored and candidate) and secrets.compare_digest(stored, candidate)
+
+
+def _require_live_control_access(request: Request, instance_id: int) -> None:
+    permissions = _encuestas_permissions(request)
+    if permissions.get("manage_surveys"):
+        return
+
+    integration_token = str(
+        request.headers.get("X-Encuestas-Integration-Token")
+        or request.headers.get("X-SIPET-Integration-Token")
+        or ""
+    ).strip()
+    if not integration_token:
+        raise HTTPException(status_code=403, detail="No autorizado para controlar la sesión en vivo.")
+
+    db = get_db()
+    try:
+        instance = (
+            db.query(SurveyInstance)
+            .filter(SurveyInstance.id == instance_id, SurveyInstance.tenant_id == _tenant_id(request))
+            .first()
+        )
+        if not instance or not _has_live_integration_token(instance, integration_token):
+            raise HTTPException(status_code=403, detail="Token de integración inválido.")
+    finally:
+        db.close()
+
+
 def _coerce_360_anonymity(data: Dict[str, Any]) -> Dict[str, Any]:
     payload = dict(data or {})
     survey_type = str(payload.get("survey_type") or "").strip().lower()
@@ -606,12 +672,33 @@ def _asset_url(path: str, source: Path) -> str:
         return path
 
 
+def _json_for_script(value: Any) -> str:
+    return (
+        json.dumps(value, ensure_ascii=True)
+        .replace("</", "<\\/")
+        .replace("<!--", "<\\!--")
+    )
+
+
+def _response_asset_urls(public: bool = False) -> Dict[str, str]:
+    if public:
+        return {
+            "js_url": _asset_url("/api/public/encuestas-static/encuesta_response.js", _ENCUESTA_RESPONSE_JS_PATH),
+            "css_url": _asset_url("/api/public/encuestas-static/encuesta.css", _ENCUESTA_CSS_PATH),
+        }
+    return {
+        "js_url": _asset_url("/modulos/encuestas/encuesta_response.js", _ENCUESTA_RESPONSE_JS_PATH),
+        "css_url": _asset_url("/modulos/encuestas/encuesta.css", _ENCUESTA_CSS_PATH),
+    }
+
+
 def _render_module_shell(
     request: Request,
     *,
     title: str,
     content: str,
     js_url: str,
+    css_url: Optional[str] = None,
     current_panel: str = "",
     is_response: bool = False,
     show_back_link: bool = True,
@@ -695,6 +782,7 @@ def _render_module_shell(
             },
         )
 
+    resolved_css_url = css_url or _asset_url("/modulos/encuestas/encuesta.css", _ENCUESTA_CSS_PATH)
     shell = f"""<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -702,7 +790,7 @@ def _render_module_shell(
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{escape(title)}</title>
   <link rel="icon" type="image/svg+xml" href="{icon_url}">
-  <link rel="stylesheet" href="{_asset_url('/modulos/encuestas/encuesta.css', _ENCUESTA_CSS_PATH)}">
+  <link rel="stylesheet" href="{resolved_css_url}">
 </head>
 <body class="enc-page-body">
   <div class="enc-app-shell">
@@ -755,20 +843,20 @@ def _render_preview_html(builder: Dict[str, Any]) -> str:
 
 
 def _render_response_page(request: Request, session_payload: Dict[str, Any]) -> HTMLResponse:
+    is_public = str(session_payload.get("access_mode") or "").strip().lower() == "public"
+    asset_urls = _response_asset_urls(public=is_public)
     content = _load_response_template().replace(
         "__ENCUESTA_RESPONSE_BOOTSTRAP__",
-        json.dumps(session_payload, ensure_ascii=True),
+        _json_for_script(session_payload),
     )
-    js_url = "/api/public/encuestas/assets/encuesta_response.js"
-    if str(session_payload.get("session", {}).get("access_mode") or "").strip().lower() != "public":
-        js_url = _asset_url("/modulos/encuestas/encuesta_response.js", _ENCUESTA_RESPONSE_JS_PATH)
     html_response = _render_module_shell(
         request,
         title=f"Responder · {session_payload.get('instance', {}).get('nombre') or 'Encuesta'}",
         content=content,
-        js_url=js_url,
+        js_url=asset_urls["js_url"],
+        css_url=asset_urls["css_url"],
         is_response=True,
-        show_back_link=str(session_payload.get("session", {}).get("access_mode") or "").strip().lower() != "public",
+        show_back_link=not is_public,
     )
     return html_response
 
@@ -870,11 +958,56 @@ def encuesta_image(filename: str):
     return FileResponse(file_path)
 
 
+_ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/gif", "image/webp", "image/svg+xml"}
+_MAX_IMAGE_BYTES = 5 * 1024 * 1024  # 5 MB
+
+
+@router.post("/api/encuestas/campanas/{instance_id}/upload-image", status_code=201)
+async def api_upload_instance_image(instance_id: int, request: Request, file: UploadFile = File(...)):
+    """
+    Sube una imagen para la encuesta y devuelve la URL pública.
+    Acepta JPEG, PNG, GIF, WebP y SVG (máx. 5 MB).
+    """
+    ensure_survey_schema()
+    _require_encuestas_permission(request, "manage_surveys")
+
+    content_type = (file.content_type or "").split(";")[0].strip().lower()
+    if content_type not in _ALLOWED_IMAGE_TYPES:
+        raise HTTPException(
+            status_code=415,
+            detail=f"Tipo de archivo no permitido: {content_type}. Use JPEG, PNG, GIF, WebP o SVG.",
+        )
+
+    raw = await file.read()
+    if len(raw) > _MAX_IMAGE_BYTES:
+        raise HTTPException(status_code=413, detail="La imagen supera el límite de 5 MB.")
+
+    ext_map = {
+        "image/jpeg": ".jpg", "image/png": ".png", "image/gif": ".gif",
+        "image/webp": ".webp", "image/svg+xml": ".svg",
+    }
+    ext = ext_map.get(content_type, ".bin")
+    filename = f"enc_{instance_id}_{secrets.token_hex(8)}{ext}"
+
+    image_root = _ENCUESTAS_IMAGE_DIR.resolve()
+    image_root.mkdir(parents=True, exist_ok=True)
+    dest = (image_root / filename).resolve()
+    if dest.parent != image_root:
+        raise HTTPException(status_code=400, detail="Nombre de archivo inválido.")
+
+    dest.write_bytes(raw)
+
+    url = f"/modulos/encuestas/imagenes/{filename}"
+    return {"url": url, "filename": filename}
+
+
+@router.get("/api/public/encuestas-static/encuesta.css")
 @router.get("/api/public/encuestas/assets/encuesta.css")
 def encuesta_public_css():
     return FileResponse(_ENCUESTA_CSS_PATH, media_type="text/css")
 
 
+@router.get("/api/public/encuestas-static/encuesta_response.js")
 @router.get("/api/public/encuestas/assets/encuesta_response.js")
 def encuesta_public_response_js():
     return FileResponse(_ENCUESTA_RESPONSE_JS_PATH, media_type="application/javascript")
@@ -989,6 +1122,10 @@ def api_update_campaign_draft(instance_id: int, payload: SurveyInstanceDraftUpda
         instance = update_instance_draft(instance_id, _tenant_id(request), data)
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except SQLAlchemyError as exc:
+        raise HTTPException(status_code=500, detail=f"Error de base de datos al guardar encuesta: {exc}") from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Error al guardar encuesta: {exc}") from exc
     if not instance:
         raise HTTPException(status_code=404, detail="Encuesta no encontrada.")
     return instance
@@ -1293,6 +1430,8 @@ def api_publish_campaign(instance_id: int, request: Request):
         instance = publish_instance(instance_id, _tenant_id(request))
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Error al publicar encuesta: {exc}") from exc
     if not instance:
         raise HTTPException(status_code=404, detail="Encuesta no encontrada.")
     return instance
@@ -1345,6 +1484,15 @@ def api_get_public_response_session(response_id: int, request: Request):
     return api_get_response_session(response_id, request)
 
 
+@router.get("/api/encuestas/respuestas/{response_id}/review")
+def api_get_response_review(response_id: int, request: Request):
+    ensure_survey_schema()
+    payload = get_response_review_results(response_id, _tenant_id(request))
+    if not payload:
+        raise HTTPException(status_code=404, detail="Respuesta no encontrada.")
+    return payload
+
+
 @router.put("/api/encuestas/respuestas/{response_id}/save")
 def api_save_response_draft(response_id: int, payload: ResponseSaveIn, request: Request):
     ensure_survey_schema()
@@ -1371,3 +1519,257 @@ def api_submit_response(response_id: int, payload: ResponseSaveIn, request: Requ
 @router.post("/api/public/encuestas/respuestas/{response_id}/submit")
 def api_submit_public_response(response_id: int, payload: ResponseSaveIn, request: Request):
     return api_submit_response(response_id, payload, request)
+
+
+# ---------------------------------------------------------------------------
+# Export / Import de estructura de encuestas
+# ---------------------------------------------------------------------------
+
+
+@router.get("/api/encuestas/templates/{template_id}/export.json")
+def api_export_template(template_id: int, request: Request):
+    """Descarga la estructura de una plantilla como archivo JSON portátil."""
+    ensure_survey_schema()
+    _require_encuestas_permission(request, "manage_surveys")
+    data = export_template_structure(template_id, _tenant_id(request))
+    if data is None:
+        raise HTTPException(status_code=404, detail="Plantilla no encontrada.")
+    filename = quote(f"plantilla_{template_id}.json")
+    headers = {"Content-Disposition": f'attachment; filename="{filename}"'}
+    return FastAPIResponse(
+        json.dumps(data, ensure_ascii=False, indent=2),
+        media_type="application/json",
+        headers=headers,
+    )
+
+
+@router.get("/api/encuestas/campanas/{instance_id}/export-structure.json")
+def api_export_instance_structure(instance_id: int, request: Request):
+    """Descarga la estructura de una instancia como archivo JSON portátil (sin respuestas)."""
+    ensure_survey_schema()
+    _require_encuestas_permission(request, "manage_surveys")
+    data = export_instance_structure(instance_id, _tenant_id(request))
+    if data is None:
+        raise HTTPException(status_code=404, detail="Encuesta no encontrada.")
+    filename = quote(f"encuesta_{instance_id}.json")
+    headers = {"Content-Disposition": f'attachment; filename="{filename}"'}
+    return FastAPIResponse(
+        json.dumps(data, ensure_ascii=False, indent=2),
+        media_type="application/json",
+        headers=headers,
+    )
+
+
+@router.post("/api/encuestas/import", status_code=201)
+async def api_import_survey(request: Request, file: UploadFile = File(...)):
+    """
+    Importa una encuesta desde un archivo JSON exportado previamente.
+
+    Acepta archivos exportados como ``survey_template`` o ``survey_instance``.
+    Siempre crea objetos nuevos en estado draft, nunca sobreescribe existentes.
+    """
+    ensure_survey_schema()
+    _require_encuestas_permission(request, "manage_surveys")
+    raw = await file.read()
+    try:
+        payload = json.loads(raw)
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail=f"JSON inválido: {exc}") from exc
+    if not isinstance(payload, dict):
+        raise HTTPException(status_code=422, detail="El archivo debe ser un objeto JSON.")
+    created_by = getattr(request.state, "user_name", None) or request.cookies.get("user_name")
+    try:
+        result = import_survey(payload, _tenant_id(request), created_by=created_by)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Error al importar: {exc}") from exc
+    return result
+
+
+# ---------------------------------------------------------------------------
+# Live session — presenter page
+# ---------------------------------------------------------------------------
+
+
+@router.get("/encuestas/presentador/{instance_id}", response_class=HTMLResponse)
+def encuesta_presenter_page(instance_id: int, request: Request):
+    """Página de control del presentador para sesiones en vivo."""
+    ensure_survey_schema()
+    _require_encuestas_permission(request, "manage_surveys")
+    tenant_id = _tenant_id(request)
+    instance = get_instance(instance_id, tenant_id)
+    if instance is None:
+        raise HTTPException(status_code=404, detail="Encuesta no encontrada.")
+
+    bootstrap = {
+        "instance_id": instance_id,
+        "instance": instance,
+        "tenant_id": tenant_id,
+    }
+    content = _load_presenter_template().replace(
+        "__PRESENTER_BOOTSTRAP__",
+        _json_for_script(bootstrap),
+    )
+    js_url = _asset_url("/modulos/encuestas/encuesta_presenter.js", _ENCUESTA_PRESENTER_JS_PATH)
+    return _render_module_shell(
+        request,
+        title=f"Presentador · {instance.get('nombre') or 'Encuesta'}",
+        content=content,
+        js_url=js_url,
+        is_response=False,
+        show_back_link=True,
+    )
+
+
+@router.get("/modulos/encuestas/encuesta_presenter.js")
+def encuesta_presenter_js():
+    return FileResponse(_ENCUESTA_PRESENTER_JS_PATH, media_type="application/javascript")
+
+
+# ---------------------------------------------------------------------------
+# Live session — management API (requires manage_surveys)
+# ---------------------------------------------------------------------------
+
+
+@router.post("/api/encuestas/campanas/{instance_id}/live/start")
+def api_live_start(instance_id: int, request: Request):
+    """Inicia una sesión en vivo. Devuelve presenter_token (úsalo para controlar la sesión)."""
+    ensure_survey_schema()
+    _require_live_control_access(request, instance_id)
+    try:
+        state = start_live_session(instance_id, _tenant_id(request))
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return state
+
+
+@router.post("/api/encuestas/campanas/{instance_id}/live/stop")
+def api_live_stop(instance_id: int, request: Request):
+    """Finaliza la sesión en vivo."""
+    ensure_survey_schema()
+    _require_live_control_access(request, instance_id)
+    try:
+        state = stop_live_session(instance_id, _tenant_id(request))
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return state
+
+
+class _LiveQuestionPayload(BaseModel):
+    question_id: int
+    presenter_token: str
+    show_results: Optional[bool] = None
+
+
+class _LivePagePayload(BaseModel):
+    page_index: int
+    presenter_token: str
+    show_results: Optional[bool] = None
+
+
+@router.post("/api/encuestas/campanas/{instance_id}/live/question")
+def api_live_set_question(instance_id: int, request: Request, payload: _LiveQuestionPayload):
+    """Cambia la pregunta activa de la sesión en vivo."""
+    ensure_survey_schema()
+    _require_live_control_access(request, instance_id)
+    try:
+        state = set_live_question(
+            instance_id,
+            _tenant_id(request),
+            payload.question_id,
+            payload.presenter_token,
+            show_results=payload.show_results,
+        )
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return state
+
+
+@router.post("/api/encuestas/campanas/{instance_id}/live/page")
+def api_live_set_page(instance_id: int, request: Request, payload: _LivePagePayload):
+    """Cambia la página activa de la sesión en vivo."""
+    ensure_survey_schema()
+    _require_live_control_access(request, instance_id)
+    try:
+        state = set_live_page(
+            instance_id,
+            _tenant_id(request),
+            payload.page_index,
+            payload.presenter_token,
+            show_results=payload.show_results,
+        )
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return state
+
+
+@router.get("/api/encuestas/campanas/{instance_id}/live/status")
+def api_live_status_presenter(instance_id: int, request: Request):
+    """Estado completo de la sesión en vivo (con resultados) — para el presentador."""
+    ensure_survey_schema()
+    _require_live_control_access(request, instance_id)
+    try:
+        state = get_live_status_presenter(instance_id, _tenant_id(request))
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return state
+
+
+# ---------------------------------------------------------------------------
+# Live session — public audience API (no auth, only tenant scoping)
+# ---------------------------------------------------------------------------
+
+
+@router.get("/api/public/encuestas/{public_token}/live/status")
+def api_live_status_audience(public_token: str, request: Request):
+    """
+    Estado de la sesión en vivo para la audiencia.
+    Polling desde la página de respuesta pública.
+    """
+    ensure_survey_schema()
+    tenant_id = _tenant_id(request)
+    # Resolve the instance by public token
+    from fastapi_modulo.modulos.encuestas.modelos.encuestas_store import get_db as _get_db
+    from fastapi_modulo.modulos.encuestas.modelos.encuestas_models import SurveyInstance as _SI
+    db = _get_db()
+    try:
+        instances = db.query(_SI).filter(
+            _SI.tenant_id == tenant_id,
+            _SI.public_link_token == public_token,
+        ).order_by(_SI.updated_at.desc(), _SI.id.desc()).all()
+        inst = (
+            next((row for row in instances if row.status == "published"), None)
+            or next((row for row in instances if row.status == "scheduled"), None)
+            or (instances[0] if instances else None)
+        )
+        if inst is None:
+            raise HTTPException(status_code=404, detail="Encuesta no encontrada.")
+        instance_id = inst.id
+    finally:
+        db.close()
+
+    try:
+        state = get_live_status_audience(instance_id, tenant_id, public_token=public_token)
+    except (ValueError, PermissionError) as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return state
+
+
+@router.get("/api/encuestas/campanas/{instance_id}/live/audience")
+def api_live_status_audience_internal(instance_id: int, request: Request):
+    """
+    Estado de la sesión en vivo para la audiencia interna (autenticada).
+    Polling desde la página de respuesta interna.
+    """
+    ensure_survey_schema()
+    _require_encuestas_permission(request, "view_module")
+    try:
+        state = get_live_status_audience(instance_id, _tenant_id(request))
+    except (ValueError, PermissionError) as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return state

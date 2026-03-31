@@ -44,9 +44,14 @@
               <h2>Campañas</h2>
               <p>Campañas del tenant actual con acceso directo al constructor.</p>
             </div>
-            <button type="button" class="enc-button enc-button-primary" data-enc-action="new-survey">
-              Crear campaña
-            </button>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <button type="button" class="enc-button enc-button-secondary" data-enc-action="import-survey">
+                Importar
+              </button>
+              <button type="button" class="enc-button enc-button-primary" data-enc-action="new-survey">
+                Crear campaña
+              </button>
+            </div>
           </div>
           <div class="enc-view-switcher" role="tablist" aria-label="Vistas de campañas">
             <button type="button" class="enc-view-chip is-active" data-enc-campaign-view="kanban" aria-pressed="true">Kanban</button>
@@ -167,12 +172,51 @@
                         <span id="enc-editor-restringido">Todos los participantes autorizados</span>
                       </div>
                     </div>
+                    <div id="enc-public-link-summary" class="enc-public-link-summary" hidden>
+                      <div class="enc-public-link-summary-copy">
+                        <div class="enc-public-link-summary-row">
+                          <div class="enc-public-link-summary-label">
+                            <strong>ID de encuesta</strong>
+                            <span id="enc-survey-instance-id"></span>
+                          </div>
+                          <button type="button" class="enc-button enc-button-secondary" data-enc-copy-instance-id>Copiar ID</button>
+                        </div>
+                        <div class="enc-public-link-summary-row">
+                          <div class="enc-public-link-summary-label">
+                            <strong>Token de integración</strong>
+                            <span id="enc-survey-integration-token"></span>
+                          </div>
+                          <button type="button" class="enc-button enc-button-secondary" data-enc-copy-integration-token>Copiar token</button>
+                        </div>
+                        <div class="enc-public-link-summary-row">
+                          <div class="enc-public-link-summary-label">
+                            <strong>URL pública</strong>
+                            <a id="enc-public-link-anchor" href="#" target="_blank" rel="noopener noreferrer"></a>
+                          </div>
+                          <div class="enc-public-link-summary-actions">
+                            <button type="button" class="enc-button enc-button-secondary" data-enc-copy-public-link>Copiar enlace</button>
+                            <a id="enc-open-public-link" class="enc-button enc-button-secondary" href="#" target="_blank" rel="noopener noreferrer">Abrir encuesta</a>
+                          </div>
+                        </div>
+                        <div class="enc-public-link-summary-row">
+                          <div class="enc-public-link-summary-label">
+                            <strong>Panel en vivo</strong>
+                            <a id="enc-presenter-link-anchor" href="#" target="_blank" rel="noopener noreferrer"></a>
+                          </div>
+                          <div class="enc-public-link-summary-actions">
+                            <button type="button" class="enc-button enc-button-secondary" data-enc-copy-presenter-link>Copiar acceso</button>
+                            <a id="enc-open-presenter-link" class="enc-button enc-button-secondary" href="#" target="_blank" rel="noopener noreferrer">Abrir panel</a>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
                 <div class="enc-survey-tabs" role="tablist" aria-label="Configuración de encuesta">
                   <button type="button" class="enc-survey-tab is-active" data-enc-survey-tab="questions">Preguntas</button>
                   <button type="button" class="enc-survey-tab" data-enc-survey-tab="options">Opciones</button>
+                  <button type="button" class="enc-survey-tab" data-enc-survey-tab="presentation">Presentación</button>
                   <button type="button" class="enc-survey-tab" data-enc-survey-tab="description">Descripción</button>
                   <button type="button" class="enc-survey-tab" data-enc-survey-tab="initial-message">Mensaje inicial</button>
                   <button type="button" class="enc-survey-tab" data-enc-survey-tab="final-message">Mensaje final</button>
@@ -194,7 +238,7 @@
                     </div>
                     <div id="enc-questions-list" class="enc-stack"></div>
                     <div class="enc-question-board-actions">
-                      <button type="button" class="enc-button enc-button-secondary" data-enc-action="add-section">+ Agregar sección</button>
+                      <button type="button" class="enc-button enc-button-secondary" data-enc-action="add-section">+ Agregar página</button>
                       <button type="button" class="enc-button enc-button-primary" data-enc-action="add-question">+ Agregar pregunta</button>
                       <span id="enc-board-msg" class="enc-board-msg" aria-live="polite"></span>
                     </div>
@@ -235,17 +279,46 @@
                           <option value="scheduled">Programada</option>
                         </select>
                       </label>
+                      <label class="enc-field">
+                        <span>Modo de respuesta</span>
+                        <select id="enc-editor-response-mode" class="enc-input enc-select">
+                          <option value="standard">Estándar</option>
+                          <option value="presentation">Presentación</option>
+                        </select>
+                      </label>
                       <div class="enc-form-actions enc-field-span-2">
                         <button type="submit" class="enc-button enc-button-primary">Guardar opciones</button>
                       </div>
                     </form>
                   </section>
 
+                  <section class="enc-survey-panel" data-enc-survey-panel="presentation">
+                    <div class="enc-presentation-builder">
+                      <div class="enc-presentation-toolbar">
+                        <div>
+                          <p class="enc-sidebar-label">Modo Presentación</p>
+                          <p class="enc-question-meta">Crea páginas con bloques HTML y preguntas existentes. Usa el modo de respuesta "Presentación" para activarlo.</p>
+                        </div>
+                        <div class="enc-builder-toolbar">
+                          <button type="button" id="enc-presentation-add-page" class="enc-button enc-button-secondary">Agregar página</button>
+                          <button type="button" id="enc-presentation-save" class="enc-button enc-button-primary">Guardar presentación</button>
+                        </div>
+                      </div>
+                      <div id="enc-presentation-pages" class="enc-presentation-pages"></div>
+                    </div>
+                  </section>
+
                   <section class="enc-survey-panel" data-enc-survey-panel="description">
                     <form id="enc-survey-description-form">
                       <textarea id="enc-editor-description" class="enc-input enc-textarea" placeholder="Describe el contexto y objetivo de la encuesta"></textarea>
                       <div class="enc-form-actions" style="margin-top:16px;">
-                        <button type="submit" class="enc-button enc-button-primary">Guardar descripción</button>
+                        <button type="button" id="enc-insert-header-image" class="enc-button enc-button-secondary">Insertar imagen en HTML superior</button>
+                        <button type="button" id="enc-insert-footer-image" class="enc-button enc-button-secondary">Insertar imagen en HTML inferior</button>
+                      </div>
+                      <textarea id="enc-editor-header-html" class="enc-input enc-textarea" style="margin-top:16px;" placeholder="HTML superior opcional. Ej. &lt;h2&gt;Instrucciones&lt;/h2&gt;&lt;p&gt;Texto de apoyo...&lt;/p&gt;"></textarea>
+                      <textarea id="enc-editor-footer-html" class="enc-input enc-textarea" style="margin-top:16px;" placeholder="HTML inferior opcional. Ej. &lt;p&gt;&lt;strong&gt;Nota:&lt;/strong&gt; Puedes guardar y continuar después.&lt;/p&gt;"></textarea>
+                      <div class="enc-form-actions" style="margin-top:16px;">
+                        <button type="submit" class="enc-button enc-button-primary">Guardar contenido</button>
                       </div>
                     </form>
                   </section>
@@ -304,7 +377,14 @@
                 </label>
                 <label class="enc-field enc-field-span-2">
                   <span>Grupo manual</span>
-                  <textarea id="enc-audience-manual-group" class="enc-input enc-textarea" placeholder='{"name":"Grupo especial","members":[{"user_id":"1","nombre":"Ana"}]}'></textarea>
+                  <div class="enc-manual-groups">
+                    <div id="enc-manual-groups-list" class="enc-manual-groups-list"></div>
+                    <div class="enc-manual-groups-actions">
+                      <button id="enc-manual-group-add" type="button" class="enc-button enc-button-secondary">Agregar grupo</button>
+                    </div>
+                    <p class="enc-manual-groups-help">Define grupos y miembros sin escribir JSON. Cada miembro puede incluir `user_id`, nombre, rol y departamento.</p>
+                    <textarea id="enc-audience-manual-group" class="enc-input enc-textarea" hidden></textarea>
+                  </div>
                 </label>
                 <div class="enc-form-actions enc-field-span-2">
                   <button type="submit" class="enc-button enc-button-primary">Guardar y materializar audiencia</button>
@@ -390,6 +470,22 @@
                   <span>URL de la imagen</span>
                   <input id="enc-imagen-url" class="enc-input" type="url" placeholder="https://ejemplo.com/imagen.jpg">
                 </label>
+                <div class="enc-field enc-field-span-2">
+                  <span class="enc-field-label">O sube una imagen desde tu equipo</span>
+                  <div class="enc-imagen-upload-area" id="enc-imagen-upload-area">
+                    <input id="enc-imagen-file" type="file" accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml" class="enc-imagen-file-input" aria-label="Subir imagen">
+                    <div class="enc-imagen-upload-prompt" id="enc-imagen-upload-prompt">
+                      <span class="enc-imagen-upload-icon">📁</span>
+                      <span>Arrastra una imagen aquí o <strong>haz clic para seleccionar</strong></span>
+                      <small class="enc-muted">JPEG, PNG, GIF, WebP, SVG — máx. 5 MB</small>
+                    </div>
+                    <div id="enc-imagen-upload-preview" class="enc-imagen-upload-preview" hidden>
+                      <img id="enc-imagen-preview-img" src="" alt="Vista previa" class="enc-imagen-preview-img">
+                      <button type="button" id="enc-imagen-upload-clear" class="enc-button enc-button-ghost enc-imagen-upload-clear">✕ Quitar</button>
+                    </div>
+                    <p id="enc-imagen-upload-msg" class="enc-imagen-upload-msg" hidden></p>
+                  </div>
+                </div>
                 <div class="enc-field enc-field-span-2">
                   <span class="enc-field-label">Posición en la encuesta</span>
                   <div class="enc-imgpos-grid" id="enc-imgpos-grid">
@@ -553,9 +649,8 @@
         </article>
       </section>
   </div>
-</section>
 
-<div id="enc-question-modal" class="enc-modal" hidden>
+  <div id="enc-question-modal" class="enc-modal" hidden>
   <div class="enc-modal-backdrop" data-enc-close-modal="question"></div>
   <div class="enc-modal-dialog">
     <div class="enc-modal-head">
@@ -575,7 +670,11 @@
               <div id="enc-modal-question-types" class="enc-modal-type-options"></div>
             </div>
             <div class="enc-modal-preview">
-              <div id="enc-modal-question-preview" class="enc-card enc-subcard"></div>
+              <div id="enc-modal-question-preview"></div>
+              <div id="enc-modal-inline-options" hidden>
+                <p class="enc-sidebar-label" id="enc-modal-inline-options-label">Alternativas</p>
+                <textarea id="enc-modal-inline-options-ta" class="enc-input enc-textarea enc-inline-options-ta" placeholder="Una opción por línea"></textarea>
+              </div>
             </div>
           </div>
           <div class="enc-modal-tabs">
@@ -616,3 +715,115 @@
     </div>
   </div>
 </div>
+
+  <div id="enc-page-modal" class="enc-modal" hidden>
+  <div class="enc-modal-backdrop" data-enc-close-modal="page"></div>
+  <div class="enc-modal-dialog enc-page-modal-dialog">
+    <div class="enc-modal-head">
+      <h3>Editar página</h3>
+      <button type="button" class="enc-modal-close" data-enc-close-modal="page">×</button>
+    </div>
+    <div class="enc-modal-body">
+      <div class="enc-page-builder">
+        <aside class="enc-page-builder-sidebar">
+          <div class="enc-page-builder-section">
+            <p class="enc-sidebar-label">Plantillas</p>
+            <div class="enc-page-template-grid">
+              <button type="button" class="enc-question-type-chip" data-enc-page-template="hero">
+                <span class="enc-question-type-chip-copy"><strong>Hero</strong><small>Portada visual</small></span>
+              </button>
+              <button type="button" class="enc-question-type-chip" data-enc-page-template="split">
+                <span class="enc-question-type-chip-copy"><strong>Split</strong><small>Texto + visual</small></span>
+              </button>
+              <button type="button" class="enc-question-type-chip" data-enc-page-template="stats">
+                <span class="enc-question-type-chip-copy"><strong>Stats</strong><small>Métricas</small></span>
+              </button>
+              <button type="button" class="enc-question-type-chip" data-enc-page-template="question-focus">
+                <span class="enc-question-type-chip-copy"><strong>Pregunta</strong><small>Pregunta destacada</small></span>
+              </button>
+            </div>
+          </div>
+          <div class="enc-page-builder-section">
+            <p class="enc-sidebar-label">Bloques</p>
+            <div class="enc-page-template-grid">
+              <button type="button" class="enc-button enc-button-secondary" data-enc-page-block="html">Agregar HTML</button>
+              <button type="button" class="enc-button enc-button-secondary" data-enc-page-block="image">Agregar imagen</button>
+              <button type="button" class="enc-button enc-button-secondary" data-enc-page-block="question">Agregar pregunta</button>
+            </div>
+          </div>
+        </aside>
+        <div class="enc-page-builder-main">
+          <div class="enc-page-builder-main-grid">
+            <div class="enc-page-builder-form">
+              <div class="enc-form-grid">
+                <label class="enc-field">
+                  <span>Título</span>
+                  <input id="enc-page-title" class="enc-input" type="text" placeholder="Opcional">
+                </label>
+                <label class="enc-field">
+                  <span>Secciones</span>
+                  <select id="enc-page-section-count" class="enc-input enc-select">
+                    <option value="1">1 · Página completa</option>
+                    <option value="2">2 · Dos columnas</option>
+                    <option value="4">4 · Cuatro cuadrantes</option>
+                  </select>
+                </label>
+                <label class="enc-field">
+                  <span>Color de fondo</span>
+                  <input id="enc-page-bg-color" class="enc-input" type="color" value="#ffffff">
+                </label>
+                <label class="enc-field enc-field-span-2">
+                  <span>Descripción</span>
+                  <textarea id="enc-page-description" class="enc-input enc-textarea" placeholder="Contexto o instrucciones para esta página"></textarea>
+                </label>
+                <label class="enc-field enc-field-span-2">
+                  <span>Imagen de fondo</span>
+                  <input id="enc-page-bg-image" class="enc-input" type="url" placeholder="https://ejemplo.com/fondo.jpg">
+                </label>
+                <label class="enc-field">
+                  <span>Texto del footer</span>
+                  <input id="enc-page-footer-text" class="enc-input" type="text" placeholder="Opcional">
+                </label>
+                <label class="enc-field">
+                  <span>Color del footer</span>
+                  <input id="enc-page-footer-color" class="enc-input" type="color" value="#0f172a">
+                </label>
+              </div>
+              <div id="enc-page-blocks" class="enc-page-blocks"></div>
+            </div>
+            <div class="enc-page-builder-preview-wrap">
+              <p class="enc-sidebar-label">Vista previa</p>
+              <div id="enc-page-preview" class="enc-page-builder-preview" tabindex="0"></div>
+            </div>
+          </div>
+          <div class="enc-modal-actions">
+            <button type="button" id="enc-page-save-close" class="enc-button enc-button-primary">Guardar página</button>
+            <button type="button" class="enc-button enc-button-secondary" data-enc-close-modal="page">Cerrar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+  <div id="enc-options-popup" class="enc-options-popup" hidden>
+    <div class="enc-options-popup-backdrop" id="enc-options-popup-backdrop"></div>
+    <div class="enc-options-popup-panel">
+      <div class="enc-options-popup-head">
+        <strong id="enc-options-popup-title">Alternativas de respuesta</strong>
+        <button type="button" class="enc-modal-close" id="enc-options-popup-close">×</button>
+      </div>
+      <div class="enc-options-popup-body">
+        <label class="enc-field">
+          <span>Una opción por línea</span>
+          <textarea id="enc-options-popup-textarea" class="enc-input enc-textarea" rows="8" placeholder="Opción 1&#10;Opción 2&#10;Opción 3"></textarea>
+        </label>
+      </div>
+      <div class="enc-options-popup-foot">
+        <button type="button" id="enc-options-popup-confirm" class="enc-button enc-button-primary">Confirmar</button>
+        <button type="button" id="enc-options-popup-cancel" class="enc-button enc-button-secondary">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+</section>

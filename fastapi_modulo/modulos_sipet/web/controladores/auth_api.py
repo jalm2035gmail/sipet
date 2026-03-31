@@ -77,12 +77,13 @@ def backend_login_submit(
     if not username or not password:
         auth_service.register_failed_login_attempt(request)
         auth_service.record_login_attempt(request, username, False)
-        return auth_page_error(request, "Datos incorrectos, vuelva a intentarlo", 401)
+        return auth_page_error(request, "Datos incorrectos", 401)
 
     db = auth_service.get_session_local()()
     has_passkey = False
     totp_secret = ""
     global_superadmin = None
+    redirect_url = "/inicio"
     try:
         try:
             user = auth_service.find_user_by_login(db, username)
@@ -91,7 +92,7 @@ def backend_login_submit(
                 if not global_superadmin:
                     auth_service.register_failed_login_attempt(request)
                     auth_service.record_login_attempt(request, username, False)
-                    return auth_page_error(request, "Datos incorrectos, vuelva a intentarlo", 401)
+                    return auth_page_error(request, "Datos incorrectos", 401)
                 role_name = str(global_superadmin["role_name"])
                 session_username = str(global_superadmin["username"])
                 has_passkey = False
@@ -101,6 +102,7 @@ def backend_login_submit(
                 session_username = auth_service.decrypt_sensitive(user.usuario) or username
                 has_passkey = bool(user.backendauthn_credential_id and user.backendauthn_public_key)
                 totp_secret = mfa_service.get_user_totp_secret(user, role_name)
+                redirect_url = auth_service.resolve_post_login_redirect(db, role_name, int(user.id))
         except SQLAlchemyError:
             return _redirect_to_database_setup(request)
     finally:
@@ -129,7 +131,7 @@ def backend_login_submit(
                 auth_service.register_failed_login_attempt(request)
                 auth_service.record_login_attempt(request, username, False)
                 return auth_page_error(request, "Código de autenticador inválido.", 401)
-            response = RedirectResponse(url="/inicio", status_code=303)
+            response = RedirectResponse(url=redirect_url if not global_superadmin else "/inicio", status_code=303)
             mfa_service.finish_mfa_login(
                 request,
                 response,
@@ -156,7 +158,7 @@ def backend_login_submit(
             return response
         return auth_page_error(request, "Ingresa tu código de autenticador para completar el acceso.", 401)
 
-    response = RedirectResponse(url="/inicio", status_code=303)
+    response = RedirectResponse(url=redirect_url if not global_superadmin else "/inicio", status_code=303)
     try:
         auth_service.apply_login_session(
             response,

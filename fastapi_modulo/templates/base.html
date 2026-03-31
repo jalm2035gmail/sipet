@@ -62,6 +62,7 @@
     {% set is_superadmin_effective = current_role in ['superadministrador', 'superadmin'] %}
     {% include "modulos/web/sidebar.html" %}
     {% include "modulos/web/navbar.html" %}
+    {% include "modulos_sipet/web/vistas/partials/global_error_dialog.html" %}
     <main class="main-content">
         <div class="content-shell">
         <section class="content-section">

@@ -1,5 +1,151 @@
 <section id="empresa-usuarios-module" class="w-full space-y-4" data-initial-section="{{ initial_section | default('usuarios') }}">
   <style>
+    #empresa-usuarios-module {
+      --empresa-bg: var(--page-bg, #f5f6f8);
+      --empresa-surface: var(--content-bg, #ffffff);
+      --empresa-surface-soft: color-mix(in srgb, var(--content-bg, #ffffff) 90%, var(--page-bg, #f5f6f8) 10%);
+      --empresa-border: color-mix(in srgb, var(--field-border, #cbd5e1) 72%, #ffffff 28%);
+      --empresa-border-soft: color-mix(in srgb, var(--field-border, #cbd5e1) 54%, #ffffff 46%);
+      --empresa-text: var(--body-text, #0f172a);
+      --empresa-muted: color-mix(in srgb, var(--body-text, #0f172a) 62%, #ffffff 38%);
+      --empresa-accent: var(--button-bg, #0f172a);
+      --empresa-accent-contrast: var(--button-text, #ffffff);
+      --empresa-focus: var(--field-focus, var(--button-bg, #0f172a));
+      color: var(--empresa-text);
+    }
+
+    #empresa-usuarios-module .titulo,
+    #empresa-usuarios-module .card {
+      border-color: var(--empresa-border) !important;
+      background: var(--empresa-surface) !important;
+      box-shadow: 0 12px 30px color-mix(in srgb, var(--sidebar-bottom, #0f172a) 8%, transparent);
+    }
+
+    #empresa-usuarios-module .titulo {
+      background: linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--content-bg, #ffffff) 96%, var(--page-bg, #f5f6f8) 4%),
+        color-mix(in srgb, var(--content-bg, #ffffff) 88%, var(--page-bg, #f5f6f8) 12%)
+      ) !important;
+    }
+
+    #empresa-usuarios-module .card-body,
+    #empresa-usuarios-module .access-module-block,
+    #empresa-usuarios-module .access-reference-list-item,
+    #empresa-usuarios-module .access-module-card,
+    #empresa-usuarios-module .access-reference-card {
+      color: var(--empresa-text);
+    }
+
+    #empresa-usuarios-module .text-MAIN-content\/70,
+    #empresa-usuarios-module .text-MAIN-content\/80,
+    #empresa-usuarios-module .text-MAIN-content\/60,
+    #empresa-usuarios-module .access-module-block__hint,
+    #empresa-usuarios-module .access-module-block__note {
+      color: var(--empresa-muted) !important;
+    }
+
+    #empresa-usuarios-module .tabs-boxed,
+    #empresa-usuarios-module .rounded-box.border.border-MAIN-300.bg-MAIN-100,
+    #empresa-usuarios-module .access-module-card__panel,
+    #empresa-usuarios-module .access-reference-list-item,
+    #empresa-usuarios-module .access-reference-tag,
+    #empresa-usuarios-module .access-module-card,
+    #empresa-usuarios-module .access-reference-card {
+      border-color: var(--empresa-border) !important;
+      background: var(--empresa-surface-soft) !important;
+    }
+
+    #empresa-usuarios-module .tabs-lifted .tab {
+      color: var(--body-text, #0f172a) !important;
+      background: color-mix(in srgb, var(--b1, #ffffff) 90%, var(--b2, #f3f4f6) 10%);
+      border-color: color-mix(in srgb, var(--body-text, #0f172a) 18%, transparent);
+      font-weight: 600;
+      opacity: 1;
+    }
+
+    #empresa-usuarios-module .tabs-lifted .tab:hover {
+      color: var(--body-text, #0f172a) !important;
+      background: color-mix(in srgb, var(--b1, #ffffff) 82%, var(--b2, #f3f4f6) 18%);
+    }
+
+    #empresa-usuarios-module .tabs-lifted .tab.tab-active {
+      color: #ffffff !important;
+      background: var(--sidebar-bottom, #0f172a);
+      border-color: var(--sidebar-bottom, #0f172a);
+    }
+
+    #empresa-usuarios-module .tabs-lifted .tab.tab-active:hover {
+      color: #ffffff !important;
+      background: color-mix(in srgb, var(--sidebar-bottom, #0f172a) 92%, #ffffff 8%);
+    }
+
+    #empresa-usuarios-module .tabs-boxed .tab {
+      color: var(--empresa-text) !important;
+      font-weight: 600;
+    }
+
+    #empresa-usuarios-module .tabs-boxed .tab.tab-active {
+      background: var(--empresa-accent) !important;
+      color: var(--empresa-accent-contrast) !important;
+    }
+
+    #empresa-usuarios-module .input,
+    #empresa-usuarios-module .select,
+    #empresa-usuarios-module .textarea {
+      min-height: 44px;
+      border-radius: 12px;
+      border-color: var(--empresa-border) !important;
+      background: var(--empresa-surface) !important;
+      color: var(--empresa-text) !important;
+      box-shadow: none;
+    }
+
+    #empresa-usuarios-module .textarea {
+      min-height: 110px;
+    }
+
+    #empresa-usuarios-module .input::placeholder,
+    #empresa-usuarios-module .textarea::placeholder {
+      color: color-mix(in srgb, var(--empresa-text) 42%, #ffffff 58%);
+    }
+
+    #empresa-usuarios-module .input:focus,
+    #empresa-usuarios-module .select:focus,
+    #empresa-usuarios-module .textarea:focus {
+      outline: 0;
+      border-color: var(--empresa-focus) !important;
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--empresa-focus) 16%, transparent);
+    }
+
+    #empresa-usuarios-module .label-text,
+    #empresa-usuarios-module .card-title,
+    #empresa-usuarios-module h3,
+    #empresa-usuarios-module h4 {
+      color: var(--empresa-text) !important;
+    }
+
+    #empresa-usuarios-module .btn-primary,
+    #empresa-usuarios-module .badge-primary {
+      background: var(--empresa-accent) !important;
+      border-color: var(--empresa-accent) !important;
+      color: var(--empresa-accent-contrast) !important;
+    }
+
+    #empresa-usuarios-module .btn-ghost,
+    #empresa-usuarios-module .btn-outline,
+    #empresa-usuarios-module .badge-outline {
+      border-color: var(--empresa-border) !important;
+    }
+
+    #empresa-usuarios-module .table {
+      color: var(--empresa-text);
+    }
+
+    #empresa-usuarios-module .table :where(th, td) {
+      border-color: var(--empresa-border-soft);
+    }
+
     .access-module-block {
       display: grid;
       gap: 1.5rem;
@@ -288,7 +434,12 @@
         </label>
         <label class="form-control">
           <div class="label"><span class="label-text font-semibold">Contraseña</span></div>
-          <input type="password" name="contrasena" class="input input-bordered" placeholder="Mínimo 8 caracteres" required>
+          <div class="relative">
+            <input type="password" name="contrasena" class="input input-bordered w-full pr-12" placeholder="Mínimo 8 caracteres" required autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true">
+            <button type="button" class="absolute inset-y-0 right-3 my-auto flex h-8 w-8 items-center justify-center rounded-full border border-transparent bg-transparent p-0" data-usuarios-password-toggle="1" title="Mostrar contraseña" aria-label="Mostrar contraseña">
+              <img src="/templates/icon/boton/ojo.svg" alt="" class="h-5 w-5" data-usuarios-password-icon="1">
+            </button>
+          </div>
         </label>
         <label class="form-control">
           <div class="label"><span class="label-text font-semibold">Rol</span></div>
@@ -325,8 +476,9 @@
             <button type="button" id="usuarios-totp-setup-btn" class="btn btn-outline btn-primary">Generar QR</button>
           </div>
         </div>
-        <div class="md:col-span-2 xl:col-span-3 flex items-end">
+        <div class="md:col-span-2 xl:col-span-3 flex items-end gap-3">
           <button type="submit" class="btn btn-primary" id="usuarios-create-submit">Dar de alta</button>
+          <button type="button" class="btn btn-outline btn-error hidden" id="usuarios-create-delete">Eliminar</button>
         </div>
       </form>
       <div class="pt-2 grid gap-4" id="usuarios-create-notebook-host"></div>
@@ -485,6 +637,7 @@
   var createTemplate = document.getElementById('usuarios-create-template');
   var createForm = null;
   var createSubmitBtn = null;
+  var createDeleteBtn = null;
   var createNotebookHost = null;
   var createTitle = null;
   var createDescription = null;
@@ -511,6 +664,7 @@
   var currentView = 'list';
   var currentCreateTab = 'roles';
   var createProfileState = null;
+  var PASSWORD_MASK = '********';
   var orgLibPromise = null;
   var usuariosOrgChart = null;
   var orgExpandedUsuarioId = '';
@@ -531,6 +685,7 @@
   function cacheCreateElements() {
     createForm = document.getElementById('usuarios-create-form');
     createSubmitBtn = document.getElementById('usuarios-create-submit');
+    createDeleteBtn = document.getElementById('usuarios-create-delete');
     createNotebookHost = document.getElementById('usuarios-create-notebook-host');
     createTitle = document.getElementById('usuarios-create-title');
     createDescription = document.getElementById('usuarios-create-description');
@@ -1640,9 +1795,32 @@
       if (nombreInput) nombreInput.value = String(current.nombre || '');
       if (usuarioInput) usuarioInput.value = String(current.usuario || '');
       if (correoInput) correoInput.value = String(current.correo || '');
-      if (passwordInput) passwordInput.value = '';
+      if (passwordInput) {
+        passwordInput.value = '';
+        passwordInput.required = false;
+        passwordInput.placeholder = PASSWORD_MASK;
+        passwordInput.setAttribute('autocomplete', 'off');
+        passwordInput.setAttribute('autocorrect', 'off');
+        passwordInput.setAttribute('autocapitalize', 'off');
+        passwordInput.setAttribute('spellcheck', 'false');
+        passwordInput.setAttribute('data-lpignore', 'true');
+        passwordInput.setAttribute('data-1p-ignore', 'true');
+      }
       if (empleadoInput) empleadoInput.checked = Boolean(current.empleado != null ? current.empleado : current.colaborador);
       if (totpInput) totpInput.checked = Boolean(current.totp_enabled);
+    } else if (createForm) {
+      var newPasswordInput = createForm.querySelector('input[name="contrasena"]');
+      if (newPasswordInput) {
+        newPasswordInput.value = '';
+        newPasswordInput.required = true;
+        newPasswordInput.placeholder = 'Mínimo 8 caracteres';
+        newPasswordInput.setAttribute('autocomplete', 'off');
+        newPasswordInput.setAttribute('autocorrect', 'off');
+        newPasswordInput.setAttribute('autocapitalize', 'off');
+        newPasswordInput.setAttribute('spellcheck', 'false');
+        newPasswordInput.setAttribute('data-lpignore', 'true');
+        newPasswordInput.setAttribute('data-1p-ignore', 'true');
+      }
     }
     renderCreateNotebook();
     populateRolSelect();
@@ -1650,7 +1828,28 @@
     if (createSubmitBtn) {
       createSubmitBtn.textContent = current ? 'Guardar cambios' : 'Dar de alta';
     }
+    if (createDeleteBtn) {
+      createDeleteBtn.classList.toggle('hidden', !current);
+    }
+    bindCreatePasswordToggle();
     bindCreateForm();
+  }
+
+  function bindCreatePasswordToggle() {
+    if (!createForm) return;
+    var toggleBtn = createForm.querySelector('[data-usuarios-password-toggle="1"]');
+    var passwordInput = createForm.querySelector('input[name="contrasena"]');
+    var passwordIcon = createForm.querySelector('[data-usuarios-password-icon="1"]');
+    if (!(toggleBtn instanceof HTMLButtonElement) || !(passwordInput instanceof HTMLInputElement)) return;
+    toggleBtn.addEventListener('click', function () {
+      var visible = passwordInput.type === 'text';
+      passwordInput.type = visible ? 'password' : 'text';
+      toggleBtn.setAttribute('aria-label', visible ? 'Mostrar contraseña' : 'Ocultar contraseña');
+      toggleBtn.setAttribute('title', visible ? 'Mostrar contraseña' : 'Ocultar contraseña');
+      if (passwordIcon instanceof HTMLImageElement) {
+        passwordIcon.src = visible ? '/templates/icon/boton/ojo.svg' : '/templates/icon/boton/ojot.svg';
+      }
+    });
   }
 
   function renderCurrentView() {
@@ -2144,7 +2343,7 @@
         payload.identidad_mision = String(current.identidad_mision || '').trim();
         payload.identidad_vision = String(current.identidad_vision || '').trim();
       }
-      if (!payload.contrasena) delete payload.contrasena;
+      if (!payload.contrasena || payload.contrasena === PASSWORD_MASK) delete payload.contrasena;
 
       createSubmitBtn.disabled = true;
       createSubmitBtn.textContent = 'Guardando...';
@@ -2188,6 +2387,45 @@
           createSubmitBtn.textContent = getCurrent() ? 'Guardar cambios' : 'Dar de alta';
         });
     });
+    if (createDeleteBtn) {
+      createDeleteBtn.addEventListener('click', function () {
+        var current = getCurrent();
+        var id = current && current.id != null ? current.id : null;
+        if (!id) return;
+        var label = String((current && (current.usuario || current.nombre)) || 'este usuario');
+        if (!window.confirm('¿Eliminar a ' + label + '?')) return;
+        createDeleteBtn.disabled = true;
+        createDeleteBtn.textContent = 'Eliminando...';
+        fetch('/api/colaboradores/' + encodeURIComponent(String(id)), {
+          method: 'DELETE',
+          headers: { Accept: 'application/json' }
+        })
+          .then(async function (res) {
+            var raw = await res.text();
+            var json = null;
+            try { json = raw ? JSON.parse(raw) : {}; } catch (err) {}
+            return { ok: res.ok, json: json, raw: raw };
+          })
+          .then(function (result) {
+            if (!result.ok || !result.json || result.json.success === false) {
+              throw new Error((result.json && (result.json.error || result.json.detail)) || 'No se pudo eliminar el usuario');
+            }
+            var currentKey = getKey(current);
+            usuarios = usuarios.filter(function (row) { return getKey(row) !== currentKey; });
+            selectedKey = '';
+            currentView = 'list';
+            renderCurrentView();
+            window.alert('Usuario eliminado correctamente.');
+          })
+          .catch(function (error) {
+            window.alert(error && error.message ? error.message : 'No se pudo eliminar el usuario');
+          })
+          .finally(function () {
+            createDeleteBtn.disabled = false;
+            createDeleteBtn.textContent = 'Eliminar';
+          });
+      });
+    }
   }
 
   resetCreateProfileState();

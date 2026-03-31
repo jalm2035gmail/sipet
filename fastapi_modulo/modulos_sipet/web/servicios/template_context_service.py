@@ -131,10 +131,13 @@ def build_login_context(
     login_error: str = "",
     **extra: object,
 ) -> dict:
+    resolved_error = str(login_error or "").strip()
+    if not resolved_error:
+        resolved_error = str(request.query_params.get("error") or "").strip()
     return {
         "request": request,
         "title": title,
-        "login_error": login_error,
+        "login_error": resolved_error,
         **get_login_identity_context(request),
         **extra,
     }
@@ -162,6 +165,24 @@ def build_backend_context(
     login_identity = get_login_identity_context(request)
     resolved_title = (page_title or title or "Sin titulo").strip()
     resolved_description = (page_description or description or subtitle or "Descripcion pendiente").strip()
+    pwa_theme_color = "#0f172a"
+    pwa_background_color_start = "#0f172a"
+    pwa_background_color_end = "#1d4ed8"
+    pwa_logo_url = ""
+    pwa_app_name = "SIPET"
+    pwa_description = "Instala SIPET para abrirlo como app y usar funciones offline."
+    try:
+        from fastapi_modulo.modulos_sipet.pwa.servicios.pwa_runtime_service import get_pwa_logo_url, load_pwa_settings
+
+        pwa_settings = load_pwa_settings()
+        pwa_theme_color = str(pwa_settings.get("theme_color") or pwa_theme_color).strip() or pwa_theme_color
+        pwa_background_color_start = str(pwa_settings.get("background_color_start") or pwa_background_color_start).strip() or pwa_background_color_start
+        pwa_background_color_end = str(pwa_settings.get("background_color_end") or pwa_background_color_end).strip() or pwa_background_color_end
+        pwa_logo_url = str(get_pwa_logo_url(pwa_settings) or "").strip()
+        pwa_app_name = str(pwa_settings.get("app_name") or pwa_app_name).strip() or pwa_app_name
+        pwa_description = str(pwa_settings.get("description") or pwa_description).strip() or pwa_description
+    except Exception:
+        pass
     return {
         "request": request,
         "title": title,
@@ -191,6 +212,12 @@ def build_backend_context(
         "app_env": APP_ENV,
         "is_superadmin_user": is_superadmin(request),
         "is_admin_or_superadmin_user": is_admin_or_superadmin(request),
+        "pwa_theme_color": pwa_theme_color,
+        "pwa_background_color_start": pwa_background_color_start,
+        "pwa_background_color_end": pwa_background_color_end,
+        "pwa_logo_url": pwa_logo_url,
+        "pwa_app_name": pwa_app_name,
+        "pwa_description": pwa_description,
         **build_icon_catalog_context(),
         **get_backend_catalog_context(request),
         **extra,

@@ -476,6 +476,7 @@
                 if (text.includes('bandeja') || route === '/notificaciones' || route.startsWith('/notificaciones/')) return 'fa-regular fa-envelope';
                 if (text === 'configuración' || text === 'configuracion' || route === '/ajustes/configuracion') return 'fa-solid fa-gear';
                 if (text === 'general' && route.includes('/ajustes/configuracion')) return 'fa-solid fa-sliders';
+                if (text === 'pwa' || route === '/ajustes/pwa') return 'fa-solid fa-mobile-screen';
                 if (text === 'seguridad' || route.includes('#seguridad')) return 'fa-solid fa-lock';
                 if (text === 'integraciones' || route.includes('#integraciones')) return 'fa-solid fa-plug';
                 if (text === 'ia' || route === '/ajustes/ia') return 'fa-solid fa-brain';

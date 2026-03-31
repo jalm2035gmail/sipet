@@ -148,16 +148,32 @@ def _iter_zip_members(archive: zipfile.ZipFile, target_root: str, module_key: st
             raise HTTPException(status_code=400, detail="El ZIP contiene enlaces simbolicos no permitidos.")
         normalized_parts.append((info, tuple(part for part in path.parts if part not in {"", "."})))
 
-    first_parts = {parts[0] for _, parts in normalized_parts if parts}
-    strip_first_segment = len(first_parts) == 1 and next(iter(first_parts)) in {
-        target_dir_name,
-        normalized_module_key,
-        "src",
-        "package",
+    allowed_root_aliases = {
+        alias
+        for alias in {target_dir_name, normalized_module_key, "src", "package"}
+        if alias
     }
 
+    def _should_strip_first_segment(parts_list: list[tuple[zipfile.ZipInfo, tuple[str, ...]]]) -> bool:
+        first_parts = {parts[0] for _, parts in parts_list if parts}
+        if len(first_parts) != 1:
+            return False
+        first_part = next(iter(first_parts))
+        if first_part in allowed_root_aliases:
+            return True
+        second_parts = {parts[1] for _, parts in parts_list if len(parts) > 1}
+        if len(second_parts) == 1 and next(iter(second_parts)) in allowed_root_aliases:
+            return True
+        return any(len(parts) > 1 and parts[1] == "__manifest__.py" for _, parts in parts_list)
+
+    while _should_strip_first_segment(normalized_parts):
+        normalized_parts = [
+            (info, parts[1:] if len(parts) > 1 else ())
+            for info, parts in normalized_parts
+        ]
+
     for info, parts in normalized_parts:
-        rel_parts = parts[1:] if strip_first_segment and len(parts) > 1 else parts
+        rel_parts = parts
         if not rel_parts:
             continue
         destination = os.path.abspath(os.path.join(target_root, *rel_parts))
@@ -192,6 +208,7 @@ def _extract_archive_to_staging(
     archive: zipfile.ZipFile,
     target_root: str,
     *,
+    module_key: str = "",
     staging_root: str,
 ) -> dict[str, Any]:
     entries: list[dict[str, Any]] = []
@@ -325,7 +342,7 @@ def inspect_module_zip(module_key: str, zip_path: str) -> dict[str, Any]:
             if archive.testzip() is not None:
                 raise HTTPException(status_code=400, detail="El archivo ZIP esta corrupto.")
             staging_root = tempfile.mkdtemp(prefix=f"apps-stage-{str(module_key or '').strip()}-")
-            staged = _extract_archive_to_staging(archive, target_root, staging_root=staging_root)
+            staged = _extract_archive_to_staging(archive, target_root, module_key=module_key, staging_root=staging_root)
             _validate_staged_module_architecture(module_key, target_root, staging_root)
             return {
                 "module_key": module_key,
@@ -366,7 +383,7 @@ def restore_module_snapshot(module_key: str, snapshot_path: str) -> int:
     try:
         with zipfile.ZipFile(snapshot_path, "r") as archive:
             staging_root = tempfile.mkdtemp(prefix=f"apps-restore-{str(module_key or '').strip()}-")
-            staged = _extract_archive_to_staging(archive, target_root, staging_root=staging_root)
+            staged = _extract_archive_to_staging(archive, target_root, module_key=module_key, staging_root=staging_root)
         for child in Path(target_root).iterdir():
             if child.name == "__pycache__":
                 continue

@@ -103,6 +103,11 @@ async function crearReferido(e) {
   const fd = new FormData(e.target);
   const body = Object.fromEntries(fd);
   body.referente_id = parseInt(body.referente_id);
+  if (body.program_assignment_id) {
+    body.program_assignment_id = parseInt(body.program_assignment_id);
+  } else {
+    delete body.program_assignment_id;
+  }
   try {
     await api('POST', '/api/referidos/crear', body);
     showToast('Referido creado exitosamente.');
@@ -158,6 +163,22 @@ async function guardarConfig(e, crear = false) {
   }
 }
 
+async function guardarProgramaTienda(e) {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const body = Object.fromEntries(fd);
+  body.user_id = parseInt(body.user_id || '0', 10);
+  body.max_referrals = parseInt(body.max_referrals || '0', 10);
+  body.commission_rate = parseFloat(body.commission_rate || '0');
+  try {
+    await api('POST', '/api/referidos/programas', body);
+    showToast('Tienda registrada en el programa de referidos.');
+    setTimeout(() => location.reload(), 700);
+  } catch (error) {
+    showToast(error.message, 'danger');
+  }
+}
+
 // ── Toggle campos de incentivo ────────────────────────────────────────────
 function toggleIncentiveFields(sel) {
   const isPercent = sel.value === 'percent';
@@ -167,5 +188,9 @@ function toggleIncentiveFields(sel) {
 }
 
 function referidosApp() {
-  return {};
+  return {
+    init() {
+      return null;
+    },
+  };
 }

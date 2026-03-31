@@ -78,6 +78,19 @@ def _verify_password(password: str, stored_hash: str) -> bool:
     return verify_auth_password(password, stored)
 
 
+def _confirm_user_password(username: str, password: str) -> bool:
+    from fastapi_modulo.modulos_sipet.web.servicios.auth_service import authenticate_global_superadmin
+
+    normalized_username = str(username or "").strip()
+    provided_password = str(password or "")
+    if not normalized_username or not provided_password:
+        return False
+    if authenticate_global_superadmin(normalized_username, provided_password):
+        return True
+    stored_hash = _get_user_password_hash(normalized_username)
+    return _verify_password(provided_password, stored_hash)
+
+
 def issue_sensitive_action_token(
     *,
     username: str,
@@ -88,8 +101,7 @@ def issue_sensitive_action_token(
     normalized_action = str(action or "").strip()
     if normalized_action not in SUPPORTED_SENSITIVE_ACTIONS:
         raise HTTPException(status_code=400, detail="Acción sensible no soportada.")
-    stored_hash = _get_user_password_hash(username)
-    if not _verify_password(password, stored_hash):
+    if not _confirm_user_password(username, password):
         raise HTTPException(status_code=401, detail="Confirmación de contraseña inválida.")
     expires_at = datetime.now(timezone.utc) + timedelta(seconds=_token_ttl_seconds())
     payload = {

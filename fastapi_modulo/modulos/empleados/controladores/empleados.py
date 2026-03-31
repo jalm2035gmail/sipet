@@ -2,6 +2,7 @@ import os
 import uuid
 import json
 import re
+import hashlib
 import traceback
 from pathlib import Path
 from typing import Dict, Any, List, Optional
@@ -11,6 +12,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import text
 from fastapi_modulo.core import db as core_db
+from fastapi_modulo.core.module_registry import get_active_app_access_names
 from fastapi_modulo.modulos.personalizacion.controladores.roles import ensure_default_roles
 from fastapi_modulo.modulos_sipet.modulo_base.runtime_app import POAActivity
 from fastapi_modulo.modulos_sipet.web.controladores.backend_shell import render_backend_page
@@ -190,6 +192,19 @@ def _normalize_poa_access_level(value: Any) -> str:
     return "todas_tareas" if raw == "todas_tareas" else "mis_tareas"
 
 
+def _resolve_access_app_options(request: Request | None = None) -> List[str]:
+    tenant_key = ""
+    if request is not None:
+        tenant_key = str(getattr(request.state, "tenant_key", "") or "").strip()
+    installed = [
+        app_name for app_name in get_active_app_access_names(tenant_key=tenant_key or None)
+        if app_name in ACCESS_APP_OPTIONS
+    ]
+    if installed:
+        return installed
+    return list(ACCESS_APP_OPTIONS)
+
+
 def _normalize_strategy_submenu_access_levels(raw_levels: Any) -> Dict[str, Dict[str, bool]]:
     normalized: Dict[str, Dict[str, bool]] = {
         submenu_name: {level_key: False for level_key in ACCESS_LEVEL_KEYS}
@@ -241,9 +256,12 @@ def _normalize_conversation_access(raw_access: Any) -> Dict[str, Any]:
 def _apply_conversation_module_access(
     app_access_levels: Dict[str, Dict[str, bool]],
     conversation_access: Dict[str, Any],
+    allowed_app_options: Optional[List[str]] = None,
 ) -> Dict[str, Dict[str, bool]]:
-    normalized = _normalize_app_access_levels(app_access_levels, [])
+    normalized = _normalize_app_access_levels(app_access_levels, [], allowed_app_options=allowed_app_options)
     role = str((conversation_access or {}).get("role") or "").strip().lower()
+    if "Conversaciones" not in normalized:
+        return normalized
     normalized["Conversaciones"] = {key: False for key in ACCESS_LEVEL_KEYS}
     if role == "administrador":
         normalized["Conversaciones"]["full_access"] = True
@@ -396,13 +414,18 @@ def _build_colaborador_kpi_maps(db) -> Dict[str, List[Dict[str, Any]]]:
     return participant_map
 
 
-def _normalize_app_access_levels(raw_levels: Any, fallback_app_access: Any = None) -> Dict[str, Dict[str, bool]]:
+def _normalize_app_access_levels(
+    raw_levels: Any,
+    fallback_app_access: Any = None,
+    allowed_app_options: Optional[List[str]] = None,
+) -> Dict[str, Dict[str, bool]]:
+    allowed_options = list(allowed_app_options or ACCESS_APP_OPTIONS)
     normalized: Dict[str, Dict[str, bool]] = {
         app_name: {level_key: False for level_key in ACCESS_LEVEL_KEYS}
-        for app_name in ACCESS_APP_OPTIONS
+        for app_name in allowed_options
     }
     if isinstance(raw_levels, dict):
-        for app_name in ACCESS_APP_OPTIONS:
+        for app_name in allowed_options:
             raw_entry = raw_levels.get(app_name)
             if raw_entry is None:
                 for legacy_name, current_name in LEGACY_ACCESS_APP_ALIASES.items():
@@ -426,10 +449,10 @@ def _normalize_app_access_levels(raw_levels: Any, fallback_app_access: Any = Non
     fallback_values: List[str] = []
     if isinstance(fallback_app_access, list):
         fallback_values = [_normalize_access_app_name(item) for item in fallback_app_access]
-        fallback_values = [item for item in fallback_values if item in ACCESS_APP_OPTIONS]
+        fallback_values = [item for item in fallback_values if item in allowed_options]
     elif isinstance(fallback_app_access, str):
         normalized_name = _normalize_access_app_name(fallback_app_access)
-        if normalized_name in ACCESS_APP_OPTIONS:
+        if normalized_name in allowed_options:
             fallback_values = [normalized_name]
     for app_name in fallback_values:
         if not any(normalized[app_name].values()):
@@ -444,24 +467,29 @@ def _normalize_access_app_name(value: Any) -> str:
     return LEGACY_ACCESS_APP_ALIASES.get(raw, raw)
 
 
-def _derive_visible_app_access(app_access_levels: Dict[str, Dict[str, bool]]) -> List[str]:
+def _derive_visible_app_access(
+    app_access_levels: Dict[str, Dict[str, bool]],
+    allowed_app_options: Optional[List[str]] = None,
+) -> List[str]:
+    allowed_options = list(allowed_app_options or ACCESS_APP_OPTIONS)
     visible: List[str] = []
-    for app_name in ACCESS_APP_OPTIONS:
+    for app_name in allowed_options:
         levels = app_access_levels.get(app_name) or {}
         if any(bool(levels.get(level_key, False)) for level_key in ACCESS_LEVEL_KEYS):
             visible.append(app_name)
     return visible
 
 
-def _serialize_access_settings(meta_entry: Any) -> Dict[str, Any]:
+def _serialize_access_settings(meta_entry: Any, allowed_app_options: Optional[List[str]] = None) -> Dict[str, Any]:
     entry = meta_entry if isinstance(meta_entry, dict) else {}
     app_access_levels = _normalize_app_access_levels(
         entry.get("app_access_levels"),
         entry.get("app_access", []),
+        allowed_app_options=allowed_app_options,
     )
     return {
         "app_access_levels": app_access_levels,
-        "app_access": _derive_visible_app_access(app_access_levels),
+        "app_access": _derive_visible_app_access(app_access_levels, allowed_app_options=allowed_app_options),
         "strategy_submenu_access_levels": _normalize_strategy_submenu_access_levels(
             entry.get("strategy_submenu_access_levels"),
         ),
@@ -531,6 +559,7 @@ EMPLEADOS_PLACEHOLDER_TEMPLATE_PATH = os.path.join(
 def _build_colaboradores_payload(request: Request) -> Dict[str, Any]:
     db = _db_session()
     try:
+        installed_app_options = _resolve_access_app_options(request)
         meta = _load_colab_meta()
         rows = db.query(Usuario).all()
         names_by_id = {u.id: (u.full_name or "").strip() for u in rows}
@@ -548,7 +577,7 @@ def _build_colaboradores_payload(request: Request) -> Dict[str, Any]:
                 conversation_access = _normalize_conversation_access(meta_entry.get("conversation_access"))
                 data.append(
                     {
-                        **_serialize_access_settings(meta_entry),
+                        **_serialize_access_settings(meta_entry, allowed_app_options=installed_app_options),
                         "id": u.id,
                         "nombre": u.full_name or "",
                         "full_name": u.full_name or "",
@@ -614,6 +643,7 @@ def _build_colaboradores_payload(request: Request) -> Dict[str, Any]:
             "can_view_all": can_view_all,
             "can_manage_access": can_view_all,
             "assignable_roles": assignable_roles,
+            "installed_app_options": installed_app_options,
         }
     finally:
         db.close()
@@ -763,8 +793,13 @@ def api_guardar_colaborador(request: Request, data: dict = Body(...)):
     poa_access_level = _normalize_poa_access_level(data.get("poa_access_level"))
     raw_app_access = data.get("app_access")
     raw_app_access_levels = data.get("app_access_levels")
-    app_access_levels = _normalize_app_access_levels(raw_app_access_levels, raw_app_access)
-    app_access = _derive_visible_app_access(app_access_levels)
+    installed_app_options = _resolve_access_app_options(request)
+    app_access_levels = _normalize_app_access_levels(
+        raw_app_access_levels,
+        raw_app_access,
+        allowed_app_options=installed_app_options,
+    )
+    app_access = _derive_visible_app_access(app_access_levels, allowed_app_options=installed_app_options)
     strategy_submenu_access_levels = _normalize_strategy_submenu_access_levels(
         data.get("strategy_submenu_access_levels"),
     )
@@ -861,11 +896,6 @@ def api_guardar_colaborador(request: Request, data: dict = Body(...)):
     identidad_mision: str = str(data.get("identidad_mision") or "").strip()
     identidad_vision: str = str(data.get("identidad_vision") or "").strip()
 
-    if not full_name or (not usuario_login and incoming_id is None):
-        return JSONResponse(
-            {"success": False, "error": "Nombre y usuario son obligatorios"},
-            status_code=400,
-        )
     if incoming_id is None and not password:
         return JSONResponse(
             {"success": False, "error": "La contraseña es obligatoria para crear colaborador"},
@@ -952,6 +982,17 @@ def api_guardar_colaborador(request: Request, data: dict = Body(...)):
                 {"success": False, "error": "Nombre y usuario son obligatorios"},
                 status_code=400,
             )
+        if password:
+            password_fingerprint = hashlib.sha256(password.encode("utf-8")).hexdigest()[:16]
+            print(
+                "[api_guardar_colaborador.password] "
+                f"incoming_id={incoming_id or 0} "
+                f"viewer={viewer_username or '-'} "
+                f"target={usuario_login or '-'} "
+                f"password_len={len(password)} "
+                f"password_sha256_prefix={password_fingerprint}",
+                flush=True,
+            )
         user_hash = sensitive_lookup_hash(usuario_login)
         email_hash = sensitive_lookup_hash(correo) if correo else None
         puestos_catalog = _load_puestos_laborales_catalog()
@@ -1035,6 +1076,7 @@ def api_guardar_colaborador(request: Request, data: dict = Body(...)):
             effective_app_access_levels = _normalize_app_access_levels(
                 MAIN_meta_entry.get("app_access_levels"),
                 MAIN_meta_entry.get("app_access"),
+                allowed_app_options=installed_app_options,
             )
             if can_admin_manage and ("app_access" in data or "app_access_levels" in data):
                 effective_app_access_levels = app_access_levels
@@ -1042,8 +1084,12 @@ def api_guardar_colaborador(request: Request, data: dict = Body(...)):
             effective_app_access_levels = _apply_conversation_module_access(
                 effective_app_access_levels,
                 effective_conversation_access,
+                allowed_app_options=installed_app_options,
             )
-            effective_app_access = _derive_visible_app_access(effective_app_access_levels)
+            effective_app_access = _derive_visible_app_access(
+                effective_app_access_levels,
+                allowed_app_options=installed_app_options,
+            )
             meta[str(existing.id)] = {
                 "colaborador": colaborador if can_admin_manage else bool(MAIN_meta_entry.get("colaborador", False)),
                 "menu_blocks": menu_blocks if can_admin_manage else MAIN_meta_entry.get("menu_blocks", []),
@@ -1141,8 +1187,15 @@ def api_guardar_colaborador(request: Request, data: dict = Body(...)):
         db.commit()
         db.refresh(nuevo)
         meta = _load_colab_meta()
-        effective_app_access_levels = _apply_conversation_module_access(app_access_levels, conversation_access)
-        effective_app_access = _derive_visible_app_access(effective_app_access_levels)
+        effective_app_access_levels = _apply_conversation_module_access(
+            app_access_levels,
+            conversation_access,
+            allowed_app_options=installed_app_options,
+        )
+        effective_app_access = _derive_visible_app_access(
+            effective_app_access_levels,
+            allowed_app_options=installed_app_options,
+        )
         meta[str(nuevo.id)] = {
             "colaborador": colaborador,
             "menu_blocks": menu_blocks,
@@ -1224,6 +1277,74 @@ def api_guardar_colaborador(request: Request, data: dict = Body(...)):
             },
             status_code=409,
         )
+    except Exception as exc:
+        db.rollback()
+        return JSONResponse(
+            {
+                "success": False,
+                "error": f"No se pudo guardar: {exc}",
+            },
+            status_code=500,
+        )
+    finally:
+        db.close()
+
+
+@router.post("/api/colaboradores/{user_id}/password", response_class=JSONResponse)
+def api_actualizar_contrasena_colaborador(request: Request, user_id: int, data: dict = Body(...)):
+    viewer_role = normalize_role_name((getattr(request.state, "user_role", None) or "").strip().lower())
+    viewer_username = (getattr(request.state, "user_name", None) or "").strip().lower()
+    password = str(data.get("contrasena") or "")
+
+    if len(password) < 8:
+        return JSONResponse(
+            {"success": False, "error": "La contraseña debe tener al menos 8 caracteres"},
+            status_code=400,
+        )
+
+    db = _db_session()
+    try:
+        user = db.query(Usuario).filter(Usuario.id == user_id).first()
+        if not user:
+            return JSONResponse({"success": False, "error": "Usuario no encontrado"}, status_code=404)
+
+        can_admin_manage = _is_admin_role(viewer_role)
+        username_value = str(decrypt_sensitive(getattr(user, "usuario", "") or "")).strip().lower()
+        is_self_service_update = bool(viewer_username and username_value == viewer_username)
+        if not can_admin_manage and not is_self_service_update:
+            return JSONResponse(
+                {"success": False, "error": "No tiene permisos para modificar este colaborador"},
+                status_code=403,
+            )
+
+        password_fingerprint = hashlib.sha256(password.encode("utf-8")).hexdigest()[:16] if password else ""
+        print(
+            "[api_actualizar_contrasena_colaborador] "
+            f"user_id={user_id} "
+            f"viewer={viewer_username or '-'} "
+            f"target={username_value or '-'} "
+            f"password_len={len(password)} "
+            f"password_sha256_prefix={password_fingerprint}",
+            flush=True,
+        )
+
+        user.contrasena = hash_password(password)
+        user.is_active = True
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        return {
+            "success": True,
+            "message": "Contraseña actualizada correctamente",
+            "data": {
+                "id": user.id,
+                "usuario": decrypt_sensitive(user.usuario) or "",
+                "correo": decrypt_sensitive(user.correo) or "",
+                "totp_enabled": bool(getattr(user, "totp_enabled", False)),
+                "totp_secret_configured": bool(str(getattr(user, "totp_secret", "") or "").strip()),
+                "estado": "Activo" if bool(getattr(user, "is_active", True)) else "Inactivo",
+            },
+        }
     except Exception as exc:
         db.rollback()
         return JSONResponse(

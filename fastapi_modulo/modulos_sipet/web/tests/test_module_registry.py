@@ -182,7 +182,7 @@ def test_refresh_module_registry_skips_manifest_already_registered(monkeypatch, 
         description="Configuración institucional.",
         route="/identidad-institucional",
         icon="fa-solid fa-building",
-        manifest_file="fastapi_modulo/modulos/identidad_institucional/__manifest__.py",
+        manifest_file="fastapi_modulo/modulos_sipet/identidad_institucional/__manifest__.py",
     )
     monkeypatch.setattr(module_registry, "MODULE_DEFINITIONS", [existing])
     monkeypatch.setattr(module_registry, "MODULES_BY_KEY", {"empresa": existing})
@@ -216,3 +216,29 @@ def test_is_module_enabled_returns_true_when_router_module_is_enabled_for_any_te
     monkeypatch.setattr(module_registry, "_has_enabled_tenant_installation", lambda module_key: module_key == "encuestas")
 
     assert module_registry.is_module_enabled("encuestas") is True
+
+
+def test_read_installed_app_keys_for_tenant_returns_none_when_tenant_has_no_rows(monkeypatch) -> None:
+    class _Query:
+        def __init__(self, rows):
+            self._rows = rows
+
+        def filter(self, *args, **kwargs):
+            return self
+
+        def first(self):
+            return self._rows[0] if self._rows else None
+
+        def all(self):
+            return self._rows
+
+    class _Session:
+        def query(self, *args, **kwargs):
+            return _Query([])
+
+        def close(self):
+            return None
+
+    monkeypatch.setattr(module_registry, "get_admin_session_factory", lambda: (lambda: _Session()))
+
+    assert module_registry._read_installed_app_keys_for_tenant("oaxaca") is None

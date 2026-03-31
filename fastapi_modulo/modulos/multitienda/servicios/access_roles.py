@@ -16,13 +16,6 @@ MULTITIENDA_ROLE_DEFINITIONS = (
                 "user_only": False,
                 "special_permissions": False,
             },
-            "Reportes": {
-                "full_access": True,
-                "read_only": False,
-                "department_only": False,
-                "user_only": False,
-                "special_permissions": False,
-            },
         },
     },
     {

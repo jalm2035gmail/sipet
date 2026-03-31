@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}Entrar · {{ app_name }}{% endblock %}
+
+{% block content %}
+<section class="form-shell">
+  <form id="login-form" class="card form-card">
+    <h1>Iniciar sesión</h1>
+    <p class="muted">Usa email o username.</p>
+
+    <label>
+      Usuario
+      <input name="username" type="text" required autocomplete="username" />
+    </label>
+    <label>
+      Contraseña
+      <input name="password" type="password" required autocomplete="current-password" />
+    </label>
+
+    <button class="btn" type="submit">Entrar</button>
+    <p class="muted">¿No tienes cuenta? <a href="/register">Regístrate</a></p>
+  </form>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.getElementById('login-form')?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    try {
+      const res = await fetch('/api/v1/auth/login/json', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: form.get('username'),
+          password: form.get('password')
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.detail || 'No se pudo iniciar sesión');
+      }
+      window.Auth.set(data.access_token, data.refresh_token);
+      window.toast('Sesión iniciada', 'success');
+      window.location.href = '/';
+    } catch (error) {
+      window.toast(error.message, 'error');
+    }
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,98 @@
+<div id="enc-presenter-root" class="enc-presenter-root">
+  <script>
+    window.__PRESENTER_BOOTSTRAP = __PRESENTER_BOOTSTRAP__;
+  </script>
+
+  <!-- Header bar -->
+  <div class="enc-presenter-header">
+    <div class="enc-presenter-header-left">
+      <span class="enc-presenter-title" id="enc-pres-title">Cargando...</span>
+      <span class="enc-presenter-badge" id="enc-pres-status-badge">Inactiva</span>
+    </div>
+    <div class="enc-presenter-header-right">
+      <button id="enc-pres-btn-start" class="enc-button enc-button-primary" type="button">
+        Iniciar sesión en vivo
+      </button>
+      <button id="enc-pres-btn-stop" class="enc-button enc-button-danger" type="button" hidden>
+        Finalizar sesión
+      </button>
+      <button id="enc-pres-btn-copy-token" class="enc-button enc-button-ghost" type="button" hidden title="Copiar token de presentador">
+        Copiar token
+      </button>
+    </div>
+  </div>
+
+  <!-- Main layout -->
+  <div class="enc-presenter-body">
+
+    <!-- Left: question list -->
+    <aside class="enc-presenter-sidebar">
+      <p class="enc-sidebar-label" id="enc-pres-sidebar-label">Láminas</p>
+      <div class="enc-presenter-access enc-card">
+        <label class="enc-field">
+          <span>Acceso de participantes</span>
+          <select id="enc-pres-access-mode" class="enc-input enc-select">
+            <option value="public_link">Enlace compartible</option>
+            <option value="internal">Requiere autenticación</option>
+          </select>
+        </label>
+        <p class="enc-question-meta" id="enc-pres-access-help">Comparte el vínculo público de la encuesta para una reunión abierta.</p>
+      </div>
+      <ol id="enc-pres-question-list" class="enc-pres-question-list"></ol>
+    </aside>
+
+    <!-- Center: active question + controls -->
+    <section class="enc-presenter-center">
+      <div id="enc-pres-idle-message" class="enc-pres-state-msg">
+        <div class="enc-pres-state-icon">📋</div>
+        <p>Inicia la sesión en vivo para comenzar a presentar preguntas al público.</p>
+        <button id="enc-pres-btn-start-center" class="enc-button enc-button-primary" type="button">
+          Iniciar sesión en vivo
+        </button>
+      </div>
+
+      <div id="enc-pres-active-panel" hidden>
+        <div class="enc-pres-current-question enc-card">
+          <div class="enc-pres-question-meta">
+            <span id="enc-pres-q-index" class="enc-pres-q-counter"></span>
+            <span id="enc-pres-q-type" class="enc-pres-q-type-badge"></span>
+          </div>
+          <h2 id="enc-pres-q-titulo" class="enc-pres-q-titulo"></h2>
+          <p id="enc-pres-q-desc" class="enc-pres-q-desc"></p>
+        </div>
+
+        <div id="enc-pres-page-stage" class="enc-pres-page-stage enc-card" hidden></div>
+
+        <div class="enc-pres-nav-buttons">
+          <button id="enc-pres-btn-prev" class="enc-button enc-button-secondary" type="button">← Anterior</button>
+          <button id="enc-pres-btn-toggle-results" class="enc-button enc-button-ghost" type="button">Ocultar resultados</button>
+          <button id="enc-pres-btn-next" class="enc-button enc-button-primary" type="button">Siguiente →</button>
+        </div>
+      </div>
+
+      <div id="enc-pres-ended-message" class="enc-pres-state-msg" hidden>
+        <div class="enc-pres-state-icon">✅</div>
+        <p>La sesión en vivo ha finalizado.</p>
+      </div>
+    </section>
+
+    <!-- Right: live results chart -->
+    <aside class="enc-presenter-results">
+      <div class="enc-pres-results-head">
+        <p class="enc-sidebar-label">Respuestas en vivo</p>
+        <div class="enc-pres-results-controls">
+          <button id="enc-pres-btn-results-chart" class="enc-mini-btn is-primary" type="button">Gráfica</button>
+          <button id="enc-pres-btn-results-data" class="enc-mini-btn" type="button">Datos</button>
+          <button id="enc-pres-btn-results-fullscreen" class="enc-mini-btn" type="button">Pantalla completa</button>
+        </div>
+      </div>
+      <div id="enc-pres-results-panel" class="enc-pres-results-panel">
+        <p class="enc-pres-results-waiting enc-muted">Esperando respuestas...</p>
+      </div>
+    </aside>
+
+  </div>
+
+  <!-- Polling interval: 2.5 s while running -->
+  <div id="enc-pres-data" data-poll-interval="2500"></div>
+</div>
