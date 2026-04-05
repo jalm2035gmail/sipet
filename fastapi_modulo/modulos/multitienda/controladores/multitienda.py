@@ -772,7 +772,7 @@ def _public_store_exists(request: Request, store_slug: str) -> bool:
                 SELECT id
                 FROM vendors
                 WHERE LOWER(store_slug) = :slug
-                  AND is_active = 1
+                  AND is_active = TRUE
                 LIMIT 1
                 """
             ),
@@ -793,9 +793,9 @@ def _public_store_product_exists(request: Request, store_slug: str, product_slug
                 FROM products p
                 JOIN vendors v ON v.id = p.vendor_id
                 WHERE LOWER(v.store_slug) = :store_slug
-                  AND v.is_active = 1
+                  AND v.is_active = TRUE
                   AND LOWER(p.slug) = :product_slug
-                  AND p.is_active = 1
+                  AND p.is_active = TRUE
                   AND LOWER(COALESCE(p.status, '')) = 'published'
                 LIMIT 1
                 """
@@ -819,7 +819,7 @@ def _load_public_store_info(request: Request, store_slug: str) -> dict:
                 SELECT id, store_name, store_slug, logo, banner, store_theme
                 FROM vendors
                 WHERE LOWER(store_slug) = :slug
-                  AND is_active = 1
+                  AND is_active = TRUE
                 LIMIT 1
                 """
             ),
@@ -1312,7 +1312,7 @@ def _sync_primary_product_image(db, product_id: int, product_name: str, primary_
             SELECT id, image, alt_text
             FROM product_images
             WHERE product_id = :product_id
-              AND is_primary = 1
+              AND is_primary = TRUE
             ORDER BY id ASC
             LIMIT 1
             """

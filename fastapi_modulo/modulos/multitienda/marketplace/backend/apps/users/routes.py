@@ -375,7 +375,7 @@ def mark_notification_read(
         text(
             """
             UPDATE user_notifications
-            SET is_read = 1
+            SET is_read = TRUE
             WHERE id = :notification_id AND user_id = :user_id
             """
         ),

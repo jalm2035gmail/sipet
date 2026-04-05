@@ -39,15 +39,15 @@ def _load_db_public_catalog(db: Session, store_id: int | None, featured_only: bo
             "  GROUP BY product_id"
             ") pc ON pc.product_id = p.id "
             "LEFT JOIN categories c ON c.id = pc.category_id "
-            "LEFT JOIN product_images pi ON pi.product_id = p.id AND pi.is_primary = 1 "
+            "LEFT JOIN product_images pi ON pi.product_id = p.id AND pi.is_primary = TRUE "
             "LEFT JOIN vendors v ON v.id = p.vendor_id "
-            "WHERE p.status = 'published' AND p.is_active = 1"
+            "WHERE p.status = 'published' AND p.is_active = TRUE"
         )
         if store_id is not None:
             sql += " AND p.vendor_id = :vid"
             db_params["vid"] = store_id
         elif featured_only:
-            sql += " AND v.is_featured = 1"
+            sql += " AND v.is_featured = TRUE"
         sql += " ORDER BY p.id DESC"
         sql_rows = rows(db, sql, db_params)
         use_category = True
@@ -60,15 +60,15 @@ def _load_db_public_catalog(db: Session, store_id: int | None, featured_only: bo
             "v.store_name AS store_name, "
             "v.store_slug AS store_slug "
             "FROM products p "
-            "LEFT JOIN product_images pi ON pi.product_id = p.id AND pi.is_primary = 1 "
+            "LEFT JOIN product_images pi ON pi.product_id = p.id AND pi.is_primary = TRUE "
             "LEFT JOIN vendors v ON v.id = p.vendor_id "
-            "WHERE p.status = 'published' AND p.is_active = 1"
+            "WHERE p.status = 'published' AND p.is_active = TRUE"
         )
         if store_id is not None:
             sql += " AND p.vendor_id = :vid"
             db_params["vid"] = store_id
         elif featured_only:
-            sql += " AND v.is_featured = 1"
+            sql += " AND v.is_featured = TRUE"
         sql += " ORDER BY p.id DESC"
         sql_rows = rows(db, sql, db_params)
         use_category = False
