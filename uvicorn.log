@@ -1,5 +1,5 @@
 [startup] static mount skipped /modulos/activo_fijo/static: directory 'fastapi_modulo/modulos/activo_fijo/static' does not exist
-INFO:     Started server process [95105]
+INFO:     Started server process [6387]
 INFO:     Waiting for application startup.
 [startup] core_schema begin
 [startup] create_all ok
@@ -109,5 +109,6 @@ INFO:     Waiting for application startup.
 [startup] register late routers done
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
-INFO:     127.0.0.1:64593 - "GET /sw.js HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:65158 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:58070 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:58057 - "GET /sw.js HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:58744 - "GET /sw.js HTTP/1.1" 404 Not Found

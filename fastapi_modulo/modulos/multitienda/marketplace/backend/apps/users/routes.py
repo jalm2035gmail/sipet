@@ -3,17 +3,17 @@ from sqlalchemy.orm import Session
 from sqlalchemy import Column, DateTime, Integer, MetaData, String, Table, Text, func, or_, select, text
 from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.users import models, schemas
 from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.vendors.models import VendorStore
-from fastapi_modulo.modulos.multitienda.marketplace.backend.core.db import SessionLocal
+from fastapi_modulo.modulos.multitienda.marketplace.backend.core.db import engine, get_db
 from jose import jwt, JWTError
 from datetime import datetime, timedelta
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm, HTTPAuthorizationCredentials, HTTPBearer
 from typing import Optional
-from threading import Lock
 from types import SimpleNamespace
 import bcrypt
-import os
 
-SECRET_KEY = os.getenv("SECRET_KEY", "supersecret")
+from fastapi_modulo.modulos.multitienda.marketplace.backend.core.settings import get_secret_key
+
+SECRET_KEY = get_secret_key()
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
@@ -32,18 +32,18 @@ _USER_NOTIFICATIONS_TABLE = Table(
     Column("is_read", Integer, nullable=False, server_default=text("0")),
     Column("created_at", DateTime, nullable=False, server_default=func.current_timestamp()),
 )
+_LOGIN_ATTEMPTS_TABLE = Table(
+    "user_login_attempts",
+    _NOTIFICATIONS_METADATA,
+    Column("attempt_key", String(255), primary_key=True),
+    Column("failed_count", Integer, nullable=False, server_default=text("0")),
+    Column("lock_until", DateTime, nullable=True),
+    Column("backoff_seconds", Integer, nullable=False, server_default=text(str(5 * 60))),
+    Column("updated_at", DateTime, nullable=False, server_default=func.current_timestamp()),
+)
 
 MAX_FREE_ATTEMPTS = 3
 INITIAL_LOCK_SECONDS = 5 * 60
-_LOGIN_ATTEMPTS: dict[str, dict] = {}
-_LOGIN_ATTEMPTS_LOCK = Lock()
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 def verify_password(plain_password, hashed_password):
     try:
@@ -51,28 +51,32 @@ def verify_password(plain_password, hashed_password):
             plain_password.encode("utf-8"),
             hashed_password.encode("utf-8"),
         )
-    except Exception:
+    except (AttributeError, TypeError, ValueError):
         return False
 
 def get_password_hash(password):
     return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
 
-def _get_attempt_state(key: str) -> dict:
-    with _LOGIN_ATTEMPTS_LOCK:
-        state = _LOGIN_ATTEMPTS.get(key)
-        if not state:
-            state = {
-                "failed_count": 0,
-                "lock_until": None,
-                "backoff_seconds": INITIAL_LOCK_SECONDS,
-            }
-            _LOGIN_ATTEMPTS[key] = state
-        return state
+def _get_attempt_state(db: Session, key: str) -> dict:
+    row = db.execute(
+        select(_LOGIN_ATTEMPTS_TABLE).where(_LOGIN_ATTEMPTS_TABLE.c.attempt_key == key)
+    ).mappings().first()
+    if row:
+        return dict(row)
+    state = {
+        "attempt_key": key,
+        "failed_count": 0,
+        "lock_until": None,
+        "backoff_seconds": INITIAL_LOCK_SECONDS,
+    }
+    db.execute(_LOGIN_ATTEMPTS_TABLE.insert().values(**state))
+    db.commit()
+    return state
 
 
-def _is_locked(key: str) -> int:
-    state = _get_attempt_state(key)
+def _is_locked(db: Session, key: str) -> int:
+    state = _get_attempt_state(db, key)
     lock_until = state.get("lock_until")
     if not lock_until:
         return 0
@@ -80,28 +84,38 @@ def _is_locked(key: str) -> int:
     return remaining if remaining > 0 else 0
 
 
-def _register_failed_attempt(key: str) -> int:
-    with _LOGIN_ATTEMPTS_LOCK:
-        state = _LOGIN_ATTEMPTS.get(key) or {
-            "failed_count": 0,
-            "lock_until": None,
-            "backoff_seconds": INITIAL_LOCK_SECONDS,
-        }
-        state["failed_count"] += 1
-        lock_seconds = 0
-        if state["failed_count"] > MAX_FREE_ATTEMPTS:
-            lock_seconds = int(state.get("backoff_seconds", INITIAL_LOCK_SECONDS))
-            state["lock_until"] = datetime.utcnow() + timedelta(seconds=lock_seconds)
-            state["backoff_seconds"] = lock_seconds * 2
-        _LOGIN_ATTEMPTS[key] = state
-        return lock_seconds
+def _register_failed_attempt(db: Session, key: str) -> int:
+    state = _get_attempt_state(db, key)
+    failed_count = int(state.get("failed_count") or 0) + 1
+    lock_seconds = 0
+    lock_until = state.get("lock_until")
+    backoff_seconds = int(state.get("backoff_seconds") or INITIAL_LOCK_SECONDS)
+    if failed_count > MAX_FREE_ATTEMPTS:
+        lock_seconds = backoff_seconds
+        lock_until = datetime.utcnow() + timedelta(seconds=lock_seconds)
+        backoff_seconds = lock_seconds * 2
+    db.execute(
+        _LOGIN_ATTEMPTS_TABLE.update()
+        .where(_LOGIN_ATTEMPTS_TABLE.c.attempt_key == key)
+        .values(
+            failed_count=failed_count,
+            lock_until=lock_until,
+            backoff_seconds=backoff_seconds,
+            updated_at=datetime.utcnow(),
+        )
+    )
+    db.commit()
+    return lock_seconds
 
 
-def _reset_attempts(*keys: str) -> None:
-    with _LOGIN_ATTEMPTS_LOCK:
-        for key in keys:
-            if key in _LOGIN_ATTEMPTS:
-                del _LOGIN_ATTEMPTS[key]
+def _reset_attempts(db: Session, *keys: str) -> None:
+    valid_keys = [key for key in keys if key]
+    if not valid_keys:
+        return
+    db.execute(
+        _LOGIN_ATTEMPTS_TABLE.delete().where(_LOGIN_ATTEMPTS_TABLE.c.attempt_key.in_(valid_keys))
+    )
+    db.commit()
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode = data.copy()
@@ -133,12 +147,13 @@ def _as_user_namespace(user_row) -> SimpleNamespace:
     )
 
 
-def _ensure_notifications_table(db: Session) -> None:
-    bind = db.get_bind()
-    if bind is None:
-        raise RuntimeError("No hay engine asociado a la sesión actual.")
-    _USER_NOTIFICATIONS_TABLE.create(bind=bind, checkfirst=True)
-    db.commit()
+def bootstrap_user_support_tables(bind=None) -> None:
+    bind = bind or engine
+    _NOTIFICATIONS_METADATA.create_all(
+        bind=bind,
+        tables=[_USER_NOTIFICATIONS_TABLE, _LOGIN_ATTEMPTS_TABLE],
+        checkfirst=True,
+    )
 
 
 def _coerce_limit(value) -> int:
@@ -180,6 +195,11 @@ def _enforce_store_user_limit(db: Session, user: schemas.UserCreate) -> None:
 
 @router.post("/register", response_model=schemas.UserRead)
 def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
+    if user.user_type != schemas.UserType.customer:
+        raise HTTPException(
+            status_code=403,
+            detail="Solo se permite el registro publico de usuarios customer.",
+        )
     db_user = db.query(models.User).filter((models.User.username == user.username) | (models.User.email == user.email)).first()
     if db_user:
         raise HTTPException(status_code=400, detail="Username or email already registered")
@@ -205,7 +225,7 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     identifier_key = f"id:{identifier.lower()}"
     user_key = f"user:{user_row['id']}" if user_row else identifier_key
 
-    remaining_lock_seconds = _is_locked(user_key)
+    remaining_lock_seconds = _is_locked(db, user_key)
     if remaining_lock_seconds > 0:
         wait_minutes = max(1, int((remaining_lock_seconds + 59) / 60))
         raise HTTPException(
@@ -214,7 +234,7 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
         )
 
     if not user_row or not verify_password(form_data.password, user_row["hashed_password"]):
-        applied_lock_seconds = _register_failed_attempt(user_key)
+        applied_lock_seconds = _register_failed_attempt(db, user_key)
         if applied_lock_seconds > 0:
             wait_minutes = max(1, int((applied_lock_seconds + 59) / 60))
             raise HTTPException(
@@ -225,6 +245,7 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
 
     if user_row:
         _reset_attempts(
+            db,
             user_key,
             f"id:{user_row['username'].lower()}",
             f"id:{user_row['email'].lower()}",
@@ -279,7 +300,10 @@ def require_any_role(*required_roles: str):
 
 
 @router.get("/system-users")
-def list_system_users(db: Session = Depends(get_db)):
+def list_system_users(
+    db: Session = Depends(get_db),
+    _current_user: models.User = Depends(require_role("superadmin")),
+):
     rows = db.execute(
         select(
             models.User.__table__.c.id,
@@ -308,7 +332,6 @@ def notifications_unread_count(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    _ensure_notifications_table(db)
     unread = db.execute(
         text(
             """
@@ -327,7 +350,6 @@ def list_notifications(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    _ensure_notifications_table(db)
     rows = db.execute(
         text(
             """
@@ -349,7 +371,6 @@ def mark_notification_read(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    _ensure_notifications_table(db)
     result = db.execute(
         text(
             """
@@ -372,7 +393,6 @@ def create_notification(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    _ensure_notifications_table(db)
     title = str(payload.get("title") or "").strip()
     message = str(payload.get("message") or "").strip()
     if not title or not message:

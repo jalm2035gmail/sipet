@@ -5,25 +5,27 @@ import json
 from sqlalchemy.orm import Session, joinedload
 
 from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.employees.models import StoreEmployee
+from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.service_utils import (
+    delete_entity,
+    get_by_id as get_record_by_id,
+    get_by_vendor as get_vendor_record,
+    list_by_vendor as list_vendor_records,
+    update_entity,
+)
 from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.users.models import User
 from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.users.routes import get_password_hash
 
 
 def list_by_vendor(db: Session, vendor_id: int) -> list[StoreEmployee]:
-    return (
-        db.query(StoreEmployee)
-        .filter_by(vendor_id=vendor_id)
-        .order_by(StoreEmployee.id)
-        .all()
-    )
+    return list_vendor_records(db, StoreEmployee, vendor_id, order_by=(StoreEmployee.id,))
 
 
 def get_by_id(db: Session, employee_id: int) -> StoreEmployee | None:
-    return db.query(StoreEmployee).filter_by(id=employee_id).first()
+    return get_record_by_id(db, StoreEmployee, employee_id)
 
 
 def get_by_vendor(db: Session, vendor_id: int, employee_id: int) -> StoreEmployee | None:
-    return db.query(StoreEmployee).filter_by(id=employee_id, vendor_id=vendor_id).first()
+    return get_vendor_record(db, StoreEmployee, vendor_id, employee_id)
 
 
 def get_by_vendor_user(db: Session, vendor_id: int, user_id: int) -> StoreEmployee | None:
@@ -86,16 +88,11 @@ def update_employee(
         updates["job_title"] = job_title
         updates["phone"] = phone
         updates["department"] = department
-    for field, value in updates.items():
-        setattr(employee, field, value)
-    db.flush()
-    db.refresh(employee)
-    return employee
+    return update_entity(db, employee, **updates)
 
 
 def delete_employee(db: Session, employee: StoreEmployee) -> None:
-    db.delete(employee)
-    db.flush()
+    delete_entity(db, employee)
 
 
 def set_password_for_vendor_employee(
@@ -119,7 +116,7 @@ def _decode_position_meta(raw_value) -> dict:
     try:
         decoded = json.loads(str(raw_value or ""))
         return decoded if isinstance(decoded, dict) else {}
-    except Exception:
+    except json.JSONDecodeError:
         return {"p": str(raw_value or "")}
 
 

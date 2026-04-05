@@ -6,14 +6,22 @@ from sqlalchemy.orm import Session
 
 from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.reservations.models import StoreReservation
 from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.reservations.schemas import ReservationStatus
+from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.service_utils import (
+    create_for_vendor as create_vendor_record,
+    delete_entity,
+    get_by_id as get_record_by_id,
+    get_by_vendor as get_vendor_record,
+    list_by_vendor as list_vendor_records,
+    update_entity,
+)
 
 
 def list_by_vendor(db: Session, vendor_id: int) -> list[StoreReservation]:
-    return (
-        db.query(StoreReservation)
-        .filter_by(vendor_id=vendor_id)
-        .order_by(StoreReservation.reservation_date.desc())
-        .all()
+    return list_vendor_records(
+        db,
+        StoreReservation,
+        vendor_id,
+        order_by=(StoreReservation.reservation_date.desc(),),
     )
 
 
@@ -22,11 +30,11 @@ def list_by_customer(db: Session, user_id: int) -> list[StoreReservation]:
 
 
 def get_by_id(db: Session, reservation_id: int) -> StoreReservation | None:
-    return db.query(StoreReservation).filter_by(id=reservation_id).first()
+    return get_record_by_id(db, StoreReservation, reservation_id)
 
 
 def get_by_vendor(db: Session, vendor_id: int, reservation_id: int) -> StoreReservation | None:
-    return db.query(StoreReservation).filter_by(id=reservation_id, vendor_id=vendor_id).first()
+    return get_vendor_record(db, StoreReservation, vendor_id, reservation_id)
 
 
 def create_for_vendor(
@@ -40,8 +48,10 @@ def create_for_vendor(
     duration_minutes: int = 60,
     notes: str = "",
 ) -> StoreReservation:
-    reservation = StoreReservation(
-        vendor_id=vendor_id,
+    reservation = create_vendor_record(
+        db,
+        StoreReservation,
+        vendor_id,
         customer_user_id=customer_user_id,
         product_id=product_id,
         reservation_date=reservation_date,
@@ -49,15 +59,11 @@ def create_for_vendor(
         duration_minutes=duration_minutes,
         notes=notes,
     )
-    db.add(reservation)
-    db.flush()
-    db.refresh(reservation)
     return reservation
 
 
 def update_reservation(db: Session, reservation: StoreReservation, **updates) -> StoreReservation:
-    for field, value in updates.items():
-        setattr(reservation, field, value)
+    update_entity(db, reservation, **updates)
     status = updates.get("status")
     if status == ReservationStatus.confirmed:
         reservation.confirmed_at = datetime.utcnow()
@@ -69,5 +75,4 @@ def update_reservation(db: Session, reservation: StoreReservation, **updates) ->
 
 
 def delete_reservation(db: Session, reservation: StoreReservation) -> None:
-    db.delete(reservation)
-    db.flush()
+    delete_entity(db, reservation)

@@ -4,6 +4,7 @@ from contextlib import contextmanager
 from functools import lru_cache
 from html import escape
 from pathlib import Path
+import hashlib
 import json
 import logging
 import re
@@ -12,8 +13,7 @@ _log = logging.getLogger("multitienda.config")
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from fastapi.responses import RedirectResponse
-from fastapi.responses import JSONResponse
-from sqlalchemy import text
+from sqlalchemy import bindparam, text
 
 from fastapi_modulo.core import db as core_db
 from fastapi_modulo.core.module_registry import is_module_enabled, list_modules_payload
@@ -21,12 +21,17 @@ from fastapi_modulo.modulos.multitienda.__manifest__ import MANIFEST
 from fastapi_modulo.modulos.multitienda.controladores.marketplace_backend import (
     build_marketplace_backend_app,
     SessionLocal,
+    bootstrap_business_types_schema,
     create_business_type,
     list_business_types,
     save_store_settings,
 )
 from fastapi_modulo.modulos.multitienda.controladores.routers.admin_api import create_admin_api_router
-from fastapi_modulo.modulos.multitienda.controladores.routers.public import create_public_router
+from fastapi_modulo.modulos.multitienda.controladores.routers.multitienda_employees import create_employees_router
+from fastapi_modulo.modulos.multitienda.controladores.routers.multitienda_pages import create_pages_router
+from fastapi_modulo.modulos.multitienda.controladores.routers.multitienda_products import create_products_router
+from fastapi_modulo.modulos.multitienda.controladores.routers.multitienda_public import create_public_router
+from fastapi_modulo.modulos.multitienda.controladores.routers.multitienda_store_admin import create_store_admin_router
 from fastapi_modulo.modulos.multitienda.controladores.services.scope_service import (
     coerce_theme_bool as _coerce_theme_bool,
     current_user_record as _current_user_record_impl,
@@ -45,7 +50,9 @@ from fastapi_modulo.modulos.multitienda.controladores.services.section_service i
 )
 from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.analytics import service as analytics_service
 from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.employees import service as employee_service
+from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.layaways import service as layaway_service
 from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.products import service as product_service
+from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.users.routes import bootstrap_user_support_tables
 from fastapi_modulo.modulos.multitienda.servicios.access_roles import ensure_multitienda_access_roles
 from fastapi_modulo.modulos.multitienda.servicios.store_tables import (
     ensure_store_tables,
@@ -93,6 +100,16 @@ marketplace_app = build_marketplace_backend_app()
 
 def bootstrap_multitienda() -> None:
     ensure_store_tables()
+    _ensure_vendor_table()
+    db = SessionLocal()
+    try:
+        _ensure_product_tables(db.bind)
+        layaway_service.bootstrap_layaway_schema(db)
+    finally:
+        db.close()
+    bootstrap_business_types_schema()
+    _ensure_membresia_table()
+    bootstrap_user_support_tables()
     ensure_multitienda_access_roles()
 
 _STYLE_RE = re.compile(r"<style>(.*?)</style>", re.IGNORECASE | re.DOTALL)
@@ -432,6 +449,56 @@ def _parsed_marketplace_document(document_html: str) -> tuple[str, str, tuple[st
     return styles, main_markup, tuple(filtered_scripts)
 
 
+def _section_label(section_id: str) -> str:
+    section_meta = next((item for item in _MODULE_SECTIONS if item["id"] == section_id), None)
+    return section_meta["label"] if section_meta else "Multitienda"
+
+
+def _shell_variant(section_id: str) -> str:
+    return "hero" if section_id == "inicio" else "standard"
+
+
+@lru_cache(maxsize=128)
+def _cached_marketplace_shell_template(
+    section_id: str,
+    document_hash: str,
+    shell_variant: str,
+    styles: str,
+    main_markup: str,
+    scripts_markup: str,
+) -> str:
+    del document_hash
+    del shell_variant
+    section_label = _section_label(section_id)
+    return (
+        '<div class="multitienda-official-view">'
+        + _MODULE_NAVBAR_BOOTSTRAP
+        + _MODULE_LAYOUT_OVERRIDES
+        + _SIDEBAR_STYLE_TAG
+        + styles
+        + '<section class="multitienda-shell">'
+        + "__SIDEBAR__"
+        + '<div class="multitienda-shell__content">'
+        + "__HERO__"
+        + '<section class="multitienda-shell__body">'
+        + '<div class="multitienda-shell__panel-head">'
+        + '<div class="multitienda-shell__panel-title"><h2>'
+        + escape(section_label)
+        + "</h2></div>"
+        + "__PANEL_ACTIONS__"
+        + "</div>"
+        + '<div class="multitienda-shell__module-body"><main class="page">'
+        + main_markup
+        + "</main></div>"
+        + "</section>"
+        + "</div>"
+        + "</section>"
+        + scripts_markup
+        + _build_marketplace_workspace_script()
+        + "</div>"
+    )
+
+
 def _build_marketplace_shell_content(
     document_html: str,
     section_id: str,
@@ -444,8 +511,7 @@ def _build_marketplace_shell_content(
     initial_inventory: str = "",
 ) -> str:
     styles, main_markup, filtered_scripts = _parsed_marketplace_document(document_html)
-    section_meta = next((item for item in sections if item["id"] == section_id), None)
-    section_label = section_meta["label"] if section_meta else "Multitienda"
+    section_label = _section_label(section_id)
     show_hero = section_id == "inicio"
 
     hero_markup = ""
@@ -493,32 +559,20 @@ def _build_marketplace_shell_content(
             + "</div>"
         )
 
+    document_hash = hashlib.sha1(document_html.encode("utf-8")).hexdigest()
+    shell_template = _cached_marketplace_shell_template(
+        section_id,
+        document_hash,
+        _shell_variant(section_id),
+        styles,
+        main_markup,
+        "".join(filtered_scripts),
+    )
     return (
-        '<div class="multitienda-official-view">'
-        + _MODULE_NAVBAR_BOOTSTRAP
-        + _MODULE_LAYOUT_OVERRIDES
-        + _SIDEBAR_STYLE_TAG
-        + styles
-        + '<section class="multitienda-shell">'
-        + render_sidebar_markup(sections, section_id, viewer_name, initial_store_name)
-        + '<div class="multitienda-shell__content">'
-        + hero_markup
-        + '<section class="multitienda-shell__body">'
-        + '<div class="multitienda-shell__panel-head">'
-        + '<div class="multitienda-shell__panel-title"><h2>'
-        + escape(section_label)
-        + "</h2></div>"
-        + panel_actions_markup
-        + "</div>"
-        + '<div class="multitienda-shell__module-body"><main class="page">'
-        + main_markup
-        + "</main></div>"
-        + "</section>"
-        + "</div>"
-        + "</section>"
-        + "".join(filtered_scripts)
-        + _build_marketplace_workspace_script()
-        + "</div>"
+        shell_template
+        .replace("__SIDEBAR__", render_sidebar_markup(sections, section_id, viewer_name, initial_store_name), 1)
+        .replace("__HERO__", hero_markup, 1)
+        .replace("__PANEL_ACTIONS__", panel_actions_markup, 1)
     )
 
 
@@ -956,11 +1010,12 @@ def _load_business_type_names(db) -> dict[str, str]:
         if names:
             return names
     except Exception:
-        pass
+        _log.exception("Error cargando tipos de negocio desde la sesion principal.")
     fallback_db = SessionLocal()
     try:
         return _fetch_names(fallback_db)
     except Exception:
+        _log.exception("Error cargando tipos de negocio desde la sesion fallback.")
         return {}
     finally:
         fallback_db.close()
@@ -1080,6 +1135,7 @@ def _ensure_vendor_table() -> None:
                 try:
                     db.execute(text("ALTER TABLE vendors ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY"))
                 except Exception:
+                    _log.exception("No se pudo agregar IDENTITY a vendors.id; se intentara fallback con secuencia.")
                     db.execute(text("CREATE SEQUENCE IF NOT EXISTS vendors_id_seq"))
                     db.execute(text("ALTER SEQUENCE vendors_id_seq OWNED BY vendors.id"))
                     db.execute(text("ALTER TABLE vendors ALTER COLUMN id SET DEFAULT nextval('vendors_id_seq')"))
@@ -1099,7 +1155,7 @@ def _ensure_vendor_table() -> None:
         db.close()
 
 
-def _ensure_product_tables(db) -> None:
+def _ensure_product_tables(bind) -> None:
     from fastapi_modulo.modulos.multitienda.marketplace.backend.core.db import Base
     from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.vendors.models import VendorStore  # noqa: F401
     from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.products.models import Product, ProductImage  # noqa: F401
@@ -1107,7 +1163,7 @@ def _ensure_product_tables(db) -> None:
     table_names = [Product.__tablename__, ProductImage.__tablename__]
     tables = [Base.metadata.tables[name] for name in table_names if name in Base.metadata.tables]
     if tables:
-        Base.metadata.create_all(bind=db.bind, tables=tables, checkfirst=True)
+        Base.metadata.create_all(bind=bind, tables=tables, checkfirst=True)
 
 
 def _decode_store_theme(raw_value) -> dict:
@@ -1119,7 +1175,7 @@ def _decode_store_theme(raw_value) -> dict:
             return {}
         try:
             current = json.loads(current)
-        except Exception:
+        except json.JSONDecodeError:
             return {}
     return {}
 
@@ -1261,6 +1317,139 @@ def _fits_vendor_asset_column(value: object) -> bool:
     return len(raw) <= 255
 
 
+def _normalize_catalog_gallery(product: dict[str, object]) -> list[str]:
+    return [
+        img for img in (product.get("galleryImages") or [])
+        if isinstance(img, str) and img and not img.startswith("data:") and len(img) <= 255
+    ]
+
+
+def _sync_primary_product_image(db, product_id: int, product_name: str, primary_image: str) -> None:
+    image_row = db.execute(
+        text(
+            """
+            SELECT id, image, alt_text
+            FROM product_images
+            WHERE product_id = :product_id
+              AND is_primary = 1
+            ORDER BY id ASC
+            LIMIT 1
+            """
+        ),
+        {"product_id": product_id},
+    ).mappings().first()
+    if primary_image:
+        if image_row:
+            if (
+                str(image_row.get("image") or "") != primary_image
+                or str(image_row.get("alt_text") or "") != product_name
+            ):
+                db.execute(
+                    text(
+                        """
+                        UPDATE product_images
+                        SET image = :image,
+                            alt_text = :alt_text,
+                            "order" = 0
+                        WHERE id = :image_id
+                        """
+                    ),
+                    {
+                        "image_id": int(image_row["id"]),
+                        "image": primary_image,
+                        "alt_text": product_name,
+                    },
+                )
+        else:
+            db.execute(
+                text(
+                    """
+                    INSERT INTO product_images (product_id, image, alt_text, is_primary, "order")
+                    VALUES (:product_id, :image, :alt_text, 1, 0)
+                    """
+                ),
+                {
+                    "product_id": product_id,
+                    "image": primary_image,
+                    "alt_text": product_name,
+                },
+            )
+    elif image_row:
+        db.execute(
+            text("DELETE FROM product_images WHERE id = :image_id"),
+            {"image_id": int(image_row["id"])},
+        )
+
+
+def _sync_gallery_product_images(db, product_id: int, product_name: str, gallery: list[str]) -> None:
+    existing_rows = db.execute(
+        text(
+            """
+            SELECT id, image, alt_text, "order"
+            FROM product_images
+            WHERE product_id = :product_id
+              AND is_primary = 0
+            ORDER BY "order" ASC, id ASC
+            """
+        ),
+        {"product_id": product_id},
+    ).mappings().all()
+    existing_urls = [str(row.get("image") or "") for row in existing_rows]
+    if existing_urls == gallery and all(str(row.get("alt_text") or "") == product_name for row in existing_rows):
+        return
+    existing_by_url: dict[str, list[dict[str, object]]] = {}
+    for row in existing_rows:
+        existing_by_url.setdefault(str(row.get("image") or ""), []).append(dict(row))
+    retained_ids: set[int] = set()
+    for gal_order, gal_url in enumerate(gallery):
+        desired_order = gal_order + 1
+        candidates = existing_by_url.get(gal_url) or []
+        reusable = None
+        while candidates:
+            candidate = candidates.pop(0)
+            candidate_id = int(candidate["id"])
+            if candidate_id not in retained_ids:
+                reusable = candidate
+                retained_ids.add(candidate_id)
+                break
+        if reusable:
+            if (
+                int(reusable.get("order") or 0) != desired_order
+                or str(reusable.get("alt_text") or "") != product_name
+            ):
+                db.execute(
+                    text(
+                        """
+                        UPDATE product_images
+                        SET alt_text = :alt_text,
+                            "order" = :ord
+                        WHERE id = :image_id
+                        """
+                    ),
+                    {
+                        "image_id": int(reusable["id"]),
+                        "alt_text": product_name,
+                        "ord": desired_order,
+                    },
+                )
+            continue
+        db.execute(
+            text(
+                """
+                INSERT INTO product_images (product_id, image, alt_text, is_primary, "order")
+                VALUES (:product_id, :image, :alt_text, 0, :ord)
+                """
+            ),
+            {"product_id": product_id, "image": gal_url, "alt_text": product_name, "ord": desired_order},
+        )
+    stale_ids = [int(row["id"]) for row in existing_rows if int(row["id"]) not in retained_ids]
+    if stale_ids:
+        db.execute(
+            text("DELETE FROM product_images WHERE id IN :image_ids").bindparams(bindparam("image_ids", expanding=True)),
+            {"image_ids": stale_ids},
+        )
+
+
 def _sync_catalog_products_to_marketplace(db, store_id: int, previous_products: list[dict[str, object]], catalog_products: list[dict[str, object]]) -> list[dict[str, object]]:
     previous_db_ids = {
         int(item.get("db_product_id"))
@@ -1312,27 +1501,53 @@ def _sync_catalog_products_to_marketplace(db, store_id: int, previous_products: 
         }
 
         if mapped_product_id:
-            updated_row = db.execute(
+            existing_row = db.execute(
                 text(
                     """
-                    UPDATE products
-                    SET name = :name,
-                        description = :description,
-                        price = :price,
-                        stock_quantity = :stock_quantity,
-                        slug = :slug,
-                        is_active = :is_active,
-                        status = :status,
-                        type = :type,
-                        updated_at = CURRENT_TIMESTAMP
+                    SELECT id, name, description, price, stock_quantity, slug, is_active, status, type
+                    FROM products
                     WHERE id = :product_id
                       AND vendor_id = :vendor_id
-                    RETURNING id
+                    LIMIT 1
                     """
                 ),
-                {**payload, "product_id": mapped_product_id},
+                {"product_id": mapped_product_id, "vendor_id": store_id},
             ).mappings().first()
-            if not updated_row:
+            if existing_row:
+                changed = (
+                    str(existing_row.get("name") or "") != str(payload["name"])
+                    or str(existing_row.get("description") or "") != str(payload["description"])
+                    or float(existing_row.get("price") or 0) != float(payload["price"])
+                    or int(existing_row.get("stock_quantity") or 0) != int(payload["stock_quantity"])
+                    or str(existing_row.get("slug") or "") != str(payload["slug"])
+                    or bool(existing_row.get("is_active")) != bool(payload["is_active"])
+                    or str(existing_row.get("status") or "") != str(payload["status"])
+                    or str(existing_row.get("type") or "") != str(payload["type"])
+                )
+                if changed:
+                    updated_row = db.execute(
+                        text(
+                            """
+                            UPDATE products
+                            SET name = :name,
+                                description = :description,
+                                price = :price,
+                                stock_quantity = :stock_quantity,
+                                slug = :slug,
+                                is_active = :is_active,
+                                status = :status,
+                                type = :type,
+                                updated_at = CURRENT_TIMESTAMP
+                            WHERE id = :product_id
+                              AND vendor_id = :vendor_id
+                            RETURNING id
+                            """
+                        ),
+                        {**payload, "product_id": mapped_product_id},
+                    ).mappings().first()
+                    if not updated_row:
+                        mapped_product_id = None
+            else:
                 mapped_product_id = None
 
         if mapped_product_id is None:
@@ -1359,76 +1574,10 @@ def _sync_catalog_products_to_marketplace(db, store_id: int, previous_products: 
         product["publicado"] = is_public
 
         primary_image = str(product.get("imagen") or "").strip()
-        if primary_image and not primary_image.startswith("data:") and len(primary_image) <= 255:
-            image_row = db.execute(
-                text(
-                    """
-                    SELECT id
-                    FROM product_images
-                    WHERE product_id = :product_id
-                      AND is_primary = 1
-                    ORDER BY id ASC
-                    LIMIT 1
-                    """
-                ),
-                {"product_id": mapped_product_id},
-            ).mappings().first()
-            if image_row:
-                db.execute(
-                    text(
-                        """
-                        UPDATE product_images
-                        SET image = :image,
-                            alt_text = :alt_text,
-                            "order" = 0
-                        WHERE id = :image_id
-                        """
-                    ),
-                    {
-                        "image_id": int(image_row["id"]),
-                        "image": primary_image,
-                        "alt_text": product_name,
-                    },
-                )
-            else:
-                db.execute(
-                    text(
-                        """
-                        INSERT INTO product_images (product_id, image, alt_text, is_primary, "order")
-                        VALUES (:product_id, :image, :alt_text, 1, 0)
-                        """
-                    ),
-                    {
-                        "product_id": mapped_product_id,
-                        "image": primary_image,
-                        "alt_text": product_name,
-                    },
-                )
-        else:
-            db.execute(
-                text("DELETE FROM product_images WHERE product_id = :product_id AND is_primary = 1"),
-                {"product_id": mapped_product_id},
-            )
-
-        # Sincronizar fotos adicionales (galleryImages)
-        gallery = [
-            img for img in (product.get("galleryImages") or [])
-            if isinstance(img, str) and img and not img.startswith("data:") and len(img) <= 255
-        ]
-        db.execute(
-            text("DELETE FROM product_images WHERE product_id = :product_id AND is_primary = 0"),
-            {"product_id": mapped_product_id},
-        )
-        for gal_order, gal_url in enumerate(gallery):
-            db.execute(
-                text(
-                    """
-                    INSERT INTO product_images (product_id, image, alt_text, is_primary, "order")
-                    VALUES (:product_id, :image, :alt_text, 0, :ord)
-                    """
-                ),
-                {"product_id": mapped_product_id, "image": gal_url, "alt_text": product_name, "ord": gal_order + 1},
-            )
+        if primary_image.startswith("data:") or len(primary_image) > 255:
+            primary_image = ""
+        _sync_primary_product_image(db, mapped_product_id, product_name, primary_image)
+        _sync_gallery_product_images(db, mapped_product_id, product_name, _normalize_catalog_gallery(product))
 
         synced_products.append(product)
 
@@ -1442,17 +1591,14 @@ def _sync_catalog_products_to_marketplace(db, store_id: int, previous_products: 
     return synced_products
 
 
-@router.get("/multitienda/api/business-types", response_class=JSONResponse)
 def multitienda_business_types_proxy():
     return list_business_types()
 
 
-@router.post("/multitienda/api/business-types", response_class=JSONResponse)
 async def multitienda_create_business_type_proxy(request: Request):
     return await create_business_type(request)
 
 
-@router.get("/multitienda/api/store-admin-users", response_class=JSONResponse)
 def multitienda_store_admin_users(request: Request):
     with _request_db_context(request) as ctx:
         db = ctx["db"]
@@ -1476,9 +1622,7 @@ def multitienda_store_admin_users(request: Request):
         return {"success": True, "data": rows}
 
 
-@router.get("/multitienda/api/memberships", response_class=JSONResponse)
 def multitienda_memberships():
-    _ensure_membresia_table()
     db = SessionLocal()
     try:
         _seed_membresias(db)
@@ -1499,9 +1643,7 @@ def multitienda_memberships():
         db.close()
 
 
-@router.get("/multitienda/api/stores", response_class=JSONResponse)
 def multitienda_list_stores(request: Request):
-    _ensure_vendor_table()
     db = _db_session_for_request(request)
     try:
         scope = _resolve_store_scope(request, db)
@@ -1510,9 +1652,7 @@ def multitienda_list_stores(request: Request):
         db.close()
 
 
-@router.post("/multitienda/api/stores", response_class=JSONResponse)
 async def multitienda_save_store(request: Request):
-    _ensure_vendor_table()
     scope = _resolve_request_context(request)["scope"]
     try:
         if not scope["restricted"]:
@@ -1529,111 +1669,10 @@ async def multitienda_save_store(request: Request):
     except HTTPException:
         raise
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"No se pudo guardar la tienda: {exc}") from exc
+        _log.exception("No se pudo guardar la tienda para scope=%s", scope)
+        raise HTTPException(status_code=500, detail="No se pudo guardar la tienda.") from exc
 
 
-@router.get("/multitienda/inicio", include_in_schema=False, response_class=HTMLResponse)
-def multitienda_inicio_entrypoint(request: Request):
-    return _render_official_shell(request, "inicio", inicio_html())
-
-
-@router.get("/multitienda", include_in_schema=False, response_class=HTMLResponse)
-def multitienda_entrypoint(request: Request):
-    return _render_official_shell(request, "inicio", inicio_html())
-
-
-@router.get("/multitienda/", include_in_schema=False, response_class=HTMLResponse)
-def multitienda_entrypoint_slash(request: Request):
-    return _render_official_shell(request, "inicio", inicio_html())
-
-
-@router.get("/multitienda/videos", include_in_schema=False, response_class=HTMLResponse)
-def multitienda_videos_entrypoint(request: Request):
-    return _dispatch_section_entrypoint(request, "videos")
-
-
-@router.get("/multitienda/referidos", include_in_schema=False, response_class=HTMLResponse)
-def multitienda_referidos_entrypoint(request: Request):
-    return _dispatch_section_entrypoint(request, "referidos")
-
-
-@router.get("/multitienda/notificaciones-pwa", include_in_schema=False, response_class=HTMLResponse)
-def multitienda_notificaciones_pwa_entrypoint(request: Request):
-    return _dispatch_section_entrypoint(request, "notificaciones_pwa")
-
-
-@router.get("/multitienda/reservaciones", include_in_schema=False, response_class=HTMLResponse)
-def multitienda_reservaciones_entrypoint(request: Request):
-    return _dispatch_section_entrypoint(request, "reservaciones")
-
-
-@router.get("/multitienda/cupones", include_in_schema=False, response_class=HTMLResponse)
-def multitienda_cupones_entrypoint(request: Request):
-    return _dispatch_section_entrypoint(request, "cupones")
-
-
-@router.get("/multitienda/fidelizacion", include_in_schema=False, response_class=HTMLResponse)
-def multitienda_fidelizacion_entrypoint(request: Request):
-    return _dispatch_section_entrypoint(request, "fidelizacion")
-
-
-@router.get("/multitienda/whatsapp", include_in_schema=False, response_class=HTMLResponse)
-def multitienda_whatsapp_entrypoint(request: Request):
-    return _dispatch_section_entrypoint(request, "whatsapp")
-
-
-@router.get("/multitienda/empleados", include_in_schema=False, response_class=HTMLResponse)
-def multitienda_empleados_entrypoint(request: Request):
-    return _dispatch_section_entrypoint(request, "empleados")
-
-
-@router.get("/multitienda/seguidores", include_in_schema=False, response_class=HTMLResponse)
-def multitienda_seguidores_entrypoint(request: Request):
-    return _dispatch_section_entrypoint(request, "seguidores")
-
-
-@router.get("/multitienda/proveedores", include_in_schema=False, response_class=HTMLResponse)
-def multitienda_proveedores_entrypoint(request: Request):
-    return _dispatch_section_entrypoint(request, "proveedores")
-
-
-@router.get("/multitienda/ia", include_in_schema=False, response_class=HTMLResponse)
-def multitienda_ia_entrypoint(request: Request):
-    return _dispatch_section_entrypoint(request, "ia")
-
-
-@router.get("/multitienda/institucion_financiera", include_in_schema=False, response_class=HTMLResponse)
-def multitienda_institucion_financiera_entrypoint(request: Request):
-    return _dispatch_section_entrypoint(request, "institucion_financiera")
-
-
-@router.get("/multitienda/apartados", include_in_schema=False, response_class=HTMLResponse)
-def multitienda_apartados_entrypoint(request: Request):
-    return _dispatch_section_entrypoint(request, "apartados")
-
-
-@router.get("/multitienda/subastas", include_in_schema=False, response_class=HTMLResponse)
-def multitienda_subastas_entrypoint(request: Request):
-    return _dispatch_section_entrypoint(request, "subastas")
-
-
-@router.get("/multitienda/crm", include_in_schema=False, response_class=HTMLResponse)
-def multitienda_crm_entrypoint(request: Request):
-    return _dispatch_section_entrypoint(request, "crm")
-
-
-@router.get("/multitienda/administracion_tiendas", include_in_schema=False, response_class=HTMLResponse)
-def multitienda_gestion_entrypoint(request: Request):
-    return _dispatch_section_entrypoint(request, "gestion")
-
-
-@router.get("/multitienda/repartidores", include_in_schema=False, response_class=HTMLResponse)
-def multitienda_repartidores_entrypoint(request: Request):
-    return _dispatch_section_entrypoint(request, "repartidores")
-
-
-
-@router.get("/multitienda/configuracion", include_in_schema=False, response_class=HTMLResponse)
 def multitienda_config_entrypoint(request: Request):
     effective_store_id = None
     redirect_to_canonical = False
@@ -1694,29 +1733,6 @@ def multitienda_config_entrypoint(request: Request):
             initial_config_json=initial_config_json,
         ),
     )
-
-
-@router.get("/configuracion", include_in_schema=False)
-@router.get("/configuracion/", include_in_schema=False)
-def multitienda_config_legacy_redirect():
-    return RedirectResponse(url="/multitienda/configuracion", status_code=307)
-
-
-@router.get("/multitienda/productos", include_in_schema=False, response_class=HTMLResponse)
-def multitienda_productos_entrypoint(request: Request):
-    return _render_official_shell(request, "productos", productos_html())
-
-
-@router.get("/multitienda/tienda", include_in_schema=False, response_class=HTMLResponse)
-def multitienda_tienda_entrypoint(request: Request):
-    return _render_official_shell(request, "tienda", tienda_html())
-
-
-@router.get("/multitienda/tiendas", include_in_schema=False, response_class=HTMLResponse)
-def multitienda_tiendas_entrypoint(request: Request):
-    return _render_official_shell(request, "tienda", tienda_html())
-
-
 # ─── API CRUD — store_tables ──────────────────────────────────────────────────
 # Helpers compartidos
 
@@ -1748,6 +1764,7 @@ async def _json_body(request: Request) -> dict:
     try:
         return await request.json()
     except Exception:
+        _log.exception("No se pudo decodificar JSON en %s %s", request.method, request.url.path)
         return {}
 
 
@@ -1770,7 +1787,6 @@ router.include_router(
 
 # ── Inicio Stats ─────────────────────────────────────────────────────────────
 
-@router.get("/multitienda/api/inicio-stats", response_class=JSONResponse)
 def api_inicio_stats(request: Request):
     with _request_db_context(request) as ctx:
         db = ctx["db"]
@@ -1779,7 +1795,6 @@ def api_inicio_stats(request: Request):
         return {"success": True, "data": analytics_service.get_store_stats(db, store_id)}
 
 
-@router.put("/multitienda/api/configuracion", response_class=JSONResponse)
 async def api_update_store_configuration(request: Request):
     payload = await _json_body(request)
     raw_config = payload.get("config") if isinstance(payload.get("config"), dict) else payload
@@ -1859,7 +1874,6 @@ async def api_update_store_configuration(request: Request):
         return {"success": True, "data": result_data}
 
 
-@router.get("/multitienda/api/configuracion", response_class=JSONResponse)
 def api_get_store_configuration(request: Request):
     with _request_db_context(request) as ctx:
         db = ctx["db"]
@@ -1885,7 +1899,6 @@ def api_get_store_configuration(request: Request):
 
 # ── Productos privados (tienda) ──────────────────────────────────────────────
 
-@router.get("/multitienda/api/productos", response_class=JSONResponse)
 def api_list_store_products(request: Request):
     with _request_db_context(request) as ctx:
         db = ctx["db"]
@@ -1906,7 +1919,6 @@ def api_list_store_products(request: Request):
         return {"success": True, "data": _extract_catalog_products(theme)}
 
 
-@router.put("/multitienda/api/productos", response_class=JSONResponse)
 async def api_replace_store_products(request: Request):
     payload = await _json_body(request)
     incoming_products = payload.get("products") if isinstance(payload.get("products"), list) else payload
@@ -1917,7 +1929,6 @@ async def api_replace_store_products(request: Request):
         db = ctx["db"]
         scope = ctx["scope"]
         store_id = _resolve_store_id_from_scope(request, scope)
-        _ensure_product_tables(db)
         row = db.execute(
             text(
                 """
@@ -1958,7 +1969,6 @@ async def api_replace_store_products(request: Request):
 
 # ── Empleados ─────────────────────────────────────────────────────────────────
 
-@router.get("/multitienda/api/empleados", response_class=JSONResponse)
 def api_list_employees(request: Request):
     with _request_db_context(request) as ctx:
         db = ctx["db"]
@@ -1969,7 +1979,6 @@ def api_list_employees(request: Request):
         return {"success": True, "data": employee_service.list_admin_rows(db, store_id)}
 
 
-@router.post("/multitienda/api/empleados", response_class=JSONResponse)
 async def api_create_employee(request: Request):
     try:
         with _request_db_context(request, include_permissions=True) as ctx:
@@ -2003,7 +2012,6 @@ async def api_create_employee(request: Request):
         raise HTTPException(status_code=500, detail="Error interno al crear el empleado.")
 
 
-@router.put("/multitienda/api/empleados/{employee_id}", response_class=JSONResponse)
 async def api_update_employee(employee_id: int, request: Request):
     try:
         with _request_db_context(request) as ctx:
@@ -2023,7 +2031,6 @@ async def api_update_employee(employee_id: int, request: Request):
         raise HTTPException(status_code=500, detail="Error interno al actualizar el empleado.")
 
 
-@router.delete("/multitienda/api/empleados/{employee_id}", response_class=JSONResponse)
 def api_delete_employee(employee_id: int, request: Request):
     try:
         with _request_db_context(request) as ctx:
@@ -2042,7 +2049,6 @@ def api_delete_employee(employee_id: int, request: Request):
         raise HTTPException(status_code=500, detail="Error interno al eliminar el empleado.")
 
 
-@router.post("/multitienda/api/empleados/{employee_id}/password", response_class=JSONResponse)
 async def api_change_employee_password(employee_id: int, request: Request):
     try:
         with _request_db_context(request) as ctx:
@@ -2062,7 +2068,48 @@ async def api_change_employee_password(employee_id: int, request: Request):
     except HTTPException:
         raise
     except Exception:
+        _log.exception("Error cambiando contrasena de empleado id=%s", employee_id)
         raise HTTPException(status_code=500, detail="Error interno al cambiar la contraseña.")
+
+
+router.include_router(
+    create_store_admin_router(
+        list_business_types=multitienda_business_types_proxy,
+        create_business_type=multitienda_create_business_type_proxy,
+        store_admin_users=multitienda_store_admin_users,
+        memberships=multitienda_memberships,
+        list_stores=multitienda_list_stores,
+        save_store=multitienda_save_store,
+        inicio_stats=api_inicio_stats,
+        get_store_configuration=api_get_store_configuration,
+        update_store_configuration=api_update_store_configuration,
+    )
+)
+router.include_router(
+    create_pages_router(
+        render_official_shell=_render_official_shell,
+        dispatch_section_entrypoint=_dispatch_section_entrypoint,
+        inicio_html=inicio_html,
+        configuracion_entrypoint=multitienda_config_entrypoint,
+        productos_html=productos_html,
+        tienda_html=tienda_html,
+    )
+)
+router.include_router(
+    create_products_router(
+        list_store_products=api_list_store_products,
+        replace_store_products=api_replace_store_products,
+    )
+)
+router.include_router(
+    create_employees_router(
+        list_employees=api_list_employees,
+        create_employee=api_create_employee,
+        update_employee=api_update_employee,
+        delete_employee=api_delete_employee,
+        change_employee_password=api_change_employee_password,
+    )
+)
 
 
 __all__ = ["bootstrap_multitienda", "router"]

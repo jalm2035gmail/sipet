@@ -2,82 +2,60 @@ from __future__ import annotations
 
 from datetime import date
 
-from sqlalchemy import text
+from sqlalchemy import inspect, text
 from sqlalchemy.orm import Session
 
-from fastapi_modulo.modulos.multitienda.servicios.data_utils import serialize_mapping
+from fastapi_modulo.modulos.multitienda.servicios.store_tables_shared import (
+    build_update_params,
+    row,
+    rows,
+)
+
+_LAYAWAY_EXTRA_COLUMNS = {
+    "folio": "TEXT DEFAULT ''",
+    "customer_name": "TEXT DEFAULT ''",
+    "customer_phone": "TEXT DEFAULT ''",
+    "customer_email": "TEXT DEFAULT ''",
+    "product_name": "TEXT DEFAULT ''",
+    "product_sku": "TEXT DEFAULT ''",
+    "modalidad": "TEXT DEFAULT 'libre'",
+    "cuotas": "INTEGER DEFAULT 0",
+    "periodicidad": "TEXT DEFAULT 'mensual'",
+    "start_date": "TEXT DEFAULT ''",
+}
 
 
-def _rows(db: Session, sql: str, params=None) -> list:
-    result = db.execute(text(sql), params or {})
-    keys = result.keys()
-    return [serialize_mapping(dict(zip(keys, row))) for row in result.fetchall()]
+def _add_allowed_layaway_columns(db: Session, existing_columns: set[str]) -> None:
+    for column_name, column_sql in _LAYAWAY_EXTRA_COLUMNS.items():
+        if column_name in existing_columns:
+            continue
+        if column_name not in _LAYAWAY_EXTRA_COLUMNS:
+            raise ValueError(f"Columna de layaway no permitida: {column_name}")
+        db.execute(text(f"ALTER TABLE store_layaways ADD COLUMN {column_name} {column_sql}"))
 
 
-def _row(db: Session, sql: str, params=None):
-    result = db.execute(text(sql), params or {})
-    keys = result.keys()
-    row = result.fetchone()
-    return serialize_mapping(dict(zip(keys, row))) if row else None
-
-
-def _delete_by_vendor(db: Session, table: str, id_column: str, record_id: int, vendor_id: int) -> bool:
-    result = db.execute(
-        text(f"DELETE FROM {table} WHERE {id_column} = :rid AND vendor_id = :vid"),
-        {"rid": record_id, "vid": vendor_id},
-    )
-    return result.rowcount > 0
-
-
-def _build_update_params(data: dict, base_params: dict, col_map: dict) -> tuple[list[str], dict]:
-    fields = []
-    params = dict(base_params)
-    seen = set()
-    for src, col in col_map.items():
-        if data.get(src) is not None and col not in seen:
-            key = f"p_{col}"
-            fields.append(f"{col} = :{key}")
-            params[key] = data[src]
-            seen.add(col)
-    return fields, params
-
-
-def ensure_extras(db: Session) -> None:
-    extra_cols = [
-        ("folio", "TEXT DEFAULT ''"),
-        ("customer_name", "TEXT DEFAULT ''"),
-        ("customer_phone", "TEXT DEFAULT ''"),
-        ("customer_email", "TEXT DEFAULT ''"),
-        ("product_name", "TEXT DEFAULT ''"),
-        ("product_sku", "TEXT DEFAULT ''"),
-        ("modalidad", "TEXT DEFAULT 'libre'"),
-        ("cuotas", "INTEGER DEFAULT 0"),
-        ("periodicidad", "TEXT DEFAULT 'mensual'"),
-        ("start_date", "TEXT DEFAULT ''"),
-    ]
-    for col, typ in extra_cols:
-        try:
-            db.execute(text(f"ALTER TABLE store_layaways ADD COLUMN {col} {typ}"))
-            db.commit()
-        except Exception:
-            pass
-
-    db.execute(text("""
-        CREATE TABLE IF NOT EXISTS store_layaway_payments (
-            id         INTEGER PRIMARY KEY AUTOINCREMENT,
-            layaway_id INTEGER NOT NULL,
-            amount     REAL NOT NULL DEFAULT 0,
-            paid_at    TEXT DEFAULT '',
-            method     TEXT DEFAULT 'efectivo',
-            reference  TEXT DEFAULT '',
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-    """))
+def bootstrap_layaway_schema(db: Session) -> None:
+    inspector = inspect(db.bind)
+    existing_columns = {column["name"] for column in inspector.get_columns("store_layaways")}
+    payment_tables = set(inspector.get_table_names())
+    _add_allowed_layaway_columns(db, existing_columns)
+    if "store_layaway_payments" not in payment_tables:
+        db.execute(text("""
+            CREATE TABLE IF NOT EXISTS store_layaway_payments (
+                id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                layaway_id INTEGER NOT NULL,
+                amount     REAL NOT NULL DEFAULT 0,
+                paid_at    TEXT DEFAULT '',
+                method     TEXT DEFAULT 'efectivo',
+                reference  TEXT DEFAULT '',
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        """))
     db.commit()
 
 
 def list_by_vendor(db: Session, vendor_id: int) -> list:
-    return _rows(
+    return rows(
         db,
         "SELECT * FROM store_layaways WHERE vendor_id = :vid ORDER BY created_at DESC",
         {"vid": vendor_id},
@@ -87,7 +65,7 @@ def list_by_vendor(db: Session, vendor_id: int) -> list:
 def create_basic(db: Session, vendor_id: int, data: dict) -> dict:
     total = float(data.get("total_amount") or data.get("precio_total") or 0)
     down = float(data.get("downpayment") or data.get("enganche") or 0)
-    return _row(
+    return row(
         db,
         "INSERT INTO store_layaways "
         "(vendor_id, customer_user_id, product_id, total_amount, downpayment, balance_due, due_date, notes, status) "
@@ -112,10 +90,10 @@ def update_basic(db: Session, vendor_id: int, layaway_id: int, data: dict):
         "due_date": "due_date", "fecha_limite": "due_date",
         "notes": "notes", "notas": "notes",
     }
-    fields, params = _build_update_params(data, {"vid": vendor_id, "lid": layaway_id}, col_map)
+    fields, params = build_update_params(data, {"vid": vendor_id, "lid": layaway_id}, col_map)
     if not fields:
         return None
-    return _row(
+    return row(
         db,
         "UPDATE store_layaways SET " + ", ".join(fields) + ", updated_at = CURRENT_TIMESTAMP "
         "WHERE id = :lid AND vendor_id = :vid RETURNING *",
@@ -124,11 +102,15 @@ def update_basic(db: Session, vendor_id: int, layaway_id: int, data: dict):
 
 
 def delete_basic(db: Session, vendor_id: int, layaway_id: int) -> bool:
-    return _delete_by_vendor(db, "store_layaways", "id", layaway_id, vendor_id)
+    result = db.execute(
+        text("DELETE FROM store_layaways WHERE id = :rid AND vendor_id = :vid"),
+        {"rid": layaway_id, "vid": vendor_id},
+    )
+    return result.rowcount > 0
 
 
 def _recalculate_balance(db: Session, layaway_id: int, layaway_row: dict, *, paid_status: str = "completado") -> dict | None:
-    total_paid_row = _row(
+    total_paid_row = row(
         db,
         "SELECT COALESCE(SUM(amount),0) AS s FROM store_layaway_payments WHERE layaway_id = :lid",
         {"lid": layaway_id},
@@ -137,7 +119,7 @@ def _recalculate_balance(db: Session, layaway_id: int, layaway_row: dict, *, pai
     total_amt = float(layaway_row.get("total_amount") or 0)
     new_balance = max(0.0, round(total_amt - total_paid, 2))
     new_status = paid_status if new_balance <= 0 else "active"
-    return _row(
+    return row(
         db,
         "UPDATE store_layaways SET balance_due = :bal, status = :st, updated_at = CURRENT_TIMESTAMP "
         "WHERE id = :lid RETURNING *",
@@ -146,13 +128,12 @@ def _recalculate_balance(db: Session, layaway_id: int, layaway_row: dict, *, pai
 
 
 def create_rich(db: Session, vendor_id: int, data: dict) -> dict:
-    ensure_extras(db)
     total = float(data.get("total_amount") or data.get("precio") or 0)
     down = float(data.get("downpayment") or data.get("enganche") or 0)
-    cnt = _row(db, "SELECT COUNT(*) AS n FROM store_layaways WHERE vendor_id = :vid", {"vid": vendor_id})
+    cnt = row(db, "SELECT COUNT(*) AS n FROM store_layaways WHERE vendor_id = :vid", {"vid": vendor_id})
     sequence = int((cnt or {}).get("n", 0)) + 1
     folio = data.get("folio") or f"AP-{date.today().year}-{sequence:04d}"
-    return _row(
+    return row(
         db,
         "INSERT INTO store_layaways "
         "(vendor_id, customer_user_id, product_id, total_amount, downpayment, balance_due, due_date, notes, status,"
@@ -183,7 +164,6 @@ def create_rich(db: Session, vendor_id: int, data: dict) -> dict:
 
 
 def update_rich(db: Session, vendor_id: int, layaway_id: int, data: dict) -> dict | None:
-    ensure_extras(db)
     col_map = {
         "status": "status", "estado": "status",
         "balance_due": "balance_due", "saldo_pendiente": "balance_due",
@@ -202,10 +182,10 @@ def update_rich(db: Session, vendor_id: int, layaway_id: int, data: dict) -> dic
         "periodicidad": "periodicidad",
         "start_date": "start_date", "fechaInicio": "start_date",
     }
-    fields, params = _build_update_params(data, {"vid": vendor_id, "lid": layaway_id}, col_map)
+    fields, params = build_update_params(data, {"vid": vendor_id, "lid": layaway_id}, col_map)
     if not fields:
         return None
-    return _row(
+    return row(
         db,
         "UPDATE store_layaways SET " + ", ".join(fields) + ", updated_at = CURRENT_TIMESTAMP "
         "WHERE id = :lid AND vendor_id = :vid RETURNING *",
@@ -214,15 +194,14 @@ def update_rich(db: Session, vendor_id: int, layaway_id: int, data: dict) -> dic
 
 
 def list_payments(db: Session, vendor_id: int, layaway_id: int) -> list:
-    ensure_extras(db)
-    layaway = _row(
+    layaway = row(
         db,
         "SELECT id FROM store_layaways WHERE id = :lid AND vendor_id = :vid",
         {"lid": layaway_id, "vid": vendor_id},
     )
     if not layaway:
         return []
-    return _rows(
+    return rows(
         db,
         "SELECT * FROM store_layaway_payments WHERE layaway_id = :lid ORDER BY paid_at ASC, id ASC",
         {"lid": layaway_id},
@@ -230,8 +209,7 @@ def list_payments(db: Session, vendor_id: int, layaway_id: int) -> list:
 
 
 def add_payment(db: Session, vendor_id: int, layaway_id: int, data: dict) -> dict:
-    ensure_extras(db)
-    layaway = _row(
+    layaway = row(
         db,
         "SELECT * FROM store_layaways WHERE id = :lid AND vendor_id = :vid",
         {"lid": layaway_id, "vid": vendor_id},
@@ -241,7 +219,7 @@ def add_payment(db: Session, vendor_id: int, layaway_id: int, data: dict) -> dic
     amount = float(data.get("amount") or data.get("monto") or 0)
     if amount <= 0:
         return {"error": "Monto inválido"}
-    payment = _row(
+    payment = row(
         db,
         "INSERT INTO store_layaway_payments (layaway_id, amount, paid_at, method, reference) "
         "VALUES (:lid, :amt, :paid_at, :method, :ref) RETURNING *",
@@ -258,8 +236,7 @@ def add_payment(db: Session, vendor_id: int, layaway_id: int, data: dict) -> dic
 
 
 def delete_payment(db: Session, vendor_id: int, layaway_id: int, payment_id: int) -> bool:
-    ensure_extras(db)
-    layaway = _row(
+    layaway = row(
         db,
         "SELECT * FROM store_layaways WHERE id = :lid AND vendor_id = :vid",
         {"lid": layaway_id, "vid": vendor_id},
@@ -278,8 +255,7 @@ def set_status(db: Session, vendor_id: int, layaway_id: int, new_status: str) ->
     allowed = {"cancelado", "active", "entregado"}
     if new_status not in allowed:
         return None
-    ensure_extras(db)
-    return _row(
+    return row(
         db,
         "UPDATE store_layaways SET status = :st, updated_at = CURRENT_TIMESTAMP "
         "WHERE id = :lid AND vendor_id = :vid RETURNING *",
@@ -288,7 +264,6 @@ def set_status(db: Session, vendor_id: int, layaway_id: int, new_status: str) ->
 
 
 def mark_overdue(db: Session, vendor_id: int) -> int:
-    ensure_extras(db)
     result = db.execute(text(
         "UPDATE store_layaways SET status = 'vencido', updated_at = CURRENT_TIMESTAMP "
         "WHERE vendor_id = :vid AND status = 'active' AND due_date != '' AND due_date < date('now')"

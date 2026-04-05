@@ -5,23 +5,31 @@ from datetime import datetime
 from sqlalchemy.orm import Session
 
 from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.coupons.models import StoreCoupon
+from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.service_utils import (
+    create_for_vendor as create_vendor_record,
+    delete_entity,
+    get_by_id as get_record_by_id,
+    get_by_vendor as get_vendor_record,
+    list_by_vendor as list_vendor_records,
+    update_entity,
+)
 
 
 def list_by_vendor(db: Session, vendor_id: int) -> list[StoreCoupon]:
-    return (
-        db.query(StoreCoupon)
-        .filter_by(vendor_id=vendor_id)
-        .order_by(StoreCoupon.created_at.desc())
-        .all()
+    return list_vendor_records(
+        db,
+        StoreCoupon,
+        vendor_id,
+        order_by=(StoreCoupon.created_at.desc(),),
     )
 
 
 def get_by_id(db: Session, coupon_id: int) -> StoreCoupon | None:
-    return db.query(StoreCoupon).filter_by(id=coupon_id).first()
+    return get_record_by_id(db, StoreCoupon, coupon_id)
 
 
 def get_by_vendor(db: Session, vendor_id: int, coupon_id: int) -> StoreCoupon | None:
-    return db.query(StoreCoupon).filter_by(id=coupon_id, vendor_id=vendor_id).first()
+    return get_vendor_record(db, StoreCoupon, vendor_id, coupon_id)
 
 
 def get_by_vendor_code(db: Session, vendor_id: int, code: str) -> StoreCoupon | None:
@@ -29,24 +37,15 @@ def get_by_vendor_code(db: Session, vendor_id: int, code: str) -> StoreCoupon | 
 
 
 def create_for_vendor(db: Session, vendor_id: int, **payload) -> StoreCoupon:
-    coupon = StoreCoupon(vendor_id=vendor_id, **payload)
-    db.add(coupon)
-    db.flush()
-    db.refresh(coupon)
-    return coupon
+    return create_vendor_record(db, StoreCoupon, vendor_id, **payload)
 
 
 def update_coupon(db: Session, coupon: StoreCoupon, **updates) -> StoreCoupon:
-    for field, value in updates.items():
-        setattr(coupon, field, value)
-    db.flush()
-    db.refresh(coupon)
-    return coupon
+    return update_entity(db, coupon, **updates)
 
 
 def delete_coupon(db: Session, coupon: StoreCoupon) -> None:
-    db.delete(coupon)
-    db.flush()
+    delete_entity(db, coupon)
 
 
 def validate_coupon_for_vendor(

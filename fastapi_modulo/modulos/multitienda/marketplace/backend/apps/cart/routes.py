@@ -7,7 +7,7 @@ from fastapi_modulo.modulos.multitienda.marketplace.backend.core.db import get_d
 from fastapi_modulo.modulos.multitienda.marketplace.backend.core.dependencies import get_session_key as _get_session_key
 from .models import Cart, CartItem
 from .schemas import CartItemIn, CartItemOut, CartItemUpdate, CartOut
-from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.products.models import ProductRelated
+from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.products.models import Product, ProductRelated
 
 router = APIRouter(prefix="/api/cart", tags=["cart"])
 
@@ -135,12 +135,25 @@ def add_item(
     db: Session = Depends(get_db),
 ):
     """Agrega un producto al carrito o incrementa su cantidad si ya existe."""
+    try:
+        product_id_int = int(payload.product_id)
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=400, detail="product_id invalido")
+
+    product = (
+        db.query(Product)
+        .filter(Product.id == product_id_int, Product.is_active.is_(True))
+        .first()
+    )
+    if not product:
+        raise HTTPException(status_code=404, detail="Producto no encontrado")
+
     session_key = _get_session_key(request, response)
     cart = _get_or_create_cart(session_key, db)
 
     existing = (
         db.query(CartItem)
-        .filter(CartItem.cart_id == cart.id, CartItem.product_id == payload.product_id)
+        .filter(CartItem.cart_id == cart.id, CartItem.product_id == str(product.id))
         .first()
     )
     if existing:
@@ -151,13 +164,13 @@ def add_item(
 
     item = CartItem(
         cart_id=cart.id,
-        product_id=payload.product_id,
-        product_name=payload.product_name,
+        product_id=str(product.id),
+        product_name=payload.product_name or str(product.name or ""),
         product_image=payload.product_image,
         store_name=payload.store_name,
-        vendor_id=payload.vendor_id,
+        vendor_id=payload.vendor_id or str(product.vendor_id or ""),
         quantity=payload.quantity,
-        unit_price=payload.unit_price,
+        unit_price=product.price,
     )
     db.add(item)
     db.commit()

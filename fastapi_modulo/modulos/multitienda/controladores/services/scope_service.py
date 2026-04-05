@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+import logging
+
 from sqlalchemy import text
 
 from fastapi_modulo.modulos_sipet.web.modelos.core_models import Rol
 from fastapi_modulo.modulos_sipet.web.servicios.access_service import normalize_role_name, sensitive_lookup_hash
 from fastapi_modulo.modulos_sipet.web.servicios.auth_service import find_user_by_login
+
+_log = logging.getLogger("multitienda.scope")
 
 
 def coerce_theme_bool(value: object) -> bool:
@@ -106,4 +110,5 @@ def resolve_store_permissions(db, scope: dict, decode_store_theme) -> dict:
         theme["can_use_auctions"] = coerce_theme_bool(theme.get("can_use_auctions"))
         return theme
     except Exception:
+        _log.exception("Error al resolver permisos de tienda para scope=%s", scope)
         return {}

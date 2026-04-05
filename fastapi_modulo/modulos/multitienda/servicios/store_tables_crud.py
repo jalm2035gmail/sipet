@@ -9,10 +9,53 @@ from fastapi_modulo.modulos.multitienda.servicios.store_tables_shared import (
 )
 
 
+def _serialize_rows(rows) -> list[dict]:
+    return [orm_to_dict(row) for row in rows]
+
+
+def _list_by_vendor_compat(service_module, store_id: int, *, db=None) -> list[dict]:
+    with optional_session(db) as current_db:
+        return _serialize_rows(service_module.list_by_vendor(current_db, store_id))
+
+
+def _update_by_vendor_compat(
+    service_module,
+    store_id: int,
+    record_id: int,
+    data: dict,
+    col_map: dict,
+    *,
+    update_fn_name: str,
+    normalizer=None,
+    db=None,
+):
+    with optional_session(db, commit=True) as current_db:
+        normalized = normalizer(data) if normalizer else data
+        record = service_module.get_by_vendor(current_db, store_id, record_id)
+        if not record or not apply_updates(record, normalized, col_map):
+            return None
+        return orm_to_dict(getattr(service_module, update_fn_name)(current_db, record))
+
+
+def _delete_by_vendor_compat(
+    service_module,
+    store_id: int,
+    record_id: int,
+    *,
+    delete_fn_name: str,
+    db=None,
+) -> bool:
+    with optional_session(db, commit=True) as current_db:
+        record = service_module.get_by_vendor(current_db, store_id, record_id)
+        if not record:
+            return False
+        getattr(service_module, delete_fn_name)(current_db, record)
+        return True
+
+
 def list_employees(store_id: int) -> list:
     from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.employees import service as employee_service
-    with managed_session() as db:
-        return [orm_to_dict(employee) for employee in employee_service.list_by_vendor(db, store_id)]
+    return _list_by_vendor_compat(employee_service, store_id)
 
 
 def create_employee(store_id: int, data: dict) -> dict:
@@ -35,8 +78,12 @@ def create_employee(store_id: int, data: dict) -> dict:
 
 def update_employee(store_id: int, employee_id: int, data: dict):
     from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.employees import service as employee_service
-    with managed_session(commit=True) as db:
-        col_map = {
+    return _update_by_vendor_compat(
+        employee_service,
+        store_id,
+        employee_id,
+        data,
+        {
             "role": "role", "rol": "role",
             "position": "position",
             "full_name": "full_name", "nombre": "full_name",
@@ -44,21 +91,19 @@ def update_employee(store_id: int, employee_id: int, data: dict):
             "phone": "phone", "celular": "phone",
             "department": "department", "departamento": "department",
             "is_active": "is_active",
-        }
-        employee = employee_service.get_by_vendor(db, store_id, employee_id)
-        if not employee or not apply_updates(employee, data, col_map):
-            return None
-        return orm_to_dict(employee_service.update_employee(db, employee))
+        },
+        update_fn_name="update_employee",
+    )
 
 
 def delete_employee(store_id: int, employee_id: int) -> bool:
     from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.employees import service as employee_service
-    with managed_session(commit=True) as db:
-        employee = employee_service.get_by_vendor(db, store_id, employee_id)
-        if not employee:
-            return False
-        employee_service.delete_employee(db, employee)
-        return True
+    return _delete_by_vendor_compat(
+        employee_service,
+        store_id,
+        employee_id,
+        delete_fn_name="delete_employee",
+    )
 
 
 def change_employee_password(store_id: int, employee_id: int, password: str) -> bool:
@@ -69,8 +114,7 @@ def change_employee_password(store_id: int, employee_id: int, password: str) -> 
 
 def list_coupons(store_id: int) -> list:
     from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.coupons import service as coupon_service
-    with managed_session() as db:
-        return [orm_to_dict(coupon) for coupon in coupon_service.list_by_vendor(db, store_id)]
+    return _list_by_vendor_compat(coupon_service, store_id)
 
 
 def create_coupon(store_id: int, data: dict) -> dict:
@@ -94,9 +138,12 @@ def create_coupon(store_id: int, data: dict) -> dict:
 
 def update_coupon(store_id: int, coupon_id: int, data: dict):
     from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.coupons import service as coupon_service
-    with managed_session(commit=True) as db:
-        normalized = normalize_datetime_fields(data, "valid_from", "inicio", "valid_until", "expiracion")
-        col_map = {
+    return _update_by_vendor_compat(
+        coupon_service,
+        store_id,
+        coupon_id,
+        data,
+        {
             "code": "code", "codigo": "code",
             "discount_type": "discount_type", "tipo": "discount_type",
             "discount_value": "discount_value", "valor": "discount_value",
@@ -105,21 +152,20 @@ def update_coupon(store_id: int, coupon_id: int, data: dict):
             "valid_from": "valid_from", "inicio": "valid_from",
             "valid_until": "valid_until", "expiracion": "valid_until",
             "is_active": "is_active",
-        }
-        coupon = coupon_service.get_by_vendor(db, store_id, coupon_id)
-        if not coupon or not apply_updates(coupon, normalized, col_map):
-            return None
-        return orm_to_dict(coupon_service.update_coupon(db, coupon))
+        },
+        update_fn_name="update_coupon",
+        normalizer=lambda payload: normalize_datetime_fields(payload, "valid_from", "inicio", "valid_until", "expiracion"),
+    )
 
 
 def delete_coupon(store_id: int, coupon_id: int) -> bool:
     from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.coupons import service as coupon_service
-    with managed_session(commit=True) as db:
-        coupon = coupon_service.get_by_vendor(db, store_id, coupon_id)
-        if not coupon:
-            return False
-        coupon_service.delete_coupon(db, coupon)
-        return True
+    return _delete_by_vendor_compat(
+        coupon_service,
+        store_id,
+        coupon_id,
+        delete_fn_name="delete_coupon",
+    )
 
 
 def validate_coupon(store_id: int, code: str, cart_total: float = 0.0) -> dict:
@@ -136,8 +182,7 @@ def redeem_coupon(store_id: int, coupon_id: int) -> bool:
 
 def list_referrals(store_id: int) -> list:
     from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.referrals import service as referral_service
-    with managed_session() as db:
-        return [orm_to_dict(referral) for referral in referral_service.list_by_vendor(db, store_id)]
+    return _list_by_vendor_compat(referral_service, store_id)
 
 
 def create_referral(store_id: int, data: dict) -> dict:
@@ -157,29 +202,36 @@ def create_referral(store_id: int, data: dict) -> dict:
 
 def update_referral(store_id: int, referral_id: int, data: dict):
     from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.referrals import service as referral_service
-    with managed_session(commit=True) as db:
-        normalized = normalize_datetime_fields(data, "reward_given_at")
-        col_map = {"status": "status", "estado": "status", "referred_user_id": "referred_user_id", "reward_type": "reward_type", "reward_value": "reward_value", "reward_given_at": "reward_given_at"}
-        referral = referral_service.get_by_vendor(db, store_id, referral_id)
-        if not referral or not apply_updates(referral, normalized, col_map):
-            return None
-        return orm_to_dict(referral_service.update_referral(db, referral))
+    return _update_by_vendor_compat(
+        referral_service,
+        store_id,
+        referral_id,
+        data,
+        {
+            "status": "status", "estado": "status",
+            "referred_user_id": "referred_user_id",
+            "reward_type": "reward_type",
+            "reward_value": "reward_value",
+            "reward_given_at": "reward_given_at",
+        },
+        update_fn_name="update_referral",
+        normalizer=lambda payload: normalize_datetime_fields(payload, "reward_given_at"),
+    )
 
 
 def delete_referral(store_id: int, referral_id: int) -> bool:
     from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.referrals import service as referral_service
-    with managed_session(commit=True) as db:
-        referral = referral_service.get_by_vendor(db, store_id, referral_id)
-        if not referral:
-            return False
-        referral_service.delete_referral(db, referral)
-        return True
+    return _delete_by_vendor_compat(
+        referral_service,
+        store_id,
+        referral_id,
+        delete_fn_name="delete_referral",
+    )
 
 
 def list_reservations(store_id: int) -> list:
     from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.reservations import service as reservation_service
-    with managed_session() as db:
-        return [orm_to_dict(reservation) for reservation in reservation_service.list_by_vendor(db, store_id)]
+    return _list_by_vendor_compat(reservation_service, store_id)
 
 
 def create_reservation(store_id: int, data: dict) -> dict:
@@ -200,36 +252,37 @@ def create_reservation(store_id: int, data: dict) -> dict:
 
 def update_reservation(store_id: int, reservation_id: int, data: dict):
     from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.reservations import service as reservation_service
-    with managed_session(commit=True) as db:
-        normalized = normalize_datetime_fields(data, "reservation_date", "fecha", "confirmed_at", "cancelled_at")
-        col_map = {
+    return _update_by_vendor_compat(
+        reservation_service,
+        store_id,
+        reservation_id,
+        data,
+        {
             "status": "status", "estado": "status",
             "reservation_date": "reservation_date", "fecha": "reservation_date",
             "time_slot": "time_slot", "hora": "time_slot",
             "duration_minutes": "duration_minutes",
             "notes": "notes", "notas": "notes",
             "confirmed_at": "confirmed_at", "cancelled_at": "cancelled_at",
-        }
-        reservation = reservation_service.get_by_vendor(db, store_id, reservation_id)
-        if not reservation or not apply_updates(reservation, normalized, col_map):
-            return None
-        return orm_to_dict(reservation_service.update_reservation(db, reservation))
+        },
+        update_fn_name="update_reservation",
+        normalizer=lambda payload: normalize_datetime_fields(payload, "reservation_date", "fecha", "confirmed_at", "cancelled_at"),
+    )
 
 
 def delete_reservation(store_id: int, reservation_id: int) -> bool:
     from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.reservations import service as reservation_service
-    with managed_session(commit=True) as db:
-        reservation = reservation_service.get_by_vendor(db, store_id, reservation_id)
-        if not reservation:
-            return False
-        reservation_service.delete_reservation(db, reservation)
-        return True
+    return _delete_by_vendor_compat(
+        reservation_service,
+        store_id,
+        reservation_id,
+        delete_fn_name="delete_reservation",
+    )
 
 
 def list_followers(store_id: int) -> list:
     from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.followers import service as follower_service
-    with managed_session() as db:
-        return [orm_to_dict(follower) for follower in follower_service.list_by_vendor(db, store_id)]
+    return _list_by_vendor_compat(follower_service, store_id)
 
 
 def create_follower(store_id: int, data: dict) -> dict:
@@ -244,18 +297,17 @@ def update_follower(store_id: int, follower_id: int, data: dict):
 
 def delete_follower(store_id: int, follower_id: int) -> bool:
     from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.followers import service as follower_service
-    with managed_session(commit=True) as db:
-        follower = follower_service.get_by_vendor(db, store_id, follower_id)
-        if not follower:
-            return False
-        follower_service.delete_follower(db, follower)
-        return True
+    return _delete_by_vendor_compat(
+        follower_service,
+        store_id,
+        follower_id,
+        delete_fn_name="delete_follower",
+    )
 
 
 def list_videos(store_id: int) -> list:
     from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.videos import service as video_service
-    with managed_session() as db:
-        return [orm_to_dict(video) for video in video_service.list_by_vendor(db, store_id)]
+    return _list_by_vendor_compat(video_service, store_id)
 
 
 def create_video(store_id: int, data: dict) -> dict:
@@ -276,18 +328,17 @@ def create_video(store_id: int, data: dict) -> dict:
 
 def delete_video(store_id: int, video_id: int) -> bool:
     from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.videos import service as video_service
-    with managed_session(commit=True) as db:
-        video = video_service.get_by_vendor(db, store_id, video_id)
-        if not video:
-            return False
-        video_service.delete_video(db, video)
-        return True
+    return _delete_by_vendor_compat(
+        video_service,
+        store_id,
+        video_id,
+        delete_fn_name="delete_video",
+    )
 
 
 def list_suppliers(store_id: int, db=None) -> list:
     from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.suppliers import service as supplier_service
-    with optional_session(db) as current_db:
-        return [orm_to_dict(supplier) for supplier in supplier_service.list_by_vendor(current_db, store_id)]
+    return _list_by_vendor_compat(supplier_service, store_id, db=db)
 
 
 def create_supplier(store_id: int, data: dict, db=None) -> dict:
@@ -310,8 +361,12 @@ def create_supplier(store_id: int, data: dict, db=None) -> dict:
 
 def update_supplier(store_id: int, supplier_id: int, data: dict, db=None):
     from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.suppliers import service as supplier_service
-    with optional_session(db, commit=True) as current_db:
-        col_map = {
+    return _update_by_vendor_compat(
+        supplier_service,
+        store_id,
+        supplier_id,
+        data,
+        {
             "name": "name", "nombre": "name",
             "contact_name": "contact_name", "email": "email",
             "phone": "phone", "telefono": "phone",
@@ -319,18 +374,18 @@ def update_supplier(store_id: int, supplier_id: int, data: dict, db=None):
             "country": "country", "website": "website",
             "notes": "notes", "notas": "notes",
             "is_active": "is_active",
-        }
-        supplier = supplier_service.get_by_vendor(current_db, store_id, supplier_id)
-        if not supplier or not apply_updates(supplier, data, col_map):
-            return None
-        return orm_to_dict(supplier_service.update_supplier(current_db, supplier))
+        },
+        update_fn_name="update_supplier",
+        db=db,
+    )
 
 
 def delete_supplier(store_id: int, supplier_id: int, db=None) -> bool:
     from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.suppliers import service as supplier_service
-    with optional_session(db, commit=True) as current_db:
-        supplier = supplier_service.get_by_vendor(current_db, store_id, supplier_id)
-        if not supplier:
-            return False
-        supplier_service.delete_supplier(current_db, supplier)
-        return True
+    return _delete_by_vendor_compat(
+        supplier_service,
+        store_id,
+        supplier_id,
+        delete_fn_name="delete_supplier",
+        db=db,
+    )

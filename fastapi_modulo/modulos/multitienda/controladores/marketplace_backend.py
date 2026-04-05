@@ -37,6 +37,17 @@ def _ensure_business_types_schema(bind) -> None:
     _business_type_metadata.create_all(bind=bind, tables=[store_business_types], checkfirst=True)
 
 
+def bootstrap_business_types_schema(bind=None) -> None:
+    target_bind = bind or SessionLocal.kw["bind"] if hasattr(SessionLocal, "kw") else None
+    if target_bind is None:
+        db = SessionLocal()
+        try:
+            target_bind = db.bind
+        finally:
+            db.close()
+    _ensure_business_types_schema(target_bind)
+
+
 def _default_business_types() -> list[dict[str, str]]:
     return [
         {"name": "Restaurante", "code": "REST", "description": "Negocios de alimentos y bebidas."},
@@ -46,7 +57,6 @@ def _default_business_types() -> list[dict[str, str]]:
 
 
 def _list_business_types(db) -> list[dict[str, str]]:
-    _ensure_business_types_schema(db.bind)
     rows = db.execute(
         select(
             store_business_types.c.id,
@@ -89,7 +99,7 @@ def _deserialize_store_theme(raw_value) -> dict:
             return {}
         try:
             current = json.loads(current)
-        except Exception:
+        except json.JSONDecodeError:
             return {}
     return {}
 
@@ -294,7 +304,6 @@ async def create_business_type(request: Request):
 
     db = SessionLocal()
     try:
-        _ensure_business_types_schema(db.bind)
         existing = db.execute(
             select(store_business_types.c.id).where(
                 (store_business_types.c.code == code) | (store_business_types.c.name == name)

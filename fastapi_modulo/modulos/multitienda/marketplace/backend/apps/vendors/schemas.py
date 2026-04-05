@@ -1,4 +1,4 @@
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_serializer, field_validator
 from typing import Optional, Dict, List
 from datetime import datetime
 from enum import Enum
@@ -35,6 +35,10 @@ class VendorDocumentRead(BaseModel):
     file: Optional[str]
     verified: bool
     uploaded_at: datetime
+
+    @field_serializer("file")
+    def serialize_file(self, value: Optional[str]) -> Optional[str]:
+        return None
 
     class Config:
         from_attributes = True

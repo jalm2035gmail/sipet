@@ -3,14 +3,22 @@ from __future__ import annotations
 from sqlalchemy.orm import Session
 
 from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.referrals.models import ReferralStatus, StoreReferral
+from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.service_utils import (
+    create_for_vendor as create_vendor_record,
+    delete_entity,
+    get_by_id as get_record_by_id,
+    get_by_vendor as get_vendor_record,
+    list_by_vendor as list_vendor_records,
+    update_entity,
+)
 
 
 def list_by_vendor(db: Session, vendor_id: int) -> list[StoreReferral]:
-    return (
-        db.query(StoreReferral)
-        .filter_by(vendor_id=vendor_id)
-        .order_by(StoreReferral.created_at.desc())
-        .all()
+    return list_vendor_records(
+        db,
+        StoreReferral,
+        vendor_id,
+        order_by=(StoreReferral.created_at.desc(),),
     )
 
 
@@ -19,11 +27,11 @@ def list_by_referrer(db: Session, user_id: int) -> list[StoreReferral]:
 
 
 def get_by_id(db: Session, referral_id: int) -> StoreReferral | None:
-    return db.query(StoreReferral).filter_by(id=referral_id).first()
+    return get_record_by_id(db, StoreReferral, referral_id)
 
 
 def get_by_vendor(db: Session, vendor_id: int, referral_id: int) -> StoreReferral | None:
-    return db.query(StoreReferral).filter_by(id=referral_id, vendor_id=vendor_id).first()
+    return get_vendor_record(db, StoreReferral, vendor_id, referral_id)
 
 
 def get_by_code(db: Session, referral_code: str) -> StoreReferral | None:
@@ -40,31 +48,24 @@ def create_for_vendor(
     reward_value=None,
     status=ReferralStatus.pending,
 ) -> StoreReferral:
-    referral = StoreReferral(
-        vendor_id=vendor_id,
+    return create_vendor_record(
+        db,
+        StoreReferral,
+        vendor_id,
         referrer_user_id=referrer_user_id,
         referral_code=referral_code,
         reward_type=reward_type,
         reward_value=reward_value,
         status=status,
     )
-    db.add(referral)
-    db.flush()
-    db.refresh(referral)
-    return referral
 
 
 def update_referral(db: Session, referral: StoreReferral, **updates) -> StoreReferral:
-    for field, value in updates.items():
-        setattr(referral, field, value)
-    db.flush()
-    db.refresh(referral)
-    return referral
+    return update_entity(db, referral, **updates)
 
 
 def delete_referral(db: Session, referral: StoreReferral) -> None:
-    db.delete(referral)
-    db.flush()
+    delete_entity(db, referral)
 
 
 def claim_referral(db: Session, referral: StoreReferral, referred_user_id: int) -> StoreReferral:

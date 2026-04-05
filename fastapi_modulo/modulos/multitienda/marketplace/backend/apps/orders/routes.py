@@ -5,19 +5,11 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session, joinedload
 
-from fastapi_modulo.modulos.multitienda.marketplace.backend.core.db import SessionLocal
+from fastapi_modulo.modulos.multitienda.marketplace.backend.core.db import get_db
 from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.users.routes import require_any_role
 from .models import Order, OrderItem, ShippingGroup, Payment
 
 router = APIRouter()
-
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 
 def _serialize_item(i: OrderItem) -> dict:

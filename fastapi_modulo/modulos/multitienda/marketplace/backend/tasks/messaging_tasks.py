@@ -1,7 +1,6 @@
 from celery import shared_task
 from datetime import datetime, timedelta, date
 import logging
-from sqlalchemy.orm import Session
 from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.messaging.models import (
     AutoReplyRule,
     Conversation,
@@ -14,13 +13,6 @@ from fastapi_modulo.modulos.multitienda.marketplace.backend.core.db import Sessi
 # from backend.apps.surveys.models import Survey
 
 logger = logging.getLogger(__name__)
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 @shared_task
 def send_message_notification(message_id: int):
@@ -36,8 +28,8 @@ def send_message_notification(message_id: int):
         # context = {...}
         # send_email_notification(to_email=message.recipient.email, subject=subject, template_name='new_message', context=context)
         logger.info(f"Would send message notification to {message.recipient.email}")
-    except Exception as e:
-        logger.error(f"Error sending message notification: {e}")
+    except Exception:
+        logger.exception("Error sending message notification")
     finally:
         db.close()
 
@@ -65,8 +57,8 @@ def send_auto_reply(rule_id: int, conversation_id: int, trigger_message_id: int)
         db.add(auto_message)
         db.commit()
         logger.info(f"Sent auto-reply to conversation {conversation_id}")
-    except Exception as e:
-        logger.error(f"Error sending auto-reply: {e}")
+    except Exception:
+        logger.exception("Error sending auto-reply")
     finally:
         db.close()
 
@@ -88,8 +80,8 @@ def close_inactive_conversations():
             closed_count += 1
         db.commit()
         logger.info(f"Closed {closed_count} inactive conversations")
-    except Exception as e:
-        logger.error(f"Error closing inactive conversations: {e}")
+    except Exception:
+        logger.exception("Error closing inactive conversations")
     finally:
         db.close()
 
@@ -123,8 +115,8 @@ def update_message_analytics():
             analytics.avg_response_time_minutes = 0
             db.commit()
             logger.info(f"Updated messaging analytics for vendor {vendor.id}")
-    except Exception as e:
-        logger.error(f"Error updating messaging analytics: {e}")
+    except Exception:
+        logger.exception("Error updating messaging analytics")
     finally:
         db.close()
 
@@ -141,7 +133,7 @@ def send_conversation_followup(conversation_id: int):
         # survey = Survey(...)
         # followup_message = Message(...)
         logger.info(f"Would send follow-up survey for conversation {conversation_id}")
-    except Exception as e:
-        logger.error(f"Error sending conversation follow-up: {e}")
+    except Exception:
+        logger.exception("Error sending conversation follow-up")
     finally:
         db.close()

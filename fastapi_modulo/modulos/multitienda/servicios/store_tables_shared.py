@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
-import json
 
 from sqlalchemy import inspect, text
 
@@ -12,6 +11,7 @@ from fastapi_modulo.modulos.multitienda.servicios.data_utils import (
     orm_to_dict as orm_to_dict,
     serialize_mapping as serialize_mapping,
 )
+from fastapi_modulo.modulos.multitienda.servicios.theme_utils import decode_theme as decode_theme
 
 
 def rows(db, sql: str, params=None) -> list:
@@ -51,20 +51,6 @@ def build_update_params(data: dict, base_params: dict, col_map: dict) -> tuple[l
     return fields, params
 
 
-def decode_theme(raw_value) -> dict:
-    current = raw_value
-    for _ in range(3):
-        if isinstance(current, dict):
-            return current
-        if not isinstance(current, str):
-            return {}
-        try:
-            current = json.loads(current)
-        except Exception:
-            return {}
-    return {}
-
-
 @contextmanager
 def optional_session(db=None, *, commit: bool = False):
     if db is not None:
@@ -72,6 +58,25 @@ def optional_session(db=None, *, commit: bool = False):
         return
     with managed_session(commit=commit) as own_db:
         yield own_db
+
+
+_STORE_EMPLOYEE_ALLOWED_COLUMNS = {
+    "full_name": "VARCHAR(150) DEFAULT ''",
+    "job_title": "VARCHAR(120) DEFAULT ''",
+    "phone": "VARCHAR(30) DEFAULT ''",
+    "department": "VARCHAR(80) DEFAULT ''",
+}
+
+
+def _add_allowed_columns(connection, table_name: str, existing_columns: set[str], allowed_columns: dict[str, str]) -> None:
+    for column_name, column_sql in allowed_columns.items():
+        if column_name in existing_columns:
+            continue
+        if column_name not in allowed_columns:
+            raise ValueError(f"Columna no permitida para {table_name}: {column_name}")
+        connection.execute(
+            text(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {allowed_columns[column_name]}")
+        )
 
 
 def ensure_store_tables(bind=None) -> None:
@@ -126,16 +131,10 @@ def ensure_store_tables(bind=None) -> None:
         column["name"]
         for column in inspector.get_columns("store_employees")
     }
-    missing_columns = [
-        ("full_name", "VARCHAR(150) DEFAULT ''"),
-        ("job_title", "VARCHAR(120) DEFAULT ''"),
-        ("phone", "VARCHAR(30) DEFAULT ''"),
-        ("department", "VARCHAR(80) DEFAULT ''"),
-    ]
     with target_bind.begin() as connection:
-        for column_name, column_sql in missing_columns:
-            if column_name in existing_columns:
-                continue
-            connection.execute(
-                text(f"ALTER TABLE store_employees ADD COLUMN {column_name} {column_sql}")
-            )
+        _add_allowed_columns(
+            connection,
+            "store_employees",
+            existing_columns,
+            _STORE_EMPLOYEE_ALLOWED_COLUMNS,
+        )

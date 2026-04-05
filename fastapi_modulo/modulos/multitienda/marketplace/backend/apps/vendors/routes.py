@@ -3,20 +3,76 @@ from sqlalchemy.orm import Session
 from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.users.models import User, UserType
 from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.users.routes import require_role
 from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.vendors import models, schemas
-from fastapi_modulo.modulos.multitienda.marketplace.backend.core.db import SessionLocal
+from fastapi_modulo.modulos.multitienda.marketplace.backend.core.db import get_db
 from typing import List, Optional
 import bcrypt
-import os
-import shutil
+from pathlib import Path
+import re
+import secrets
+
+_MODULE_ROOT = Path(__file__).resolve().parents[5]
+_PRIVATE_UPLOAD_ROOT = _MODULE_ROOT / "private_storage" / "vendor_kyc"
+_MAX_VENDOR_DOCUMENT_BYTES = 10 * 1024 * 1024
+_ALLOWED_VENDOR_DOC_EXTENSIONS = {".pdf", ".png", ".jpg", ".jpeg"}
+_ALLOWED_VENDOR_DOC_MIME_TYPES = {
+    "application/pdf",
+    "image/png",
+    "image/jpeg",
+}
+_ALLOWED_VENDOR_DOCUMENT_TYPES = {
+    "ine",
+    "pasaporte",
+    "rfc",
+    "constancia_fiscal",
+    "comprobante_domicilio",
+    "estado_cuenta",
+    "acta_constitutiva",
+    "curp",
+    "otro",
+}
 
 router = APIRouter()
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+
+def _sanitize_vendor_document_type(value: str) -> str:
+    normalized = re.sub(r"[^a-z0-9_-]+", "_", str(value or "").strip().lower()).strip("_")
+    if not normalized:
+        raise HTTPException(status_code=400, detail="document_type invalido.")
+    if normalized not in _ALLOWED_VENDOR_DOCUMENT_TYPES:
+        raise HTTPException(status_code=400, detail="Tipo de documento no permitido.")
+    return normalized
+
+
+def _safe_vendor_document_extension(filename: str) -> str:
+    ext = Path(str(filename or "").strip()).suffix.lower()
+    if ext not in _ALLOWED_VENDOR_DOC_EXTENSIONS:
+        raise HTTPException(status_code=400, detail="Extension de archivo no permitida.")
+    return ext
+
+
+def _matches_vendor_document_signature(content: bytes, ext: str) -> bool:
+    if ext == ".pdf":
+        return content.startswith(b"%PDF-")
+    if ext == ".png":
+        return content.startswith(b"\x89PNG\r\n\x1a\n")
+    if ext in {".jpg", ".jpeg"}:
+        return content.startswith(b"\xff\xd8\xff")
+    return False
+
+
+def _vendor_document_storage_key(store_id: int, internal_name: str) -> str:
+    return f"vendor_kyc/{int(store_id)}/documents/{internal_name}"
+
+
+def _vendor_document_storage_path(storage_key: str) -> Path:
+    normalized = str(storage_key or "").strip().replace("\\", "/").lstrip("/")
+    if ".." in normalized.split("/"):
+        raise HTTPException(status_code=400, detail="Ruta de almacenamiento invalida.")
+    path = (_PRIVATE_UPLOAD_ROOT / normalized.removeprefix("vendor_kyc/")).resolve()
+    root = _PRIVATE_UPLOAD_ROOT.resolve()
+    if root not in path.parents and path != root:
+        raise HTTPException(status_code=400, detail="Ruta de almacenamiento invalida.")
+    return path
 
 # --- ADMIN ENDPOINTS ---
 
@@ -184,17 +240,35 @@ async def upload_vendor_document(
     store = db.query(models.VendorStore).filter_by(vendor_id=user.id).first()
     if not store:
         raise HTTPException(status_code=404, detail="Vendor store not found")
-    # Guardar archivo localmente (puedes adaptar a S3/MinIO)
-    file_dir = f"uploads/vendors/{store.id}/documents/"
-    os.makedirs(file_dir, exist_ok=True)
-    file_path = os.path.join(file_dir, f"{document_type}_{file.filename}")
-    with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+
+    safe_document_type = _sanitize_vendor_document_type(document_type)
+    safe_extension = _safe_vendor_document_extension(file.filename or "")
+    if str(file.content_type or "").strip().lower() not in _ALLOWED_VENDOR_DOC_MIME_TYPES:
+        raise HTTPException(status_code=400, detail="Tipo MIME no permitido.")
+
+    file_bytes = await file.read(_MAX_VENDOR_DOCUMENT_BYTES + 1)
+    if not file_bytes:
+        raise HTTPException(status_code=400, detail="El archivo esta vacio.")
+    if len(file_bytes) > _MAX_VENDOR_DOCUMENT_BYTES:
+        raise HTTPException(status_code=413, detail="El archivo excede el tamano maximo permitido.")
+    if not _matches_vendor_document_signature(file_bytes, safe_extension):
+        raise HTTPException(status_code=400, detail="El contenido del archivo no coincide con su extension.")
+
+    file_dir = _PRIVATE_UPLOAD_ROOT / str(store.id) / "documents"
+    file_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
+    internal_name = f"{safe_document_type}_{secrets.token_urlsafe(16)}{safe_extension}"
+    storage_key = _vendor_document_storage_key(store.id, internal_name)
+    file_path = _vendor_document_storage_path(storage_key)
+    with file_path.open("wb") as buffer:
+        buffer.write(file_bytes)
+    file_path.chmod(0o600)
+    await file.close()
+
     # Guardar registro en base de datos
     document = models.VendorDocument(
         vendor_id=store.id,
-        document_type=document_type,
-        file=file_path
+        document_type=safe_document_type,
+        file=storage_key
     )
     db.add(document)
     db.commit()

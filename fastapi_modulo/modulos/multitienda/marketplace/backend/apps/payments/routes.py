@@ -19,7 +19,7 @@ Variables de entorno necesarias:
 from __future__ import annotations
 
 import os
-import secrets
+import logging
 from datetime import datetime, timezone
 from decimal import Decimal
 from typing import List, Optional
@@ -29,6 +29,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from sqlalchemy.orm import Session
 
 from fastapi_modulo.modulos.multitienda.marketplace.backend.core.db import get_db
+from fastapi_modulo.modulos.multitienda.marketplace.backend.core.dependencies import get_session_key as _get_session_key
 from .models import (
     CheckoutPayment,
     IFWalletAccount,
@@ -50,8 +51,7 @@ from .schemas import (
 )
 
 router = APIRouter(prefix="/api/payments", tags=["payments"])
-
-_SESSION_COOKIE = "mt_session"
+_log = logging.getLogger("multitienda.payments")
 
 # ── PayPal config ──────────────────────────────────────────────────────────────
 
@@ -76,25 +76,6 @@ def _if_headers() -> dict:
 
 def _if_available() -> bool:
     return bool(_IF_API_BASE and _IF_API_KEY)
-
-
-
-_PAYPAL_CLIENT_SECRET = os.getenv("PAYPAL_CLIENT_SECRET", "")
-
-
-# ── Helpers ────────────────────────────────────────────────────────────────────
-
-def _get_session_key(request: Request, response: Response) -> str:
-    key = request.headers.get("X-Session-Key") or request.cookies.get(_SESSION_COOKIE)
-    if not key:
-        key = secrets.token_urlsafe(32)
-        response.set_cookie(
-            _SESSION_COOKIE, key,
-            max_age=60 * 60 * 24 * 365,
-            httponly=True,
-            samesite="lax",
-        )
-    return key
 
 
 def _serialize_payment(p: CheckoutPayment) -> dict:
@@ -222,7 +203,12 @@ async def if_wallet_balance(
                 db.commit()
                 db.refresh(wallet)
         except Exception:
-            pass  # usar cache si la IF no responde
+            _log.exception(
+                "Error consultando saldo de billetera IF para session_key=%s member=%s",
+                session_key,
+                wallet.member_number,
+            )
+            # usar cache si la IF no responde
 
     return {
         "session_key": session_key,
@@ -473,7 +459,11 @@ async def checkout_if_wallet(
         except HTTPException:
             raise
         except Exception as exc:
-            raise HTTPException(status_code=503, detail=f"No se pudo conectar con la institución financiera: {exc}") from exc
+            _log.exception(
+                "No se pudo conectar con la institucion financiera para order_reference=%s",
+                payload.order_reference,
+            )
+            raise HTTPException(status_code=503, detail="No se pudo conectar con la institución financiera.") from exc
 
     # Registrar la transacción localmente
     tx = IFWalletTransaction(
@@ -688,4 +678,3 @@ def get_payments_for_order(
         .all()
     )
     return [_serialize_payment(p) for p in payments]
-

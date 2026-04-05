@@ -6,19 +6,15 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
-from fastapi_modulo.modulos.multitienda.marketplace.backend.core.db import SessionLocal
+from fastapi_modulo.modulos.multitienda.marketplace.backend.core.dependencies import (
+    assert_store_access,
+    get_vendor_store as _get_vendor_store,
+)
+from fastapi_modulo.modulos.multitienda.marketplace.backend.core.db import get_db
 from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.users.routes import require_any_role
 from .models import Product, Category, ProductImage, ProductVariant, ProductStatus, ProductRelated, BENEFIT_TYPES
 
 router = APIRouter()
-
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 
 def _slugify(text: str) -> str:
@@ -65,6 +61,8 @@ def list_store_products(
     db: Session = Depends(get_db),
     user=Depends(require_any_role("vendor", "superadmin", "store_employee")),
 ):
+    _get_vendor_store(vendor_id, db)
+    assert_store_access(user, vendor_id, db)
     query = db.query(Product).filter(Product.vendor_id == vendor_id)
     if status:
         query = query.filter(Product.status == status)
@@ -112,6 +110,8 @@ def create_product(
     db: Session = Depends(get_db),
     user=Depends(require_any_role("vendor", "superadmin")),
 ):
+    _get_vendor_store(vendor_id, db)
+    assert_store_access(user, vendor_id, db)
     name = str(data.get("name") or "").strip()
     if not name:
         raise HTTPException(status_code=400, detail="El nombre es obligatorio.")
@@ -168,6 +168,7 @@ def update_product(
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:
         raise HTTPException(status_code=404, detail="Producto no encontrado.")
+    assert_store_access(user, int(product.vendor_id), db)
 
     for field in ("name", "description", "status", "type"):
         if field in data and data[field] is not None:
@@ -210,6 +211,7 @@ def delete_product(
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:
         raise HTTPException(status_code=404, detail="Producto no encontrado.")
+    assert_store_access(user, int(product.vendor_id), db)
     db.delete(product)
     db.commit()
     return {"success": True}
@@ -242,6 +244,7 @@ def add_product_image(
     p = db.query(Product).filter(Product.id == product_id).first()
     if not p:
         raise HTTPException(status_code=404, detail="Producto no encontrado.")
+    assert_store_access(user, int(p.vendor_id), db)
     is_primary = bool(data.get("is_primary", False))
     if is_primary:
         db.query(ProductImage).filter(ProductImage.product_id == product_id).update({"is_primary": False})
@@ -274,6 +277,10 @@ def set_primary_image(
     ).first()
     if not img:
         raise HTTPException(status_code=404, detail="Imagen no encontrada.")
+    product = db.query(Product).filter(Product.id == product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Producto no encontrado.")
+    assert_store_access(user, int(product.vendor_id), db)
     db.query(ProductImage).filter(ProductImage.product_id == product_id).update({"is_primary": False})
     img.is_primary = True
     db.commit()
@@ -293,6 +300,10 @@ def delete_product_image(
     ).first()
     if not img:
         raise HTTPException(status_code=404, detail="Imagen no encontrada.")
+    product = db.query(Product).filter(Product.id == product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Producto no encontrado.")
+    assert_store_access(user, int(product.vendor_id), db)
     db.delete(img)
     db.commit()
     return {"success": True}
@@ -344,8 +355,10 @@ def add_related_product(
     user=Depends(require_any_role("vendor", "superadmin")),
 ):
     """Configura que al comprar `product_id`, un producto relacionado obtenga un beneficio."""
-    if not db.query(Product).filter(Product.id == product_id).first():
+    product = db.query(Product).filter(Product.id == product_id).first()
+    if not product:
         raise HTTPException(status_code=404, detail="Producto no encontrado.")
+    assert_store_access(user, int(product.vendor_id), db)
 
     try:
         related_id = int(data["related_product_id"])
@@ -354,8 +367,11 @@ def add_related_product(
 
     if related_id == product_id:
         raise HTTPException(status_code=400, detail="Un producto no puede relacionarse consigo mismo.")
-    if not db.query(Product).filter(Product.id == related_id).first():
+    related_product = db.query(Product).filter(Product.id == related_id).first()
+    if not related_product:
         raise HTTPException(status_code=404, detail="Producto relacionado no encontrado.")
+    if int(related_product.vendor_id or 0) != int(product.vendor_id or 0):
+        raise HTTPException(status_code=400, detail="El producto relacionado debe pertenecer a la misma tienda.")
 
     benefit_type = str(data.get("benefit_type") or "")
     if benefit_type not in BENEFIT_TYPES:
@@ -399,6 +415,10 @@ def update_related_product(
     ).first()
     if not rel:
         raise HTTPException(status_code=404, detail="Relación no encontrada.")
+    product = db.query(Product).filter(Product.id == product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Producto no encontrado.")
+    assert_store_access(user, int(product.vendor_id), db)
 
     if "benefit_type" in data:
         if data["benefit_type"] not in BENEFIT_TYPES:
@@ -428,6 +448,10 @@ def delete_related_product(
     ).first()
     if not rel:
         raise HTTPException(status_code=404, detail="Relación no encontrada.")
+    product = db.query(Product).filter(Product.id == product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Producto no encontrado.")
+    assert_store_access(user, int(product.vendor_id), db)
     db.delete(rel)
     db.commit()
     return {"success": True}
@@ -478,4 +502,3 @@ def compute_benefits(data: dict, db: Session = Depends(get_db)):
         result.append(entry)
 
     return {"success": True, "data": result}
-
