@@ -12,6 +12,9 @@ def _safe_first(query, *, context: str = ""):
     try:
         return query.first()
     except SQLAlchemyError as exc:
+        session = getattr(query, "session", None)
+        if session is not None:
+            session.rollback()
         print(f"[web.core_repository] query skipped in {context or 'unknown'}: {exc}", flush=True)
         return None
 
@@ -20,6 +23,9 @@ def _safe_all(query, *, context: str = ""):
     try:
         return query.all()
     except SQLAlchemyError as exc:
+        session = getattr(query, "session", None)
+        if session is not None:
+            session.rollback()
         print(f"[web.core_repository] query skipped in {context or 'unknown'}: {exc}", flush=True)
         return []
 
