@@ -1,9 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
-from datetime import datetime
-from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.users.routes import require_any_role, get_current_user
-from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.reservations import models, schemas
+from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.users.routes import require_any_role
+from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.reservations import schemas, service
 from fastapi_modulo.modulos.multitienda.marketplace.backend.core.db import get_db
 from fastapi_modulo.modulos.multitienda.marketplace.backend.core.dependencies import assert_store_access, get_vendor_store as _get_vendor_store
 
@@ -18,7 +17,7 @@ def list_reservations(
 ):
     _get_vendor_store(vendor_id, db)
     assert_store_access(user, vendor_id, db)
-    return db.query(models.StoreReservation).filter_by(vendor_id=vendor_id).all()
+    return service.list_by_vendor(db, vendor_id)
 
 
 @router.post("/store/{vendor_id}", response_model=schemas.StoreReservationRead, status_code=201)
@@ -29,18 +28,17 @@ def create_reservation(
     user=Depends(require_any_role("customer", "vendor", "superadmin", "store_employee")),
 ):
     _get_vendor_store(vendor_id, db)
-    reservation = models.StoreReservation(
-        vendor_id=vendor_id,
+    reservation = service.create_for_vendor(
+        db,
+        vendor_id,
         customer_user_id=user.id,
         product_id=data.product_id,
         reservation_date=data.reservation_date,
         time_slot=data.time_slot,
         duration_minutes=data.duration_minutes,
-        notes=data.notes,
+        notes=data.notes or "",
     )
-    db.add(reservation)
     db.commit()
-    db.refresh(reservation)
     return reservation
 
 
@@ -51,18 +49,12 @@ def update_reservation(
     db: Session = Depends(get_db),
     user=Depends(require_any_role("vendor", "superadmin", "store_employee")),
 ):
-    reservation = db.query(models.StoreReservation).filter_by(id=reservation_id).first()
+    reservation = service.get_by_id(db, reservation_id)
     if not reservation:
         raise HTTPException(status_code=404, detail="Reservación no encontrada")
     assert_store_access(user, reservation.vendor_id, db)
-    for field, value in data.dict(exclude_unset=True).items():
-        setattr(reservation, field, value)
-    if data.status == schemas.ReservationStatus.confirmed:
-        reservation.confirmed_at = datetime.utcnow()
-    elif data.status == schemas.ReservationStatus.cancelled:
-        reservation.cancelled_at = datetime.utcnow()
+    reservation = service.update_reservation(db, reservation, **data.dict(exclude_unset=True))
     db.commit()
-    db.refresh(reservation)
     return reservation
 
 
@@ -72,11 +64,11 @@ def delete_reservation(
     db: Session = Depends(get_db),
     user=Depends(require_any_role("vendor", "superadmin")),
 ):
-    reservation = db.query(models.StoreReservation).filter_by(id=reservation_id).first()
+    reservation = service.get_by_id(db, reservation_id)
     if not reservation:
         raise HTTPException(status_code=404, detail="Reservación no encontrada")
     assert_store_access(user, reservation.vendor_id, db)
-    db.delete(reservation)
+    service.delete_reservation(db, reservation)
     db.commit()
 
 
@@ -85,4 +77,4 @@ def my_reservations(
     db: Session = Depends(get_db),
     user=Depends(require_any_role("customer", "vendor", "superadmin", "store_employee")),
 ):
-    return db.query(models.StoreReservation).filter_by(customer_user_id=user.id).all()
+    return service.list_by_customer(db, user.id)

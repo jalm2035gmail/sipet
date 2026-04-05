@@ -12,14 +12,21 @@ El parámetro `store_id` en las funciones públicas corresponde a `vendor_id` en
 from __future__ import annotations
 from contextlib import contextmanager
 from datetime import datetime
+from decimal import Decimal
+from enum import Enum
 import json
 from sqlalchemy import text
+from sqlalchemy.inspection import inspect as sa_inspect
 from fastapi_modulo.modulos.multitienda.marketplace.backend.core.db import SessionLocal
 
 
 def _coerce(v):
     if isinstance(v, datetime):
         return v.isoformat()
+    if isinstance(v, Decimal):
+        return float(v)
+    if isinstance(v, Enum):
+        return v.value
     return v
 
 
@@ -38,6 +45,82 @@ def _row(db, sql: str, params=None):
     keys = result.keys()
     row = result.fetchone()
     return _serialize(dict(zip(keys, row))) if row else None
+
+
+def _orm_to_dict(instance) -> dict:
+    return _serialize({
+        attr.key: getattr(instance, attr.key)
+        for attr in sa_inspect(instance.__class__).mapper.column_attrs
+    })
+
+
+def _orm_list(query) -> list:
+    return [_orm_to_dict(row) for row in query.all()]
+
+
+def _apply_updates(instance, data: dict, col_map: dict) -> bool:
+    updated = False
+    seen = set()
+    for src, field in col_map.items():
+        if data.get(src) is not None and field not in seen:
+            setattr(instance, field, data[src])
+            seen.add(field)
+            updated = True
+    return updated
+
+
+def _parse_datetime_value(value):
+    if value in (None, ""):
+        return None
+    if isinstance(value, datetime):
+        return value
+    if isinstance(value, str):
+        normalized = value.strip()
+        if not normalized:
+            return None
+        normalized = normalized.replace("Z", "+00:00")
+        try:
+            return datetime.fromisoformat(normalized)
+        except ValueError:
+            pass
+    return value
+
+
+def _normalize_datetime_fields(data: dict, *fields: str) -> dict:
+    normalized = dict(data)
+    for field in fields:
+        if field in normalized:
+            normalized[field] = _parse_datetime_value(normalized[field])
+    return normalized
+
+
+def _build_update_params(data: dict, base_params: dict, col_map: dict) -> tuple[list[str], dict]:
+    fields = []
+    params = dict(base_params)
+    seen = set()
+    for src, col in col_map.items():
+        if data.get(src) is not None and col not in seen:
+            key = f"p_{col}"
+            fields.append(f"{col} = :{key}")
+            params[key] = data[src]
+            seen.add(col)
+    return fields, params
+
+
+def _list_by_vendor(db, table: str, store_id: int, order_by: str) -> list:
+    return _rows(
+        db,
+        f"SELECT * FROM {table} WHERE vendor_id = :vid ORDER BY {order_by}",
+        {"vid": store_id},
+    )
+
+
+def _delete_by_vendor(db, table: str, id_column: str, record_id: int, store_id: int) -> bool:
+    result = db.execute(
+        text(f"DELETE FROM {table} WHERE {id_column} = :rid AND vendor_id = :vid"),
+        {"rid": record_id, "vid": store_id},
+    )
+    return result.rowcount > 0
 
 
 def _decode_theme(raw_value) -> dict:
@@ -129,107 +212,96 @@ def ensure_store_tables(bind=None) -> None:
 # ─── EMPLOYEES ───────────────────────────────────────────────────────────────
 
 def list_employees(store_id: int) -> list:
+    from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.employees import service as employee_service
+
     with _managed_session() as db:
-        return _rows(db,
-            "SELECT * FROM store_employees WHERE vendor_id = :vid ORDER BY id",
-            {"vid": store_id})
+        return [_orm_to_dict(employee) for employee in employee_service.list_by_vendor(db, store_id)]
 
 
 def create_employee(store_id: int, data: dict) -> dict:
+    from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.employees import service as employee_service
+
     with _managed_session(commit=True) as db:
-        row = _row(db,
-            "INSERT INTO store_employees (vendor_id, user_id, role, position, is_active) "
-            "VALUES (:vid, :uid, :role, :pos, :active) RETURNING *",
-            {"vid": store_id,
-             "uid": int(data.get("user_id") or 0),
-             "role": str(data.get("role") or data.get("rol") or "seller"),
-             "pos": str(data.get("position") or data.get("puesto") or ""),
-             "active": bool(data.get("is_active", True))})
-        return row or {}
+        employee = employee_service.create_for_vendor(
+            db,
+            store_id,
+            user_id=int(data.get("user_id") or 0),
+            role=str(data.get("role") or data.get("rol") or "seller"),
+            position=str(data.get("position") or data.get("puesto") or ""),
+            is_active=bool(data.get("is_active", True)),
+        )
+        return _orm_to_dict(employee)
 
 
 def update_employee(store_id: int, employee_id: int, data: dict):
+    from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.employees import service as employee_service
+
     with _managed_session(commit=True) as db:
-        fields, params = [], {"vid": store_id, "eid": employee_id}
         col_map = {"role": "role", "rol": "role",
                    "position": "position", "puesto": "position",
                    "is_active": "is_active"}
-        seen = set()
-        for src, col in col_map.items():
-            if data.get(src) is not None and col not in seen:
-                key = f"p_{col}"
-                fields.append(f"{col} = :{key}")
-                params[key] = data[src]
-                seen.add(col)
-        if not fields:
+        employee = employee_service.get_by_vendor(db, store_id, employee_id)
+        if not employee:
             return None
-        row = _row(db,
-            "UPDATE store_employees SET " + ", ".join(fields) + ", updated_at = CURRENT_TIMESTAMP "
-            "WHERE id = :eid AND vendor_id = :vid RETURNING *", params)
-        return row
+        if not _apply_updates(employee, data, col_map):
+            return None
+        employee = employee_service.update_employee(db, employee)
+        return _orm_to_dict(employee)
 
 
 def delete_employee(store_id: int, employee_id: int) -> bool:
+    from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.employees import service as employee_service
+
     with _managed_session(commit=True) as db:
-        r = db.execute(text("DELETE FROM store_employees WHERE id = :eid AND vendor_id = :vid"),
-                       {"eid": employee_id, "vid": store_id})
-        return r.rowcount > 0
+        employee = employee_service.get_by_vendor(db, store_id, employee_id)
+        if not employee:
+            return False
+        employee_service.delete_employee(db, employee)
+        return True
 
 
 def change_employee_password(store_id: int, employee_id: int, password: str) -> bool:
-    from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.users.routes import get_password_hash
+    from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.employees import service as employee_service
 
     with _managed_session(commit=True) as db:
-        employee = _row(
-            db,
-            "SELECT user_id FROM store_employees WHERE id = :eid AND vendor_id = :vid",
-            {"eid": employee_id, "vid": store_id},
-        )
-        if not employee or not employee.get("user_id"):
-            return False
-        hashed_password = get_password_hash(password)
-        result = db.execute(
-            text(
-                "UPDATE users SET hashed_password = :pwd WHERE id = :uid"
-            ),
-            {"pwd": hashed_password, "uid": int(employee["user_id"])},
-        )
-        return result.rowcount > 0
+        return employee_service.set_password_for_vendor_employee(db, store_id, employee_id, password)
 
 
 # ─── COUPONS ─────────────────────────────────────────────────────────────────
 
 def list_coupons(store_id: int) -> list:
+    from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.coupons import service as coupon_service
+
     with _managed_session() as db:
-        return _rows(db,
-            "SELECT * FROM store_coupons WHERE vendor_id = :vid ORDER BY created_at DESC",
-            {"vid": store_id})
+        return [_orm_to_dict(coupon) for coupon in coupon_service.list_by_vendor(db, store_id)]
 
 
 def create_coupon(store_id: int, data: dict) -> dict:
+    from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.coupons import service as coupon_service
+
     with _managed_session(commit=True) as db:
-        row = _row(db,
-            "INSERT INTO store_coupons "
-            "(vendor_id, code, discount_type, discount_value, min_order_amount, "
-            "max_uses, uses_count, per_user_limit, valid_from, valid_until, is_active) "
-            "VALUES (:vid, :code, :dtype, :dval, :minamt, :maxuses, 0, :perlimit, :vfrom, :vuntil, :active) "
-            "RETURNING *",
-            {"vid": store_id,
-             "code": str(data.get("code") or data.get("codigo") or "").strip().upper(),
-             "dtype": str(data.get("discount_type") or data.get("tipo") or "percent"),
-             "dval": float(data.get("discount_value") or data.get("valor") or 0),
-             "minamt": float(data.get("min_order_amount") or data.get("min_compra") or 0),
-             "maxuses": int(data["max_uses"]) if data.get("max_uses") else None,
-             "perlimit": int(data.get("per_user_limit") or 1),
-             "vfrom": data.get("valid_from") or data.get("inicio"),
-             "vuntil": data.get("valid_until") or data.get("expiracion"),
-             "active": bool(data.get("is_active", True))})
-        return row or {}
+        normalized = _normalize_datetime_fields(data, "valid_from", "inicio", "valid_until", "expiracion")
+        coupon = coupon_service.create_for_vendor(
+            db,
+            store_id,
+            code=str(normalized.get("code") or normalized.get("codigo") or "").strip().upper(),
+            discount_type=str(normalized.get("discount_type") or normalized.get("tipo") or "percent"),
+            discount_value=float(normalized.get("discount_value") or normalized.get("valor") or 0),
+            min_order_amount=float(normalized.get("min_order_amount") or normalized.get("min_compra") or 0),
+            max_uses=int(normalized["max_uses"]) if normalized.get("max_uses") else None,
+            per_user_limit=int(normalized.get("per_user_limit") or 1),
+            valid_from=normalized.get("valid_from") or normalized.get("inicio"),
+            valid_until=normalized.get("valid_until") or normalized.get("expiracion"),
+            is_active=bool(normalized.get("is_active", True)),
+        )
+        return _orm_to_dict(coupon)
 
 
 def update_coupon(store_id: int, coupon_id: int, data: dict):
+    from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.coupons import service as coupon_service
+
     with _managed_session(commit=True) as db:
-        fields, params = [], {"vid": store_id, "cid": coupon_id}
+        normalized = _normalize_datetime_fields(data, "valid_from", "inicio", "valid_until", "expiracion")
         col_map = {"code": "code", "codigo": "code",
                    "discount_type": "discount_type", "tipo": "discount_type",
                    "discount_value": "discount_value", "valor": "discount_value",
@@ -238,143 +310,150 @@ def update_coupon(store_id: int, coupon_id: int, data: dict):
                    "valid_from": "valid_from", "inicio": "valid_from",
                    "valid_until": "valid_until", "expiracion": "valid_until",
                    "is_active": "is_active"}
-        seen = set()
-        for src, col in col_map.items():
-            if data.get(src) is not None and col not in seen:
-                key = f"p_{col}"
-                fields.append(f"{col} = :{key}")
-                params[key] = data[src]
-                seen.add(col)
-        if not fields:
+        coupon = coupon_service.get_by_vendor(db, store_id, coupon_id)
+        if not coupon:
             return None
-        row = _row(db,
-            "UPDATE store_coupons SET " + ", ".join(fields) +
-            " WHERE id = :cid AND vendor_id = :vid RETURNING *", params)
-        return row
+        if not _apply_updates(coupon, normalized, col_map):
+            return None
+        coupon = coupon_service.update_coupon(db, coupon)
+        return _orm_to_dict(coupon)
 
 
 def delete_coupon(store_id: int, coupon_id: int) -> bool:
+    from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.coupons import service as coupon_service
+
     with _managed_session(commit=True) as db:
-        r = db.execute(text("DELETE FROM store_coupons WHERE id = :cid AND vendor_id = :vid"),
-                       {"cid": coupon_id, "vid": store_id})
-        return r.rowcount > 0
+        coupon = coupon_service.get_by_vendor(db, store_id, coupon_id)
+        if not coupon:
+            return False
+        coupon_service.delete_coupon(db, coupon)
+        return True
 
 
 # ─── REFERRALS ───────────────────────────────────────────────────────────────
 
 def list_referrals(store_id: int) -> list:
+    from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.referrals import service as referral_service
+
     with _managed_session() as db:
-        return _rows(db,
-            "SELECT * FROM store_referrals WHERE vendor_id = :vid ORDER BY created_at DESC",
-            {"vid": store_id})
+        return [_orm_to_dict(referral) for referral in referral_service.list_by_vendor(db, store_id)]
 
 
 def create_referral(store_id: int, data: dict) -> dict:
+    from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.referrals import service as referral_service
+
     with _managed_session(commit=True) as db:
-        row = _row(db,
-            "INSERT INTO store_referrals "
-            "(vendor_id, referrer_user_id, referral_code, reward_type, reward_value, status) "
-            "VALUES (:vid, :ruid, :code, :rtype, :rval, 'pending') RETURNING *",
-            {"vid": store_id,
-             "ruid": int(data.get("referrer_user_id") or 0),
-             "code": str(data.get("referral_code") or data.get("codigo") or "").strip().upper(),
-             "rtype": data.get("reward_type"),
-             "rval": float(data["reward_value"]) if data.get("reward_value") else None})
-        return row or {}
+        normalized = _normalize_datetime_fields(data, "reward_given_at")
+        referral = referral_service.create_for_vendor(
+            db,
+            store_id,
+            referrer_user_id=int(normalized.get("referrer_user_id") or 0),
+            referral_code=str(normalized.get("referral_code") or normalized.get("codigo") or "").strip().upper(),
+            reward_type=normalized.get("reward_type"),
+            reward_value=float(normalized["reward_value"]) if normalized.get("reward_value") else None,
+            status="pending",
+        )
+        return _orm_to_dict(referral)
 
 
 def update_referral(store_id: int, referral_id: int, data: dict):
+    from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.referrals import service as referral_service
+
     with _managed_session(commit=True) as db:
-        fields, params = [], {"vid": store_id, "rid": referral_id}
+        normalized = _normalize_datetime_fields(data, "reward_given_at")
         col_map = {"status": "status", "estado": "status",
                    "referred_user_id": "referred_user_id",
                    "reward_type": "reward_type", "reward_value": "reward_value",
                    "reward_given_at": "reward_given_at"}
-        seen = set()
-        for src, col in col_map.items():
-            if data.get(src) is not None and col not in seen:
-                key = f"p_{col}"
-                fields.append(f"{col} = :{key}")
-                params[key] = data[src]
-                seen.add(col)
-        if not fields:
+        referral = referral_service.get_by_vendor(db, store_id, referral_id)
+        if not referral:
             return None
-        row = _row(db,
-            "UPDATE store_referrals SET " + ", ".join(fields) +
-            " WHERE id = :rid AND vendor_id = :vid RETURNING *", params)
-        return row
+        if not _apply_updates(referral, normalized, col_map):
+            return None
+        referral = referral_service.update_referral(db, referral)
+        return _orm_to_dict(referral)
 
 
 def delete_referral(store_id: int, referral_id: int) -> bool:
+    from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.referrals import service as referral_service
+
     with _managed_session(commit=True) as db:
-        r = db.execute(text("DELETE FROM store_referrals WHERE id = :rid AND vendor_id = :vid"),
-                       {"rid": referral_id, "vid": store_id})
-        return r.rowcount > 0
+        referral = referral_service.get_by_vendor(db, store_id, referral_id)
+        if not referral:
+            return False
+        referral_service.delete_referral(db, referral)
+        return True
 
 
 # ─── RESERVATIONS ────────────────────────────────────────────────────────────
 
 def list_reservations(store_id: int) -> list:
+    from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.reservations import service as reservation_service
+
     with _managed_session() as db:
-        return _rows(db,
-            "SELECT * FROM store_reservations WHERE vendor_id = :vid ORDER BY reservation_date DESC",
-            {"vid": store_id})
+        return [_orm_to_dict(reservation) for reservation in reservation_service.list_by_vendor(db, store_id)]
 
 
 def create_reservation(store_id: int, data: dict) -> dict:
+    from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.reservations import service as reservation_service
+
     with _managed_session(commit=True) as db:
-        row = _row(db,
-            "INSERT INTO store_reservations "
-            "(vendor_id, customer_user_id, product_id, reservation_date, time_slot, duration_minutes, notes, status) "
-            "VALUES (:vid, :cuid, :pid, :rdate, :slot, :dur, :notes, 'pending') RETURNING *",
-            {"vid": store_id,
-             "cuid": int(data.get("customer_user_id") or 0),
-             "pid": int(data["product_id"]) if data.get("product_id") else None,
-             "rdate": data.get("reservation_date") or data.get("fecha"),
-             "slot": data.get("time_slot") or data.get("hora"),
-             "dur": int(data.get("duration_minutes") or 60),
-             "notes": str(data.get("notes") or data.get("notas") or "")})
-        return row or {}
+        normalized = _normalize_datetime_fields(data, "reservation_date", "fecha")
+        reservation = reservation_service.create_for_vendor(
+            db,
+            store_id,
+            customer_user_id=int(normalized.get("customer_user_id") or 0),
+            product_id=int(normalized["product_id"]) if normalized.get("product_id") else None,
+            reservation_date=normalized.get("reservation_date") or normalized.get("fecha"),
+            time_slot=normalized.get("time_slot") or normalized.get("hora"),
+            duration_minutes=int(normalized.get("duration_minutes") or 60),
+            notes=str(normalized.get("notes") or normalized.get("notas") or ""),
+        )
+        return _orm_to_dict(reservation)
 
 
 def update_reservation(store_id: int, reservation_id: int, data: dict):
+    from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.reservations import service as reservation_service
+
     with _managed_session(commit=True) as db:
-        fields, params = [], {"vid": store_id, "rid": reservation_id}
+        normalized = _normalize_datetime_fields(
+            data,
+            "reservation_date",
+            "fecha",
+            "confirmed_at",
+            "cancelled_at",
+        )
         col_map = {"status": "status", "estado": "status",
                    "reservation_date": "reservation_date", "fecha": "reservation_date",
                    "time_slot": "time_slot", "hora": "time_slot",
                    "duration_minutes": "duration_minutes",
                    "notes": "notes", "notas": "notes",
                    "confirmed_at": "confirmed_at", "cancelled_at": "cancelled_at"}
-        seen = set()
-        for src, col in col_map.items():
-            if data.get(src) is not None and col not in seen:
-                key = f"p_{col}"
-                fields.append(f"{col} = :{key}")
-                params[key] = data[src]
-                seen.add(col)
-        if not fields:
+        reservation = reservation_service.get_by_vendor(db, store_id, reservation_id)
+        if not reservation:
             return None
-        row = _row(db,
-            "UPDATE store_reservations SET " + ", ".join(fields) + ", updated_at = CURRENT_TIMESTAMP "
-            "WHERE id = :rid AND vendor_id = :vid RETURNING *", params)
-        return row
+        if not _apply_updates(reservation, normalized, col_map):
+            return None
+        reservation = reservation_service.update_reservation(db, reservation)
+        return _orm_to_dict(reservation)
 
 
 def delete_reservation(store_id: int, reservation_id: int) -> bool:
+    from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.reservations import service as reservation_service
+
     with _managed_session(commit=True) as db:
-        r = db.execute(text("DELETE FROM store_reservations WHERE id = :rid AND vendor_id = :vid"),
-                       {"rid": reservation_id, "vid": store_id})
-        return r.rowcount > 0
+        reservation = reservation_service.get_by_vendor(db, store_id, reservation_id)
+        if not reservation:
+            return False
+        reservation_service.delete_reservation(db, reservation)
+        return True
 
 
 # ─── LAYAWAYS ────────────────────────────────────────────────────────────────
 
 def list_layaways(store_id: int) -> list:
     with _managed_session() as db:
-        return _rows(db,
-            "SELECT * FROM store_layaways WHERE vendor_id = :vid ORDER BY created_at DESC",
-            {"vid": store_id})
+        return _list_by_vendor(db, "store_layaways", store_id, "created_at DESC")
 
 
 def create_layaway(store_id: int, data: dict) -> dict:
@@ -398,18 +477,11 @@ def create_layaway(store_id: int, data: dict) -> dict:
 
 def update_layaway(store_id: int, layaway_id: int, data: dict):
     with _managed_session(commit=True) as db:
-        fields, params = [], {"vid": store_id, "lid": layaway_id}
         col_map = {"status": "status", "estado": "status",
                    "balance_due": "balance_due", "saldo_pendiente": "balance_due",
                    "due_date": "due_date", "fecha_limite": "due_date",
                    "notes": "notes", "notas": "notes"}
-        seen = set()
-        for src, col in col_map.items():
-            if data.get(src) is not None and col not in seen:
-                key = f"p_{col}"
-                fields.append(f"{col} = :{key}")
-                params[key] = data[src]
-                seen.add(col)
+        fields, params = _build_update_params(data, {"vid": store_id, "lid": layaway_id}, col_map)
         if not fields:
             return None
         row = _row(db,
@@ -420,9 +492,7 @@ def update_layaway(store_id: int, layaway_id: int, data: dict):
 
 def delete_layaway(store_id: int, layaway_id: int) -> bool:
     with _managed_session(commit=True) as db:
-        r = db.execute(text("DELETE FROM store_layaways WHERE id = :lid AND vendor_id = :vid"),
-                       {"lid": layaway_id, "vid": store_id})
-        return r.rowcount > 0
+        return _delete_by_vendor(db, "store_layaways", "id", layaway_id, store_id)
 
 
 def _ensure_layaway_extras(db) -> None:
@@ -458,6 +528,24 @@ def _ensure_layaway_extras(db) -> None:
         )
     """))
     db.commit()
+
+
+def _recalculate_layaway_balance(db, layaway_id: int, layaway_row: dict, *, paid_status: str = "completado") -> dict | None:
+    total_paid_row = _row(
+        db,
+        "SELECT COALESCE(SUM(amount),0) AS s FROM store_layaway_payments WHERE layaway_id = :lid",
+        {"lid": layaway_id},
+    )
+    total_paid = float((total_paid_row or {}).get("s", 0)) + float(layaway_row.get("downpayment") or 0)
+    total_amt = float(layaway_row.get("total_amount") or 0)
+    new_balance = max(0.0, round(total_amt - total_paid, 2))
+    new_status = paid_status if new_balance <= 0 else "active"
+    return _row(
+        db,
+        "UPDATE store_layaways SET balance_due = :bal, status = :st, updated_at = CURRENT_TIMESTAMP "
+        "WHERE id = :lid RETURNING *",
+        {"bal": new_balance, "st": new_status, "lid": layaway_id},
+    )
 
 
 def create_layaway_rich(store_id: int, data: dict) -> dict:
@@ -524,13 +612,7 @@ def update_layaway_rich(store_id: int, layaway_id: int, data: dict) -> dict | No
             "periodicidad": "periodicidad",
             "start_date": "start_date", "fechaInicio": "start_date",
         }
-        fields, params, seen = [], {"vid": store_id, "lid": layaway_id}, set()
-        for src, col in col_map.items():
-            if data.get(src) is not None and col not in seen:
-                key = f"p_{col}"
-                fields.append(f"{col} = :{key}")
-                params[key] = data[src]
-                seen.add(col)
+        fields, params = _build_update_params(data, {"vid": store_id, "lid": layaway_id}, col_map)
         if not fields:
             return None
         row = _row(db,
@@ -574,21 +656,7 @@ def add_layaway_payment(store_id: int, layaway_id: int, data: dict) -> dict:
                 "method":  data.get("method") or data.get("metodo") or "efectivo",
                 "ref":     data.get("reference") or data.get("referencia") or "",
             })
-
-        # recalculate balance_due
-        total_paid_row = _row(db,
-            "SELECT COALESCE(SUM(amount),0) AS s FROM store_layaway_payments WHERE layaway_id = :lid",
-            {"lid": layaway_id})
-        total_paid = float((total_paid_row or {}).get("s", 0)) + float(ap.get("downpayment") or 0)
-        total_amt  = float(ap.get("total_amount") or 0)
-        new_balance = max(0.0, round(total_amt - total_paid, 2))
-        new_status  = ap.get("status") or "active"
-        if new_balance <= 0:
-            new_status = "completado"
-        _row(db,
-            "UPDATE store_layaways SET balance_due = :bal, status = :st, updated_at = CURRENT_TIMESTAMP "
-            "WHERE id = :lid",
-            {"bal": new_balance, "st": new_status, "lid": layaway_id})
+        _recalculate_layaway_balance(db, layaway_id, ap)
         return payment or {}
 
 
@@ -601,19 +669,7 @@ def delete_layaway_payment(store_id: int, layaway_id: int, payment_id: int) -> b
             return False
         r = db.execute(text("DELETE FROM store_layaway_payments WHERE id = :pid AND layaway_id = :lid"),
                        {"pid": payment_id, "lid": layaway_id})
-
-        # recalculate balance_due
-        total_paid_row = _row(db,
-            "SELECT COALESCE(SUM(amount),0) AS s FROM store_layaway_payments WHERE layaway_id = :lid",
-            {"lid": layaway_id})
-        total_paid = float((total_paid_row or {}).get("s", 0)) + float(ap.get("downpayment") or 0)
-        total_amt  = float(ap.get("total_amount") or 0)
-        new_balance = max(0.0, round(total_amt - total_paid, 2))
-        new_status  = "completado" if new_balance <= 0 else "active"
-        _row(db,
-            "UPDATE store_layaways SET balance_due = :bal, status = :st, updated_at = CURRENT_TIMESTAMP "
-            "WHERE id = :lid",
-            {"bal": new_balance, "st": new_status, "lid": layaway_id})
+        _recalculate_layaway_balance(db, layaway_id, ap)
         return r.rowcount > 0
 
 
@@ -645,18 +701,18 @@ def mark_overdue_layaways(store_id: int) -> int:
 # ─── FOLLOWERS ───────────────────────────────────────────────────────────────
 
 def list_followers(store_id: int) -> list:
+    from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.followers import service as follower_service
+
     with _managed_session() as db:
-        return _rows(db,
-            "SELECT * FROM store_followers WHERE vendor_id = :vid ORDER BY created_at DESC",
-            {"vid": store_id})
+        return [_orm_to_dict(follower) for follower in follower_service.list_by_vendor(db, store_id)]
 
 
 def create_follower(store_id: int, data: dict) -> dict:
+    from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.followers import service as follower_service
+
     with _managed_session(commit=True) as db:
-        row = _row(db,
-            "INSERT INTO store_followers (vendor_id, user_id) VALUES (:vid, :uid) RETURNING *",
-            {"vid": store_id, "uid": int(data.get("user_id") or 0)})
-        return row or {}
+        follower = follower_service.create_for_vendor(db, store_id, user_id=int(data.get("user_id") or 0))
+        return _orm_to_dict(follower)
 
 
 def update_follower(store_id: int, follower_id: int, data: dict):
@@ -664,75 +720,87 @@ def update_follower(store_id: int, follower_id: int, data: dict):
 
 
 def delete_follower(store_id: int, follower_id: int) -> bool:
+    from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.followers import service as follower_service
+
     with _managed_session(commit=True) as db:
-        r = db.execute(text("DELETE FROM store_followers WHERE id = :fid AND vendor_id = :vid"),
-                       {"fid": follower_id, "vid": store_id})
-        return r.rowcount > 0
+        follower = follower_service.get_by_vendor(db, store_id, follower_id)
+        if not follower:
+            return False
+        follower_service.delete_follower(db, follower)
+        return True
 
 
 # ─── VIDEOS ──────────────────────────────────────────────────────────────────
 
 def list_videos(store_id: int) -> list:
+    from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.videos import service as video_service
+
     with _managed_session() as db:
-        return _rows(db,
-            'SELECT * FROM store_videos WHERE vendor_id = :vid ORDER BY "order" ASC, created_at DESC',
-            {"vid": store_id})
+        return [_orm_to_dict(video) for video in video_service.list_by_vendor(db, store_id)]
 
 
 def create_video(store_id: int, data: dict) -> dict:
+    from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.videos import service as video_service
+
     with _managed_session(commit=True) as db:
-        row = _row(db,
-            'INSERT INTO store_videos (vendor_id, product_id, title, url, thumbnail, description, is_active, "order") '
-            "VALUES (:vid, :pid, :title, :url, :thumb, :desc, :active, :ord) RETURNING *",
-            {"vid": store_id,
-             "pid": int(data["product_id"]) if data.get("product_id") else None,
-             "title": str(data.get("title") or data.get("nombre") or ""),
-             "url": str(data.get("url") or ""),
-             "thumb": data.get("thumbnail"),
-             "desc": str(data.get("description") or data.get("notas") or ""),
-             "active": bool(data.get("is_active", True)),
-             "ord": int(data.get("order") or 0)})
-        return row or {}
+        video = video_service.create_for_vendor(
+            db,
+            store_id,
+            product_id=int(data["product_id"]) if data.get("product_id") else None,
+            title=str(data.get("title") or data.get("nombre") or ""),
+            url=str(data.get("url") or ""),
+            thumbnail=data.get("thumbnail"),
+            description=str(data.get("description") or data.get("notas") or ""),
+            is_active=bool(data.get("is_active", True)),
+            order=int(data.get("order") or 0),
+        )
+        return _orm_to_dict(video)
 
 
 def delete_video(store_id: int, video_id: int) -> bool:
+    from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.videos import service as video_service
+
     with _managed_session(commit=True) as db:
-        r = db.execute(text("DELETE FROM store_videos WHERE id = :vid2 AND vendor_id = :vid"),
-                       {"vid2": video_id, "vid": store_id})
-        return r.rowcount > 0
+        video = video_service.get_by_vendor(db, store_id, video_id)
+        if not video:
+            return False
+        video_service.delete_video(db, video)
+        return True
 
 
 # ─── SUPPLIERS ───────────────────────────────────────────────────────────────
 
 def list_suppliers(store_id: int, db=None) -> list:
+    from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.suppliers import service as supplier_service
+
     with _optional_session(db) as db:
-        return _rows(db,
-            "SELECT * FROM store_suppliers WHERE vendor_id = :vid ORDER BY name",
-            {"vid": store_id})
+        return [_orm_to_dict(supplier) for supplier in supplier_service.list_by_vendor(db, store_id)]
 
 
 def create_supplier(store_id: int, data: dict, db=None) -> dict:
+    from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.suppliers import service as supplier_service
+
     with _optional_session(db, commit=True) as db:
-        row = _row(db,
-            "INSERT INTO store_suppliers "
-            "(vendor_id, name, contact_name, email, phone, address, country, website, notes, is_active) "
-            "VALUES (:vid, :name, :cname, :email, :phone, :addr, :country, :web, :notes, :active) RETURNING *",
-            {"vid": store_id,
-             "name": str(data.get("name") or data.get("nombre") or "").strip(),
-             "cname": str(data.get("contact_name") or ""),
-             "email": str(data.get("email") or ""),
-             "phone": str(data.get("phone") or data.get("telefono") or ""),
-             "addr": str(data.get("address") or data.get("direccion") or ""),
-             "country": str(data.get("country") or ""),
-             "web": data.get("website"),
-             "notes": str(data.get("notes") or data.get("notas") or ""),
-             "active": bool(data.get("is_active", True))})
-        return row or {}
+        supplier = supplier_service.create_for_vendor(
+            db,
+            store_id,
+            name=str(data.get("name") or data.get("nombre") or "").strip(),
+            contact_name=str(data.get("contact_name") or ""),
+            email=str(data.get("email") or ""),
+            phone=str(data.get("phone") or data.get("telefono") or ""),
+            address=str(data.get("address") or data.get("direccion") or ""),
+            country=str(data.get("country") or ""),
+            website=data.get("website"),
+            notes=str(data.get("notes") or data.get("notas") or ""),
+            is_active=bool(data.get("is_active", True)),
+        )
+        return _orm_to_dict(supplier)
 
 
 def update_supplier(store_id: int, supplier_id: int, data: dict, db=None):
+    from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.suppliers import service as supplier_service
+
     with _optional_session(db, commit=True) as db:
-        fields, params = [], {"vid": store_id, "sid": supplier_id}
         col_map = {"name": "name", "nombre": "name",
                    "contact_name": "contact_name",
                    "email": "email",
@@ -741,26 +809,24 @@ def update_supplier(store_id: int, supplier_id: int, data: dict, db=None):
                    "country": "country", "website": "website",
                    "notes": "notes", "notas": "notes",
                    "is_active": "is_active"}
-        seen = set()
-        for src, col in col_map.items():
-            if data.get(src) is not None and col not in seen:
-                key = f"p_{col}"
-                fields.append(f"{col} = :{key}")
-                params[key] = data[src]
-                seen.add(col)
-        if not fields:
+        supplier = supplier_service.get_by_vendor(db, store_id, supplier_id)
+        if not supplier:
             return None
-        row = _row(db,
-            "UPDATE store_suppliers SET " + ", ".join(fields) + ", updated_at = CURRENT_TIMESTAMP "
-            "WHERE id = :sid AND vendor_id = :vid RETURNING *", params)
-        return row
+        if not _apply_updates(supplier, data, col_map):
+            return None
+        supplier = supplier_service.update_supplier(db, supplier)
+        return _orm_to_dict(supplier)
 
 
 def delete_supplier(store_id: int, supplier_id: int, db=None) -> bool:
+    from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.suppliers import service as supplier_service
+
     with _optional_session(db, commit=True) as db:
-        r = db.execute(text("DELETE FROM store_suppliers WHERE id = :sid AND vendor_id = :vid"),
-                       {"sid": supplier_id, "vid": store_id})
-        return r.rowcount > 0
+        supplier = supplier_service.get_by_vendor(db, store_id, supplier_id)
+        if not supplier:
+            return False
+        supplier_service.delete_supplier(db, supplier)
+        return True
 
 
 # ─── STATS ───────────────────────────────────────────────────────────────────
@@ -768,6 +834,11 @@ def delete_supplier(store_id: int, supplier_id: int, db=None) -> bool:
 def get_store_stats(store_id: int) -> dict:
     """Retorna conteos reales y datos de analítica de los últimos 7 días."""
     from datetime import date, timedelta
+    from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.analytics.models import VendorAnalytics
+    from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.coupons.models import StoreCoupon
+    from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.employees.models import StoreEmployee
+    from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.products.models import Product
+
     with _managed_session() as db:
         def _safe_count(sql, params):
             try:
@@ -776,9 +847,9 @@ def get_store_stats(store_id: int) -> dict:
             except Exception:
                 return 0
 
-        products = _safe_count("SELECT COUNT(*) AS cnt FROM products WHERE vendor_id = :vid", {"vid": store_id})
-        employees = _safe_count("SELECT COUNT(*) AS cnt FROM store_employees WHERE vendor_id = :vid", {"vid": store_id})
-        coupons = _safe_count("SELECT COUNT(*) AS cnt FROM store_coupons WHERE vendor_id = :vid AND is_active = 1", {"vid": store_id})
+        products = db.query(Product).filter_by(vendor_id=store_id).count()
+        employees = db.query(StoreEmployee).filter_by(vendor_id=store_id).count()
+        coupons = db.query(StoreCoupon).filter_by(vendor_id=store_id, is_active=True).count()
         orders = _safe_count("SELECT COUNT(*) AS cnt FROM orders WHERE vendor_id = :vid", {"vid": store_id})
 
         today = date.today()
@@ -787,11 +858,12 @@ def get_store_stats(store_id: int) -> dict:
             d = today - timedelta(days=i)
             chart_labels.append(d.strftime("%d/%m"))
             try:
-                row = _row(db,
-                    "SELECT COALESCE(store_views, 0) AS views FROM vendor_analytics "
-                    "WHERE vendor_id = :vid AND date = :d LIMIT 1",
-                    {"vid": store_id, "d": d.isoformat()})
-                chart_values.append(int(row["views"]) if row else 0)
+                row = (
+                    db.query(VendorAnalytics)
+                    .filter_by(vendor_id=store_id, date=d)
+                    .first()
+                )
+                chart_values.append(int(row.store_views or 0) if row else 0)
             except Exception:
                 chart_values.append(0)
 
@@ -813,21 +885,17 @@ def get_public_products(store_id: int = None, featured_only: bool = False) -> li
     Si store_id es None, retorna de todas las tiendas.
     Campos adaptados al formato que usa vistas/tienda.py.
     """
+    from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.products.models import ProductImage
+    from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.vendors.models import VendorStore
+
     try:
         with _managed_session() as db:
-                theme_sql = (
-                    "SELECT id, store_name, store_slug, store_theme "
-                    "FROM vendors "
-                    "WHERE is_active = 1"
-                )
-                theme_params: dict = {}
+                vendor_query = db.query(VendorStore).filter_by(is_active=True)
                 if store_id is not None:
-                    theme_sql += " AND id = :vid"
-                    theme_params["vid"] = store_id
+                    vendor_query = vendor_query.filter(VendorStore.id == store_id)
                 elif featured_only:
-                    theme_sql += " AND is_featured = 1"
-                theme_sql += " ORDER BY id DESC"
-                vendor_rows = _rows(db, theme_sql, theme_params)
+                    vendor_query = vendor_query.filter(VendorStore.is_featured.is_(True))
+                vendor_rows = _orm_list(vendor_query.order_by(VendorStore.id.desc()))
                 themed_products = []
                 themed_seen: set[tuple] = set()
                 for vendor in vendor_rows:
@@ -882,11 +950,12 @@ def get_public_products(store_id: int = None, featured_only: bool = False) -> li
                     if not item["imagen"] and isinstance(item["id"], int)
                 ]
                 if ids_sin_imagen:
-                    placeholders = ",".join(str(i) for i in ids_sin_imagen)
-                    img_rows = _rows(
-                        db,
-                        f"SELECT product_id, image FROM product_images WHERE is_primary = 1 AND product_id IN ({placeholders})",
-                        {},
+                    img_rows = _orm_list(
+                        db.query(ProductImage)
+                        .filter(
+                            ProductImage.is_primary.is_(True),
+                            ProductImage.product_id.in_(ids_sin_imagen),
+                        )
                     )
                     img_map = {int(r["product_id"]): str(r["image"] or "") for r in img_rows}
                     for item in themed_products:
@@ -993,100 +1062,47 @@ def get_public_products(store_id: int = None, featured_only: bool = False) -> li
 # ─── COUPON VALIDATION ───────────────────────────────────────────────────────
 
 def validate_coupon(store_id: int, code: str, cart_total: float = 0.0) -> dict:
-    from datetime import datetime as _dt
+    from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.coupons import service as coupon_service
+
     with _managed_session() as db:
-        now = _dt.utcnow().isoformat()
-        coupon = _row(db,
-            "SELECT * FROM store_coupons WHERE vendor_id=:vid AND code=:code AND is_active=1",
-            {"vid": store_id, "code": code.strip().upper()})
-        if not coupon:
-            return {"valid": False, "error": "Cupón inválido o inactivo."}
-        if coupon.get("valid_from") and str(coupon["valid_from"]) > now:
-            return {"valid": False, "error": "El cupón aún no es válido."}
-        if coupon.get("valid_until") and str(coupon["valid_until"]) < now:
-            return {"valid": False, "error": "El cupón ha expirado."}
-        max_uses = coupon.get("max_uses")
-        if max_uses is not None and int(coupon.get("uses_count", 0)) >= int(max_uses):
-            return {"valid": False, "error": "El cupón ha alcanzado su límite de usos."}
-        min_order = float(coupon.get("min_order_amount") or 0)
-        if cart_total < min_order:
-            return {"valid": False, "error": f"Compra mínima requerida: ${min_order:.2f}."}
-        dtype = str(coupon.get("discount_type") or "percent")
-        dval = float(coupon.get("discount_value") or 0)
-        if dtype in ("percent", "porcentaje", "percentage"):
-            discount = round(cart_total * dval / 100, 2)
-        elif dtype in ("fixed", "monto"):
-            discount = round(min(dval, cart_total), 2)
-        else:
-            discount = 0.0
-        return {
-            "valid":           True,
-            "coupon_id":       coupon["id"],
-            "code":            coupon["code"],
-            "discount_type":   dtype,
-            "discount_value":  dval,
-            "discount_amount": discount,
-            "free_shipping":   dtype in ("free_shipping", "envio"),
-        }
+        return coupon_service.validate_coupon_for_vendor(db, store_id, code, cart_total=cart_total)
 
 
 def redeem_coupon(store_id: int, coupon_id: int) -> bool:
+    from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.coupons import service as coupon_service
+
     with _managed_session(commit=True) as db:
-        r = db.execute(text(
-            "UPDATE store_coupons SET uses_count = uses_count + 1 WHERE id=:cid AND vendor_id=:vid"),
-            {"cid": coupon_id, "vid": store_id})
-        return r.rowcount > 0
+        return coupon_service.redeem_for_vendor(db, store_id, coupon_id)
 
 
 # ─── LOYALTY ─────────────────────────────────────────────────────────────────
 
 def _ensure_loyalty_tables(db) -> None:
-    db.execute(text("""
-        CREATE TABLE IF NOT EXISTS loyalty_plans (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            vendor_id INTEGER NOT NULL UNIQUE,
-            name TEXT NOT NULL DEFAULT 'Programa de puntos',
-            points_per_peso REAL NOT NULL DEFAULT 1.0,
-            min_redeem_points INTEGER NOT NULL DEFAULT 100,
-            redeem_rate REAL NOT NULL DEFAULT 0.01,
-            is_active INTEGER NOT NULL DEFAULT 1,
-            description TEXT DEFAULT '',
-            created_at TEXT DEFAULT (datetime('now')),
-            updated_at TEXT DEFAULT (datetime('now'))
-        )
-    """))
-    db.execute(text("""
-        CREATE TABLE IF NOT EXISTS loyalty_accounts (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            vendor_id INTEGER NOT NULL,
-            customer_email TEXT NOT NULL,
-            customer_name TEXT DEFAULT '',
-            current_points INTEGER NOT NULL DEFAULT 0,
-            lifetime_points INTEGER NOT NULL DEFAULT 0,
-            created_at TEXT DEFAULT (datetime('now')),
-            updated_at TEXT DEFAULT (datetime('now')),
-            UNIQUE(vendor_id, customer_email)
-        )
-    """))
-    db.execute(text("""
-        CREATE TABLE IF NOT EXISTS loyalty_transactions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            account_id INTEGER NOT NULL,
-            points INTEGER NOT NULL,
-            transaction_type TEXT NOT NULL DEFAULT 'earned',
-            reference TEXT DEFAULT '',
-            notes TEXT DEFAULT '',
-            created_at TEXT DEFAULT (datetime('now'))
-        )
-    """))
-    db.commit()
+    from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.loyalty.models import (
+        LoyaltyAccount,
+        LoyaltyPlan,
+        LoyaltyTransaction,
+    )
+    from fastapi_modulo.modulos.multitienda.marketplace.backend.core.db import Base
+
+    Base.metadata.create_all(
+        bind=db.get_bind(),
+        tables=[
+            Base.metadata.tables[LoyaltyPlan.__tablename__],
+            Base.metadata.tables[LoyaltyAccount.__tablename__],
+            Base.metadata.tables[LoyaltyTransaction.__tablename__],
+        ],
+        checkfirst=True,
+    )
 
 
 def get_loyalty_plan(store_id: int) -> dict:
+    from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.loyalty import service as loyalty_service
+
     with _managed_session() as db:
         _ensure_loyalty_tables(db)
-        row = _row(db, "SELECT * FROM loyalty_plans WHERE vendor_id=:vid", {"vid": store_id})
-        return row or {
+        plan = loyalty_service.get_plan(db, store_id)
+        return _orm_to_dict(plan) if plan else {
             "id": None, "vendor_id": store_id,
             "name": "Programa de puntos", "points_per_peso": 1.0,
             "min_redeem_points": 100, "redeem_rate": 0.01,
@@ -1095,84 +1111,59 @@ def get_loyalty_plan(store_id: int) -> dict:
 
 
 def upsert_loyalty_plan(store_id: int, data: dict) -> dict:
+    from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.loyalty import service as loyalty_service
+
     with _managed_session(commit=True) as db:
         _ensure_loyalty_tables(db)
-        existing = _row(db, "SELECT id FROM loyalty_plans WHERE vendor_id=:vid", {"vid": store_id})
-        params = {
-            "vid":  store_id,
-            "name": str(data.get("name") or "Programa de puntos"),
-            "ppp":  float(data.get("points_per_peso") or 1.0),
-            "mrp":  int(data.get("min_redeem_points") or 100),
-            "rr":   float(data.get("redeem_rate") or 0.01),
-            "act":  1 if data.get("is_active", True) else 0,
-            "desc": str(data.get("description") or ""),
-        }
-        if existing:
-            row = _row(db,
-                "UPDATE loyalty_plans SET name=:name, points_per_peso=:ppp, "
-                "min_redeem_points=:mrp, redeem_rate=:rr, is_active=:act, "
-                "description=:desc, updated_at=datetime('now') "
-                "WHERE vendor_id=:vid RETURNING *", params)
-        else:
-            row = _row(db,
-                "INSERT INTO loyalty_plans "
-                "(vendor_id,name,points_per_peso,min_redeem_points,redeem_rate,is_active,description) "
-                "VALUES (:vid,:name,:ppp,:mrp,:rr,:act,:desc) RETURNING *", params)
-        return row or {}
+        plan = loyalty_service.upsert_plan(
+            db,
+            store_id,
+            name=str(data.get("name") or "Programa de puntos"),
+            points_per_peso=float(data.get("points_per_peso") or 1.0),
+            min_redeem_points=int(data.get("min_redeem_points") or 100),
+            redeem_rate=float(data.get("redeem_rate") or 0.01),
+            is_active=bool(data.get("is_active", True)),
+            description=str(data.get("description") or ""),
+        )
+        return _orm_to_dict(plan)
 
 
 def list_loyalty_customers(store_id: int) -> list:
+    from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.loyalty import service as loyalty_service
+
     with _managed_session() as db:
         _ensure_loyalty_tables(db)
-        return _rows(db,
-            "SELECT * FROM loyalty_accounts WHERE vendor_id=:vid ORDER BY current_points DESC",
-            {"vid": store_id})
+        return [_orm_to_dict(account) for account in loyalty_service.list_customers(db, store_id)]
 
 
 def adjust_loyalty_points(store_id: int, email: str, points: int,
                           tx_type: str = "adjusted", notes: str = "",
                           reference: str = "", name: str = "") -> dict:
+    from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.loyalty import service as loyalty_service
+
     with _managed_session(commit=True) as db:
         _ensure_loyalty_tables(db)
         email = email.lower().strip()
-        existing = _row(db,
-            "SELECT * FROM loyalty_accounts WHERE vendor_id=:vid AND customer_email=:e",
-            {"vid": store_id, "e": email})
-        if existing:
-            new_pts = max(0, int(existing["current_points"]) + points)
-            new_life = int(existing["lifetime_points"]) + max(0, points)
-            account = _row(db,
-                "UPDATE loyalty_accounts SET current_points=:cp, lifetime_points=:lp, "
-                "updated_at=datetime('now') WHERE vendor_id=:vid AND customer_email=:e RETURNING *",
-                {"cp": new_pts, "lp": new_life, "vid": store_id, "e": email})
-        else:
-            init = max(0, points)
-            account = _row(db,
-                "INSERT INTO loyalty_accounts "
-                "(vendor_id,customer_email,customer_name,current_points,lifetime_points) "
-                "VALUES (:vid,:e,:name,:cp,:lp) RETURNING *",
-                {"vid": store_id, "e": email, "name": name or "", "cp": init, "lp": init})
-        db.execute(text(
-            "INSERT INTO loyalty_transactions "
-            "(account_id,points,transaction_type,reference,notes) "
-            "VALUES (:aid,:pts,:tt,:ref,:notes)"),
-            {"aid": account["id"], "pts": points, "tt": tx_type,
-             "ref": reference, "notes": notes})
-        return account or {}
+        account = loyalty_service.adjust_points(
+            db,
+            store_id,
+            email=email,
+            points=points,
+            tx_type=tx_type,
+            notes=notes,
+            reference=reference,
+            name=name,
+        )
+        return _orm_to_dict(account)
 
 
 def get_loyalty_history(store_id: int, email: str) -> list:
+    from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.loyalty import service as loyalty_service
+
     with _managed_session() as db:
         _ensure_loyalty_tables(db)
         email = email.lower().strip()
-        acc = _row(db,
-            "SELECT id FROM loyalty_accounts WHERE vendor_id=:vid AND customer_email=:e",
-            {"vid": store_id, "e": email})
-        if not acc:
-            return []
-        return _rows(db,
-            "SELECT * FROM loyalty_transactions WHERE account_id=:aid ORDER BY id DESC LIMIT 100",
-            {"aid": acc["id"]})
+        return [_orm_to_dict(tx) for tx in loyalty_service.get_history(db, store_id, email)]
 
 
 __all__ = [

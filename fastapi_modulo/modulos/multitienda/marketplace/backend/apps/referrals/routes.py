@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
 from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.users.routes import require_any_role
-from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.referrals import models, schemas
+from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.referrals import models, schemas, service
 from fastapi_modulo.modulos.multitienda.marketplace.backend.core.db import get_db
 from fastapi_modulo.modulos.multitienda.marketplace.backend.core.dependencies import assert_store_access, get_vendor_store as _get_vendor_store
 
@@ -18,7 +18,7 @@ def list_referrals(
 ):
     _get_vendor_store(vendor_id, db)
     assert_store_access(user, vendor_id, db)
-    return db.query(models.StoreReferral).filter_by(vendor_id=vendor_id).all()
+    return service.list_by_vendor(db, vendor_id)
 
 
 @router.post("/store/{vendor_id}/generate", response_model=schemas.StoreReferralRead, status_code=201)
@@ -30,18 +30,17 @@ def generate_referral(
 ):
     _get_vendor_store(vendor_id, db)
     code = data.referral_code or secrets.token_urlsafe(8).upper()
-    if db.query(models.StoreReferral).filter_by(referral_code=code).first():
+    if service.get_by_code(db, code):
         raise HTTPException(status_code=409, detail="El código de referido ya existe")
-    referral = models.StoreReferral(
-        vendor_id=vendor_id,
+    referral = service.create_for_vendor(
+        db,
+        vendor_id,
         referrer_user_id=user.id,
         referral_code=code,
         reward_type=data.reward_type,
         reward_value=data.reward_value,
     )
-    db.add(referral)
     db.commit()
-    db.refresh(referral)
     return referral
 
 
@@ -51,15 +50,14 @@ def claim_referral(
     db: Session = Depends(get_db),
     user=Depends(require_any_role("customer", "vendor", "superadmin")),
 ):
-    referral = db.query(models.StoreReferral).filter_by(referral_code=referral_code).first()
+    referral = service.get_by_code(db, referral_code)
     if not referral:
         raise HTTPException(status_code=404, detail="Código de referido no encontrado")
     if referral.status != models.ReferralStatus.pending:
         raise HTTPException(status_code=400, detail="Este código ya fue utilizado")
     if referral.referrer_user_id == user.id:
         raise HTTPException(status_code=400, detail="No puedes usar tu propio código de referido")
-    referral.referred_user_id = user.id
-    referral.status = models.ReferralStatus.completed
+    service.claim_referral(db, referral, user.id)
     db.commit()
     return {"success": True, "message": "Referido registrado correctamente"}
 
@@ -69,4 +67,4 @@ def my_referrals(
     db: Session = Depends(get_db),
     user=Depends(require_any_role("customer", "vendor", "superadmin")),
 ):
-    return db.query(models.StoreReferral).filter_by(referrer_user_id=user.id).all()
+    return service.list_by_referrer(db, user.id)

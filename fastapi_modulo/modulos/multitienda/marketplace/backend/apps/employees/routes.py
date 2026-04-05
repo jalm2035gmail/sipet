@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
 from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.users.routes import require_any_role
-from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.employees import models, schemas
+from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.employees import schemas, service
 from fastapi_modulo.modulos.multitienda.marketplace.backend.core.db import get_db
 from fastapi_modulo.modulos.multitienda.marketplace.backend.core.dependencies import assert_store_access, get_vendor_store as _get_vendor_store
 
@@ -17,7 +17,7 @@ def list_employees(
 ):
     _get_vendor_store(vendor_id, db)
     assert_store_access(user, vendor_id, db)
-    return db.query(models.StoreEmployee).filter_by(vendor_id=vendor_id).all()
+    return service.list_by_vendor(db, vendor_id)
 
 
 @router.post("/store/{vendor_id}", response_model=schemas.StoreEmployeeRead, status_code=201)
@@ -29,19 +29,18 @@ def create_employee(
 ):
     _get_vendor_store(vendor_id, db)
     assert_store_access(user, vendor_id, db)
-    existing = db.query(models.StoreEmployee).filter_by(vendor_id=vendor_id, user_id=data.user_id).first()
+    existing = service.get_by_vendor_user(db, vendor_id, data.user_id)
     if existing:
         raise HTTPException(status_code=409, detail="El usuario ya es empleado de esta tienda")
-    employee = models.StoreEmployee(
-        vendor_id=vendor_id,
+    employee = service.create_for_vendor(
+        db,
+        vendor_id,
         user_id=data.user_id,
         role=data.role,
-        position=data.position,
+        position=data.position or "",
         is_active=data.is_active,
     )
-    db.add(employee)
     db.commit()
-    db.refresh(employee)
     return employee
 
 
@@ -52,14 +51,12 @@ def update_employee(
     db: Session = Depends(get_db),
     user=Depends(require_any_role("vendor", "superadmin")),
 ):
-    employee = db.query(models.StoreEmployee).filter_by(id=employee_id).first()
+    employee = service.get_by_id(db, employee_id)
     if not employee:
         raise HTTPException(status_code=404, detail="Empleado no encontrado")
     assert_store_access(user, employee.vendor_id, db)
-    for field, value in data.dict(exclude_unset=True).items():
-        setattr(employee, field, value)
+    employee = service.update_employee(db, employee, **data.dict(exclude_unset=True))
     db.commit()
-    db.refresh(employee)
     return employee
 
 
@@ -69,9 +66,9 @@ def delete_employee(
     db: Session = Depends(get_db),
     user=Depends(require_any_role("vendor", "superadmin")),
 ):
-    employee = db.query(models.StoreEmployee).filter_by(id=employee_id).first()
+    employee = service.get_by_id(db, employee_id)
     if not employee:
         raise HTTPException(status_code=404, detail="Empleado no encontrado")
     assert_store_access(user, employee.vendor_id, db)
-    db.delete(employee)
+    service.delete_employee(db, employee)
     db.commit()

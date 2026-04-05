@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
 from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.users.routes import require_role
-from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.videos import models, schemas
+from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.videos import schemas, service
 from fastapi_modulo.modulos.multitienda.marketplace.backend.core.db import get_db
 from fastapi_modulo.modulos.multitienda.marketplace.backend.core.dependencies import get_vendor_store as _get_vendor_store
 
@@ -12,12 +12,7 @@ router = APIRouter(prefix="/videos", tags=["videos"])
 @router.get("/store/{vendor_id}", response_model=List[schemas.StoreVideoRead])
 def list_videos(vendor_id: int, db: Session = Depends(get_db)):
     _get_vendor_store(vendor_id, db)
-    return (
-        db.query(models.StoreVideo)
-        .filter_by(vendor_id=vendor_id, is_active=True)
-        .order_by(models.StoreVideo.order.asc())
-        .all()
-    )
+    return service.list_by_vendor(db, vendor_id, active_only=True)
 
 
 @router.post("/store/{vendor_id}", response_model=schemas.StoreVideoRead, status_code=201)
@@ -28,10 +23,8 @@ def create_video(
     user=Depends(require_role("vendor")),
 ):
     _get_vendor_store(vendor_id, db)
-    video = models.StoreVideo(vendor_id=vendor_id, **data.dict())
-    db.add(video)
+    video = service.create_for_vendor(db, vendor_id, **data.dict())
     db.commit()
-    db.refresh(video)
     return video
 
 
@@ -42,13 +35,11 @@ def update_video(
     db: Session = Depends(get_db),
     user=Depends(require_role("vendor")),
 ):
-    video = db.query(models.StoreVideo).filter_by(id=video_id).first()
+    video = service.get_by_id(db, video_id)
     if not video:
         raise HTTPException(status_code=404, detail="Video no encontrado")
-    for field, value in data.dict(exclude_unset=True).items():
-        setattr(video, field, value)
+    video = service.update_video(db, video, **data.dict(exclude_unset=True))
     db.commit()
-    db.refresh(video)
     return video
 
 
@@ -58,8 +49,8 @@ def delete_video(
     db: Session = Depends(get_db),
     user=Depends(require_role("vendor")),
 ):
-    video = db.query(models.StoreVideo).filter_by(id=video_id).first()
+    video = service.get_by_id(db, video_id)
     if not video:
         raise HTTPException(status_code=404, detail="Video no encontrado")
-    db.delete(video)
+    service.delete_video(db, video)
     db.commit()

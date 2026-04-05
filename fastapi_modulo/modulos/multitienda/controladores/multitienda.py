@@ -5,8 +5,6 @@ from pathlib import Path
 import json
 import logging
 import re
-from urllib.parse import urlencode
-
 _log = logging.getLogger("multitienda.config")
 
 from fastapi import APIRouter, HTTPException, Request
@@ -25,22 +23,35 @@ from fastapi_modulo.modulos.multitienda.controladores.marketplace_backend import
     list_business_types,
     save_store_settings,
 )
+from fastapi_modulo.modulos.multitienda.controladores.routers.admin_api import create_admin_api_router
+from fastapi_modulo.modulos.multitienda.controladores.routers.public import create_public_router
+from fastapi_modulo.modulos.multitienda.controladores.services.scope_service import (
+    coerce_theme_bool as _coerce_theme_bool,
+    current_user_record as _current_user_record_impl,
+    resolve_store_permissions as _resolve_store_permissions_impl,
+    resolve_store_scope as _resolve_store_scope_impl,
+)
+from fastapi_modulo.modulos.multitienda.controladores.services.section_service import (
+    can_access_module_section as _can_access_module_section_impl,
+    can_access_store_config as _can_access_store_config_impl,
+    get_optional_section_integration as _get_optional_section_integration_impl,
+    optional_section_available as _optional_section_available_impl,
+    resolve_integrated_module_context as _resolve_integrated_module_context_impl,
+    resolve_integrated_section_target as _resolve_integrated_section_target_impl,
+    resolve_enabled_module_route as _resolve_enabled_module_route_impl,
+    visible_module_sections as _visible_module_sections_impl,
+)
+from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.analytics import service as analytics_service
+from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.employees import service as employee_service
+from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.products import service as product_service
+from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.users.models import User
 from fastapi_modulo.modulos.multitienda.servicios.access_roles import ensure_multitienda_access_roles
 from fastapi_modulo.modulos.multitienda.servicios.store_tables import (
     ensure_store_tables,
-    get_store_stats, get_public_products,
-    list_employees, create_employee, update_employee, delete_employee, change_employee_password,
-    list_coupons, create_coupon, update_coupon, delete_coupon,
-    validate_coupon, redeem_coupon,
     list_layaways, create_layaway, update_layaway, delete_layaway,
     create_layaway_rich, update_layaway_rich,
     list_layaway_payments, add_layaway_payment, delete_layaway_payment,
     set_layaway_status, mark_overdue_layaways,
-    list_followers, create_follower, update_follower, delete_follower,
-    list_videos, create_video, delete_video,
-    list_suppliers, create_supplier, update_supplier, delete_supplier,
-    get_loyalty_plan, upsert_loyalty_plan,
-    list_loyalty_customers, adjust_loyalty_points, get_loyalty_history,
 )
 from fastapi_modulo.modulos.multitienda.vistas.utils import _prefix_root_relative_urls
 from fastapi_modulo.modulos.multitienda.vistas.configuracion import configuracion_html
@@ -48,6 +59,7 @@ from fastapi_modulo.modulos.multitienda.vistas.gestion import gestion_html
 from fastapi_modulo.modulos.multitienda.vistas.inicio import inicio_html
 from fastapi_modulo.modulos.multitienda.vistas.productos import productos_html
 from fastapi_modulo.modulos.multitienda.vistas.tienda import tienda_html
+from fastapi_modulo.modulos.multitienda.vistas.carrito import carrito_html
 from fastapi_modulo.modulos.multitienda.vistas.cupones import cupones_html
 from fastapi_modulo.modulos.multitienda.vistas.empleados import empleados_html
 from fastapi_modulo.modulos.multitienda.vistas.seguidores import seguidores_html
@@ -170,159 +182,72 @@ _MULTITIENDA_FAVICON_TAGS = (
 )
 
 
-def _coerce_theme_bool(value: object) -> bool:
-    if isinstance(value, bool):
-        return value
-    normalized = str(value or "").strip().lower()
-    return normalized in {"1", "true", "verdadero", "si", "sí", "yes", "on", "habilitado", "enabled"}
-
-
 def _resolve_store_permissions(db, scope: dict) -> dict:
-    """Returns store-level feature flags extracted from store_theme."""
-    try:
-        if scope.get("store_id"):
-            row = db.execute(
-                text("SELECT store_theme FROM vendors WHERE id = :id LIMIT 1"),
-                {"id": int(scope["store_id"])},
-            ).mappings().first()
-        elif scope.get("user_id"):
-            row = db.execute(
-                text("SELECT store_theme FROM vendors WHERE vendor_id = :uid LIMIT 1"),
-                {"uid": int(scope["user_id"])},
-            ).mappings().first()
-        else:
-            return {}
-        theme = _decode_store_theme(row["store_theme"]) if row else {}
-        if not theme:
-            return {}
-        theme["can_upload_videos"] = _coerce_theme_bool(theme.get("can_upload_videos"))
-        theme["referrals"] = _coerce_theme_bool(theme.get("referrals"))
-        theme["fidelizacion"] = _coerce_theme_bool(theme.get("fidelizacion"))
-        theme["pwa_notifications"] = _coerce_theme_bool(theme.get("pwa_notifications"))
-        theme["appointments"] = _coerce_theme_bool(theme.get("appointments"))
-        theme["coupons"] = _coerce_theme_bool(theme.get("coupons"))
-        theme["whatsapp"] = _coerce_theme_bool(theme.get("whatsapp"))
-        theme["can_use_ai"] = _coerce_theme_bool(theme.get("can_use_ai"))
-        theme["can_use_financial"] = _coerce_theme_bool(theme.get("can_use_financial"))
-        theme["can_use_layaway"] = _coerce_theme_bool(theme.get("can_use_layaway"))
-        theme["can_use_auctions"] = _coerce_theme_bool(theme.get("can_use_auctions"))
-        return theme
-    except Exception:
-        return {}
+    return _resolve_store_permissions_impl(db, scope, _decode_store_theme)
 
 
 def _get_optional_section_integration(section_id: str) -> dict:
-    return dict(_OPTIONAL_SECTION_INTEGRATIONS.get(str(section_id or "").strip(), {}))
+    return _get_optional_section_integration_impl(section_id, _OPTIONAL_SECTION_INTEGRATIONS)
 
 
 def _resolve_enabled_module_route(module_key: str) -> str:
-    normalized_key = str(module_key or "").strip()
-    if not normalized_key or not is_module_enabled(normalized_key):
-        return ""
-    for item in list_modules_payload():
-        if str(item.get("key") or "").strip() == normalized_key:
-            return str(item.get("route") or "").strip()
-    return ""
+    return _resolve_enabled_module_route_impl(module_key, is_module_enabled, list_modules_payload)
 
 
 def _optional_section_available(section_id: str) -> bool:
-    integration = _get_optional_section_integration(section_id)
-    module_key = str(integration.get("module_key") or "").strip()
-    if not module_key:
-        return True
-    return bool(_resolve_enabled_module_route(module_key))
+    return _optional_section_available_impl(
+        section_id,
+        _OPTIONAL_SECTION_INTEGRATIONS,
+        is_module_enabled,
+        list_modules_payload,
+    )
 
 
 def _resolve_integrated_section_target(section_id: str, scope: dict | None = None) -> str:
-    integration = _get_optional_section_integration(section_id)
-    module_key = str(integration.get("module_key") or "").strip()
-    explicit_target = str(integration.get("target_route") or "").strip()
-    target_route = explicit_target or _resolve_enabled_module_route(module_key)
-    if not target_route:
-        return ""
-    scope_query_param = str(integration.get("scope_query_param") or "").strip()
-    scope_value = str((scope or {}).get("store_slug") or "").strip()
-    if scope_query_param and scope_value:
-        separator = "&" if "?" in target_route else "?"
-        return f"{target_route}{separator}{urlencode({scope_query_param: scope_value})}"
-    return target_route
+    return _resolve_integrated_section_target_impl(
+        section_id,
+        _OPTIONAL_SECTION_INTEGRATIONS,
+        is_module_enabled,
+        list_modules_payload,
+        scope,
+    )
 
 
 def _resolve_integrated_module_context(section_id: str, scope: dict | None = None) -> dict[str, str | bool]:
-    integration = _get_optional_section_integration(section_id)
-    module_key = str(integration.get("module_key") or "").strip()
-    target_route = _resolve_integrated_section_target(section_id, scope)
-    route = _resolve_enabled_module_route(module_key)
-    return {
-        "enabled": bool(route),
-        "module_key": module_key,
-        "route": route,
-        "target_route": target_route or route,
-        "api_base": f"/api/{module_key}" if module_key else "",
-    }
-
-
-def _is_store_assigned_admin(role_name: str | None) -> bool:
-    return normalize_role_name(role_name) == "administrador_tienda"
+    return _resolve_integrated_module_context_impl(
+        section_id,
+        _OPTIONAL_SECTION_INTEGRATIONS,
+        is_module_enabled,
+        list_modules_payload,
+        scope,
+    )
 
 
 def _can_access_store_config(role_name: str | None) -> bool:
-    """Returns True for store‑assigned admins and platform-level admins."""
-    normalized = normalize_role_name(role_name)
-    return normalized in {
-        "administrador_tienda",
-        "superadministrador",
-        "superadmin",
-        "administrador_multiempresa",
-        "administrador",
-    }
+    return _can_access_store_config_impl(role_name)
 
 
 def _visible_module_sections(role_name: str | None, store_permissions: dict | None = None) -> list[dict[str, str]]:
-    normalized_role = normalize_role_name(role_name)
-    is_superadmin = normalized_role in {"superadministrador", "superadmin"}
-    is_platform_admin = is_superadmin or normalized_role in {"administrador_multiempresa", "administrador"}
-    perms = store_permissions or {}
-    sections = []
-    for section in _MODULE_SECTIONS:
-        if not _optional_section_available(section["id"]):
-            continue
-        if section["id"] == "gestion" and not is_platform_admin:
-            continue
-        if section["id"] == "repartidores" and not is_platform_admin:
-            continue
-        if section["id"] == "configuracion" and not _can_access_store_config(normalized_role):
-            continue
-        if section["id"] == "videos" and not is_superadmin and not perms.get("can_upload_videos"):
-            continue
-        if section["id"] == "referidos" and not is_superadmin and not perms.get("referrals"):
-            continue
-        if section["id"] == "fidelizacion" and not is_superadmin and not perms.get("fidelizacion"):
-            continue
-        if section["id"] == "notificaciones_pwa" and not is_superadmin and not perms.get("pwa_notifications"):
-            continue
-        if section["id"] == "reservaciones" and not is_superadmin and not perms.get("appointments"):
-            continue
-        if section["id"] == "cupones" and not is_superadmin and not perms.get("coupons"):
-            continue
-        if section["id"] == "whatsapp" and not is_superadmin and not perms.get("whatsapp"):
-            continue
-        if section["id"] == "seguidores" and not is_superadmin and int(perms.get("max_portal_users") or 0) <= 0:
-            continue
-        if section["id"] == "ia" and not is_superadmin and not perms.get("can_use_ai"):
-            continue
-        if section["id"] == "institucion_financiera" and not is_superadmin and not perms.get("can_use_financial"):
-            continue
-        if section["id"] == "apartados" and not is_superadmin and not perms.get("can_use_layaway"):
-            continue
-        if section["id"] == "subastas" and not is_superadmin and not perms.get("can_use_auctions"):
-            continue
-        sections.append(section)
-    return sections
+    return _visible_module_sections_impl(
+        role_name,
+        _MODULE_SECTIONS,
+        _OPTIONAL_SECTION_INTEGRATIONS,
+        is_module_enabled,
+        list_modules_payload,
+        store_permissions,
+    )
 
 
 def _can_access_module_section(role_name: str | None, section_id: str, store_permissions: dict | None = None) -> bool:
-    return any(section["id"] == section_id for section in _visible_module_sections(role_name, store_permissions))
+    return _can_access_module_section_impl(
+        role_name,
+        section_id,
+        _MODULE_SECTIONS,
+        _OPTIONAL_SECTION_INTEGRATIONS,
+        is_module_enabled,
+        list_modules_payload,
+        store_permissions,
+    )
 
 
 def _build_marketplace_workspace_script() -> str:
@@ -718,6 +643,90 @@ def _public_store_product_exists(request: Request, store_slug: str, product_slug
         db.close()
 
 
+def _load_public_store_info(request: Request, store_slug: str) -> dict:
+    db = _db_session_for_request(request)
+    try:
+        row = db.execute(
+            text(
+                """
+                SELECT id, store_name, store_slug, logo, banner, store_theme
+                FROM vendors
+                WHERE LOWER(store_slug) = :slug
+                  AND is_active = 1
+                LIMIT 1
+                """
+            ),
+            {"slug": str(store_slug or "").strip().lower()},
+        ).mappings().first()
+        if not row:
+            return {"success": False, "data": {}}
+        theme = _decode_store_theme(row.get("store_theme"))
+        config = _extract_store_config(theme)
+        landing_banner = (
+            str(config.get("landing_banner") or "").strip()
+            or str(row.get("banner") or "").strip()
+        )
+        logo = (
+            str(config.get("site_logo") or "").strip()
+            or str(row.get("logo") or "").strip()
+        )
+        return {
+            "success": True,
+            "data": {
+                "id": int(row.get("id") or 0),
+                "store_name": str(row.get("store_name") or ""),
+                "store_slug": str(row.get("store_slug") or ""),
+                "logo": logo,
+                "landing_banner": landing_banner,
+                "email": str(config.get("email") or ""),
+                "phone": str(config.get("phone") or ""),
+                "slogan": str(config.get("slogan") or ""),
+                "website": str(config.get("website") or ""),
+                "street": str(config.get("street") or ""),
+                "between_streets": str(config.get("between_streets") or ""),
+                "neighborhood": str(config.get("neighborhood") or ""),
+                "postal_code": str(config.get("postal_code") or ""),
+                "locality": str(config.get("locality") or ""),
+                "municipality": str(config.get("municipality") or ""),
+                "state": str(config.get("state") or ""),
+                "country": str(config.get("country") or ""),
+                "latitude": str(config.get("latitude") or ""),
+                "longitude": str(config.get("longitude") or ""),
+                "mission": str(config.get("mission") or ""),
+                "vision": str(config.get("vision") or ""),
+                "partner_benefits": str(config.get("partner_benefits") or ""),
+                "consumer_rights": str(config.get("consumer_rights") or ""),
+                "data_privacy": str(config.get("data_privacy") or ""),
+                "additional_conditions": str(config.get("additional_conditions") or ""),
+                "hide_email": bool(config.get("hide_email")),
+                "hide_phone": bool(config.get("hide_phone")),
+                "hide_website": bool(config.get("hide_website")),
+                "hide_address": bool(config.get("hide_address")),
+                "hide_map": bool(config.get("hide_map")),
+                "hide_partner_benefits": bool(config.get("hide_partner_benefits")),
+                "hide_about": bool(config.get("hide_about")),
+                "hide_policies": bool(config.get("hide_policies")),
+                "hide_product_prices": bool(config.get("hide_product_prices")),
+                "hide_cart_buttons": bool(config.get("hide_cart_buttons")),
+            },
+        }
+    finally:
+        db.close()
+
+
+def _load_public_products(request: Request, mode: str, store_id_value: str) -> list[dict]:
+    store_id = int(store_id_value) if str(store_id_value or "").isdigit() else None
+    db = _db_session_for_request(request)
+    try:
+        return product_service.list_public_catalog(
+            db,
+            store_id,
+            featured_only=str(mode or "").strip().lower() == "featured",
+        )
+    finally:
+        db.close()
+
+
 def _current_username(request: Request) -> str:
     return str(
         getattr(request.state, "user_name", None)
@@ -729,69 +738,12 @@ def _current_username(request: Request) -> str:
     ).strip()
 
 
-def _current_user_record(request: Request, db):
-    username = _current_username(request)
-    if not username:
-        return None
-    user = find_user_by_login(db, username)
-    roles_by_id = {role.id: normalize_role_name(role.nombre) for role in db.query(Rol).all()}
-    if user is not None:
-        role_name = roles_by_id.get(user.rol_id) or normalize_role_name(getattr(user, "role", "") or "usuario")
-        return user, role_name
-    normalized_username = username.lower()
-    for user in db.query(Usuario).all():
-        decrypted_username = (decrypt_sensitive(user.usuario) or "").strip().lower()
-        decrypted_email = (decrypt_sensitive(user.correo) or "").strip().lower()
-        if normalized_username not in {decrypted_username, decrypted_email}:
-            continue
-        role_name = roles_by_id.get(user.rol_id) or normalize_role_name(getattr(user, "role", "") or "usuario")
-        return user, role_name
-    return None
-
-
 def _resolve_store_scope(request: Request, db) -> dict[str, object]:
-    resolved = _current_user_record(request, db)
-    if not resolved:
-        return {"role": "usuario", "user_id": None, "store_id": None, "store_slug": "", "restricted": False}
-    user, role_name = resolved
-    restricted = role_name in {"administrador_tienda", "vendedor_tienda"}
-    store_id = None
-    store_slug = ""
-    if restricted:
-        store_row = db.execute(
-            text(
-                """
-                SELECT id, store_slug
-                FROM vendors
-                WHERE vendor_id = :vendor_id
-                LIMIT 1
-                """
-            ),
-            {"vendor_id": int(user.id)},
-        ).mappings().first()
-        if not store_row:
-            store_row = db.execute(
-                text(
-                    """
-                    SELECT v.id, v.store_slug
-                    FROM store_employees se
-                    JOIN vendors v ON v.id = se.vendor_id
-                    WHERE se.user_id = :user_id
-                    ORDER BY se.id ASC
-                    LIMIT 1
-                    """
-                ),
-                {"user_id": int(user.id)},
-            ).mappings().first()
-        store_id = int(store_row["id"]) if store_row and store_row.get("id") is not None else None
-        store_slug = str(store_row.get("store_slug") or "") if store_row else ""
-    return {
-        "role": role_name,
-        "user_id": int(user.id),
-        "store_id": store_id,
-        "store_slug": store_slug,
-        "restricted": restricted,
-    }
+    return _resolve_store_scope_impl(
+        request,
+        db,
+        lambda current_request, current_db: _current_user_record_impl(current_request, current_db, _current_username),
+    )
 
 
 def _list_store_rows(db, where_clause: str = "", params: dict[str, object] | None = None) -> list[dict]:
@@ -1806,53 +1758,6 @@ def multitienda_tiendas_entrypoint(request: Request):
     return _render_official_shell(request, "tienda", tienda_html())
 
 
-@router.get("/tiendas", include_in_schema=False, response_class=HTMLResponse)
-def public_tiendas_entrypoint():
-    return _render_public_document(tienda_html())
-
-
-@router.get("/tiendas/", include_in_schema=False, response_class=HTMLResponse)
-def public_tiendas_entrypoint_slash():
-    return _render_public_document(tienda_html())
-
-
-@router.get("/multitienda/public/tiendas", include_in_schema=False, response_class=HTMLResponse)
-def public_multitienda_tiendas_entrypoint():
-    return _render_public_document(tienda_html())
-
-
-@router.get("/destacados", include_in_schema=False, response_class=HTMLResponse)
-def public_destacados_entrypoint():
-    return _render_public_document(tienda_html())
-
-
-@router.get("/destacados/", include_in_schema=False, response_class=HTMLResponse)
-def public_destacados_entrypoint_slash():
-    return _render_public_document(tienda_html())
-
-
-@router.get("/carrito", include_in_schema=False, response_class=HTMLResponse)
-def public_cart_entrypoint():
-    from fastapi_modulo.modulos.multitienda.vistas.carrito import carrito_html
-    return _render_public_document(carrito_html())
-
-
-@router.get("/carrito/", include_in_schema=False, response_class=HTMLResponse)
-def public_cart_entrypoint_slash():
-    from fastapi_modulo.modulos.multitienda.vistas.carrito import carrito_html
-    return _render_public_document(carrito_html())
-
-
-@router.get("/destaacados", include_in_schema=False, response_class=HTMLResponse)
-def public_destacados_typo_entrypoint():
-    return RedirectResponse(url="/destacados", status_code=307)
-
-
-@router.get("/destaacados/", include_in_schema=False, response_class=HTMLResponse)
-def public_destacados_typo_entrypoint_slash():
-    return RedirectResponse(url="/destacados", status_code=307)
-
-
 # ─── API CRUD — store_tables ──────────────────────────────────────────────────
 # Helpers compartidos
 
@@ -1881,12 +1786,33 @@ async def _json_body(request: Request) -> dict:
         return {}
 
 
+router.include_router(create_admin_api_router(_require_store_id, _json_body))
+router.include_router(
+    create_public_router(
+        render_public_document=_render_public_document,
+        public_store_exists=_public_store_exists,
+        public_store_product_exists=_public_store_product_exists,
+        render_not_found_template=render_not_found_template,
+        tienda_html=tienda_html,
+        carrito_html=carrito_html,
+        public_landing_reserved=_PUBLIC_LANDING_RESERVED,
+        load_public_store_info=_load_public_store_info,
+        load_public_products=_load_public_products,
+        require_store_id=_require_store_id,
+    )
+)
+
+
 # ── Inicio Stats ─────────────────────────────────────────────────────────────
 
 @router.get("/multitienda/api/inicio-stats", response_class=JSONResponse)
 def api_inicio_stats(request: Request):
     store_id = _require_store_id(request)
-    return {"success": True, "data": get_store_stats(store_id)}
+    db = _db_session_for_request(request)
+    try:
+        return {"success": True, "data": analytics_service.get_store_stats(db, store_id)}
+    finally:
+        db.close()
 
 
 @router.put("/multitienda/api/configuracion", response_class=JSONResponse)
@@ -2097,41 +2023,40 @@ def api_list_employees(request: Request):
         if store_id is None:
             raise HTTPException(status_code=403, detail="No tienes una tienda asignada.")
         store_id = int(store_id)
-        rows = db.execute(text(
-            """
-            SELECT se.id, se.role as rol, se.position, se.is_active, se.created_at,
-                   u.username as usuario, u.email as correo
-            FROM store_employees se
-            JOIN users u ON u.id = se.user_id
-            WHERE se.vendor_id = :vid
-            ORDER BY se.id
-            """
-        ), {"vid": store_id}).mappings().all()
         result = []
-        for row in rows:
-            d = dict(row)
-            pos_raw = d.pop("position", "") or ""
+        employees = employee_service.list_by_vendor(db, store_id)
+        user_ids = [int(employee.user_id) for employee in employees if employee.user_id is not None]
+        users_by_id = {
+            int(user.id): user
+            for user in db.query(User).filter(User.id.in_(user_ids)).all()
+        } if user_ids else {}
+        for employee in employees:
+            user = users_by_id.get(int(employee.user_id or 0))
+            pos_raw = str(employee.position or "")
             try:
                 meta = json.loads(pos_raw)
-                full_name = meta.get("n") or d["usuario"]
+                full_name = meta.get("n") or str(getattr(user, "username", "") or "")
                 puesto = meta.get("p") or ""
                 celular = meta.get("t") or ""
                 departamento = meta.get("d") or ""
             except Exception:
-                full_name = d["usuario"]
+                full_name = str(getattr(user, "username", "") or "")
                 puesto = pos_raw
                 celular = ""
                 departamento = ""
-            is_active = d.pop("is_active", True)
-            created_at = d.pop("created_at", None)
-            d["full_name"] = full_name
-            d["nombre"] = full_name
-            d["puesto"] = puesto
-            d["celular"] = celular
-            d["departamento"] = departamento
-            d["estado"] = "Activo" if is_active else "Inactivo"
-            d["created_at"] = str(created_at) if created_at else ""
-            result.append(d)
+            result.append({
+                "id": employee.id,
+                "rol": getattr(employee.role, "value", employee.role),
+                "usuario": str(getattr(user, "username", "") or ""),
+                "correo": str(getattr(user, "email", "") or ""),
+                "full_name": full_name,
+                "nombre": full_name,
+                "puesto": puesto,
+                "celular": celular,
+                "departamento": departamento,
+                "estado": "Activo" if bool(employee.is_active) else "Inactivo",
+                "created_at": str(employee.created_at) if employee.created_at else "",
+            })
         return {"success": True, "data": result}
     finally:
         db.close()
@@ -2156,11 +2081,7 @@ async def api_create_employee(request: Request):
         store_perms = _resolve_store_permissions(db, scope)
         max_users = int(store_perms.get("max_internal_users") or 0)
         if max_users > 0:
-            count_row = db.execute(
-                text("SELECT COUNT(*) as cnt FROM store_employees WHERE vendor_id = :vid"),
-                {"vid": store_id},
-            ).mappings().first()
-            current_count = int((count_row or {}).get("cnt", 0))
+            current_count = len(employee_service.list_by_vendor(db, store_id))
             if current_count >= max_users:
                 raise HTTPException(status_code=422, detail="LIMIT_REACHED")
 
@@ -2173,19 +2094,20 @@ async def api_create_employee(request: Request):
         if not contrasena:
             raise HTTPException(status_code=400, detail="La contraseña es obligatoria.")
 
-        existing = db.execute(
-            text("SELECT id FROM users WHERE username = :u"), {"u": usuario}
-        ).mappings().first()
+        existing = db.query(User).filter_by(username=usuario).first()
         if existing:
             raise HTTPException(status_code=409, detail="El nombre de usuario ya está en uso.")
 
         hashed = get_password_hash(contrasena)
         email_to_use = correo if correo else f"{usuario}@tienda.local"
-        user_row = db.execute(
-            text("INSERT INTO users (username, email, hashed_password, user_type) VALUES (:u, :e, :h, 'store_employee') RETURNING id"),
-            {"u": usuario, "e": email_to_use, "h": hashed},
-        ).mappings().first()
-        user_id = user_row["id"]
+        user = User(
+            username=usuario,
+            email=email_to_use,
+            hashed_password=hashed,
+            user_type="store_employee",
+        )
+        db.add(user)
+        db.flush()
 
         nombre = (data.get("nombre") or usuario).strip()
         puesto = (data.get("puesto") or "").strip()
@@ -2196,12 +2118,16 @@ async def api_create_employee(request: Request):
         rol_form = (data.get("rol") or "usuario").lower()
         emp_role = "manager" if rol_form == "administrador" else "seller"
 
-        emp_row = db.execute(
-            text("INSERT INTO store_employees (vendor_id, user_id, role, position, is_active) VALUES (:vid, :uid, :role, :pos, true) RETURNING id"),
-            {"vid": store_id, "uid": user_id, "role": emp_role, "pos": pos_json},
-        ).mappings().first()
+        employee = employee_service.create_for_vendor(
+            db,
+            store_id,
+            user_id=int(user.id),
+            role=emp_role,
+            position=pos_json,
+            is_active=True,
+        )
         db.commit()
-        return {"success": True, "data": {"id": emp_row["id"], "usuario": usuario, "correo": correo, "nombre": nombre, "puesto": puesto}}
+        return {"success": True, "data": {"id": employee.id, "usuario": usuario, "correo": correo, "nombre": nombre, "puesto": puesto}}
     except HTTPException:
         raise
     except Exception:
@@ -2226,14 +2152,11 @@ async def api_update_employee(employee_id: int, request: Request):
         store_id = int(store_id)
 
         data = await _json_body(request)
-        emp = db.execute(
-            text("SELECT id, user_id, position FROM store_employees WHERE id = :eid AND vendor_id = :vid"),
-            {"eid": employee_id, "vid": store_id},
-        ).mappings().first()
+        emp = employee_service.get_by_vendor(db, store_id, employee_id)
         if not emp:
             raise HTTPException(status_code=404, detail="Empleado no encontrado.")
 
-        pos_raw = emp["position"] or ""
+        pos_raw = str(emp.position or "")
         try:
             meta = json.loads(pos_raw)
         except Exception:
@@ -2248,33 +2171,23 @@ async def api_update_employee(employee_id: int, request: Request):
             meta["d"] = data["departamento"]
         pos_json = json.dumps(meta, ensure_ascii=False)[:400]
 
-        fields = ["position = :pos"]
-        params: dict = {"pos": pos_json, "eid": employee_id, "vid": store_id}
-
         rol_form = (data.get("rol") or "").lower()
-        if rol_form == "administrador":
-            fields.append("role = :role")
-            params["role"] = "manager"
-        elif rol_form == "usuario":
-            fields.append("role = :role")
-            params["role"] = "seller"
-
         is_active = data.get("is_active")
         if is_active is None and "estado" in data:
             is_active = str(data["estado"]).lower() != "inactivo"
+        updates = {"position": pos_json}
+        if rol_form == "administrador":
+            updates["role"] = "manager"
+        elif rol_form == "usuario":
+            updates["role"] = "seller"
         if is_active is not None:
-            fields.append("is_active = :active")
-            params["active"] = bool(is_active)
+            updates["is_active"] = bool(is_active)
 
-        db.execute(
-            text("UPDATE store_employees SET " + ", ".join(fields) + ", updated_at = CURRENT_TIMESTAMP WHERE id = :eid AND vendor_id = :vid"),
-            params,
-        )
+        employee_service.update_employee(db, emp, **updates)
         if data.get("correo"):
-            db.execute(
-                text("UPDATE users SET email = :e WHERE id = :uid"),
-                {"e": data["correo"], "uid": emp["user_id"]},
-            )
+            user = db.query(User).filter_by(id=int(emp.user_id or 0)).first()
+            if user:
+                user.email = data["correo"]
         db.commit()
         return {"success": True}
     except HTTPException:
@@ -2300,27 +2213,15 @@ def api_delete_employee(employee_id: int, request: Request):
             raise HTTPException(status_code=403, detail="No tienes una tienda asignada.")
         store_id = int(store_id)
 
-        emp = db.execute(
-            text("SELECT user_id FROM store_employees WHERE id = :eid AND vendor_id = :vid"),
-            {"eid": employee_id, "vid": store_id},
-        ).mappings().first()
+        emp = employee_service.get_by_vendor(db, store_id, employee_id)
         if not emp:
             raise HTTPException(status_code=404, detail="Empleado no encontrado.")
-        user_id = emp["user_id"]
+        user_id = int(emp.user_id or 0)
 
-        db.execute(
-            text("DELETE FROM store_employees WHERE id = :eid AND vendor_id = :vid"),
-            {"eid": employee_id, "vid": store_id},
-        )
-        other_refs = db.execute(
-            text("SELECT COUNT(*) as cnt FROM store_employees WHERE user_id = :uid"),
-            {"uid": user_id},
-        ).mappings().first()
-        if int((other_refs or {}).get("cnt", 1)) == 0:
-            db.execute(
-                text("DELETE FROM users WHERE id = :uid AND user_type = 'store_employee'"),
-                {"uid": user_id},
-            )
+        employee_service.delete_employee(db, emp)
+        other_refs = db.query(employee_service.StoreEmployee).filter_by(user_id=user_id).count()
+        if user_id and other_refs == 0:
+            db.query(User).filter_by(id=user_id, user_type="store_employee").delete()
         db.commit()
         return {"success": True}
     except HTTPException:
@@ -2335,7 +2236,6 @@ def api_delete_employee(employee_id: int, request: Request):
 
 @router.post("/multitienda/api/empleados/{employee_id}/password", response_class=JSONResponse)
 async def api_change_employee_password(employee_id: int, request: Request):
-    from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.users.routes import get_password_hash
     db = _db_session_for_request(request)
     try:
         scope = _resolve_store_scope(request, db)
@@ -2352,18 +2252,9 @@ async def api_change_employee_password(employee_id: int, request: Request):
         if not pwd:
             raise HTTPException(status_code=400, detail="La contraseña no puede estar vacía.")
 
-        emp = db.execute(
-            text("SELECT user_id FROM store_employees WHERE id = :eid AND vendor_id = :vid"),
-            {"eid": employee_id, "vid": store_id},
-        ).mappings().first()
-        if not emp:
+        ok = employee_service.set_password_for_vendor_employee(db, store_id, employee_id, pwd)
+        if not ok:
             raise HTTPException(status_code=404, detail="Empleado no encontrado.")
-
-        hashed = get_password_hash(pwd)
-        db.execute(
-            text("UPDATE users SET hashed_password = :h WHERE id = :uid"),
-            {"h": hashed, "uid": emp["user_id"]},
-        )
         db.commit()
         return {"success": True}
     except HTTPException:
@@ -2374,455 +2265,5 @@ async def api_change_employee_password(employee_id: int, request: Request):
     finally:
         db.close()
 
-
-# ── Productos públicos (tienda) ───────────────────────────────────────────────
-
-@router.get("/multitienda/api/store-info", response_class=JSONResponse)
-def api_public_store_info(request: Request):
-    """Retorna info pública de una tienda (nombre, logo, banner) por store_slug."""
-    store_slug = str(request.query_params.get("store_slug") or "").strip().lower()
-    if not store_slug:
-        return {"success": False, "data": {}}
-    db = _db_session_for_request(request)
-    try:
-        row = db.execute(
-            text(
-                """
-                SELECT id, store_name, store_slug, logo, banner, store_theme
-                FROM vendors
-                WHERE LOWER(store_slug) = :slug
-                  AND is_active = 1
-                LIMIT 1
-                """
-            ),
-            {"slug": store_slug},
-        ).mappings().first()
-        if not row:
-            return {"success": False, "data": {}}
-        theme = _decode_store_theme(row.get("store_theme"))
-        config = _extract_store_config(theme)
-        landing_banner = (
-            str(config.get("landing_banner") or "").strip()
-            or str(row.get("banner") or "").strip()
-        )
-        logo = (
-            str(config.get("site_logo") or "").strip()
-            or str(row.get("logo") or "").strip()
-        )
-        return {
-            "success": True,
-            "data": {
-                "store_name": str(row.get("store_name") or ""),
-                "store_slug": str(row.get("store_slug") or ""),
-                "logo": logo,
-                "landing_banner": landing_banner,
-                "email": str(config.get("email") or ""),
-                "phone": str(config.get("phone") or ""),
-                "slogan": str(config.get("slogan") or ""),
-                "website": str(config.get("website") or ""),
-                "street": str(config.get("street") or ""),
-                "between_streets": str(config.get("between_streets") or ""),
-                "neighborhood": str(config.get("neighborhood") or ""),
-                "postal_code": str(config.get("postal_code") or ""),
-                "locality": str(config.get("locality") or ""),
-                "municipality": str(config.get("municipality") or ""),
-                "state": str(config.get("state") or ""),
-                "country": str(config.get("country") or ""),
-                "latitude": str(config.get("latitude") or ""),
-                "longitude": str(config.get("longitude") or ""),
-                "mission": str(config.get("mission") or ""),
-                "vision": str(config.get("vision") or ""),
-                "partner_benefits": str(config.get("partner_benefits") or ""),
-                "consumer_rights": str(config.get("consumer_rights") or ""),
-                "data_privacy": str(config.get("data_privacy") or ""),
-                "additional_conditions": str(config.get("additional_conditions") or ""),
-                "hide_email": bool(config.get("hide_email")),
-                "hide_phone": bool(config.get("hide_phone")),
-                "hide_website": bool(config.get("hide_website")),
-                "hide_address": bool(config.get("hide_address")),
-                "hide_map": bool(config.get("hide_map")),
-                "hide_partner_benefits": bool(config.get("hide_partner_benefits")),
-                "hide_about": bool(config.get("hide_about")),
-                "hide_policies": bool(config.get("hide_policies")),
-                "hide_product_prices": bool(config.get("hide_product_prices")),
-                "hide_cart_buttons": bool(config.get("hide_cart_buttons")),
-            },
-        }
-    finally:
-        db.close()
-
-
-@router.get("/multitienda/api/productos-publicos", response_class=JSONResponse)
-def api_public_products(request: Request):
-    """Retorna productos publicados visibles en la tienda pública."""
-    mode = str(request.query_params.get("mode") or "all").strip().lower()
-    store_slug = str(request.query_params.get("store_slug") or "").strip().lower()
-    store_id = None
-    featured_only = mode == "featured"
-
-    if store_slug:
-        db = _db_session_for_request(request)
-        try:
-            row = db.execute(
-                text(
-                    """
-                    SELECT id
-                    FROM vendors
-                    WHERE LOWER(store_slug) = :slug
-                      AND is_active = 1
-                    LIMIT 1
-                    """
-                ),
-                {"slug": store_slug},
-            ).mappings().first()
-            store_id = int(row["id"]) if row and row.get("id") is not None else None
-        finally:
-            db.close()
-    elif mode == "store":
-        try:
-            store_id = _require_store_id(request)
-        except Exception:
-            store_id = None
-
-    return {"success": True, "data": get_public_products(store_id, featured_only=featured_only)}
-
-
-@router.get("/{store_slug}", include_in_schema=False, response_class=HTMLResponse)
-def public_store_landing_entrypoint(request: Request, store_slug: str):
-    normalized = str(store_slug or "").strip().lower()
-    if not normalized or normalized in _PUBLIC_LANDING_RESERVED:
-        return render_not_found_template(request, title="Pagina no encontrada", status_code=404)
-    if not _public_store_exists(request, normalized):
-        return render_not_found_template(request, title="Tienda no encontrada", status_code=404)
-    return _render_public_document(tienda_html())
-
-
-@router.get("/{store_slug}/{product_slug}", include_in_schema=False, response_class=HTMLResponse)
-def public_store_product_landing_entrypoint(request: Request, store_slug: str, product_slug: str):
-    normalized_store = str(store_slug or "").strip().lower()
-    normalized_product = str(product_slug or "").strip().lower()
-    if (
-        not normalized_store
-        or not normalized_product
-        or normalized_store in _PUBLIC_LANDING_RESERVED
-        or normalized_product in _PUBLIC_LANDING_RESERVED
-    ):
-        return render_not_found_template(request, title="Pagina no encontrada", status_code=404)
-    if not _public_store_product_exists(request, normalized_store, normalized_product):
-        return render_not_found_template(request, title="Producto no encontrado", status_code=404)
-    return _render_public_document(tienda_html())
-
-
-# ── Cupones ───────────────────────────────────────────────────────────────────
-
-@router.get("/multitienda/api/cupones", response_class=JSONResponse)
-def api_list_coupons(request: Request):
-    store_id = _require_store_id(request)
-    return {"success": True, "data": list_coupons(store_id)}
-
-
-@router.post("/multitienda/api/cupones", response_class=JSONResponse)
-async def api_create_coupon(request: Request):
-    store_id = _require_store_id(request)
-    data = await _json_body(request)
-    return {"success": True, "data": create_coupon(store_id, data)}
-
-
-@router.put("/multitienda/api/cupones/{coupon_id}", response_class=JSONResponse)
-async def api_update_coupon(coupon_id: int, request: Request):
-    store_id = _require_store_id(request)
-    data = await _json_body(request)
-    result = update_coupon(store_id, coupon_id, data)
-    if result is None:
-        raise HTTPException(status_code=404, detail="Cupón no encontrado.")
-    return {"success": True, "data": result}
-
-
-@router.delete("/multitienda/api/cupones/{coupon_id}", response_class=JSONResponse)
-def api_delete_coupon(coupon_id: int, request: Request):
-    store_id = _require_store_id(request)
-    ok = delete_coupon(store_id, coupon_id)
-    if not ok:
-        raise HTTPException(status_code=404, detail="Cupón no encontrado.")
-    return {"success": True}
-
-
-@router.post("/multitienda/api/cupones/validar", response_class=JSONResponse)
-async def api_validate_coupon(request: Request):
-    store_id = _require_store_id(request)
-    data = await _json_body(request)
-    code = str(data.get("code") or data.get("codigo") or "").strip()
-    cart_total = float(data.get("cart_total") or data.get("total_carrito") or 0)
-    if not code:
-        raise HTTPException(status_code=400, detail="Se requiere el código del cupón.")
-    return validate_coupon(store_id, code, cart_total)
-
-
-@router.post("/multitienda/api/cupones/{coupon_id}/redimir", response_class=JSONResponse)
-def api_redeem_coupon(coupon_id: int, request: Request):
-    store_id = _require_store_id(request)
-    ok = redeem_coupon(store_id, coupon_id)
-    if not ok:
-        raise HTTPException(status_code=404, detail="Cupón no encontrado.")
-    return {"success": True}
-
-
-# ── Fidelización ──────────────────────────────────────────────────────────────
-
-@router.get("/multitienda/api/fidelizacion/plan", response_class=JSONResponse)
-def api_get_loyalty_plan(request: Request):
-    store_id = _require_store_id(request)
-    return {"success": True, "data": get_loyalty_plan(store_id)}
-
-
-@router.put("/multitienda/api/fidelizacion/plan", response_class=JSONResponse)
-async def api_update_loyalty_plan(request: Request):
-    store_id = _require_store_id(request)
-    data = await _json_body(request)
-    return {"success": True, "data": upsert_loyalty_plan(store_id, data)}
-
-
-@router.get("/multitienda/api/fidelizacion/clientes", response_class=JSONResponse)
-def api_list_loyalty_customers(request: Request):
-    store_id = _require_store_id(request)
-    return {"success": True, "data": list_loyalty_customers(store_id)}
-
-
-@router.get("/multitienda/api/fidelizacion/clientes/{email}/historial", response_class=JSONResponse)
-def api_loyalty_history(email: str, request: Request):
-    store_id = _require_store_id(request)
-    return {"success": True, "data": get_loyalty_history(store_id, email)}
-
-
-@router.post("/multitienda/api/fidelizacion/clientes/{email}/ajustar", response_class=JSONResponse)
-async def api_adjust_loyalty(email: str, request: Request):
-    store_id = _require_store_id(request)
-    data = await _json_body(request)
-    points = int(data.get("points") or data.get("puntos") or 0)
-    if points == 0:
-        raise HTTPException(status_code=400, detail="Se requiere una cantidad de puntos distinta de 0.")
-    tx_type = str(data.get("type") or ("adjusted" if points > 0 else "adjusted"))
-    result = adjust_loyalty_points(
-        store_id, email, points, tx_type=tx_type,
-        notes=str(data.get("notes") or data.get("notas") or ""),
-        reference=str(data.get("reference") or ""),
-        name=str(data.get("name") or data.get("nombre") or ""),
-    )
-    return {"success": True, "data": result}
-
-
-# ── Apartados (layaways) ──────────────────────────────────────────────────────
-
-@router.get("/multitienda/api/apartados", response_class=JSONResponse)
-def api_list_layaways(request: Request):
-    store_id = _require_store_id(request)
-    return {"success": True, "data": list_layaways(store_id)}
-
-
-@router.post("/multitienda/api/apartados", response_class=JSONResponse)
-async def api_create_layaway(request: Request):
-    store_id = _require_store_id(request)
-    data = await _json_body(request)
-    return {"success": True, "data": create_layaway(store_id, data)}
-
-
-@router.put("/multitienda/api/apartados/{layaway_id}", response_class=JSONResponse)
-async def api_update_layaway(layaway_id: int, request: Request):
-    store_id = _require_store_id(request)
-    data = await _json_body(request)
-    result = update_layaway(store_id, layaway_id, data)
-    if result is None:
-        raise HTTPException(status_code=404, detail="Apartado no encontrado.")
-    return {"success": True, "data": result}
-
-
-@router.delete("/multitienda/api/apartados/{layaway_id}", response_class=JSONResponse)
-def api_delete_layaway(layaway_id: int, request: Request):
-    store_id = _require_store_id(request)
-    ok = delete_layaway(store_id, layaway_id)
-    if not ok:
-        raise HTTPException(status_code=404, detail="Apartado no encontrado.")
-    return {"success": True}
-
-
-@router.post("/multitienda/api/apartados/crear", response_class=JSONResponse)
-async def api_create_layaway_rich(request: Request):
-    store_id = _require_store_id(request)
-    data = await _json_body(request)
-    return {"success": True, "data": create_layaway_rich(store_id, data)}
-
-
-@router.put("/multitienda/api/apartados/{layaway_id}/editar", response_class=JSONResponse)
-async def api_update_layaway_rich(layaway_id: int, request: Request):
-    store_id = _require_store_id(request)
-    data = await _json_body(request)
-    result = update_layaway_rich(store_id, layaway_id, data)
-    if result is None:
-        raise HTTPException(status_code=404, detail="Apartado no encontrado.")
-    return {"success": True, "data": result}
-
-
-@router.get("/multitienda/api/apartados/{layaway_id}/pagos", response_class=JSONResponse)
-def api_list_layaway_payments(layaway_id: int, request: Request):
-    store_id = _require_store_id(request)
-    return {"success": True, "data": list_layaway_payments(store_id, layaway_id)}
-
-
-@router.post("/multitienda/api/apartados/{layaway_id}/pagos", response_class=JSONResponse)
-async def api_add_layaway_payment(layaway_id: int, request: Request):
-    store_id = _require_store_id(request)
-    data = await _json_body(request)
-    result = add_layaway_payment(store_id, layaway_id, data)
-    if result.get("error"):
-        raise HTTPException(status_code=400, detail=result["error"])
-    return {"success": True, "data": result}
-
-
-@router.delete("/multitienda/api/apartados/{layaway_id}/pagos/{payment_id}", response_class=JSONResponse)
-def api_delete_layaway_payment(layaway_id: int, payment_id: int, request: Request):
-    store_id = _require_store_id(request)
-    ok = delete_layaway_payment(store_id, layaway_id, payment_id)
-    if not ok:
-        raise HTTPException(status_code=404, detail="Pago no encontrado.")
-    return {"success": True}
-
-
-@router.post("/multitienda/api/apartados/{layaway_id}/cancelar", response_class=JSONResponse)
-def api_cancel_layaway(layaway_id: int, request: Request):
-    store_id = _require_store_id(request)
-    result = set_layaway_status(store_id, layaway_id, "cancelado")
-    if not result:
-        raise HTTPException(status_code=404, detail="Apartado no encontrado.")
-    return {"success": True, "data": result}
-
-
-@router.post("/multitienda/api/apartados/{layaway_id}/reactivar", response_class=JSONResponse)
-def api_reactivate_layaway(layaway_id: int, request: Request):
-    store_id = _require_store_id(request)
-    result = set_layaway_status(store_id, layaway_id, "active")
-    if not result:
-        raise HTTPException(status_code=404, detail="Apartado no encontrado.")
-    return {"success": True, "data": result}
-
-
-@router.post("/multitienda/api/apartados/{layaway_id}/entregar", response_class=JSONResponse)
-def api_deliver_layaway(layaway_id: int, request: Request):
-    store_id = _require_store_id(request)
-    result = set_layaway_status(store_id, layaway_id, "entregado")
-    if not result:
-        raise HTTPException(status_code=404, detail="Apartado no encontrado.")
-    return {"success": True, "data": result}
-
-
-@router.post("/multitienda/api/apartados/vencer", response_class=JSONResponse)
-def api_mark_overdue_layaways(request: Request):
-    store_id = _require_store_id(request)
-    count = mark_overdue_layaways(store_id)
-    return {"success": True, "updated": count}
-
-
-# ── Seguidores ────────────────────────────────────────────────────────────────
-
-@router.get("/multitienda/api/seguidores", response_class=JSONResponse)
-def api_list_followers(request: Request):
-    store_id = _require_store_id(request)
-    return {"success": True, "data": list_followers(store_id)}
-
-
-@router.post("/multitienda/api/seguidores", response_class=JSONResponse)
-async def api_create_follower(request: Request):
-    store_id = _require_store_id(request)
-    data = await _json_body(request)
-    return {"success": True, "data": create_follower(store_id, data)}
-
-
-@router.delete("/multitienda/api/seguidores/{follower_id}", response_class=JSONResponse)
-def api_delete_follower(follower_id: int, request: Request):
-    store_id = _require_store_id(request)
-    ok = delete_follower(store_id, follower_id)
-    if not ok:
-        raise HTTPException(status_code=404, detail="Seguidor no encontrado.")
-    return {"success": True}
-
-
-# ── Videos ────────────────────────────────────────────────────────────────────
-
-@router.get("/multitienda/api/videos", response_class=JSONResponse)
-def api_list_videos(request: Request):
-    store_id = _require_store_id(request)
-    return {"success": True, "data": list_videos(store_id)}
-
-
-@router.post("/multitienda/api/videos", response_class=JSONResponse)
-async def api_create_video(request: Request):
-    store_id = _require_store_id(request)
-    data = await _json_body(request)
-    return {"success": True, "data": create_video(store_id, data)}
-
-
-@router.delete("/multitienda/api/videos/{video_id}", response_class=JSONResponse)
-def api_delete_video(video_id: int, request: Request):
-    store_id = _require_store_id(request)
-    ok = delete_video(store_id, video_id)
-    if not ok:
-        raise HTTPException(status_code=404, detail="Video no encontrado.")
-    return {"success": True}
-
-
-# ── Proveedores ───────────────────────────────────────────────────────────────
-
-@router.get("/multitienda/api/proveedores", response_class=JSONResponse)
-def api_list_suppliers(request: Request):
-    store_id = _require_store_id(request)
-    db = _db_session_for_request(request)
-    try:
-        ensure_store_tables(db.bind)
-        return {"success": True, "data": list_suppliers(store_id, db=db)}
-    finally:
-        db.close()
-
-
-@router.post("/multitienda/api/proveedores", response_class=JSONResponse)
-async def api_create_supplier(request: Request):
-    store_id = _require_store_id(request)
-    db = _db_session_for_request(request)
-    data = await _json_body(request)
-    try:
-        ensure_store_tables(db.bind)
-        return {"success": True, "data": create_supplier(store_id, data, db=db)}
-    finally:
-        db.close()
-
-
-@router.put("/multitienda/api/proveedores/{supplier_id}", response_class=JSONResponse)
-async def api_update_supplier(supplier_id: int, request: Request):
-    store_id = _require_store_id(request)
-    db = _db_session_for_request(request)
-    data = await _json_body(request)
-    try:
-        ensure_store_tables(db.bind)
-        result = update_supplier(store_id, supplier_id, data, db=db)
-        if result is None:
-            raise HTTPException(status_code=404, detail="Proveedor no encontrado.")
-        return {"success": True, "data": result}
-    finally:
-        db.close()
-
-
-@router.delete("/multitienda/api/proveedores/{supplier_id}", response_class=JSONResponse)
-def api_delete_supplier(supplier_id: int, request: Request):
-    store_id = _require_store_id(request)
-    db = _db_session_for_request(request)
-    try:
-        ensure_store_tables(db.bind)
-        ok = delete_supplier(store_id, supplier_id, db=db)
-        if not ok:
-            raise HTTPException(status_code=404, detail="Proveedor no encontrado.")
-        return {"success": True}
-    finally:
-        db.close()
-
-
-# ─────────────────────────────────────────────────────────────────────────────
 
 __all__ = ["router"]
