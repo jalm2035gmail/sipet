@@ -28,6 +28,7 @@ import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from sqlalchemy.orm import Session
 
+from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.users.routes import require_any_role, require_role
 from fastapi_modulo.modulos.multitienda.marketplace.backend.core.db import get_db
 from fastapi_modulo.modulos.multitienda.marketplace.backend.core.dependencies import get_session_key as _get_session_key
 from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.cart.models import Cart, CartItem
@@ -156,6 +157,7 @@ def if_wallet_link(
     request: Request,
     response: Response,
     db: Session = Depends(get_db),
+    _user=Depends(require_any_role("customer", "vendor", "superadmin", "store_employee")),
 ):
     """Vincula la sesión actual con la cuenta de billetera IF del socio."""
     session_key = _get_session_key(request, response)
@@ -190,6 +192,7 @@ async def if_wallet_balance(
     request: Request,
     response: Response,
     db: Session = Depends(get_db),
+    _user=Depends(require_any_role("customer", "vendor", "superadmin", "store_employee")),
 ):
     """
     Consulta el saldo de la billetera IF del socio.
@@ -241,6 +244,7 @@ def if_wallet_transactions(
     request: Request,
     response: Response,
     db: Session = Depends(get_db),
+    _user=Depends(require_any_role("customer", "vendor", "superadmin", "store_employee")),
 ):
     """Historial local de débitos realizados con la billetera IF."""
     session_key = _get_session_key(request, response)
@@ -276,6 +280,7 @@ def checkout_cash(
     request: Request,
     response: Response,
     db: Session = Depends(get_db),
+    _user=Depends(require_any_role("customer", "vendor", "superadmin", "store_employee")),
 ):
     """Registra un pedido para pago en efectivo (contra entrega o en tienda)."""
     session_key = _get_session_key(request, response)
@@ -306,6 +311,7 @@ async def checkout_paypal_create(
     request: Request,
     response: Response,
     db: Session = Depends(get_db),
+    _user=Depends(require_any_role("customer", "vendor", "superadmin", "store_employee")),
 ):
     """Crea una orden en PayPal. Redirigir al cliente a `approve_url`.
     Luego capturar con POST /checkout/paypal/capture."""
@@ -372,6 +378,7 @@ async def checkout_paypal_capture(
     request: Request,
     response: Response,
     db: Session = Depends(get_db),
+    _user=Depends(require_any_role("customer", "vendor", "superadmin", "store_employee")),
 ):
     """Captura el pago de una orden PayPal ya aprobada por el cliente."""
     session_key = _get_session_key(request, response)
@@ -420,6 +427,7 @@ async def checkout_if_wallet(
     request: Request,
     response: Response,
     db: Session = Depends(get_db),
+    _user=Depends(require_any_role("customer", "vendor", "superadmin", "store_employee")),
 ):
     """
     Debita el monto de la billetera electrónica de la institución financiera.
@@ -519,6 +527,7 @@ async def solicitar_prestamo(
     request: Request,
     response: Response,
     db: Session = Depends(get_db),
+    _user=Depends(require_any_role("customer", "vendor", "superadmin", "store_employee")),
 ):
     """
     Envía una solicitud de crédito a la institución financiera para financiar
@@ -607,6 +616,7 @@ def get_loan(
     request: Request,
     response: Response,
     db: Session = Depends(get_db),
+    _user=Depends(require_any_role("customer", "vendor", "superadmin", "store_employee")),
 ):
     """Consulta el estado de una solicitud de préstamo."""
     session_key = _get_session_key(request, response)
@@ -624,6 +634,7 @@ def list_loans(
     request: Request,
     response: Response,
     db: Session = Depends(get_db),
+    _user=Depends(require_any_role("customer", "vendor", "superadmin", "store_employee")),
 ):
     """Lista todas las solicitudes de préstamo de la sesión actual."""
     session_key = _get_session_key(request, response)
@@ -641,6 +652,7 @@ def update_loan_status(
     loan_id: int,
     payload: LoanStatusUpdateIn,
     db: Session = Depends(get_db),
+    _user=Depends(require_role("superadmin")),
 ):
     """
     Webhook interno: actualiza el resultado de una solicitud de préstamo
@@ -689,6 +701,7 @@ def get_payments_for_order(
     request: Request,
     response: Response,
     db: Session = Depends(get_db),
+    _user=Depends(require_any_role("customer", "vendor", "superadmin", "store_employee")),
 ):
     """Devuelve todos los registros de pago para una referencia de orden."""
     session_key = _get_session_key(request, response)

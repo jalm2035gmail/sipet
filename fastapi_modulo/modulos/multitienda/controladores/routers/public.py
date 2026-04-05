@@ -94,6 +94,25 @@ def create_public_router(
             "data": load_public_products(request, mode, str(store_id or "")),
         }
 
+    return router
+
+
+def create_public_catchall_router(
+    *,
+    render_public_document: HtmlRenderer,
+    public_store_exists: StoreExistsChecker,
+    public_store_product_exists: StoreProductExistsChecker,
+    render_not_found_template: NotFoundRenderer,
+    tienda_html: Callable[[], str],
+    public_landing_reserved: set[str],
+) -> APIRouter:
+    """Catch-all router for public store URLs.
+
+    MUST be registered in the 'late' phase so it does not intercept explicit
+    routes from other modules (e.g. /web/{slug} from the frontend module).
+    """
+    router = APIRouter()
+
     @router.get("/{store_slug}", include_in_schema=False, response_class=HTMLResponse)
     def public_store_landing_entrypoint(request: Request, store_slug: str):
         normalized = str(store_slug or "").strip().lower()

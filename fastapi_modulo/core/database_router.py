@@ -5,6 +5,7 @@ import json
 import os
 import re
 import threading
+from urllib.parse import quote
 from contextvars import ContextVar
 from dataclasses import dataclass
 from pathlib import Path
@@ -416,12 +417,7 @@ def _build_url_from_options(options: Mapping[str, str], host: str = "") -> Optio
     db_name = _resolve_db_name_from_options(options, host)
     if not db_name:
         return None
-    auth = ""
-    if db_user:
-        auth = db_user
-        if db_password:
-            auth = f"{auth}:{db_password}"
-        auth = f"{auth}@"
+    auth = _build_auth_fragment(db_user, db_password)
     if db_engine == "mysql":
         return f"mysql+pymysql://{auth}{db_host}:{db_port}/{db_name}"
     return f"postgresql://{auth}{db_host}:{db_port}/{db_name}"
@@ -505,12 +501,7 @@ def _build_postgresql_url_from_options(options: configparser.SectionProxy) -> st
     db_port = str(options.get("db_port") or "5432").strip()
     db_user = str(options.get("db_user") or "").strip()
     db_password = str(options.get("db_password") or "").strip()
-    auth = ""
-    if db_user:
-        auth = db_user
-        if db_password:
-            auth = f"{auth}:{db_password}"
-        auth = f"{auth}@"
+    auth = _build_auth_fragment(db_user, db_password)
     return f"postgresql://{auth}{db_host}:{db_port}/{db_name}"
 
 
@@ -524,14 +515,20 @@ def _build_database_url_from_options(options: Mapping[str, str]) -> str:
         db_port = str(options.get("db_port") or "3306").strip()
         db_user = str(options.get("db_user") or "").strip()
         db_password = str(options.get("db_password") or "").strip()
-        auth = ""
-        if db_user:
-            auth = db_user
-            if db_password:
-                auth = f"{auth}:{db_password}"
-            auth = f"{auth}@"
+        auth = _build_auth_fragment(db_user, db_password)
         return f"mysql+pymysql://{auth}{db_host}:{db_port}/{db_name}"
     return _build_postgresql_url_from_options(options)
+
+
+def _build_auth_fragment(db_user: str, db_password: str) -> str:
+    username = str(db_user or "").strip()
+    password = str(db_password or "").strip()
+    if not username:
+        return ""
+    auth = quote(username, safe="")
+    if password:
+        auth = f"{auth}:{quote(password, safe='')}"
+    return f"{auth}@"
 
 
 def domain_config_path(domain: str) -> Path:

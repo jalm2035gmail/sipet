@@ -947,6 +947,52 @@ body {
   transform: translateY(0);
 }
 
+.gov-apps-page #apps-upload-summary,
+.gov-apps-page #apps-upload-architecture,
+.gov-apps-page #apps-upload-preview,
+.gov-apps-page #apps-upload-warnings {
+  color: #0f172a !important;
+}
+
+.gov-apps-page #apps-upload-summary .text-base-content\/50,
+.gov-apps-page #apps-upload-summary .text-base-content\/60,
+.gov-apps-page #apps-upload-summary .text-base-content\/65,
+.gov-apps-page #apps-upload-summary .text-base-content\/70,
+.gov-apps-page #apps-upload-architecture .text-base-content\/50,
+.gov-apps-page #apps-upload-architecture .text-base-content\/60,
+.gov-apps-page #apps-upload-architecture .text-base-content\/65,
+.gov-apps-page #apps-upload-architecture .text-base-content\/70 {
+  color: #64748b !important;
+}
+
+.gov-apps-page #apps-upload-summary > div > div,
+.gov-apps-page #apps-upload-summary li,
+.gov-apps-page #apps-upload-summary li div,
+.gov-apps-page #apps-upload-architecture li,
+.gov-apps-page #apps-upload-architecture li div,
+.gov-apps-page #apps-upload-warnings,
+.gov-apps-page #apps-upload-warnings * {
+  color: #0f172a !important;
+}
+
+.gov-apps-page #apps-upload-architecture .text-warning {
+  color: #b45309 !important;
+}
+
+.gov-apps-page #apps-upload-architecture .text-error {
+  color: #b91c1c !important;
+}
+
+.gov-apps-page #apps-upload-architecture .border-warning\/20,
+.gov-apps-page #apps-upload-architecture .border-error\/20 {
+  border-color: rgba(148, 163, 184, 0.35) !important;
+}
+
+.gov-apps-page #apps-upload-architecture .bg-base-100,
+.gov-apps-page #apps-upload-warnings {
+  background: rgba(255, 255, 255, 0.96) !important;
+}
+
 /* =========================================================
    RESPONSIVE
    ========================================================= */

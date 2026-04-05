@@ -248,3 +248,35 @@ def test_read_installed_app_keys_for_tenant_returns_none_when_tenant_has_no_rows
     monkeypatch.setattr(module_registry, "get_admin_session_factory", lambda: (lambda: _Session()))
 
     assert module_registry._read_installed_app_keys_for_tenant("oaxaca") is None
+
+
+def test_read_installed_app_keys_for_tenant_uses_local_alias_fallback(monkeypatch) -> None:
+    class _Query:
+        def __init__(self, rows):
+            self._rows = rows
+
+        def filter(self, *args, **kwargs):
+            return self
+
+        def first(self):
+            return self._rows[0] if self._rows else None
+
+        def all(self):
+            return self._rows
+
+    class _Session:
+        def __init__(self):
+            self._queries = [
+                [],
+                [("multitienda",)],
+            ]
+
+        def query(self, *args, **kwargs):
+            return _Query(self._queries.pop(0))
+
+        def close(self):
+            return None
+
+    monkeypatch.setattr(module_registry, "get_admin_session_factory", lambda: (lambda: _Session()))
+
+    assert module_registry._read_installed_app_keys_for_tenant("default") == {"multitienda"}

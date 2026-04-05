@@ -25,7 +25,7 @@ def current_user_record(request, db, current_username) -> tuple[object, str] | N
     username = current_username(request)
     if not username:
         return None
-    user = find_user_by_login(db, username, login_hash=sensitive_lookup_hash(username))
+    user = find_user_by_login(db, username)
     roles_by_id = get_roles_map(db)
     if user is not None:
         role_name = roles_by_id.get(user.rol_id) or normalize_role_name(getattr(user, "role", "") or "usuario")

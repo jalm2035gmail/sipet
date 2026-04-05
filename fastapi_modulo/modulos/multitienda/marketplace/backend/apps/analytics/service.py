@@ -16,6 +16,7 @@ from fastapi_modulo.modulos.multitienda.marketplace.backend.core.db import Sessi
 
 _log = logging.getLogger("multitienda.analytics")
 _STORE_STATS_TTL_SECONDS = 60
+_STORE_STATS_CACHE_MAXSIZE = 2048
 
 
 def _build_store_stats(db: Session, vendor_id: int) -> dict:
@@ -69,7 +70,7 @@ def _build_store_stats(db: Session, vendor_id: int) -> dict:
     return payload
 
 
-@lru_cache(maxsize=512)
+@lru_cache(maxsize=_STORE_STATS_CACHE_MAXSIZE)
 def _cached_store_stats(vendor_id: int, cache_bucket: int) -> dict:
     del cache_bucket
     db = SessionLocal()
@@ -79,7 +80,7 @@ def _cached_store_stats(vendor_id: int, cache_bucket: int) -> dict:
         db.close()
 
 
-def get_store_stats(db: Session, vendor_id: int) -> dict:
+def get_cached_store_stats(db: Session, vendor_id: int) -> dict:
     del db
     cache_bucket = int(monotonic() // _STORE_STATS_TTL_SECONDS)
     return dict(_cached_store_stats(vendor_id, cache_bucket))

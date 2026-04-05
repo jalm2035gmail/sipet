@@ -55,13 +55,8 @@ from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.layaways import
 from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.products import service as product_service
 from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.users.routes import bootstrap_user_support_tables
 from fastapi_modulo.modulos.multitienda.servicios.access_roles import ensure_multitienda_access_roles
-from fastapi_modulo.modulos.multitienda.servicios.store_tables import (
-    ensure_store_tables,
-    list_layaways, create_layaway, update_layaway, delete_layaway,
-    create_layaway_rich, update_layaway_rich,
-    list_layaway_payments, add_layaway_payment, delete_layaway_payment,
-    set_layaway_status, mark_overdue_layaways,
-)
+from fastapi_modulo.modulos.multitienda.servicios.store_tables_shared import ensure_store_tables
+from fastapi_modulo.modulos.multitienda.servicios.theme_utils import decode_theme as _decode_store_theme
 from fastapi_modulo.modulos.multitienda.vistas.utils import _prefix_root_relative_urls
 from fastapi_modulo.modulos.multitienda.vistas.configuracion import configuracion_html
 from fastapi_modulo.modulos.multitienda.vistas.gestion import gestion_html
@@ -1166,21 +1161,6 @@ def _ensure_product_tables(bind) -> None:
     if tables:
         Base.metadata.create_all(bind=bind, tables=tables, checkfirst=True)
 
-
-def _decode_store_theme(raw_value) -> dict:
-    current = raw_value
-    for _ in range(3):
-        if isinstance(current, dict):
-            return current
-        if not isinstance(current, str):
-            return {}
-        try:
-            current = json.loads(current)
-        except json.JSONDecodeError:
-            return {}
-    return {}
-
-
 def _allowed_store_config_keys() -> set[str]:
     return {
         "site_logo",
@@ -1770,20 +1750,6 @@ async def _json_body(request: Request) -> dict:
 
 
 router.include_router(create_admin_api_router(_require_store_id, _json_body))
-router.include_router(
-    create_public_router(
-        render_public_document=_render_public_document,
-        public_store_exists=_public_store_exists,
-        public_store_product_exists=_public_store_product_exists,
-        render_not_found_template=render_not_found_template,
-        tienda_html=tienda_html,
-        carrito_html=carrito_html,
-        public_landing_reserved=_PUBLIC_LANDING_RESERVED,
-        load_public_store_info=_load_public_store_info,
-        load_public_products=_load_public_products,
-        require_store_id=_require_store_id,
-    )
-)
 
 
 # ── Inicio Stats ─────────────────────────────────────────────────────────────
@@ -1793,7 +1759,7 @@ def api_inicio_stats(request: Request):
         db = ctx["db"]
         scope = ctx["scope"]
         store_id = _resolve_store_id_from_scope(request, scope)
-        return {"success": True, "data": analytics_service.get_store_stats(db, store_id)}
+        return {"success": True, "data": analytics_service.get_cached_store_stats(db, store_id)}
 
 
 async def api_update_store_configuration(request: Request):
@@ -2109,6 +2075,24 @@ router.include_router(
         update_employee=api_update_employee,
         delete_employee=api_delete_employee,
         change_employee_password=api_change_employee_password,
+    )
+)
+# Non-catch-all public routes (/tiendas, /carrito, /multitienda/api/..., etc.)
+# The catch-all routes (/{store_slug}, /{store_slug}/{product_slug}) are registered
+# in the 'late' phase via multitienda_catchall_late.py to avoid intercepting
+# routes from other modules (e.g. /web/{slug} from the frontend module).
+router.include_router(
+    create_public_router(
+        render_public_document=_render_public_document,
+        public_store_exists=_public_store_exists,
+        public_store_product_exists=_public_store_product_exists,
+        render_not_found_template=render_not_found_template,
+        tienda_html=tienda_html,
+        carrito_html=carrito_html,
+        public_landing_reserved=_PUBLIC_LANDING_RESERVED,
+        load_public_store_info=_load_public_store_info,
+        load_public_products=_load_public_products,
+        require_store_id=_require_store_id,
     )
 )
 

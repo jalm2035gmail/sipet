@@ -63,6 +63,7 @@ class ModuleDefinition:
     boot_strategy: str = "deferred_router"
     registration_phase: str = "startup"
     router_specs: List[RouterSpec] = field(default_factory=list)
+    depends_on: Optional[str] = None
 
 
 LEGACY_MODULES_ENABLED = (os.environ.get("ENABLE_LEGACY_MODULES") or "").strip().lower() in {
@@ -376,6 +377,17 @@ MODULE_DEFINITIONS: List[ModuleDefinition] = [
         router_specs=[RouterSpec("fastapi_modulo.modulos.multitienda.controladores.multitienda")],
     ),
     ModuleDefinition(
+        key="multitienda_public_catchall",
+        label="Multitienda (rutas públicas catch-all)",
+        description="Catch-all de tienda pública: /{store_slug} y /{store_slug}/{product_slug}. Registro tardío para no interceptar rutas de otros módulos.",
+        sidebar_visible=False,
+        manageable=False,
+        always_enabled=True,
+        depends_on="multitienda",
+        registration_phase="late",
+        router_specs=[RouterSpec("fastapi_modulo.modulos.multitienda.controladores.multitienda_catchall_late")],
+    ),
+    ModuleDefinition(
         key="frontend",
         label="Frontend",
         description="Sitio backend y constructor frontend.",
@@ -560,6 +572,12 @@ MODULE_DEFINITIONS: List[ModuleDefinition] = [
 MODULES_BY_KEY = {module.key: module for module in MODULE_DEFINITIONS}
 _PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 _REPO_ROOT = os.path.abspath(os.path.join(_PROJECT_ROOT, ".."))
+LOCAL_TENANT_KEY_ALIASES = {
+    "default": ("127_0_0_1", "localhost", "0_0_0_0"),
+    "localhost": ("127_0_0_1", "default", "0_0_0_0"),
+    "127_0_0_1": ("default", "localhost", "0_0_0_0"),
+    "0_0_0_0": ("127_0_0_1", "default", "localhost"),
+}
 
 
 def _resolve_registry_path(path_value: str) -> str:
@@ -829,13 +847,9 @@ def _resolve_tenant_key(tenant_key: Optional[str] = None) -> str:
 
 
 def _read_installed_app_keys_for_tenant(tenant_key: str) -> Optional[set[str]]:
-    resolved_tenant_key = str(tenant_key or "").strip()
-    if not resolved_tenant_key:
-        return None
-    session = get_admin_session_factory()()
-    try:
+    def _fetch_for_tenant(session, candidate_tenant_key: str) -> Optional[set[str]]:
         base_query = session.query(TenantInstalledApp.app_key).filter(
-            TenantInstalledApp.tenant_key == resolved_tenant_key,
+            TenantInstalledApp.tenant_key == candidate_tenant_key,
         )
         if base_query.first() is None:
             return None
@@ -847,8 +861,21 @@ def _read_installed_app_keys_for_tenant(tenant_key: str) -> Optional[set[str]]:
             )
             .all()
         )
-        installed = {str(row[0]).strip() for row in rows if str(row[0] or "").strip()}
-        return installed
+        return {str(row[0]).strip() for row in rows if str(row[0] or "").strip()}
+
+    resolved_tenant_key = str(tenant_key or "").strip()
+    if not resolved_tenant_key:
+        return None
+    session = get_admin_session_factory()()
+    try:
+        installed = _fetch_for_tenant(session, resolved_tenant_key)
+        if installed is not None:
+            return installed
+        for alias in LOCAL_TENANT_KEY_ALIASES.get(resolved_tenant_key, ()):
+            alias_installed = _fetch_for_tenant(session, alias)
+            if alias_installed is not None:
+                return alias_installed
+        return None
     finally:
         session.close()
 
@@ -1136,6 +1163,8 @@ def register_enabled_routers(app: FastAPI, phase: str = "startup", tenant_key: O
         if not is_supported_module(module):
             continue
         if module.registration_phase != phase:
+            continue
+        if module.depends_on and not is_module_enabled(module.depends_on, tenant_key=tenant_key):
             continue
         if not module.router_specs or not is_module_enabled(module.key, tenant_key=tenant_key):
             continue

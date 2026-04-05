@@ -1,6 +1,7 @@
 from celery import shared_task
 from datetime import datetime, timedelta, date
 import logging
+from sqlalchemy import and_, case, func
 from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.messaging.models import (
     AutoReplyRule,
     Conversation,
@@ -91,30 +92,113 @@ def update_message_analytics():
     db = SessionLocal()
     try:
         today = date.today()
-        vendors = db.query(Vendor).filter(Vendor.status == 'approved').all()
+        day_start = datetime.combine(today, datetime.min.time())
+        vendors = (
+            db.query(Vendor.id, Vendor.vendor_id)
+            .filter(Vendor.status == 'approved')
+            .all()
+        )
+        if not vendors:
+            return
+
+        vendor_ids = [vendor.id for vendor in vendors]
+
+        conversation_stats = {
+            row.vendor_id: row
+            for row in (
+                db.query(
+                    Conversation.vendor_id.label("vendor_id"),
+                    func.count(Conversation.id).label("total_conversations"),
+                    func.sum(
+                        case((Conversation.created_at >= day_start, 1), else_=0)
+                    ).label("new_conversations"),
+                )
+                .filter(Conversation.vendor_id.in_(vendor_ids))
+                .group_by(Conversation.vendor_id)
+                .all()
+            )
+        }
+
+        message_stats = {
+            row.vendor_id: row
+            for row in (
+                db.query(
+                    Conversation.vendor_id.label("vendor_id"),
+                    func.count(Message.id).label("total_messages"),
+                    func.sum(
+                        case(
+                            (
+                                and_(
+                                    Message.created_at >= day_start,
+                                    Message.sender_id == Vendor.vendor_id,
+                                ),
+                                1,
+                            ),
+                            else_=0,
+                        )
+                    ).label("messages_sent"),
+                    func.sum(
+                        case(
+                            (
+                                and_(
+                                    Message.created_at >= day_start,
+                                    Message.sender_id != Vendor.vendor_id,
+                                ),
+                                1,
+                            ),
+                            else_=0,
+                        )
+                    ).label("messages_received"),
+                )
+                .join(Conversation, Conversation.id == Message.conversation_id)
+                .join(Vendor, Vendor.id == Conversation.vendor_id)
+                .filter(Conversation.vendor_id.in_(vendor_ids))
+                .group_by(Conversation.vendor_id)
+                .all()
+            )
+        }
+
+        analytics_rows = {
+            analytics.vendor_id: analytics
+            for analytics in (
+                db.query(MessageAnalytics)
+                .filter(
+                    MessageAnalytics.vendor_id.in_(vendor_ids),
+                    MessageAnalytics.date == today,
+                )
+                .all()
+            )
+        }
+
         for vendor in vendors:
-            analytics = db.query(MessageAnalytics).filter(
-                MessageAnalytics.vendor_id == vendor.id,
-                MessageAnalytics.date == today
-            ).first()
-            if not analytics:
+            analytics = analytics_rows.get(vendor.id)
+            if analytics is None:
                 analytics = MessageAnalytics(vendor_id=vendor.id, date=today)
                 db.add(analytics)
-            conversations = db.query(Conversation).filter(Conversation.vendor_id == vendor.id)
-            today_conversations = conversations.filter(Conversation.created_at >= datetime.combine(today, datetime.min.time()))
-            today_messages = db.query(Message).filter(
-                Message.conversation.has(vendor_id=vendor.id),
-                Message.created_at >= datetime.combine(today, datetime.min.time())
+                analytics_rows[vendor.id] = analytics
+
+            vendor_conversations = conversation_stats.get(vendor.id)
+            vendor_messages = message_stats.get(vendor.id)
+            analytics.total_conversations = int(
+                getattr(vendor_conversations, "total_conversations", 0) or 0
             )
-            analytics.total_conversations = conversations.count()
-            analytics.new_conversations = today_conversations.count()
-            analytics.total_messages = db.query(Message).filter(Message.conversation.has(vendor_id=vendor.id)).count()
-            analytics.messages_sent = today_messages.filter(Message.sender_id == vendor.user_id).count()
-            analytics.messages_received = today_messages.filter(Message.sender_id != vendor.user_id).count()
+            analytics.new_conversations = int(
+                getattr(vendor_conversations, "new_conversations", 0) or 0
+            )
+            analytics.total_messages = int(
+                getattr(vendor_messages, "total_messages", 0) or 0
+            )
+            analytics.messages_sent = int(
+                getattr(vendor_messages, "messages_sent", 0) or 0
+            )
+            analytics.messages_received = int(
+                getattr(vendor_messages, "messages_received", 0) or 0
+            )
             # Tiempo promedio de respuesta (simplificado)
             analytics.avg_response_time_minutes = 0
-            db.commit()
-            logger.info(f"Updated messaging analytics for vendor {vendor.id}")
+
+        db.commit()
+        logger.info("Updated messaging analytics for %s vendors", len(vendors))
     except Exception:
         logger.exception("Error updating messaging analytics")
     finally:

@@ -154,3 +154,26 @@ def test_load_domain_database_map_reuses_localhost_mapping_for_loopback_aliases(
 
     assert mapping["localhost"] == "sqlite:////tmp/local.db"
     assert mapping["127.0.0.1"] == "sqlite:////tmp/local.db"
+
+
+def test_resolve_database_url_from_sipet_conf_encodes_special_chars_in_password(tmp_path, monkeypatch) -> None:
+    domain_dir = tmp_path / "dominios"
+    domain_dir.mkdir(parents=True)
+    domain_conf = domain_dir / "oaxaca.tunegociovale.com.conf"
+    domain_conf.write_text(
+        "[options]\n"
+        "domain = oaxaca.tunegociovale.com\n"
+        "db_host = 127.0.0.1\n"
+        "db_port = 5432\n"
+        "db_user = sipet\n"
+        "db_password = XX,$,26/sipet@26,%\n"
+        "db_name = sipet_oaxaca\n"
+        "db_engine = postgresql\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(database_router_module, "DOMAIN_CONFIG_DIR", domain_dir)
+    monkeypatch.setattr(database_router_module, "SIPET_CONFIG_PATH", tmp_path / "sipet.conf")
+
+    resolved = database_router_module.resolve_database_url_from_sipet_conf("oaxaca.tunegociovale.com")
+
+    assert resolved == "postgresql://sipet:XX%2C%24%2C26%2Fsipet%4026%2C%25@127.0.0.1:5432/sipet_oaxaca"
