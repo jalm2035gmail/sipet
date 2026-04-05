@@ -38,6 +38,7 @@ from fastapi_modulo.modulos.multitienda.controladores.services.scope_service imp
     resolve_store_permissions as _resolve_store_permissions_impl,
     resolve_store_scope as _resolve_store_scope_impl,
 )
+from fastapi_modulo.modulos.multitienda.controladores.services.roles_service import get_roles_map
 from fastapi_modulo.modulos.multitienda.controladores.services.section_service import (
     can_access_module_section as _can_access_module_section_impl,
     can_access_store_config as _can_access_store_config_impl,
@@ -938,6 +939,11 @@ def _request_db_context(request: Request, *, include_permissions: bool = False):
             context["store_permissions"] = _resolve_store_permissions(db, scope)
         yield context
     except Exception:
+        _log.exception(
+            "Error en _request_db_context para %s %s; se realizara rollback.",
+            request.method,
+            request.url.path,
+        )
         db.rollback()
         raise
     finally:
@@ -976,16 +982,6 @@ def _list_store_rows(db, where_clause: str = "", params: dict[str, object] | Non
         ),
         params or {},
     ).mappings().all()
-
-
-def _store_row_matches_current_user(row: dict, current_username: str) -> bool:
-    normalized_current = str(current_username or "").strip().lower()
-    if not normalized_current:
-        return False
-    return normalized_current in {
-        str(row.get("full_name") or "").strip().lower(),
-        str(decrypt_sensitive(row.get("encrypted_username")) or "").strip().lower(),
-    }
 
 
 def _load_business_type_names(db) -> dict[str, str]:
@@ -1073,8 +1069,13 @@ def _resolve_store_summaries(request: Request, db, scope: dict[str, object] | No
             return []
     rows = _list_store_rows(db, where_clause, params)
     if effective_scope["restricted"] and not rows:
-        current_username = _current_username(request)
-        rows = [row for row in _list_store_rows(db) if _store_row_matches_current_user(row, current_username)]
+        user_id = effective_scope.get("user_id")
+        if user_id:
+            rows = _list_store_rows(
+                db,
+                "WHERE v.id IN (SELECT se.vendor_id FROM store_employees se WHERE se.user_id = :user_id)",
+                {"user_id": int(user_id)},
+            )
     return [_serialize_store_summary_with_types(row, business_type_names) for row in rows]
 
 
@@ -1603,7 +1604,7 @@ def multitienda_store_admin_users(request: Request):
     with _request_db_context(request) as ctx:
         db = ctx["db"]
         scope = ctx["scope"]
-        roles_by_id = {role.id: normalize_role_name(role.nombre) for role in db.query(Rol).all()}
+        roles_by_id = get_roles_map(db)
         rows = []
         for user in db.query(Usuario).order_by(Usuario.full_name.asc()).all():
             role_name = roles_by_id.get(user.rol_id) or normalize_role_name(getattr(user, "role", "") or "usuario")

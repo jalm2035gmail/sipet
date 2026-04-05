@@ -1,5 +1,5 @@
 [startup] static mount skipped /modulos/activo_fijo/static: directory 'fastapi_modulo/modulos/activo_fijo/static' does not exist
-INFO:     Started server process [6387]
+INFO:     Started server process [8288]
 INFO:     Waiting for application startup.
 [startup] core_schema begin
 [startup] create_all ok
@@ -109,6 +109,24 @@ INFO:     Waiting for application startup.
 [startup] register late routers done
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
-INFO:     127.0.0.1:58070 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
-INFO:     127.0.0.1:58057 - "GET /sw.js HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:58744 - "GET /sw.js HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:55289 - "GET /manifest.webmanifest HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:56712 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:56720 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:56712 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 303 See Other
+INFO:     127.0.0.1:56722 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:56721 - "GET /sw.js HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:56712 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:56721 - "GET /backend/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56712 - "GET /backend/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56712 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 303 See Other
+INFO:     127.0.0.1:56712 - "GET /backend/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56712 - "GET /sw.js HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:56907 - "GET /sw.js HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:56908 - "GET /backend/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56908 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 303 See Other
+INFO:     127.0.0.1:56908 - "GET /backend/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56908 - "GET /sw.js HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:58041 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:58782 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:60179 - "GET /sw.js HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:60942 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized

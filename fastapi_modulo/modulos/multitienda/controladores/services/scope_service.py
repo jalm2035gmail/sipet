@@ -4,9 +4,9 @@ import logging
 
 from sqlalchemy import text
 
-from fastapi_modulo.modulos_sipet.web.modelos.core_models import Rol
 from fastapi_modulo.modulos_sipet.web.servicios.access_service import normalize_role_name, sensitive_lookup_hash
 from fastapi_modulo.modulos_sipet.web.servicios.auth_service import find_user_by_login
+from fastapi_modulo.modulos.multitienda.controladores.services.roles_service import get_roles_map
 
 _log = logging.getLogger("multitienda.scope")
 
@@ -26,7 +26,7 @@ def current_user_record(request, db, current_username) -> tuple[object, str] | N
     if not username:
         return None
     user = find_user_by_login(db, username, login_hash=sensitive_lookup_hash(username))
-    roles_by_id = {role.id: normalize_role_name(role.nombre) for role in db.query(Rol).all()}
+    roles_by_id = get_roles_map(db)
     if user is not None:
         role_name = roles_by_id.get(user.rol_id) or normalize_role_name(getattr(user, "role", "") or "usuario")
         resolved = (user, role_name)

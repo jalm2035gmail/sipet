@@ -5,6 +5,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session, joinedload
 
+from fastapi_modulo.modulos.multitienda.marketplace.backend.core.dependencies import assert_store_access
 from fastapi_modulo.modulos.multitienda.marketplace.backend.core.db import get_db
 from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.users.routes import require_any_role
 from .models import Order, OrderItem, ShippingGroup, Payment
@@ -56,6 +57,30 @@ def _serialize_order(o: Order, include_items: bool = False) -> dict:
     return d
 
 
+def _assert_order_access(user, order: Order) -> None:
+    user_type = user.user_type.value if hasattr(user.user_type, "value") else str(user.user_type)
+    if user_type == "superadmin":
+        return
+    item_vendor_ids = {
+        int(item.vendor_id)
+        for item in (order.items or [])
+        if getattr(item, "vendor_id", None) is not None
+    }
+    if not item_vendor_ids:
+        raise HTTPException(status_code=403, detail="No tienes acceso a este pedido")
+    if user_type == "vendor":
+        allowed_vendor_id = int(user.vendor_profile_id or 0)
+        if allowed_vendor_id and allowed_vendor_id in item_vendor_ids:
+            return
+        raise HTTPException(status_code=403, detail="No tienes acceso a este pedido")
+    if user_type == "store_employee":
+        allowed_vendor_id = int(user.vendor_profile_id or 0)
+        if allowed_vendor_id and allowed_vendor_id in item_vendor_ids:
+            return
+        raise HTTPException(status_code=403, detail="No tienes acceso a este pedido")
+    raise HTTPException(status_code=403, detail="No autorizado")
+
+
 # ── List orders for a vendor ──────────────────────────────────────────────────
 
 @router.get("/store/{vendor_id}")
@@ -65,6 +90,7 @@ def list_store_orders(
     db: Session = Depends(get_db),
     user=Depends(require_any_role("vendor", "superadmin", "store_employee")),
 ):
+    assert_store_access(user, vendor_id, db)
     query = (
         db.query(Order)
         .join(OrderItem, OrderItem.order_id == Order.id)
@@ -94,6 +120,7 @@ def get_order(
     )
     if not o:
         raise HTTPException(status_code=404, detail="Pedido no encontrado.")
+    _assert_order_access(user, o)
     return {"success": True, "data": _serialize_order(o, include_items=True)}
 
 
@@ -106,9 +133,15 @@ def patch_order_status(
     db: Session = Depends(get_db),
     user=Depends(require_any_role("vendor", "superadmin", "store_employee")),
 ):
-    o = db.query(Order).filter(Order.id == order_id).first()
+    o = (
+        db.query(Order)
+        .options(joinedload(Order.items))
+        .filter(Order.id == order_id)
+        .first()
+    )
     if not o:
         raise HTTPException(status_code=404, detail="Pedido no encontrado.")
+    _assert_order_access(user, o)
     valid = {"pending", "processing", "shipped", "delivered", "cancelled", "refunded"}
     if new_status not in valid:
         raise HTTPException(status_code=400, detail=f"Estado inválido. Válidos: {', '.join(sorted(valid))}")

@@ -30,6 +30,7 @@ from sqlalchemy.orm import Session
 
 from fastapi_modulo.modulos.multitienda.marketplace.backend.core.db import get_db
 from fastapi_modulo.modulos.multitienda.marketplace.backend.core.dependencies import get_session_key as _get_session_key
+from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.cart.models import Cart, CartItem
 from .models import (
     CheckoutPayment,
     IFWalletAccount,
@@ -112,6 +113,20 @@ def _serialize_loan(lr: LoanRequest) -> dict:
         "created_at": lr.created_at.isoformat() if lr.created_at else None,
         "reviewed_at": lr.reviewed_at.isoformat() if lr.reviewed_at else None,
     }
+
+
+def _resolve_checkout_amount(db: Session, session_key: str) -> Decimal:
+    cart = db.query(Cart).filter(Cart.session_key == session_key).first()
+    if not cart:
+        raise HTTPException(status_code=400, detail="No hay carrito activo para procesar el pago.")
+    items = db.query(CartItem).filter(CartItem.cart_id == cart.id).all()
+    if not items:
+        raise HTTPException(status_code=400, detail="El carrito esta vacio.")
+    total = sum(Decimal(str(item.unit_price or 0)) * Decimal(int(item.quantity or 0)) for item in items)
+    total = total.quantize(Decimal("0.01"))
+    if total <= 0:
+        raise HTTPException(status_code=400, detail="El total del carrito es invalido.")
+    return total
 
 
 async def _paypal_access_token() -> str:
@@ -264,11 +279,12 @@ def checkout_cash(
 ):
     """Registra un pedido para pago en efectivo (contra entrega o en tienda)."""
     session_key = _get_session_key(request, response)
+    checkout_amount = _resolve_checkout_amount(db, session_key)
     payment = CheckoutPayment(
         session_key=session_key,
         order_reference=payload.order_reference,
         payment_method="efectivo",
-        amount=payload.amount,
+        amount=checkout_amount,
         status="pending",
         notes="; ".join(filter(None, [
             payload.notes,
@@ -294,6 +310,7 @@ async def checkout_paypal_create(
     """Crea una orden en PayPal. Redirigir al cliente a `approve_url`.
     Luego capturar con POST /checkout/paypal/capture."""
     session_key = _get_session_key(request, response)
+    checkout_amount = _resolve_checkout_amount(db, session_key)
     token = await _paypal_access_token()
 
     order_payload = {
@@ -303,7 +320,7 @@ async def checkout_paypal_create(
                 "reference_id": payload.order_reference,
                 "amount": {
                     "currency_code": payload.currency,
-                    "value": str(payload.amount.quantize(Decimal("0.01"))),
+                    "value": str(checkout_amount),
                 },
             }
         ],
@@ -335,7 +352,7 @@ async def checkout_paypal_create(
         session_key=session_key,
         order_reference=payload.order_reference,
         payment_method="paypal",
-        amount=payload.amount,
+        amount=checkout_amount,
         status="created",
         paypal_order_id=pp_order_id,
         notes=f"approve_url={approve_url}",
@@ -410,6 +427,7 @@ async def checkout_if_wallet(
     el intento para conciliación manual si no hay integración activa.
     """
     session_key = _get_session_key(request, response)
+    checkout_amount = _resolve_checkout_amount(db, session_key)
 
     # Obtener o crear vínculo de billetera IF
     wallet = db.query(IFWalletAccount).filter(IFWalletAccount.session_key == session_key).first()
@@ -440,7 +458,7 @@ async def checkout_if_wallet(
                     json={
                         "numero_socio": payload.member_number,
                         "numero_cuenta": payload.account_number,
-                        "monto": str(payload.amount.quantize(Decimal("0.01"))),
+                        "monto": str(checkout_amount),
                         "referencia": payload.order_reference,
                         "concepto": f"Compra en tienda - Orden {payload.order_reference}",
                     },
@@ -469,7 +487,7 @@ async def checkout_if_wallet(
     tx = IFWalletTransaction(
         wallet_id=wallet.id,
         type="debit",
-        amount=payload.amount,
+        amount=checkout_amount,
         reference_id=payload.order_reference,
         if_transaction_ref=if_ref,
         description=f"Pago pedido {payload.order_reference}",
@@ -482,7 +500,7 @@ async def checkout_if_wallet(
         session_key=session_key,
         order_reference=payload.order_reference,
         payment_method="billetera_if",
-        amount=payload.amount,
+        amount=checkout_amount,
         status=tx_status,
         if_wallet_transaction_id=tx.id,
         notes=f"Socio: {payload.member_number} | IF ref: {if_ref}" if if_ref else f"Socio: {payload.member_number}",
@@ -557,6 +575,12 @@ async def solicitar_prestamo(
                 # No falla el request: la solicitud queda en pending para revisión manual
                 lr.if_response_notes = f"IF HTTP {resp.status_code}: {resp.text[:200]}"
         except Exception as exc:
+            _log.warning(
+                "Error de conexion con IF al solicitar prestamo order_reference=%s member=%s: %s",
+                payload.order_reference,
+                payload.member_number,
+                exc,
+            )
             lr.if_response_notes = f"Error de conexión con IF: {exc}"
 
     # Registrar CheckoutPayment vinculado al préstamo

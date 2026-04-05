@@ -51,6 +51,41 @@ def _serialize_product(p: Product) -> dict:
     }
 
 
+def _next_unique_slug(db: Session, requested_slug: str) -> str:
+    base_slug = str(requested_slug or "").strip() or "producto"
+    candidate_rows = (
+        db.query(Product.slug)
+        .filter(
+            (Product.slug == base_slug)
+            | Product.slug.like(f"{base_slug}-%")
+        )
+        .all()
+    )
+    existing_slugs = {
+        str(row[0] or "").strip()
+        for row in candidate_rows
+        if row and row[0]
+    }
+    if base_slug not in existing_slugs:
+        return base_slug
+
+    max_suffix = 0
+    prefix = f"{base_slug}-"
+    for slug_value in existing_slugs:
+        if not slug_value.startswith(prefix):
+            continue
+        suffix = slug_value[len(prefix):]
+        if suffix.isdigit():
+            max_suffix = max(max_suffix, int(suffix))
+
+    for next_suffix in range(max_suffix + 1, max_suffix + 11):
+        candidate = f"{base_slug}-{next_suffix}"
+        if candidate not in existing_slugs:
+            return candidate
+
+    raise HTTPException(status_code=409, detail="No se pudo generar un slug único para el producto.")
+
+
 # ── List products for a store ──────────────────────────────────────────────────
 
 @router.get("/store/{vendor_id}")
@@ -115,13 +150,7 @@ def create_product(
     name = str(data.get("name") or "").strip()
     if not name:
         raise HTTPException(status_code=400, detail="El nombre es obligatorio.")
-    slug = str(data.get("slug") or _slugify(name) or "producto").strip()
-    # make slug unique
-    base_slug = slug
-    counter = 1
-    while db.query(Product).filter(Product.slug == slug).first():
-        slug = f"{base_slug}-{counter}"
-        counter += 1
+    slug = _next_unique_slug(db, str(data.get("slug") or _slugify(name) or "producto").strip())
 
     price = data.get("price")
     try:

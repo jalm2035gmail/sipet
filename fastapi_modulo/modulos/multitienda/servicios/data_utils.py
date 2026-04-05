@@ -4,10 +4,13 @@ from contextlib import contextmanager
 from datetime import datetime
 from decimal import Decimal
 from enum import Enum
+import logging
 
 from sqlalchemy.inspection import inspect as sa_inspect
 
 from fastapi_modulo.modulos.multitienda.marketplace.backend.core.db import SessionLocal
+
+_log = logging.getLogger("multitienda.data_utils")
 
 
 def coerce_value(value):
@@ -69,6 +72,7 @@ def managed_session(*, commit: bool = False):
         if commit:
             db.commit()
     except Exception:
+        _log.exception("Error dentro de managed_session(commit=%s); se realizara rollback.", commit)
         db.rollback()
         raise
     finally:
