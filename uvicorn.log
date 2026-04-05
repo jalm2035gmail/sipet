@@ -1,5 +1,5 @@
 [startup] static mount skipped /modulos/activo_fijo/static: directory 'fastapi_modulo/modulos/activo_fijo/static' does not exist
-INFO:     Started server process [87336]
+INFO:     Started server process [95105]
 INFO:     Waiting for application startup.
 [startup] core_schema begin
 [startup] create_all ok
@@ -109,13 +109,5 @@ INFO:     Waiting for application startup.
 [startup] register late routers done
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
-INFO:     127.0.0.1:60551 - "GET /api/backend/login/mfa-hint?usuario=0konomiyaki HTTP/1.1" 401 Unauthorized
-INFO:     127.0.0.1:60604 - "GET /api/backend/login/mfa-hint?usuario=0konomiyaki HTTP/1.1" 401 Unauthorized
-INFO:     127.0.0.1:60552 - "POST /backend/passkey/auth/options HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:60553 - "POST /backend/passkey/auth/options HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:60555 - "GET /backend/login HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60553 - "GET /templates/imagenes/generated/icon-login.png?v=1773669583 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60555 - "GET /static/vendor/fontawesome/css/all.min.css HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60555 - "GET /templates/imagenes/fondo_escritorio_536990dbab4c.jpg?v=1774443617 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60555 - "GET /templates/imagenes/generated/favicon_0f9626a58968-favicon.png?v=1774630872 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61283 - "GET /sw.js HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:64593 - "GET /sw.js HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:65158 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized

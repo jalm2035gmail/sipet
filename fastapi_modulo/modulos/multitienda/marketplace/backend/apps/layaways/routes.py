@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
 from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.users.routes import require_any_role
-from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.layaways import models, schemas
+from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.layaways import models, schemas, service
 from fastapi_modulo.modulos.multitienda.marketplace.backend.core.db import get_db
 from fastapi_modulo.modulos.multitienda.marketplace.backend.core.dependencies import assert_store_access, get_vendor_store as _get_vendor_store
 
@@ -17,7 +17,7 @@ def list_layaways(
 ):
     _get_vendor_store(vendor_id, db)
     assert_store_access(user, vendor_id, db)
-    return db.query(models.StoreLayaway).filter_by(vendor_id=vendor_id).all()
+    return service.list_by_vendor(db, vendor_id)
 
 
 @router.post("/store/{vendor_id}", response_model=schemas.StoreLayawayRead, status_code=201)
@@ -30,20 +30,15 @@ def create_layaway(
     _get_vendor_store(vendor_id, db)
     if data.downpayment > data.total_amount:
         raise HTTPException(status_code=400, detail="El enganche no puede ser mayor al total")
-    balance_due = float(data.total_amount) - float(data.downpayment)
-    layaway = models.StoreLayaway(
-        vendor_id=vendor_id,
-        customer_user_id=user.id,
-        product_id=data.product_id,
-        total_amount=data.total_amount,
-        downpayment=data.downpayment,
-        balance_due=balance_due,
-        due_date=data.due_date,
-        notes=data.notes,
-    )
-    db.add(layaway)
+    layaway = service.create_basic(db, vendor_id, {
+        "customer_user_id": user.id,
+        "product_id": data.product_id,
+        "total_amount": data.total_amount,
+        "downpayment": data.downpayment,
+        "due_date": data.due_date,
+        "notes": data.notes,
+    })
     db.commit()
-    db.refresh(layaway)
     return layaway
 
 
@@ -58,11 +53,11 @@ def update_layaway(
     if not layaway:
         raise HTTPException(status_code=404, detail="Apartado no encontrado")
     assert_store_access(user, layaway.vendor_id, db)
-    for field, value in data.dict(exclude_unset=True).items():
-        setattr(layaway, field, value)
+    updates = service.update_basic(db, layaway.vendor_id, layaway_id, data.dict(exclude_unset=True))
+    if not updates:
+        raise HTTPException(status_code=404, detail="Apartado no encontrado")
     db.commit()
-    db.refresh(layaway)
-    return layaway
+    return updates
 
 
 @router.get("/my", response_model=List[schemas.StoreLayawayRead])

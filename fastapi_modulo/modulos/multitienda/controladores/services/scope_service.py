@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from sqlalchemy import text
 
-from fastapi_modulo.modulos_sipet.web.modelos.core_models import Rol, Usuario
-from fastapi_modulo.modulos_sipet.web.servicios.access_service import normalize_role_name
-from fastapi_modulo.modulos_sipet.web.servicios.auth_service import decrypt_sensitive, find_user_by_login
+from fastapi_modulo.modulos_sipet.web.modelos.core_models import Rol
+from fastapi_modulo.modulos_sipet.web.servicios.access_service import normalize_role_name, sensitive_lookup_hash
+from fastapi_modulo.modulos_sipet.web.servicios.auth_service import find_user_by_login
 
 
 def coerce_theme_bool(value: object) -> bool:
@@ -15,22 +15,19 @@ def coerce_theme_bool(value: object) -> bool:
 
 
 def current_user_record(request, db, current_username) -> tuple[object, str] | None:
+    cached = getattr(request.state, "_multitienda_current_user_record", None)
+    if cached is not None:
+        return cached
     username = current_username(request)
     if not username:
         return None
-    user = find_user_by_login(db, username)
+    user = find_user_by_login(db, username, login_hash=sensitive_lookup_hash(username))
     roles_by_id = {role.id: normalize_role_name(role.nombre) for role in db.query(Rol).all()}
     if user is not None:
         role_name = roles_by_id.get(user.rol_id) or normalize_role_name(getattr(user, "role", "") or "usuario")
-        return user, role_name
-    normalized_username = username.lower()
-    for user in db.query(Usuario).all():
-        decrypted_username = (decrypt_sensitive(user.usuario) or "").strip().lower()
-        decrypted_email = (decrypt_sensitive(user.correo) or "").strip().lower()
-        if normalized_username not in {decrypted_username, decrypted_email}:
-            continue
-        role_name = roles_by_id.get(user.rol_id) or normalize_role_name(getattr(user, "role", "") or "usuario")
-        return user, role_name
+        resolved = (user, role_name)
+        setattr(request.state, "_multitienda_current_user_record", resolved)
+        return resolved
     return None
 
 

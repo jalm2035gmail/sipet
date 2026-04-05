@@ -38,6 +38,10 @@ def create_employee(
         user_id=data.user_id,
         role=data.role,
         position=data.position or "",
+        full_name=data.full_name or "",
+        job_title=data.job_title or "",
+        phone=data.phone or "",
+        department=data.department or "",
         is_active=data.is_active,
     )
     db.commit()

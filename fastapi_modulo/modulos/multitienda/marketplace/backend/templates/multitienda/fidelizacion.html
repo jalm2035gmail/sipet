@@ -1,0 +1,407 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Fidelización — Multitienda</title>
+  <link rel="stylesheet" href="/multitienda/static/css/fidelizacion.css" />
+</head>
+<body>
+<main>
+
+  <!-- Stats -->
+  <div class="fl-stats">
+    <div class="fl-stat">
+      <div class="fl-stat__icon fl-stat__icon--gold"><i class="fa-solid fa-star"></i></div>
+      <div><div class="fl-stat__value" id="fl-stat-clientes">0</div><div class="fl-stat__label">Clientes con puntos</div></div>
+    </div>
+    <div class="fl-stat">
+      <div class="fl-stat__icon fl-stat__icon--green"><i class="fa-solid fa-coins"></i></div>
+      <div><div class="fl-stat__value" id="fl-stat-puntos">0</div><div class="fl-stat__label">Puntos en circulación</div></div>
+    </div>
+    <div class="fl-stat">
+      <div class="fl-stat__icon fl-stat__icon--blue"><i class="fa-solid fa-arrow-up"></i></div>
+      <div><div class="fl-stat__value" id="fl-stat-lifetime">0</div><div class="fl-stat__label">Puntos históricos</div></div>
+    </div>
+    <div class="fl-stat">
+      <div class="fl-stat__icon fl-stat__icon--purple"><i class="fa-solid fa-percent"></i></div>
+      <div><div class="fl-stat__value" id="fl-stat-rate">1 pt/$</div><div class="fl-stat__label">Tasa de acumulación</div></div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="fl-tabs">
+    <button class="fl-tab active" onclick="switchTab('clientes')">Clientes</button>
+    <button class="fl-tab" onclick="switchTab('plan')">Configuración del plan</button>
+  </div>
+
+  <!-- Panel: Clientes -->
+  <div class="fl-panel active" id="fl-panel-clientes">
+    <div class="fl-toolbar">
+      <div class="fl-search">
+        <i class="fa-solid fa-magnifying-glass" style="color:var(--fl-muted);font-size:.8rem;"></i>
+        <input type="text" id="fl-search" placeholder="Buscar por correo o nombre…" oninput="renderCustomers()" />
+      </div>
+      <button class="fl-btn fl-btn--primary" onclick="openAdjustDrawer(null)">
+        <i class="fa-solid fa-plus"></i> Agregar cliente
+      </button>
+    </div>
+    <div class="fl-card" style="padding:0;overflow:hidden;">
+      <div class="fl-table-wrap">
+        <table class="fl-table">
+          <thead>
+            <tr>
+              <th>Correo</th>
+              <th>Nombre</th>
+              <th>Puntos actuales</th>
+              <th>Historial</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="fl-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Panel: Plan -->
+  <div class="fl-panel" id="fl-panel-plan">
+    <div class="fl-card">
+      <p class="fl-card__title"><i class="fa-solid fa-star" style="color:var(--fl-gold);margin-right:6px;"></i>Configuración del programa de puntos</p>
+      <div class="fl-grid-2" style="margin-bottom:14px;">
+        <div class="fl-field">
+          <label>Nombre del programa</label>
+          <input type="text" id="fl-plan-name" placeholder="Ej. Club de lealtad" />
+        </div>
+        <div class="fl-field">
+          <label>
+            Puntos por peso gastado
+            <span class="fl-field--hint">Ej. 1 = 1 punto por cada $1</span>
+          </label>
+          <input type="number" id="fl-plan-ppp" step="0.1" min="0.01" placeholder="1.0" />
+        </div>
+      </div>
+      <div class="fl-grid-2" style="margin-bottom:14px;">
+        <div class="fl-field">
+          <label>
+            Mínimo para redimir (puntos)
+            <span class="fl-field--hint">Saldo mínimo requerido para canjear</span>
+          </label>
+          <input type="number" id="fl-plan-mrp" step="1" min="1" placeholder="100" />
+        </div>
+        <div class="fl-field">
+          <label>
+            Valor por punto ($ por punto)
+            <span class="fl-field--hint">Ej. 0.01 = cada punto vale $0.01</span>
+          </label>
+          <input type="number" id="fl-plan-rr" step="0.001" min="0.001" placeholder="0.01" />
+        </div>
+      </div>
+      <div class="fl-field" style="margin-bottom:14px;">
+        <label>Descripción del programa</label>
+        <textarea id="fl-plan-desc" rows="2" placeholder="Beneficios y condiciones del programa…"></textarea>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+        <label class="fl-toggle">
+          <input type="checkbox" id="fl-plan-active" checked />
+          <span class="fl-toggle__track"></span>
+          <span class="fl-toggle__label">Programa activo</span>
+        </label>
+        <button class="fl-btn fl-btn--primary" onclick="savePlan()">
+          <i class="fa-solid fa-floppy-disk"></i> Guardar plan
+        </button>
+      </div>
+    </div>
+    <div class="fl-card" style="background:color-mix(in srgb,var(--fl-gold) 6%,var(--fl-surface));border-color:color-mix(in srgb,var(--fl-gold) 25%,var(--fl-border));">
+      <p class="fl-card__title" style="color:var(--fl-gold);">
+        <i class="fa-solid fa-circle-info" style="margin-right:6px;"></i>Cómo funciona
+      </p>
+      <p style="font-size:.86rem;color:var(--fl-text);line-height:1.6;margin:0;">
+        Los clientes acumulan puntos con cada compra según la tasa configurada.
+        Cuando alcanzan el mínimo definido, pueden canjear sus puntos por descuento en futuras compras.
+        El valor de canje convierte puntos en descuento directo (ej. 100 puntos × $0.01/pt = $1.00 de descuento).
+        Puedes ajustar puntos manualmente desde la pestaña <strong>Clientes</strong>.
+      </p>
+    </div>
+  </div>
+
+</main>
+
+<!-- Overlay -->
+<div class="fl-overlay" id="fl-overlay" onclick="closeDrawer()"></div>
+
+<!-- Drawer: Ajustar puntos -->
+<aside class="fl-drawer" id="fl-adjust-drawer">
+  <div class="fl-drawer__head">
+    <span class="fl-drawer__title" id="fl-adj-title">Ajustar puntos</span>
+    <button class="fl-drawer__close" onclick="closeDrawer()"><i class="fa-solid fa-xmark"></i></button>
+  </div>
+  <div class="fl-drawer__body">
+    <div class="fl-field">
+      <label>Correo del cliente <span style="color:var(--fl-danger)">*</span></label>
+      <input type="email" id="fl-adj-email" placeholder="cliente@ejemplo.com" />
+    </div>
+    <div class="fl-field">
+      <label>Nombre</label>
+      <input type="text" id="fl-adj-name" placeholder="Nombre del cliente (opcional)" />
+    </div>
+    <div class="fl-divider"></div>
+    <div class="fl-grid-2">
+      <div class="fl-field">
+        <label>Puntos a agregar / deducir</label>
+        <input type="number" id="fl-adj-points" placeholder="Ej. 50 ó -30" />
+        <span class="fl-field--hint">Negativo para deducir puntos.</span>
+      </div>
+      <div class="fl-field">
+        <label>Tipo de movimiento</label>
+        <select id="fl-adj-type">
+          <option value="earned">Ganados (compra)</option>
+          <option value="redeemed">Canjeados</option>
+          <option value="adjusted" selected>Ajuste manual</option>
+          <option value="expired">Expirados</option>
+        </select>
+      </div>
+    </div>
+    <div class="fl-field">
+      <label>Referencia (pedido u otro)</label>
+      <input type="text" id="fl-adj-ref" placeholder="PED-0001" />
+    </div>
+    <div class="fl-field">
+      <label>Notas internas</label>
+      <textarea id="fl-adj-notes" rows="2" placeholder="Motivo del ajuste…"></textarea>
+    </div>
+  </div>
+  <div class="fl-drawer__footer">
+    <button class="fl-btn" onclick="closeDrawer()">Cancelar</button>
+    <button class="fl-btn fl-btn--primary" onclick="saveAdjust()">
+      <i class="fa-solid fa-floppy-disk"></i> Guardar
+    </button>
+  </div>
+</aside>
+
+<!-- Drawer: Historial -->
+<aside class="fl-drawer" id="fl-hist-drawer">
+  <div class="fl-drawer__head">
+    <span class="fl-drawer__title" id="fl-hist-title">Historial de puntos</span>
+    <button class="fl-drawer__close" onclick="closeHistDrawer()"><i class="fa-solid fa-xmark"></i></button>
+  </div>
+  <div class="fl-drawer__body" id="fl-hist-body">
+    <p style="color:var(--fl-muted);text-align:center;">Cargando…</p>
+  </div>
+</aside>
+
+<!-- Toast -->
+<div class="fl-toast" id="fl-toast"></div>
+
+<script>
+(function () {
+  var customers = [];
+  var plan = {};
+  var adjustEmail = null;
+
+  /* ── Tabs ── */
+  window.switchTab = function (tab) {
+    document.querySelectorAll('.fl-tab').forEach(function (t) { t.classList.remove('active'); });
+    document.querySelectorAll('.fl-panel').forEach(function (p) { p.classList.remove('active'); });
+    document.querySelector('.fl-tab[onclick*="' + tab + '"]').classList.add('active');
+    document.getElementById('fl-panel-' + tab).classList.add('active');
+  };
+
+  /* ── Load plan ── */
+  function loadPlan() {
+    fetch('/multitienda/api/fidelizacion/plan')
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        if (!j.success) return;
+        plan = j.data || {};
+        document.getElementById('fl-plan-name').value = plan.name || '';
+        document.getElementById('fl-plan-ppp').value  = plan.points_per_peso || '1';
+        document.getElementById('fl-plan-mrp').value  = plan.min_redeem_points || '100';
+        document.getElementById('fl-plan-rr').value   = plan.redeem_rate || '0.01';
+        document.getElementById('fl-plan-desc').value = plan.description || '';
+        document.getElementById('fl-plan-active').checked = !!plan.is_active;
+        document.getElementById('fl-stat-rate').textContent =
+          parseFloat(plan.points_per_peso || 1).toFixed(1) + ' pt/$';
+      })
+      .catch(function () {});
+  }
+
+  window.savePlan = function () {
+    var payload = {
+      name:              document.getElementById('fl-plan-name').value.trim(),
+      points_per_peso:   parseFloat(document.getElementById('fl-plan-ppp').value) || 1,
+      min_redeem_points: parseInt(document.getElementById('fl-plan-mrp').value) || 100,
+      redeem_rate:       parseFloat(document.getElementById('fl-plan-rr').value) || 0.01,
+      description:       document.getElementById('fl-plan-desc').value.trim(),
+      is_active:         document.getElementById('fl-plan-active').checked,
+    };
+    fetch('/multitienda/api/fidelizacion/plan', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    }).then(function (r) { return r.json(); })
+      .then(function (j) {
+        if (j.success) {
+          plan = j.data || {};
+          document.getElementById('fl-stat-rate').textContent =
+            parseFloat(plan.points_per_peso || 1).toFixed(1) + ' pt/$';
+          toast('Plan guardado.');
+        } else { toast('Error al guardar.'); }
+      })
+      .catch(function () { toast('Error de conexión.'); });
+  };
+
+  /* ── Load customers ── */
+  function loadCustomers() {
+    fetch('/multitienda/api/fidelizacion/clientes')
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        customers = j.success ? (j.data || []) : [];
+        updateStats();
+        renderCustomers();
+      })
+      .catch(function () { customers = []; renderCustomers(); });
+  }
+
+  function updateStats() {
+    var total = customers.length;
+    var pts = customers.reduce(function (s, c) { return s + parseInt(c.current_points || 0); }, 0);
+    var life = customers.reduce(function (s, c) { return s + parseInt(c.lifetime_points || 0); }, 0);
+    document.getElementById('fl-stat-clientes').textContent = total;
+    document.getElementById('fl-stat-puntos').textContent = pts.toLocaleString('es-MX');
+    document.getElementById('fl-stat-lifetime').textContent = life.toLocaleString('es-MX');
+  }
+
+  window.renderCustomers = function () {
+    var q = (document.getElementById('fl-search').value || '').toLowerCase();
+    var rows = customers.filter(function (c) {
+      if (!q) return true;
+      return (c.customer_email || '').toLowerCase().indexOf(q) >= 0 ||
+             (c.customer_name  || '').toLowerCase().indexOf(q) >= 0;
+    });
+    var tbody = document.getElementById('fl-tbody');
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="5"><div class="fl-empty"><i class="fa-solid fa-star"></i>No hay clientes registrados en el programa todavía.</div></td></tr>';
+      return;
+    }
+    tbody.innerHTML = rows.map(function (c) {
+      var pts = parseInt(c.current_points || 0);
+      return '<tr>'
+        + '<td>' + esc(c.customer_email || '') + '</td>'
+        + '<td>' + esc(c.customer_name || '—') + '</td>'
+        + '<td><span class="fl-pts"><i class="fa-solid fa-star" style="font-size:.6rem;"></i>' + pts.toLocaleString('es-MX') + '</span></td>'
+        + '<td><button class="fl-btn" style="min-height:30px;padding:0 10px;font-size:.78rem;" onclick="openHistory(' + JSON.stringify(c.customer_email) + ')"><i class="fa-solid fa-clock-rotate-left"></i> Ver</button></td>'
+        + '<td><button class="fl-btn fl-btn--primary" style="min-height:30px;padding:0 10px;font-size:.78rem;" onclick="openAdjustDrawer(' + JSON.stringify(c.customer_email) + ',' + JSON.stringify(c.customer_name || '') + ')"><i class="fa-solid fa-pen"></i> Ajustar</button></td>'
+        + '</tr>';
+    }).join('');
+  };
+
+  /* ── Adjust drawer ── */
+  window.openAdjustDrawer = function (email, name) {
+    adjustEmail = email;
+    document.getElementById('fl-adj-title').textContent = email ? 'Ajustar puntos — ' + email : 'Agregar cliente';
+    document.getElementById('fl-adj-email').value  = email || '';
+    document.getElementById('fl-adj-email').readOnly = !!email;
+    document.getElementById('fl-adj-name').value   = name || '';
+    document.getElementById('fl-adj-points').value = '';
+    document.getElementById('fl-adj-type').value   = 'adjusted';
+    document.getElementById('fl-adj-ref').value    = '';
+    document.getElementById('fl-adj-notes').value  = '';
+    document.getElementById('fl-adjust-drawer').classList.add('is-open');
+    document.getElementById('fl-overlay').classList.add('is-open');
+  };
+
+  window.closeDrawer = function () {
+    document.getElementById('fl-adjust-drawer').classList.remove('is-open');
+    document.getElementById('fl-overlay').classList.remove('is-open');
+    adjustEmail = null;
+  };
+
+  window.saveAdjust = function () {
+    var email = document.getElementById('fl-adj-email').value.trim();
+    if (!email || email.indexOf('@') < 0) { toast('Correo inválido.'); return; }
+    var pts = parseInt(document.getElementById('fl-adj-points').value);
+    if (isNaN(pts) || pts === 0) { toast('Ingresa una cantidad de puntos distinta de 0.'); return; }
+    var payload = {
+      points:    pts,
+      type:      document.getElementById('fl-adj-type').value,
+      reference: document.getElementById('fl-adj-ref').value.trim(),
+      notes:     document.getElementById('fl-adj-notes').value.trim(),
+      name:      document.getElementById('fl-adj-name').value.trim(),
+    };
+    fetch('/multitienda/api/fidelizacion/clientes/' + encodeURIComponent(email) + '/ajustar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    }).then(function (r) { return r.json(); })
+      .then(function (j) {
+        if (j.success) { closeDrawer(); loadCustomers(); toast('Puntos guardados.'); }
+        else { toast('Error al guardar.'); }
+      })
+      .catch(function () { toast('Error de conexión.'); });
+  };
+
+  /* ── History drawer ── */
+  window.openHistory = function (email) {
+    document.getElementById('fl-hist-title').textContent = 'Historial — ' + email;
+    document.getElementById('fl-hist-body').innerHTML = '<p style="color:var(--fl-muted);text-align:center;">Cargando…</p>';
+    document.getElementById('fl-hist-drawer').classList.add('is-open');
+    document.getElementById('fl-overlay').classList.add('is-open');
+
+    fetch('/multitienda/api/fidelizacion/clientes/' + encodeURIComponent(email) + '/historial')
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        var txs = j.success ? (j.data || []) : [];
+        if (!txs.length) {
+          document.getElementById('fl-hist-body').innerHTML = '<p style="color:var(--fl-muted);text-align:center;">Sin movimientos.</p>';
+          return;
+        }
+        var typeLabel = { earned: 'Ganados', redeemed: 'Canjeados', adjusted: 'Ajuste', expired: 'Expirados' };
+        document.getElementById('fl-hist-body').innerHTML = '<div class="fl-history">'
+          + txs.map(function (t) {
+            var pts = parseInt(t.points || 0);
+            var cls = pts >= 0 ? 'pos' : 'neg';
+            var tt = t.transaction_type || 'adjusted';
+            return '<div class="fl-hist-row">'
+              + '<div>'
+              + '<span class="fl-hist-pts ' + cls + '">' + (pts > 0 ? '+' : '') + pts.toLocaleString('es-MX') + ' pts</span>'
+              + '<div class="fl-hist-meta">' + esc(t.notes || t.reference || '') + '</div>'
+              + '</div>'
+              + '<div style="text-align:right;">'
+              + '<span class="fl-hist-type ' + esc(tt) + '">' + esc(typeLabel[tt] || tt) + '</span>'
+              + '<div class="fl-hist-meta">' + esc((t.created_at || '').slice(0, 10)) + '</div>'
+              + '</div>'
+              + '</div>';
+          }).join('')
+          + '</div>';
+      })
+      .catch(function () {
+        document.getElementById('fl-hist-body').innerHTML = '<p style="color:var(--fl-muted);text-align:center;">Error al cargar.</p>';
+      });
+  };
+
+  window.closeHistDrawer = function () {
+    document.getElementById('fl-hist-drawer').classList.remove('is-open');
+    document.getElementById('fl-overlay').classList.remove('is-open');
+  };
+
+  /* ── Toast ── */
+  function toast(msg) {
+    var el = document.getElementById('fl-toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    setTimeout(function () { el.classList.remove('show'); }, 2800);
+  }
+
+  /* ── Escape ── */
+  function esc(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  /* ── Init ── */
+  loadPlan();
+  loadCustomers();
+})();
+</script>
+</body>
+</html>

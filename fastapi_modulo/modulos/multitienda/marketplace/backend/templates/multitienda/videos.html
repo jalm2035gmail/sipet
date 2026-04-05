@@ -1,0 +1,427 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Videos — Multitienda</title>
+  <link rel="stylesheet" href="/multitienda/static/css/videos.css" />
+</head>
+<body>
+<main>
+
+  <!-- Toolbar -->
+  <div class="vd-toolbar">
+    <div class="vd-toolbar__left">
+      <button class="vd-btn vd-btn--primary" id="vd-upload-btn">
+        <i class="fa-solid fa-cloud-arrow-up"></i> Subir video
+      </button>
+      <button class="vd-btn vd-btn--danger" id="vd-delete-selected-btn" disabled>
+        <i class="fa-solid fa-trash"></i> Eliminar seleccionados
+      </button>
+    </div>
+    <div class="vd-search">
+      <i class="fa-solid fa-magnifying-glass" style="color:var(--vd-muted);font-size:0.82rem"></i>
+      <input id="vd-search-input" type="search" placeholder="Buscar videos…" />
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="vd-stats" id="vd-stats">
+    <span><strong id="vd-count">0</strong> videos</span>
+    <span><strong id="vd-size-total">0 MB</strong> usados</span>
+    <span id="vd-selected-info" style="display:none"><strong id="vd-selected-count">0</strong> seleccionados</span>
+  </div>
+
+  <!-- Upload zone -->
+  <div class="vd-upload-zone" id="vd-drop-zone">
+    <input type="file" id="vd-file-input" accept="video/mp4,video/webm,video/ogg,video/quicktime,video/x-msvideo" multiple />
+    <div class="vd-upload-zone__icon"><i class="fa-solid fa-film"></i></div>
+    <p class="vd-upload-zone__title">Arrastra videos aquí o haz clic para seleccionar</p>
+    <p class="vd-upload-zone__hint">Máximo 500 MB por archivo</p>
+    <p class="vd-upload-zone__formats">MP4 · WebM · OGG · MOV · AVI</p>
+  </div>
+
+  <!-- Progress -->
+  <div class="vd-upload-progress" id="vd-upload-progress">
+    <div class="vd-progress-label">
+      <span id="vd-progress-filename">Subiendo…</span>
+      <span id="vd-progress-pct">0%</span>
+    </div>
+    <div class="vd-progress-track"><div class="vd-progress-fill" id="vd-progress-fill"></div></div>
+  </div>
+
+  <!-- Grid -->
+  <div class="vd-grid" id="vd-grid">
+    <div class="vd-empty" id="vd-empty-state">
+      <i class="fa-regular fa-film"></i>
+      <p>No hay videos subidos aún.<br>Arrastra archivos o usa el botón de arriba.</p>
+    </div>
+  </div>
+
+  <!-- Modal player -->
+  <div class="vd-modal" id="vd-modal" hidden>
+    <div class="vd-modal__inner">
+      <button class="vd-modal__close" id="vd-modal-close"><i class="fa-solid fa-xmark"></i></button>
+      <video class="vd-modal__video" id="vd-modal-video" controls></video>
+      <div class="vd-modal__info">
+        <p class="vd-modal__title" id="vd-modal-title"></p>
+        <p class="vd-modal__meta" id="vd-modal-meta"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirm delete -->
+  <div class="vd-confirm" id="vd-confirm" hidden>
+    <div class="vd-confirm__card">
+      <h3 class="vd-confirm__title"><i class="fa-solid fa-triangle-exclamation"></i> Eliminar video(s)</h3>
+      <p class="vd-confirm__msg" id="vd-confirm-msg">¿Confirmar eliminación?</p>
+      <div class="vd-confirm__actions">
+        <button class="vd-btn" id="vd-confirm-cancel">Cancelar</button>
+        <button class="vd-btn vd-btn--danger" id="vd-confirm-ok">Eliminar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="vd-toast" id="vd-toast"></div>
+
+</main>
+<script>
+(function () {
+  'use strict';
+
+  /* ── Storage key ── */
+  var STORAGE_KEY = 'multitienda_videos';
+
+  /* ── State ── */
+  var videos = [];        // { id, name, size, mimeType, date, dataUrl, duration }
+  var selected = new Set();
+  var pendingDeleteIds = [];
+
+  /* ── Elements ── */
+  var grid          = document.getElementById('vd-grid');
+  var emptyState    = document.getElementById('vd-empty-state');
+  var uploadBtn     = document.getElementById('vd-upload-btn');
+  var fileInput     = document.getElementById('vd-file-input');
+  var dropZone      = document.getElementById('vd-drop-zone');
+  var deleteSelBtn  = document.getElementById('vd-delete-selected-btn');
+  var searchInput   = document.getElementById('vd-search-input');
+  var progressWrap  = document.getElementById('vd-upload-progress');
+  var progressFill  = document.getElementById('vd-progress-fill');
+  var progressName  = document.getElementById('vd-progress-filename');
+  var progressPct   = document.getElementById('vd-progress-pct');
+  var modal         = document.getElementById('vd-modal');
+  var modalVideo    = document.getElementById('vd-modal-video');
+  var modalTitle    = document.getElementById('vd-modal-title');
+  var modalMeta     = document.getElementById('vd-modal-meta');
+  var modalClose    = document.getElementById('vd-modal-close');
+  var confirm_      = document.getElementById('vd-confirm');
+  var confirmMsg    = document.getElementById('vd-confirm-msg');
+  var confirmOk     = document.getElementById('vd-confirm-ok');
+  var confirmCancel = document.getElementById('vd-confirm-cancel');
+  var toast         = document.getElementById('vd-toast');
+  var countEl       = document.getElementById('vd-count');
+  var sizeTotalEl   = document.getElementById('vd-size-total');
+  var selectedInfo  = document.getElementById('vd-selected-info');
+  var selectedCount = document.getElementById('vd-selected-count');
+
+  /* ── Load from localStorage ── */
+  function load() {
+    try {
+      var raw = JSON.parse(window.localStorage.getItem(STORAGE_KEY) || '[]');
+      videos = Array.isArray(raw) ? raw : [];
+    } catch (e) { videos = []; }
+  }
+
+  function save() {
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(videos));
+    } catch (e) {
+      showToast('Almacenamiento lleno. Elimina videos para liberar espacio.', 'error');
+    }
+  }
+
+  /* ── Utils ── */
+  function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+
+  function fmtSize(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / 1048576).toFixed(1) + ' MB';
+  }
+
+  function fmtDuration(secs) {
+    if (!secs || isNaN(secs)) return '';
+    var m = Math.floor(secs / 60), s = Math.floor(secs % 60);
+    return m + ':' + (s < 10 ? '0' : '') + s;
+  }
+
+  function fmtDate(iso) {
+    try { return new Intl.DateTimeFormat('es-MX', { dateStyle: 'medium' }).format(new Date(iso)); }
+    catch (e) { return iso ? iso.slice(0, 10) : ''; }
+  }
+
+  function escHtml(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  /* ── Toast ── */
+  var _toastTimer;
+  function showToast(msg, type) {
+    toast.textContent = msg;
+    toast.className = 'vd-toast visible' + (type ? ' ' + type : '');
+    clearTimeout(_toastTimer);
+    _toastTimer = setTimeout(function () { toast.className = 'vd-toast'; }, 3200);
+  }
+
+  /* ── Update stats ── */
+  function updateStats() {
+    var query = (searchInput.value || '').toLowerCase();
+    var visible = query ? videos.filter(function (v) { return v.name.toLowerCase().includes(query); }) : videos;
+    if (countEl) countEl.textContent = String(visible.length);
+    var total = videos.reduce(function (acc, v) { return acc + (v.size || 0); }, 0);
+    if (sizeTotalEl) sizeTotalEl.textContent = fmtSize(total);
+    if (selected.size > 0) {
+      if (selectedInfo) selectedInfo.style.display = '';
+      if (selectedCount) selectedCount.textContent = String(selected.size);
+    } else {
+      if (selectedInfo) selectedInfo.style.display = 'none';
+    }
+    if (deleteSelBtn) deleteSelBtn.disabled = selected.size === 0;
+  }
+
+  /* ── Render ── */
+  function render() {
+    var query = (searchInput ? searchInput.value : '').toLowerCase();
+    var filtered = query ? videos.filter(function (v) { return v.name.toLowerCase().includes(query); }) : videos;
+
+    /* remove existing cards */
+    Array.from(grid.querySelectorAll('.vd-card')).forEach(function (el) { el.remove(); });
+
+    if (!filtered.length) {
+      emptyState.style.display = '';
+      updateStats();
+      return;
+    }
+    emptyState.style.display = 'none';
+
+    filtered.forEach(function (v) {
+      var card = document.createElement('div');
+      card.className = 'vd-card';
+      card.dataset.id = v.id;
+
+      var isChecked = selected.has(v.id);
+      card.innerHTML =
+        '<div class="vd-card__thumb" data-play="' + escHtml(v.id) + '">' +
+          (v.dataUrl
+            ? '<video src="' + escHtml(v.dataUrl) + '" preload="metadata" muted></video>'
+            : '<div class="vd-card__thumb-placeholder"><i class="fa-solid fa-film"></i></div>') +
+          '<div class="vd-card__play-btn"><i class="fa-solid fa-circle-play"></i></div>' +
+          (v.duration ? '<span class="vd-card__duration">' + escHtml(fmtDuration(v.duration)) + '</span>' : '') +
+          '<div class="vd-card__check ' + (isChecked ? 'checked' : '') + '" data-check="' + escHtml(v.id) + '">' +
+            (isChecked ? '<i class="fa-solid fa-check"></i>' : '') +
+          '</div>' +
+        '</div>' +
+        '<div class="vd-card__body">' +
+          '<p class="vd-card__name" title="' + escHtml(v.name) + '">' + escHtml(v.name) + '</p>' +
+          '<div class="vd-card__meta">' +
+            '<span>' + escHtml(fmtSize(v.size || 0)) + '</span>' +
+            '<span>' + escHtml(fmtDate(v.date)) + '</span>' +
+          '</div>' +
+        '</div>' +
+        '<div class="vd-card__actions">' +
+          '<button class="vd-card__action-btn" title="Reproducir" data-play="' + escHtml(v.id) + '"><i class="fa-solid fa-play"></i></button>' +
+          '<button class="vd-card__action-btn" title="Copiar URL" data-copy="' + escHtml(v.id) + '"><i class="fa-solid fa-link"></i></button>' +
+          '<button class="vd-card__action-btn vd-card__action-btn--danger" title="Eliminar" data-delete="' + escHtml(v.id) + '"><i class="fa-solid fa-trash"></i></button>' +
+        '</div>';
+      grid.insertBefore(card, emptyState);
+    });
+    updateStats();
+  }
+
+  /* ── Play modal ── */
+  function openPlayer(id) {
+    var v = videos.find(function (x) { return x.id === id; });
+    if (!v || !v.dataUrl) return;
+    modalVideo.src = v.dataUrl;
+    if (modalTitle) modalTitle.textContent = v.name;
+    if (modalMeta) modalMeta.textContent = fmtSize(v.size || 0) + ' · ' + fmtDate(v.date) + (v.duration ? ' · ' + fmtDuration(v.duration) : '');
+    modal.hidden = false;
+    modalVideo.play().catch(function () {});
+  }
+
+  function closePlayer() {
+    modal.hidden = true;
+    modalVideo.pause();
+    modalVideo.src = '';
+  }
+
+  if (modalClose) modalClose.addEventListener('click', closePlayer);
+  modal.addEventListener('click', function (e) { if (e.target === modal) closePlayer(); });
+
+  /* ── Selection ── */
+  function toggleSelect(id) {
+    if (selected.has(id)) { selected.delete(id); } else { selected.add(id); }
+    render();
+  }
+
+  /* ── Delete confirm ── */
+  function askDelete(ids, label) {
+    pendingDeleteIds = ids;
+    if (confirmMsg) confirmMsg.textContent = label;
+    confirm_.hidden = false;
+  }
+
+  if (confirmCancel) confirmCancel.addEventListener('click', function () { confirm_.hidden = true; pendingDeleteIds = []; });
+  if (confirmOk) confirmOk.addEventListener('click', function () {
+    confirm_.hidden = true;
+    pendingDeleteIds.forEach(function (id) {
+      videos = videos.filter(function (v) { return v.id !== id; });
+      selected.delete(id);
+    });
+    pendingDeleteIds = [];
+    save();
+    render();
+    showToast('Video(s) eliminado(s).', 'success');
+  });
+
+  /* ── Grid event delegation ── */
+  grid.addEventListener('click', function (e) {
+    var playEl = e.target.closest('[data-play]');
+    var checkEl = e.target.closest('[data-check]');
+    var copyEl = e.target.closest('[data-copy]');
+    var deleteEl = e.target.closest('[data-delete]');
+    if (checkEl) { toggleSelect(checkEl.dataset.check); return; }
+    if (deleteEl) {
+      var id = deleteEl.dataset.delete;
+      var v = videos.find(function (x) { return x.id === id; });
+      askDelete([id], '¿Eliminar "' + (v ? v.name : id) + '"? Esta acción no se puede deshacer.');
+      return;
+    }
+    if (copyEl) {
+      var vid = videos.find(function (x) { return x.id === copyEl.dataset.copy; });
+      if (vid && vid.dataUrl) {
+        navigator.clipboard.writeText(vid.dataUrl).then(function () { showToast('URL copiada.', 'success'); }).catch(function () { showToast('No se pudo copiar.', 'error'); });
+      }
+      return;
+    }
+    if (playEl) { openPlayer(playEl.dataset.play); }
+  });
+
+  /* ── Delete selected ── */
+  if (deleteSelBtn) deleteSelBtn.addEventListener('click', function () {
+    if (!selected.size) return;
+    askDelete(Array.from(selected), '¿Eliminar ' + selected.size + ' video(s) seleccionado(s)? Esta acción no se puede deshacer.');
+  });
+
+  /* ── Search ── */
+  if (searchInput) searchInput.addEventListener('input', function () { render(); });
+
+  /* ── File processing ── */
+  function processFiles(files) {
+    var arr = Array.from(files).filter(function (f) { return f.type.startsWith('video/'); });
+    if (!arr.length) { showToast('Selecciona archivos de video válidos.', 'error'); return; }
+    var maxMB = 500;
+    arr = arr.filter(function (f) {
+      if (f.size > maxMB * 1048576) {
+        showToast('"' + f.name + '" supera los ' + maxMB + ' MB.', 'error');
+        return false;
+      }
+      return true;
+    });
+    if (!arr.length) return;
+    processNext(arr, 0);
+  }
+
+  function processNext(files, idx) {
+    if (idx >= files.length) {
+      save();
+      render();
+      showToast(files.length + ' video(s) subido(s).', 'success');
+      progressWrap.classList.remove('visible');
+      return;
+    }
+    var file = files[idx];
+    progressWrap.classList.add('visible');
+    if (progressName) progressName.textContent = file.name;
+    if (progressPct) progressPct.textContent = '0%';
+    if (progressFill) progressFill.style.width = '0%';
+
+    var reader = new FileReader();
+    reader.onprogress = function (e) {
+      if (e.lengthComputable) {
+        var pct = Math.round((e.loaded / e.total) * 100);
+        if (progressFill) progressFill.style.width = pct + '%';
+        if (progressPct) progressPct.textContent = pct + '%';
+      }
+    };
+    reader.onload = function (e) {
+      var dataUrl = e.target.result;
+      /* get duration via temp video element */
+      var tmpVideo = document.createElement('video');
+      tmpVideo.preload = 'metadata';
+      tmpVideo.src = dataUrl;
+      tmpVideo.onloadedmetadata = function () {
+        var duration = isFinite(tmpVideo.duration) ? tmpVideo.duration : 0;
+        tmpVideo.src = '';
+        videos.unshift({
+          id: uid(),
+          name: file.name,
+          size: file.size,
+          mimeType: file.type,
+          date: new Date().toISOString(),
+          dataUrl: dataUrl,
+          duration: duration,
+        });
+        if (progressFill) progressFill.style.width = '100%';
+        if (progressPct) progressPct.textContent = '100%';
+        processNext(files, idx + 1);
+      };
+      tmpVideo.onerror = function () {
+        videos.unshift({
+          id: uid(),
+          name: file.name,
+          size: file.size,
+          mimeType: file.type,
+          date: new Date().toISOString(),
+          dataUrl: dataUrl,
+          duration: 0,
+        });
+        processNext(files, idx + 1);
+      };
+    };
+    reader.onerror = function () {
+      showToast('Error leyendo "' + file.name + '".', 'error');
+      processNext(files, idx + 1);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  /* ── Upload button / file input ── */
+  if (uploadBtn) uploadBtn.addEventListener('click', function () { fileInput.click(); });
+  if (dropZone) dropZone.addEventListener('click', function (e) {
+    if (e.target === dropZone || e.target.closest('.vd-upload-zone__icon, .vd-upload-zone__title, .vd-upload-zone__hint, .vd-upload-zone__formats')) {
+      fileInput.click();
+    }
+  });
+  if (fileInput) fileInput.addEventListener('change', function () { if (fileInput.files.length) processFiles(fileInput.files); fileInput.value = ''; });
+
+  /* ── Drag & drop ── */
+  if (dropZone) {
+    dropZone.addEventListener('dragover', function (e) { e.preventDefault(); dropZone.classList.add('drag-over'); });
+    dropZone.addEventListener('dragleave', function () { dropZone.classList.remove('drag-over'); });
+    dropZone.addEventListener('drop', function (e) {
+      e.preventDefault();
+      dropZone.classList.remove('drag-over');
+      if (e.dataTransfer && e.dataTransfer.files.length) processFiles(e.dataTransfer.files);
+    });
+  }
+
+  /* ── Init ── */
+  load();
+  render();
+
+})();
+</script>
+</body>
+</html>

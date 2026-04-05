@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from contextlib import contextmanager
+from functools import lru_cache
 from html import escape
 from pathlib import Path
 import json
@@ -44,7 +46,6 @@ from fastapi_modulo.modulos.multitienda.controladores.services.section_service i
 from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.analytics import service as analytics_service
 from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.employees import service as employee_service
 from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.products import service as product_service
-from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.users.models import User
 from fastapi_modulo.modulos.multitienda.servicios.access_roles import ensure_multitienda_access_roles
 from fastapi_modulo.modulos.multitienda.servicios.store_tables import (
     ensure_store_tables,
@@ -88,7 +89,11 @@ from fastapi_modulo.modulos_sipet.web.servicios.template_service import (
 
 router = APIRouter()
 marketplace_app = build_marketplace_backend_app()
-ensure_multitienda_access_roles()
+
+
+def bootstrap_multitienda() -> None:
+    ensure_store_tables()
+    ensure_multitienda_access_roles()
 
 _STYLE_RE = re.compile(r"<style>(.*?)</style>", re.IGNORECASE | re.DOTALL)
 _LINK_CSS_RE = re.compile(r'<link\b[^>]*rel=["\']stylesheet["\'][^>]*/?>', re.IGNORECASE)
@@ -404,6 +409,29 @@ def _build_marketplace_workspace_script() -> str:
 """
 
 
+@lru_cache(maxsize=64)
+def _parsed_marketplace_document(document_html: str) -> tuple[str, str, tuple[str, ...]]:
+    prefixed = _prefix_root_relative_urls(document_html, "/multitienda")
+    link_styles = "\n".join(m.group(0) for m in _LINK_CSS_RE.finditer(prefixed))
+    inline_styles = "\n".join(
+        f"<style>{m.group(1)}</style>" for m in _STYLE_RE.finditer(prefixed)
+    )
+    styles = "\n".join(filter(None, [link_styles, inline_styles]))
+    main_match = _MAIN_RE.search(prefixed)
+    main_markup = main_match.group(1).strip() if main_match else prefixed
+
+    filtered_scripts: list[str] = []
+    for match in _SCRIPT_RE.finditer(prefixed):
+        script_markup = match.group(1)
+        if "/static/js/backend-navbar.js" in script_markup:
+            continue
+        if "/static/js/backend-sidebar-core.js" in script_markup:
+            continue
+        filtered_scripts.append(script_markup)
+
+    return styles, main_markup, tuple(filtered_scripts)
+
+
 def _build_marketplace_shell_content(
     document_html: str,
     section_id: str,
@@ -415,26 +443,10 @@ def _build_marketplace_shell_content(
     initial_membership: str = "",
     initial_inventory: str = "",
 ) -> str:
-    prefixed = _prefix_root_relative_urls(document_html, "/multitienda")
-    link_styles = "\n".join(m.group(0) for m in _LINK_CSS_RE.finditer(prefixed))
-    inline_styles = "\n".join(
-        f"<style>{m.group(1)}</style>" for m in _STYLE_RE.finditer(prefixed)
-    )
-    styles = "\n".join(filter(None, [link_styles, inline_styles]))
-    main_match = _MAIN_RE.search(prefixed)
-    main_markup = main_match.group(1).strip() if main_match else prefixed
+    styles, main_markup, filtered_scripts = _parsed_marketplace_document(document_html)
     section_meta = next((item for item in sections if item["id"] == section_id), None)
     section_label = section_meta["label"] if section_meta else "Multitienda"
     show_hero = section_id == "inicio"
-
-    filtered_scripts: list[str] = []
-    for match in _SCRIPT_RE.finditer(prefixed):
-        script_markup = match.group(1)
-        if "/static/js/backend-navbar.js" in script_markup:
-            continue
-        if "/static/js/backend-sidebar-core.js" in script_markup:
-            continue
-        filtered_scripts.append(script_markup)
 
     hero_markup = ""
     panel_actions_markup = ""
@@ -524,13 +536,11 @@ def _render_official_shell(
     section_id: str,
     document_html: str,
 ) -> HTMLResponse:
-    db = _db_session_for_request(request)
-    try:
-        scope = _resolve_store_scope(request, db)
-        store_perms = _resolve_store_permissions(db, scope)
+    with _request_db_context(request, include_permissions=True) as ctx:
+        db = ctx["db"]
+        scope = ctx["scope"]
+        store_perms = ctx["store_permissions"]
         store_summaries = _resolve_store_summaries(request, db, scope)
-    finally:
-        db.close()
     role = str(scope.get("role") or getattr(request.state, "user_role", ""))
     # If domain-DB lookup failed (no user_id), fall back to the session role
     # so a superadmin/admin who exists in SIPET's auth but lacks a vendor entry
@@ -583,6 +593,113 @@ def _render_public_document(document_html: str) -> HTMLResponse:
     if "</head>" in content and "/multitienda/multitienda/static/imagenes/logo_vale.png" not in content:
         content = content.replace("</head>", f"{_MULTITIENDA_FAVICON_TAGS}</head>", 1)
     return HTMLResponse(content=content)
+
+
+def _render_section_or_redirect(
+    request: Request,
+    section_id: str,
+    *,
+    html_factory=None,
+    context_html_factory=None,
+    integrated: bool = False,
+):
+    context = _resolve_request_context(request, include_permissions=True)
+    scope = context["scope"]
+    store_perms = context["store_permissions"]
+    role_name = context["role_name"]
+    if not _can_access_module_section(role_name, section_id, store_perms):
+        return RedirectResponse(url="/multitienda/inicio", status_code=307)
+    if integrated:
+        target = _resolve_integrated_section_target(section_id, scope)
+        if not target:
+            return RedirectResponse(url="/multitienda/inicio", status_code=307)
+        return RedirectResponse(url=target, status_code=307)
+    if context_html_factory is not None:
+        return _render_official_shell(request, section_id, context_html_factory(context))
+    if html_factory is not None:
+        return _render_official_shell(request, section_id, html_factory())
+    raise ValueError(f"html_factory is required for non-integrated section '{section_id}'")
+
+
+def _financial_module_context(section_context: dict[str, object]) -> dict[str, str | bool]:
+    role_name = str(section_context["role_name"])
+    store_permissions = section_context["store_permissions"]
+    if not _can_access_module_section(role_name, "institucion_financiera", store_permissions):
+        return {"enabled": False, "target_route": "", "api_base": ""}
+    return _resolve_integrated_module_context("institucion_financiera", section_context["scope"])
+
+
+def _seguidores_section_html(section_context: dict[str, object]) -> str:
+    financial_context = _financial_module_context(section_context)
+    return seguidores_html(
+        max_users=int(section_context["store_permissions"].get("max_portal_users") or 0),
+        intelicoop_enabled=bool(financial_context.get("enabled")),
+        intelicoop_route=str(financial_context.get("target_route") or ""),
+        intelicoop_api_base=str(financial_context.get("api_base") or ""),
+    )
+
+
+def _proveedores_section_html(section_context: dict[str, object]) -> str:
+    financial_context = _financial_module_context(section_context)
+    return proveedores_html(
+        intelicoop_enabled=bool(financial_context.get("enabled")),
+        intelicoop_route=str(financial_context.get("target_route") or ""),
+        intelicoop_api_base=str(financial_context.get("api_base") or ""),
+    )
+
+
+def _empleados_section_html(section_context: dict[str, object]) -> str:
+    return empleados_html(
+        max_users=int(section_context["store_permissions"].get("max_internal_users") or 0)
+    )
+
+
+_SECTION_HANDLERS = {
+    "videos": {"mode": "render", "html_factory": videos_html},
+    "referidos": {"mode": "integrated"},
+    "notificaciones_pwa": {"mode": "integrated"},
+    "reservaciones": {"mode": "integrated"},
+    "cupones": {"mode": "render", "html_factory": cupones_html},
+    "fidelizacion": {"mode": "render", "html_factory": fidelizacion_html},
+    "whatsapp": {"mode": "render", "html_factory": whatsapp_html},
+    "empleados": {"mode": "render_with_context", "context_html_factory": _empleados_section_html},
+    "seguidores": {"mode": "render_with_context", "context_html_factory": _seguidores_section_html},
+    "proveedores": {"mode": "render_with_context", "context_html_factory": _proveedores_section_html},
+    "ia": {"mode": "render", "html_factory": ia_html},
+    "institucion_financiera": {"mode": "integrated"},
+    "apartados": {"mode": "render", "html_factory": apartados_html},
+    "subastas": {"mode": "integrated"},
+    "crm": {"mode": "integrated"},
+    "gestion": {"mode": "official", "html_factory": gestion_html, "denied_redirect": "/multitienda/configuracion"},
+    "repartidores": {"mode": "integrated", "denied_redirect": "/multitienda/inicio"},
+}
+
+
+def _dispatch_section_entrypoint(request: Request, section_id: str):
+    config = _SECTION_HANDLERS[section_id]
+    denied_redirect = str(config.get("denied_redirect") or "/multitienda/inicio")
+    mode = str(config["mode"])
+
+    if mode == "render":
+        return _render_section_or_redirect(
+            request,
+            section_id,
+            html_factory=config["html_factory"],
+        )
+    if mode == "render_with_context":
+        return _render_section_or_redirect(
+            request,
+            section_id,
+            context_html_factory=config["context_html_factory"],
+        )
+    if mode == "integrated":
+        return _render_section_or_redirect(request, section_id, integrated=True)
+    if mode == "official":
+        role_name = str(getattr(request.state, "user_role", "") or "").strip()
+        if not _can_access_module_section(role_name, section_id):
+            return RedirectResponse(url=denied_redirect, status_code=307)
+        return _render_official_shell(request, section_id, config["html_factory"]())
+    raise ValueError(f"Modo de seccion no soportado: {mode}")
 
 
 def _db_session_for_request(request: Request):
@@ -736,6 +853,41 @@ def _current_username(request: Request) -> str:
         or request.cookies.get("usuario")
         or ""
     ).strip()
+
+
+def _resolve_request_context(request: Request, *, include_permissions: bool = False) -> dict[str, object]:
+    db = _db_session_for_request(request)
+    try:
+        scope = _resolve_store_scope(request, db)
+        context = {
+            "scope": scope,
+            "role_name": str(scope.get("role") or getattr(request.state, "user_role", "")),
+        }
+        if include_permissions:
+            context["store_permissions"] = _resolve_store_permissions(db, scope)
+        return context
+    finally:
+        db.close()
+
+
+@contextmanager
+def _request_db_context(request: Request, *, include_permissions: bool = False):
+    db = _db_session_for_request(request)
+    try:
+        scope = _resolve_store_scope(request, db)
+        context = {
+            "db": db,
+            "scope": scope,
+            "role_name": str(scope.get("role") or getattr(request.state, "user_role", "")),
+        }
+        if include_permissions:
+            context["store_permissions"] = _resolve_store_permissions(db, scope)
+        yield context
+    except Exception:
+        db.rollback()
+        raise
+    finally:
+        db.close()
 
 
 def _resolve_store_scope(request: Request, db) -> dict[str, object]:
@@ -1302,9 +1454,9 @@ async def multitienda_create_business_type_proxy(request: Request):
 
 @router.get("/multitienda/api/store-admin-users", response_class=JSONResponse)
 def multitienda_store_admin_users(request: Request):
-    db = _db_session_for_request(request)
-    try:
-        scope = _resolve_store_scope(request, db)
+    with _request_db_context(request) as ctx:
+        db = ctx["db"]
+        scope = ctx["scope"]
         roles_by_id = {role.id: normalize_role_name(role.nombre) for role in db.query(Rol).all()}
         rows = []
         for user in db.query(Usuario).order_by(Usuario.full_name.asc()).all():
@@ -1322,8 +1474,6 @@ def multitienda_store_admin_users(request: Request):
                 }
             )
         return {"success": True, "data": rows}
-    finally:
-        db.close()
 
 
 @router.get("/multitienda/api/memberships", response_class=JSONResponse)
@@ -1363,11 +1513,7 @@ def multitienda_list_stores(request: Request):
 @router.post("/multitienda/api/stores", response_class=JSONResponse)
 async def multitienda_save_store(request: Request):
     _ensure_vendor_table()
-    db = _db_session_for_request(request)
-    try:
-        scope = _resolve_store_scope(request, db)
-    finally:
-        db.close()
+    scope = _resolve_request_context(request)["scope"]
     try:
         if not scope["restricted"]:
             return await save_store_settings(request)
@@ -1403,282 +1549,97 @@ def multitienda_entrypoint_slash(request: Request):
 
 @router.get("/multitienda/videos", include_in_schema=False, response_class=HTMLResponse)
 def multitienda_videos_entrypoint(request: Request):
-    db = _db_session_for_request(request)
-    try:
-        scope = _resolve_store_scope(request, db)
-        store_perms = _resolve_store_permissions(db, scope)
-    finally:
-        db.close()
-    role_name = str(scope.get("role") or getattr(request.state, "user_role", ""))
-    if not _can_access_module_section(role_name, "videos", store_perms):
-        return RedirectResponse(url="/multitienda/inicio", status_code=307)
-    return _render_official_shell(request, "videos", videos_html())
+    return _dispatch_section_entrypoint(request, "videos")
 
 
 @router.get("/multitienda/referidos", include_in_schema=False, response_class=HTMLResponse)
 def multitienda_referidos_entrypoint(request: Request):
-    db = _db_session_for_request(request)
-    try:
-        scope = _resolve_store_scope(request, db)
-        store_perms = _resolve_store_permissions(db, scope)
-    finally:
-        db.close()
-    role_name = str(scope.get("role") or getattr(request.state, "user_role", ""))
-    if not _can_access_module_section(role_name, "referidos", store_perms):
-        return RedirectResponse(url="/multitienda/inicio", status_code=307)
-    target = _resolve_integrated_section_target("referidos", scope)
-    if not target:
-        return RedirectResponse(url="/multitienda/inicio", status_code=307)
-    return RedirectResponse(url=target, status_code=307)
+    return _dispatch_section_entrypoint(request, "referidos")
 
 
 @router.get("/multitienda/notificaciones-pwa", include_in_schema=False, response_class=HTMLResponse)
 def multitienda_notificaciones_pwa_entrypoint(request: Request):
-    db = _db_session_for_request(request)
-    try:
-        scope = _resolve_store_scope(request, db)
-        store_perms = _resolve_store_permissions(db, scope)
-    finally:
-        db.close()
-    role_name = str(scope.get("role") or getattr(request.state, "user_role", ""))
-    if not _can_access_module_section(role_name, "notificaciones_pwa", store_perms):
-        return RedirectResponse(url="/multitienda/inicio", status_code=307)
-    target = _resolve_integrated_section_target("notificaciones_pwa", scope)
-    if not target:
-        return RedirectResponse(url="/multitienda/inicio", status_code=307)
-    return RedirectResponse(url=target, status_code=307)
+    return _dispatch_section_entrypoint(request, "notificaciones_pwa")
 
 
 @router.get("/multitienda/reservaciones", include_in_schema=False, response_class=HTMLResponse)
 def multitienda_reservaciones_entrypoint(request: Request):
-    db = _db_session_for_request(request)
-    try:
-        scope = _resolve_store_scope(request, db)
-        store_perms = _resolve_store_permissions(db, scope)
-    finally:
-        db.close()
-    role_name = str(scope.get("role") or getattr(request.state, "user_role", ""))
-    if not _can_access_module_section(role_name, "reservaciones", store_perms):
-        return RedirectResponse(url="/multitienda/inicio", status_code=307)
-    target = _resolve_integrated_section_target("reservaciones", scope)
-    if not target:
-        return RedirectResponse(url="/multitienda/inicio", status_code=307)
-    return RedirectResponse(url=target, status_code=307)
+    return _dispatch_section_entrypoint(request, "reservaciones")
 
 
 @router.get("/multitienda/cupones", include_in_schema=False, response_class=HTMLResponse)
 def multitienda_cupones_entrypoint(request: Request):
-    db = _db_session_for_request(request)
-    try:
-        scope = _resolve_store_scope(request, db)
-        store_perms = _resolve_store_permissions(db, scope)
-    finally:
-        db.close()
-    role_name = str(scope.get("role") or getattr(request.state, "user_role", ""))
-    if not _can_access_module_section(role_name, "cupones", store_perms):
-        return RedirectResponse(url="/multitienda/inicio", status_code=307)
-    return _render_official_shell(request, "cupones", cupones_html())
+    return _dispatch_section_entrypoint(request, "cupones")
 
 
 @router.get("/multitienda/fidelizacion", include_in_schema=False, response_class=HTMLResponse)
 def multitienda_fidelizacion_entrypoint(request: Request):
-    db = _db_session_for_request(request)
-    try:
-        scope = _resolve_store_scope(request, db)
-        store_perms = _resolve_store_permissions(db, scope)
-    finally:
-        db.close()
-    role_name = str(scope.get("role") or getattr(request.state, "user_role", ""))
-    if not _can_access_module_section(role_name, "fidelizacion", store_perms):
-        return RedirectResponse(url="/multitienda/inicio", status_code=307)
-    return _render_official_shell(request, "fidelizacion", fidelizacion_html())
+    return _dispatch_section_entrypoint(request, "fidelizacion")
 
 
 @router.get("/multitienda/whatsapp", include_in_schema=False, response_class=HTMLResponse)
 def multitienda_whatsapp_entrypoint(request: Request):
-    db = _db_session_for_request(request)
-    try:
-        scope = _resolve_store_scope(request, db)
-        store_perms = _resolve_store_permissions(db, scope)
-    finally:
-        db.close()
-    role_name = str(scope.get("role") or getattr(request.state, "user_role", ""))
-    if not _can_access_module_section(role_name, "whatsapp", store_perms):
-        return RedirectResponse(url="/multitienda/inicio", status_code=307)
-    return _render_official_shell(request, "whatsapp", whatsapp_html())
+    return _dispatch_section_entrypoint(request, "whatsapp")
 
 
 @router.get("/multitienda/empleados", include_in_schema=False, response_class=HTMLResponse)
 def multitienda_empleados_entrypoint(request: Request):
-    db = _db_session_for_request(request)
-    try:
-        scope = _resolve_store_scope(request, db)
-        store_perms = _resolve_store_permissions(db, scope)
-    finally:
-        db.close()
-    role_name = str(scope.get("role") or getattr(request.state, "user_role", ""))
-    if not _can_access_module_section(role_name, "empleados", store_perms):
-        return RedirectResponse(url="/multitienda/inicio", status_code=307)
-    max_users = int(store_perms.get("max_internal_users") or 0)
-    return _render_official_shell(request, "empleados", empleados_html(max_users=max_users))
+    return _dispatch_section_entrypoint(request, "empleados")
 
 
 @router.get("/multitienda/seguidores", include_in_schema=False, response_class=HTMLResponse)
 def multitienda_seguidores_entrypoint(request: Request):
-    db = _db_session_for_request(request)
-    try:
-        scope = _resolve_store_scope(request, db)
-        store_perms = _resolve_store_permissions(db, scope)
-    finally:
-        db.close()
-    role_name = str(scope.get("role") or getattr(request.state, "user_role", ""))
-    if not _can_access_module_section(role_name, "seguidores", store_perms):
-        return RedirectResponse(url="/multitienda/inicio", status_code=307)
-    max_users = int(store_perms.get("max_portal_users") or 0)
-    financial_enabled = _can_access_module_section(role_name, "institucion_financiera", store_perms)
-    intelicoop_context = _resolve_integrated_module_context("institucion_financiera", scope) if financial_enabled else {}
-    return _render_official_shell(
-        request,
-        "seguidores",
-        seguidores_html(
-            max_users=max_users,
-            intelicoop_enabled=bool(intelicoop_context.get("enabled")),
-            intelicoop_route=str(intelicoop_context.get("target_route") or ""),
-            intelicoop_api_base=str(intelicoop_context.get("api_base") or ""),
-        ),
-    )
+    return _dispatch_section_entrypoint(request, "seguidores")
 
 
 @router.get("/multitienda/proveedores", include_in_schema=False, response_class=HTMLResponse)
 def multitienda_proveedores_entrypoint(request: Request):
-    db = _db_session_for_request(request)
-    try:
-        scope = _resolve_store_scope(request, db)
-        store_perms = _resolve_store_permissions(db, scope)
-    finally:
-        db.close()
-    role_name = str(scope.get("role") or getattr(request.state, "user_role", ""))
-    if not _can_access_module_section(role_name, "proveedores", store_perms):
-        return RedirectResponse(url="/multitienda/inicio", status_code=307)
-    financial_enabled = _can_access_module_section(role_name, "institucion_financiera", store_perms)
-    intelicoop_context = _resolve_integrated_module_context("institucion_financiera", scope) if financial_enabled else {}
-    return _render_official_shell(
-        request,
-        "proveedores",
-        proveedores_html(
-            intelicoop_enabled=bool(intelicoop_context.get("enabled")),
-            intelicoop_route=str(intelicoop_context.get("target_route") or ""),
-            intelicoop_api_base=str(intelicoop_context.get("api_base") or ""),
-        ),
-    )
+    return _dispatch_section_entrypoint(request, "proveedores")
 
 
 @router.get("/multitienda/ia", include_in_schema=False, response_class=HTMLResponse)
 def multitienda_ia_entrypoint(request: Request):
-    db = _db_session_for_request(request)
-    try:
-        scope = _resolve_store_scope(request, db)
-        store_perms = _resolve_store_permissions(db, scope)
-    finally:
-        db.close()
-    role_name = str(scope.get("role") or getattr(request.state, "user_role", ""))
-    if not _can_access_module_section(role_name, "ia", store_perms):
-        return RedirectResponse(url="/multitienda/inicio", status_code=307)
-    return _render_official_shell(request, "ia", ia_html())
+    return _dispatch_section_entrypoint(request, "ia")
 
 
 @router.get("/multitienda/institucion_financiera", include_in_schema=False, response_class=HTMLResponse)
 def multitienda_institucion_financiera_entrypoint(request: Request):
-    db = _db_session_for_request(request)
-    try:
-        scope = _resolve_store_scope(request, db)
-        store_perms = _resolve_store_permissions(db, scope)
-    finally:
-        db.close()
-    role_name = str(scope.get("role") or getattr(request.state, "user_role", ""))
-    if not _can_access_module_section(role_name, "institucion_financiera", store_perms):
-        return RedirectResponse(url="/multitienda/inicio", status_code=307)
-    target = _resolve_integrated_section_target("institucion_financiera", scope)
-    if not target:
-        return RedirectResponse(url="/multitienda/inicio", status_code=307)
-    return RedirectResponse(url=target, status_code=307)
+    return _dispatch_section_entrypoint(request, "institucion_financiera")
 
 
 @router.get("/multitienda/apartados", include_in_schema=False, response_class=HTMLResponse)
 def multitienda_apartados_entrypoint(request: Request):
-    db = _db_session_for_request(request)
-    try:
-        scope = _resolve_store_scope(request, db)
-        store_perms = _resolve_store_permissions(db, scope)
-    finally:
-        db.close()
-    role_name = str(scope.get("role") or getattr(request.state, "user_role", ""))
-    if not _can_access_module_section(role_name, "apartados", store_perms):
-        return RedirectResponse(url="/multitienda/inicio", status_code=307)
-    return _render_official_shell(request, "apartados", apartados_html())
+    return _dispatch_section_entrypoint(request, "apartados")
 
 
 @router.get("/multitienda/subastas", include_in_schema=False, response_class=HTMLResponse)
 def multitienda_subastas_entrypoint(request: Request):
-    db = _db_session_for_request(request)
-    try:
-        scope = _resolve_store_scope(request, db)
-        store_perms = _resolve_store_permissions(db, scope)
-    finally:
-        db.close()
-    role_name = str(scope.get("role") or getattr(request.state, "user_role", ""))
-    if not _can_access_module_section(role_name, "subastas", store_perms):
-        return RedirectResponse(url="/multitienda/inicio", status_code=307)
-    target = _resolve_integrated_section_target("subastas", scope)
-    if not target:
-        return RedirectResponse(url="/multitienda/inicio", status_code=307)
-    return RedirectResponse(url=target, status_code=307)
+    return _dispatch_section_entrypoint(request, "subastas")
 
 
 @router.get("/multitienda/crm", include_in_schema=False, response_class=HTMLResponse)
 def multitienda_crm_entrypoint(request: Request):
-    db = _db_session_for_request(request)
-    try:
-        scope = _resolve_store_scope(request, db)
-        store_perms = _resolve_store_permissions(db, scope)
-    finally:
-        db.close()
-    role_name = str(scope.get("role") or getattr(request.state, "user_role", ""))
-    if not _can_access_module_section(role_name, "crm", store_perms):
-        return RedirectResponse(url="/multitienda/inicio", status_code=307)
-    target = _resolve_integrated_section_target("crm", scope)
-    if not target:
-        return RedirectResponse(url="/multitienda/inicio", status_code=307)
-    return RedirectResponse(url=target, status_code=307)
+    return _dispatch_section_entrypoint(request, "crm")
 
 
 @router.get("/multitienda/administracion_tiendas", include_in_schema=False, response_class=HTMLResponse)
 def multitienda_gestion_entrypoint(request: Request):
-    role_name = str(getattr(request.state, "user_role", "") or "").strip()
-    if not _can_access_module_section(role_name, "gestion"):
-        return RedirectResponse(url="/multitienda/configuracion", status_code=307)
-    return _render_official_shell(request, "gestion", gestion_html())
+    return _dispatch_section_entrypoint(request, "gestion")
 
 
 @router.get("/multitienda/repartidores", include_in_schema=False, response_class=HTMLResponse)
 def multitienda_repartidores_entrypoint(request: Request):
-    role_name = str(getattr(request.state, "user_role", "") or "").strip()
-    if not _can_access_module_section(role_name, "repartidores"):
-        return RedirectResponse(url="/multitienda/inicio", status_code=307)
-    target = _resolve_integrated_section_target("repartidores")
-    if not target:
-        return RedirectResponse(url="/multitienda/inicio", status_code=307)
-    return RedirectResponse(url=target, status_code=307)
+    return _dispatch_section_entrypoint(request, "repartidores")
 
 
 
 @router.get("/multitienda/configuracion", include_in_schema=False, response_class=HTMLResponse)
 def multitienda_config_entrypoint(request: Request):
-    db = _db_session_for_request(request)
     effective_store_id = None
     redirect_to_canonical = False
-    try:
-        scope = _resolve_store_scope(request, db)
+    with _request_db_context(request) as ctx:
+        db = ctx["db"]
+        scope = ctx["scope"]
         if not _can_access_store_config(scope.get("role") or getattr(request.state, "user_role", "")):
             return RedirectResponse(url="/multitienda/inicio", status_code=307)
         store_summaries = _resolve_store_summaries(request, db, scope)
@@ -1705,8 +1666,6 @@ def multitienda_config_entrypoint(request: Request):
                 ),
                 {"store_id": effective_store_id},
             ).mappings().first()
-    finally:
-        db.close()
     if redirect_to_canonical and effective_store_id:
         return RedirectResponse(url=f"/multitienda/configuracion?store_id={effective_store_id}", status_code=307)
     initial_store = store_summaries[0] if store_summaries else {}
@@ -1763,11 +1722,7 @@ def multitienda_tiendas_entrypoint(request: Request):
 
 def _require_store_id(request: Request) -> int:
     """Devuelve el store_id del vendedor autenticado o lanza 401/403."""
-    db = _db_session_for_request(request)
-    try:
-        scope = _resolve_store_scope(request, db)
-    finally:
-        db.close()
+    scope = _resolve_request_context(request)["scope"]
     if not scope["user_id"]:
         raise HTTPException(status_code=401, detail="No autenticado.")
     if scope["store_id"] is None:
@@ -1777,6 +1732,16 @@ def _require_store_id(request: Request) -> int:
             return int(qp)
         raise HTTPException(status_code=403, detail="No tienes una tienda asignada.")
     return int(scope["store_id"])
+
+
+def _resolve_store_id_from_scope(request: Request, scope: dict[str, object]) -> int:
+    store_id = scope.get("store_id")
+    if store_id is None:
+        qp = request.query_params.get("store_id")
+        store_id = int(qp) if (qp and qp.isdigit()) else None
+    if store_id is None:
+        raise HTTPException(status_code=403, detail="No tienes una tienda asignada.")
+    return int(store_id)
 
 
 async def _json_body(request: Request) -> dict:
@@ -1807,24 +1772,15 @@ router.include_router(
 
 @router.get("/multitienda/api/inicio-stats", response_class=JSONResponse)
 def api_inicio_stats(request: Request):
-    store_id = _require_store_id(request)
-    db = _db_session_for_request(request)
-    try:
+    with _request_db_context(request) as ctx:
+        db = ctx["db"]
+        scope = ctx["scope"]
+        store_id = _resolve_store_id_from_scope(request, scope)
         return {"success": True, "data": analytics_service.get_store_stats(db, store_id)}
-    finally:
-        db.close()
 
 
 @router.put("/multitienda/api/configuracion", response_class=JSONResponse)
 async def api_update_store_configuration(request: Request):
-    db = _db_session_for_request(request)
-    try:
-        scope = _resolve_store_scope(request, db)
-    finally:
-        db.close()
-    if not _can_access_store_config(scope.get("role") or getattr(request.state, "user_role", "")):
-        raise HTTPException(status_code=403, detail="Solo el administrador de la tienda puede ver y editar esta información.")
-    store_id = _require_store_id(request)
     payload = await _json_body(request)
     raw_config = payload.get("config") if isinstance(payload.get("config"), dict) else payload
     _MULTITIENDA_PREFIX = "/multitienda"
@@ -1842,11 +1798,14 @@ async def api_update_store_configuration(request: Request):
                 str_value = str_value[len(_MULTITIENDA_PREFIX):]
             filtered_config[normalized_key] = str_value
 
-    _log.warning("[PUT configuracion] store_id=%r role=%r payload_keys=%r filtered_keys=%r",
-                 store_id, scope.get("role"), list((raw_config or {}).keys())[:5], list(filtered_config.keys())[:5])
-
-    db = _db_session_for_request(request)
-    try:
+    with _request_db_context(request) as ctx:
+        db = ctx["db"]
+        scope = ctx["scope"]
+        if not _can_access_store_config(scope.get("role") or getattr(request.state, "user_role", "")):
+            raise HTTPException(status_code=403, detail="Solo el administrador de la tienda puede ver y editar esta información.")
+        store_id = _resolve_store_id_from_scope(request, scope)
+        _log.warning("[PUT configuracion] store_id=%r role=%r payload_keys=%r filtered_keys=%r",
+                     store_id, scope.get("role"), list((raw_config or {}).keys())[:5], list(filtered_config.keys())[:5])
         row = db.execute(
             text(
                 """
@@ -1898,22 +1857,16 @@ async def api_update_store_configuration(request: Request):
         result_data = _build_store_config_payload({"logo": filtered_config.get("site_logo") or row.get("logo"), "banner": filtered_config.get("landing_banner") or row.get("banner"), "phone": filtered_config.get("phone") or row.get("phone"), "address": filtered_config.get("street") or row.get("address"), "country": filtered_config.get("country") or row.get("country"), "store_theme": json.dumps(theme, ensure_ascii=True)})
         _log.warning("[PUT configuracion] committed ok store_id=%r result_data_keys=%r", store_id, list(result_data.keys())[:5])
         return {"success": True, "data": result_data}
-    finally:
-        db.close()
 
 
 @router.get("/multitienda/api/configuracion", response_class=JSONResponse)
 def api_get_store_configuration(request: Request):
-    db = _db_session_for_request(request)
-    try:
-        scope = _resolve_store_scope(request, db)
-    finally:
-        db.close()
-    if not _can_access_store_config(scope.get("role") or getattr(request.state, "user_role", "")):
-        raise HTTPException(status_code=403, detail="Solo el administrador de la tienda puede ver esta información.")
-    store_id = _require_store_id(request)
-    db = _db_session_for_request(request)
-    try:
+    with _request_db_context(request) as ctx:
+        db = ctx["db"]
+        scope = ctx["scope"]
+        if not _can_access_store_config(scope.get("role") or getattr(request.state, "user_role", "")):
+            raise HTTPException(status_code=403, detail="Solo el administrador de la tienda puede ver esta información.")
+        store_id = _resolve_store_id_from_scope(request, scope)
         row = db.execute(
             text(
                 """
@@ -1928,17 +1881,16 @@ def api_get_store_configuration(request: Request):
         if not row:
             raise HTTPException(status_code=404, detail="Tienda no encontrada.")
         return {"success": True, "data": _build_store_config_payload(row)}
-    finally:
-        db.close()
 
 
 # ── Productos privados (tienda) ──────────────────────────────────────────────
 
 @router.get("/multitienda/api/productos", response_class=JSONResponse)
 def api_list_store_products(request: Request):
-    store_id = _require_store_id(request)
-    db = _db_session_for_request(request)
-    try:
+    with _request_db_context(request) as ctx:
+        db = ctx["db"]
+        scope = ctx["scope"]
+        store_id = _resolve_store_id_from_scope(request, scope)
         row = db.execute(
             text(
                 """
@@ -1952,20 +1904,19 @@ def api_list_store_products(request: Request):
         ).mappings().first()
         theme = _decode_store_theme(row.get("store_theme")) if row else {}
         return {"success": True, "data": _extract_catalog_products(theme)}
-    finally:
-        db.close()
 
 
 @router.put("/multitienda/api/productos", response_class=JSONResponse)
 async def api_replace_store_products(request: Request):
-    store_id = _require_store_id(request)
     payload = await _json_body(request)
     incoming_products = payload.get("products") if isinstance(payload.get("products"), list) else payload
     if not isinstance(incoming_products, list):
         raise HTTPException(status_code=400, detail="Se esperaba una lista de productos.")
 
-    db = _db_session_for_request(request)
-    try:
+    with _request_db_context(request) as ctx:
+        db = ctx["db"]
+        scope = ctx["scope"]
+        store_id = _resolve_store_id_from_scope(request, scope)
         _ensure_product_tables(db)
         row = db.execute(
             text(
@@ -2003,267 +1954,115 @@ async def api_replace_store_products(request: Request):
         )
         db.commit()
         return {"success": True, "data": synced_products}
-    finally:
-        db.close()
 
 
 # ── Empleados ─────────────────────────────────────────────────────────────────
 
 @router.get("/multitienda/api/empleados", response_class=JSONResponse)
 def api_list_employees(request: Request):
-    db = _db_session_for_request(request)
-    try:
-        scope = _resolve_store_scope(request, db)
+    with _request_db_context(request) as ctx:
+        db = ctx["db"]
+        scope = ctx["scope"]
         if not scope.get("user_id"):
             raise HTTPException(status_code=401, detail="No autenticado.")
-        store_id = scope.get("store_id")
-        if store_id is None:
-            qp = request.query_params.get("store_id")
-            store_id = int(qp) if (qp and qp.isdigit()) else None
-        if store_id is None:
-            raise HTTPException(status_code=403, detail="No tienes una tienda asignada.")
-        store_id = int(store_id)
-        result = []
-        employees = employee_service.list_by_vendor(db, store_id)
-        user_ids = [int(employee.user_id) for employee in employees if employee.user_id is not None]
-        users_by_id = {
-            int(user.id): user
-            for user in db.query(User).filter(User.id.in_(user_ids)).all()
-        } if user_ids else {}
-        for employee in employees:
-            user = users_by_id.get(int(employee.user_id or 0))
-            pos_raw = str(employee.position or "")
-            try:
-                meta = json.loads(pos_raw)
-                full_name = meta.get("n") or str(getattr(user, "username", "") or "")
-                puesto = meta.get("p") or ""
-                celular = meta.get("t") or ""
-                departamento = meta.get("d") or ""
-            except Exception:
-                full_name = str(getattr(user, "username", "") or "")
-                puesto = pos_raw
-                celular = ""
-                departamento = ""
-            result.append({
-                "id": employee.id,
-                "rol": getattr(employee.role, "value", employee.role),
-                "usuario": str(getattr(user, "username", "") or ""),
-                "correo": str(getattr(user, "email", "") or ""),
-                "full_name": full_name,
-                "nombre": full_name,
-                "puesto": puesto,
-                "celular": celular,
-                "departamento": departamento,
-                "estado": "Activo" if bool(employee.is_active) else "Inactivo",
-                "created_at": str(employee.created_at) if employee.created_at else "",
-            })
-        return {"success": True, "data": result}
-    finally:
-        db.close()
+        store_id = _resolve_store_id_from_scope(request, scope)
+        return {"success": True, "data": employee_service.list_admin_rows(db, store_id)}
 
 
 @router.post("/multitienda/api/empleados", response_class=JSONResponse)
 async def api_create_employee(request: Request):
-    from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.users.routes import get_password_hash
-    db = _db_session_for_request(request)
     try:
-        scope = _resolve_store_scope(request, db)
-        if not scope.get("user_id"):
-            raise HTTPException(status_code=401, detail="No autenticado.")
-        store_id = scope.get("store_id")
-        if store_id is None:
-            qp = request.query_params.get("store_id")
-            store_id = int(qp) if (qp and qp.isdigit()) else None
-        if store_id is None:
-            raise HTTPException(status_code=403, detail="No tienes una tienda asignada.")
-        store_id = int(store_id)
-
-        store_perms = _resolve_store_permissions(db, scope)
-        max_users = int(store_perms.get("max_internal_users") or 0)
-        if max_users > 0:
-            current_count = len(employee_service.list_by_vendor(db, store_id))
-            if current_count >= max_users:
-                raise HTTPException(status_code=422, detail="LIMIT_REACHED")
-
-        data = await _json_body(request)
-        usuario = (data.get("usuario") or "").strip()
-        correo = (data.get("correo") or "").strip()
-        contrasena = (data.get("contrasena") or "").strip()
-        if not usuario:
-            raise HTTPException(status_code=400, detail="El usuario es obligatorio.")
-        if not contrasena:
-            raise HTTPException(status_code=400, detail="La contraseña es obligatoria.")
-
-        existing = db.query(User).filter_by(username=usuario).first()
-        if existing:
-            raise HTTPException(status_code=409, detail="El nombre de usuario ya está en uso.")
-
-        hashed = get_password_hash(contrasena)
-        email_to_use = correo if correo else f"{usuario}@tienda.local"
-        user = User(
-            username=usuario,
-            email=email_to_use,
-            hashed_password=hashed,
-            user_type="store_employee",
-        )
-        db.add(user)
-        db.flush()
-
-        nombre = (data.get("nombre") or usuario).strip()
-        puesto = (data.get("puesto") or "").strip()
-        celular = (data.get("celular") or "").strip()
-        departamento = (data.get("departamento") or "").strip()
-        pos_json = json.dumps({"n": nombre, "p": puesto, "t": celular, "d": departamento}, ensure_ascii=False)[:400]
-
-        rol_form = (data.get("rol") or "usuario").lower()
-        emp_role = "manager" if rol_form == "administrador" else "seller"
-
-        employee = employee_service.create_for_vendor(
-            db,
-            store_id,
-            user_id=int(user.id),
-            role=emp_role,
-            position=pos_json,
-            is_active=True,
-        )
-        db.commit()
-        return {"success": True, "data": {"id": employee.id, "usuario": usuario, "correo": correo, "nombre": nombre, "puesto": puesto}}
+        with _request_db_context(request, include_permissions=True) as ctx:
+            db = ctx["db"]
+            scope = ctx["scope"]
+            store_perms = ctx["store_permissions"]
+            if not scope.get("user_id"):
+                raise HTTPException(status_code=401, detail="No autenticado.")
+            store_id = _resolve_store_id_from_scope(request, scope)
+            max_users = int(store_perms.get("max_internal_users") or 0)
+            data = await _json_body(request)
+            try:
+                employee = employee_service.create_admin_employee(db, store_id, data, max_users=max_users)
+            except ValueError as exc:
+                code = str(exc)
+                if code == "LIMIT_REACHED":
+                    raise HTTPException(status_code=422, detail="LIMIT_REACHED")
+                if code == "USERNAME_REQUIRED":
+                    raise HTTPException(status_code=400, detail="El usuario es obligatorio.")
+                if code == "PASSWORD_REQUIRED":
+                    raise HTTPException(status_code=400, detail="La contraseña es obligatoria.")
+                if code == "USERNAME_TAKEN":
+                    raise HTTPException(status_code=409, detail="El nombre de usuario ya está en uso.")
+                raise
+            db.commit()
+            return {"success": True, "data": employee}
     except HTTPException:
         raise
     except Exception:
-        db.rollback()
         _log.exception("Error creando empleado")
         raise HTTPException(status_code=500, detail="Error interno al crear el empleado.")
-    finally:
-        db.close()
 
 
 @router.put("/multitienda/api/empleados/{employee_id}", response_class=JSONResponse)
 async def api_update_employee(employee_id: int, request: Request):
-    db = _db_session_for_request(request)
     try:
-        scope = _resolve_store_scope(request, db)
-        store_id = scope.get("store_id")
-        if store_id is None:
-            qp = request.query_params.get("store_id")
-            store_id = int(qp) if (qp and qp.isdigit()) else None
-        if store_id is None:
-            raise HTTPException(status_code=403, detail="No tienes una tienda asignada.")
-        store_id = int(store_id)
-
-        data = await _json_body(request)
-        emp = employee_service.get_by_vendor(db, store_id, employee_id)
-        if not emp:
-            raise HTTPException(status_code=404, detail="Empleado no encontrado.")
-
-        pos_raw = str(emp.position or "")
-        try:
-            meta = json.loads(pos_raw)
-        except Exception:
-            meta = {"p": pos_raw}
-        if "nombre" in data:
-            meta["n"] = data["nombre"]
-        if "puesto" in data:
-            meta["p"] = data["puesto"]
-        if "celular" in data:
-            meta["t"] = data["celular"]
-        if "departamento" in data:
-            meta["d"] = data["departamento"]
-        pos_json = json.dumps(meta, ensure_ascii=False)[:400]
-
-        rol_form = (data.get("rol") or "").lower()
-        is_active = data.get("is_active")
-        if is_active is None and "estado" in data:
-            is_active = str(data["estado"]).lower() != "inactivo"
-        updates = {"position": pos_json}
-        if rol_form == "administrador":
-            updates["role"] = "manager"
-        elif rol_form == "usuario":
-            updates["role"] = "seller"
-        if is_active is not None:
-            updates["is_active"] = bool(is_active)
-
-        employee_service.update_employee(db, emp, **updates)
-        if data.get("correo"):
-            user = db.query(User).filter_by(id=int(emp.user_id or 0)).first()
-            if user:
-                user.email = data["correo"]
-        db.commit()
-        return {"success": True}
+        with _request_db_context(request) as ctx:
+            db = ctx["db"]
+            scope = ctx["scope"]
+            store_id = _resolve_store_id_from_scope(request, scope)
+            data = await _json_body(request)
+            ok = employee_service.update_admin_employee(db, store_id, employee_id, data)
+            if not ok:
+                raise HTTPException(status_code=404, detail="Empleado no encontrado.")
+            db.commit()
+            return {"success": True}
     except HTTPException:
         raise
     except Exception:
-        db.rollback()
         _log.exception("Error actualizando empleado")
         raise HTTPException(status_code=500, detail="Error interno al actualizar el empleado.")
-    finally:
-        db.close()
 
 
 @router.delete("/multitienda/api/empleados/{employee_id}", response_class=JSONResponse)
 def api_delete_employee(employee_id: int, request: Request):
-    db = _db_session_for_request(request)
     try:
-        scope = _resolve_store_scope(request, db)
-        store_id = scope.get("store_id")
-        if store_id is None:
-            qp = request.query_params.get("store_id")
-            store_id = int(qp) if (qp and qp.isdigit()) else None
-        if store_id is None:
-            raise HTTPException(status_code=403, detail="No tienes una tienda asignada.")
-        store_id = int(store_id)
-
-        emp = employee_service.get_by_vendor(db, store_id, employee_id)
-        if not emp:
-            raise HTTPException(status_code=404, detail="Empleado no encontrado.")
-        user_id = int(emp.user_id or 0)
-
-        employee_service.delete_employee(db, emp)
-        other_refs = db.query(employee_service.StoreEmployee).filter_by(user_id=user_id).count()
-        if user_id and other_refs == 0:
-            db.query(User).filter_by(id=user_id, user_type="store_employee").delete()
-        db.commit()
-        return {"success": True}
+        with _request_db_context(request) as ctx:
+            db = ctx["db"]
+            scope = ctx["scope"]
+            store_id = _resolve_store_id_from_scope(request, scope)
+            ok = employee_service.delete_admin_employee(db, store_id, employee_id)
+            if not ok:
+                raise HTTPException(status_code=404, detail="Empleado no encontrado.")
+            db.commit()
+            return {"success": True}
     except HTTPException:
         raise
     except Exception:
-        db.rollback()
         _log.exception("Error eliminando empleado")
         raise HTTPException(status_code=500, detail="Error interno al eliminar el empleado.")
-    finally:
-        db.close()
 
 
 @router.post("/multitienda/api/empleados/{employee_id}/password", response_class=JSONResponse)
 async def api_change_employee_password(employee_id: int, request: Request):
-    db = _db_session_for_request(request)
     try:
-        scope = _resolve_store_scope(request, db)
-        store_id = scope.get("store_id")
-        if store_id is None:
-            qp = request.query_params.get("store_id")
-            store_id = int(qp) if (qp and qp.isdigit()) else None
-        if store_id is None:
-            raise HTTPException(status_code=403, detail="No tienes una tienda asignada.")
-        store_id = int(store_id)
+        with _request_db_context(request) as ctx:
+            db = ctx["db"]
+            scope = ctx["scope"]
+            store_id = _resolve_store_id_from_scope(request, scope)
+            data = await _json_body(request)
+            pwd = str(data.get("password") or "").strip()
+            if not pwd:
+                raise HTTPException(status_code=400, detail="La contraseña no puede estar vacía.")
 
-        data = await _json_body(request)
-        pwd = str(data.get("password") or "").strip()
-        if not pwd:
-            raise HTTPException(status_code=400, detail="La contraseña no puede estar vacía.")
-
-        ok = employee_service.set_password_for_vendor_employee(db, store_id, employee_id, pwd)
-        if not ok:
-            raise HTTPException(status_code=404, detail="Empleado no encontrado.")
-        db.commit()
-        return {"success": True}
+            ok = employee_service.set_password_for_vendor_employee(db, store_id, employee_id, pwd)
+            if not ok:
+                raise HTTPException(status_code=404, detail="Empleado no encontrado.")
+            db.commit()
+            return {"success": True}
     except HTTPException:
         raise
     except Exception:
-        db.rollback()
         raise HTTPException(status_code=500, detail="Error interno al cambiar la contraseña.")
-    finally:
-        db.close()
 
 
-__all__ = ["router"]
+__all__ = ["bootstrap_multitienda", "router"]

@@ -1,0 +1,455 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Cupones — Multitienda</title>
+  <link rel="stylesheet" href="/multitienda/static/css/cupones.css" />
+</head>
+<body>
+<main>
+  <!-- Stats -->
+  <div class="cp-stats">
+    <div class="cp-stat">
+      <div class="cp-stat__icon cp-stat__icon--blue"><i class="fa-solid fa-ticket"></i></div>
+      <div><div class="cp-stat__value" id="cp-stat-total">0</div><div class="cp-stat__label">Total cupones</div></div>
+    </div>
+    <div class="cp-stat">
+      <div class="cp-stat__icon cp-stat__icon--green"><i class="fa-solid fa-circle-check"></i></div>
+      <div><div class="cp-stat__value" id="cp-stat-activos">0</div><div class="cp-stat__label">Activos</div></div>
+    </div>
+    <div class="cp-stat">
+      <div class="cp-stat__icon cp-stat__icon--amber"><i class="fa-solid fa-clock-rotate-left"></i></div>
+      <div><div class="cp-stat__value" id="cp-stat-usados">0</div><div class="cp-stat__label">Usos totales</div></div>
+    </div>
+    <div class="cp-stat">
+      <div class="cp-stat__icon cp-stat__icon--red"><i class="fa-solid fa-calendar-xmark"></i></div>
+      <div><div class="cp-stat__value" id="cp-stat-expirados">0</div><div class="cp-stat__label">Expirados</div></div>
+    </div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="cp-toolbar">
+    <div class="cp-toolbar__left">
+      <button class="cp-btn cp-btn--primary" id="cp-nuevo-btn" onclick="openDrawer(-1)">
+        <i class="fa-solid fa-plus"></i> Nuevo cupón
+      </button>
+      <button class="cp-btn cp-btn--danger" id="cp-eliminar-btn" disabled onclick="openConfirm('bulk')">
+        <i class="fa-regular fa-trash-can"></i> Eliminar
+      </button>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+      <select class="cp-filter-select" id="cp-filter-estado" onchange="renderTable()">
+        <option value="">Todos los estados</option>
+        <option value="activo">Activo</option>
+        <option value="programado">Programado</option>
+        <option value="desactivado">Desactivado</option>
+        <option value="expirado">Expirado</option>
+      </select>
+      <select class="cp-filter-select" id="cp-filter-tipo" onchange="renderTable()">
+        <option value="">Todos los tipos</option>
+        <option value="porcentaje">Porcentaje</option>
+        <option value="monto">Monto fijo</option>
+        <option value="envio">Envío gratis</option>
+      </select>
+      <div class="cp-search">
+        <i class="fa-solid fa-magnifying-glass" style="color:var(--cp-muted);font-size:.8rem;"></i>
+        <input type="text" id="cp-search" placeholder="Buscar código o descripción…" oninput="renderTable()" />
+      </div>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="cp-table-wrap">
+    <table class="cp-table" id="cp-table">
+      <thead>
+        <tr>
+          <th style="width:36px;"><input type="checkbox" id="cp-check-all" onchange="toggleSelectAll(this.checked)" /></th>
+          <th class="sortable" data-col="codigo" onclick="sortBy('codigo')">Código <span class="sarr">↕</span></th>
+          <th class="sortable" data-col="descripcion" onclick="sortBy('descripcion')">Descripción <span class="sarr">↕</span></th>
+          <th class="sortable" data-col="tipo" onclick="sortBy('tipo')">Tipo <span class="sarr">↕</span></th>
+          <th class="sortable" data-col="valor" onclick="sortBy('valor')">Descuento <span class="sarr">↕</span></th>
+          <th class="sortable" data-col="usos" onclick="sortBy('usos')">Usos <span class="sarr">↕</span></th>
+          <th class="sortable" data-col="expiracion" onclick="sortBy('expiracion')">Expira <span class="sarr">↕</span></th>
+          <th class="sortable" data-col="estado" onclick="sortBy('estado')">Estado <span class="sarr">↕</span></th>
+        </tr>
+      </thead>
+      <tbody id="cp-tbody"></tbody>
+    </table>
+  </div>
+
+  <!-- Confirm dialog -->
+  <div class="cp-confirm" id="cp-confirm">
+    <div class="cp-confirm__card">
+      <div class="cp-confirm__icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+      <div class="cp-confirm__title" id="cp-confirm-title">¿Eliminar cupón?</div>
+      <div class="cp-confirm__text" id="cp-confirm-text">Esta acción no se puede deshacer.</div>
+      <div class="cp-confirm__actions">
+        <button class="cp-btn" onclick="closeConfirm()">Cancelar</button>
+        <button class="cp-btn cp-btn--danger" id="cp-confirm-ok">Sí, eliminar</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- Overlay -->
+<div class="cp-overlay" id="cp-overlay" onclick="closeDrawer()"></div>
+
+<!-- Drawer -->
+<aside class="cp-drawer" id="cp-drawer">
+  <div class="cp-drawer__head">
+    <span class="cp-drawer__title" id="cp-drawer-title">Nuevo cupón</span>
+    <button class="cp-drawer__close" onclick="closeDrawer()"><i class="fa-solid fa-xmark"></i></button>
+  </div>
+  <div class="cp-drawer__body">
+    <div class="cp-field">
+      <label for="cp-f-codigo">Código <span style="color:var(--cp-danger)">*</span></label>
+      <input id="cp-f-codigo" type="text" placeholder="Ej. VERANO20" style="text-transform:uppercase;" />
+      <span class="cp-field--hint">Los clientes usarán este código en el carrito.</span>
+    </div>
+    <div class="cp-field">
+      <label for="cp-f-desc">Descripción</label>
+      <input id="cp-f-desc" type="text" placeholder="Descripción breve del cupón" />
+    </div>
+    <div class="cp-field--row">
+      <div class="cp-field">
+        <label for="cp-f-tipo">Tipo de descuento</label>
+        <select id="cp-f-tipo" onchange="onTipoChange()">
+          <option value="porcentaje">Porcentaje (%)</option>
+          <option value="monto">Monto fijo</option>
+          <option value="envio">Envío gratis</option>
+        </select>
+      </div>
+      <div class="cp-field" id="cp-f-valor-wrap">
+        <label for="cp-f-valor">Valor</label>
+        <input id="cp-f-valor" type="number" min="0" step="0.01" placeholder="0" />
+      </div>
+    </div>
+    <div class="cp-field--row">
+      <div class="cp-field">
+        <label for="cp-f-min-compra">Mínimo de compra</label>
+        <input id="cp-f-min-compra" type="number" min="0" step="0.01" placeholder="0.00" />
+      </div>
+      <div class="cp-field">
+        <label for="cp-f-max-usos">Usos máximos</label>
+        <input id="cp-f-max-usos" type="number" min="0" step="1" placeholder="Ilimitado" />
+      </div>
+    </div>
+    <div class="cp-field--row">
+      <div class="cp-field">
+        <label for="cp-f-inicio">Fecha inicio</label>
+        <input id="cp-f-inicio" type="date" />
+      </div>
+      <div class="cp-field">
+        <label for="cp-f-fin">Fecha expiración</label>
+        <input id="cp-f-fin" type="date" />
+      </div>
+    </div>
+    <div class="cp-field">
+      <label for="cp-f-estado">Estado</label>
+      <select id="cp-f-estado">
+        <option value="activo">Activo</option>
+        <option value="programado">Programado</option>
+        <option value="desactivado">Desactivado</option>
+      </select>
+    </div>
+    <div class="cp-field">
+      <label for="cp-f-notas">Notas internas</label>
+      <textarea id="cp-f-notas" placeholder="Observaciones sobre este cupón…"></textarea>
+    </div>
+  </div>
+  <div class="cp-drawer__footer">
+    <button class="cp-btn cp-btn--danger" id="cp-f-delete-btn" onclick="openConfirm('single')" style="display:none;">
+      <i class="fa-regular fa-trash-can"></i> Eliminar
+    </button>
+    <button class="cp-btn cp-btn--primary" onclick="saveDrawer()">
+      <i class="fa-solid fa-floppy-disk"></i> Guardar
+    </button>
+  </div>
+</aside>
+
+<!-- Toast -->
+<div class="cp-toast" id="cp-toast"></div>
+
+<script>
+(function () {
+  var data = [];   /* API records: {id, code, discount_type, discount_value, min_order_amount, max_uses, uses_count, valid_from, valid_until, is_active} */
+  var sortCol = 'code';
+  var sortAsc = true;
+  var editIdx = -1;   /* index into data[], -1 = new */
+  var confirmMode = '';
+
+  /* ── API helpers ── */
+  function apiLoad() {
+    return fetch('/multitienda/api/cupones')
+      .then(function (r) { return r.json(); })
+      .then(function (j) { data = j.success ? j.data : []; renderTable(); })
+      .catch(function () { data = []; renderTable(); });
+  }
+
+  function dateOnly(dt) {
+    return dt ? String(dt).slice(0, 10) : '';
+  }
+
+  /* ── Estado logic ── */
+  function computeEstado(c) {
+    if (!c.is_active) return 'desactivado';
+    var today = new Date().toISOString().slice(0, 10);
+    var fin = dateOnly(c.valid_until);
+    var ini = dateOnly(c.valid_from);
+    if (fin && fin < today) return 'expirado';
+    if (ini && ini > today) return 'programado';
+    return 'activo';
+  }
+
+  /* ── Stats ── */
+  function updateStats() {
+    var total = data.length, activos = 0, usados = 0, expirados = 0;
+    data.forEach(function (c) {
+      var st = computeEstado(c);
+      if (st === 'activo') activos++;
+      if (st === 'expirado') expirados++;
+      usados += parseInt(c.uses_count || 0, 10);
+    });
+    document.getElementById('cp-stat-total').textContent = total;
+    document.getElementById('cp-stat-activos').textContent = activos;
+    document.getElementById('cp-stat-usados').textContent = usados;
+    document.getElementById('cp-stat-expirados').textContent = expirados;
+  }
+
+  /* ── Table helpers ── */
+  function tipoLabel(tipo) {
+    if (tipo === 'fixed' || tipo === 'monto') return 'Monto fijo';
+    if (tipo === 'free_shipping' || tipo === 'envio') return 'Envío gratis';
+    return 'Porcentaje';
+  }
+
+  function badgeHtml(st) {
+    var map = {
+      activo:      ['cp-badge--active',    'fa-circle-check',   'Activo'],
+      programado:  ['cp-badge--scheduled', 'fa-clock',          'Programado'],
+      desactivado: ['cp-badge--disabled',  'fa-circle-xmark',   'Desactivado'],
+      expirado:    ['cp-badge--expired',   'fa-calendar-xmark', 'Expirado'],
+    };
+    var v = map[st] || map['desactivado'];
+    return '<span class="cp-badge ' + v[0] + '"><i class="fa-solid ' + v[1] + '"></i>' + v[2] + '</span>';
+  }
+
+  function esc(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  /* ── Filtered/sorted rows ── */
+  function getFiltered() {
+    var q = (document.getElementById('cp-search').value || '').toLowerCase();
+    var fe = document.getElementById('cp-filter-estado').value;
+    var ft = document.getElementById('cp-filter-tipo').value;
+    return data.filter(function (c, i) {
+      c._idx = i;
+      var st = computeEstado(c);
+      if (fe && st !== fe) return false;
+      if (ft) {
+        var ok = ft === 'porcentaje' ? ['percent','porcentaje','percentage'] :
+                 ft === 'monto'     ? ['fixed','monto'] :
+                                     ['free_shipping','envio'];
+        if (ok.indexOf(c.discount_type) < 0) return false;
+      }
+      if (q && (c.code||'').toLowerCase().indexOf(q) < 0) return false;
+      return true;
+    });
+  }
+
+  window.renderTable = function () {
+    var rows = getFiltered();
+    rows.sort(function (a, b) {
+      var av, bv;
+      if (sortCol === 'valor') {
+        return sortAsc ? parseFloat(a.discount_value||0) - parseFloat(b.discount_value||0)
+                       : parseFloat(b.discount_value||0) - parseFloat(a.discount_value||0);
+      }
+      if (sortCol === 'usos') {
+        return sortAsc ? parseInt(a.uses_count||0) - parseInt(b.uses_count||0)
+                       : parseInt(b.uses_count||0) - parseInt(a.uses_count||0);
+      }
+      av = sortCol === 'codigo'     ? (a.code||'').toLowerCase()
+         : sortCol === 'tipo'       ? (a.discount_type||'').toLowerCase()
+         : sortCol === 'expiracion' ? dateOnly(a.valid_until)
+         : sortCol === 'estado'     ? computeEstado(a)
+         : (a.code||'').toLowerCase();
+      bv = sortCol === 'codigo'     ? (b.code||'').toLowerCase()
+         : sortCol === 'tipo'       ? (b.discount_type||'').toLowerCase()
+         : sortCol === 'expiracion' ? dateOnly(b.valid_until)
+         : sortCol === 'estado'     ? computeEstado(b)
+         : (b.code||'').toLowerCase();
+      return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
+    });
+    var tbody = document.getElementById('cp-tbody');
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="8"><div class="cp-empty"><i class="fa-solid fa-ticket"></i>No hay cupones que coincidan con los filtros.</div></td></tr>';
+      syncEliminarBtn(); updateStats(); return;
+    }
+    tbody.innerHTML = rows.map(function (c) {
+      var st = computeEstado(c);
+      var badge = badgeHtml(st);
+      var tipo = c.discount_type || '';
+      var maxUsos = c.max_uses ? parseInt(c.max_uses, 10) : null;
+      var usosTxt = maxUsos ? ((c.uses_count||0) + ' / ' + maxUsos) : (c.uses_count||0);
+      var descTxt = (tipo==='free_shipping'||tipo==='envio') ? 'Envío gratis'
+                  : (tipo==='fixed'||tipo==='monto') ? '$'+parseFloat(c.discount_value||0).toFixed(2)
+                  : parseFloat(c.discount_value||0).toFixed(1)+'%';
+      return '<tr onclick="rowClick(' + c._idx + ')">'
+        + '<td onclick="event.stopPropagation()"><input type="checkbox" class="cp-row-check" data-idx="'+c._idx+'" data-id="'+(c.id||'')+'" onchange="syncEliminarBtn()" /></td>'
+        + '<td><span class="cp-code-chip">' + esc(c.code||'') + '</span></td>'
+        + '<td>—</td>'
+        + '<td>' + tipoLabel(tipo) + '</td>'
+        + '<td>' + esc(descTxt) + '</td>'
+        + '<td>' + esc(String(usosTxt)) + '</td>'
+        + '<td>' + esc(dateOnly(c.valid_until)||'—') + '</td>'
+        + '<td>' + badge + '</td>'
+        + '</tr>';
+    }).join('');
+    syncEliminarBtn(); updateStats();
+    document.getElementById('cp-check-all').checked = false;
+  };
+
+  /* ── Sort ── */
+  window.sortBy = function (col) {
+    if (sortCol === col) { sortAsc = !sortAsc; } else { sortCol = col; sortAsc = true; }
+    renderTable();
+  };
+
+  /* ── Select all ── */
+  window.toggleSelectAll = function (checked) {
+    document.querySelectorAll('.cp-row-check').forEach(function (cb) { cb.checked = checked; });
+    syncEliminarBtn();
+  };
+
+  window.syncEliminarBtn = function () {
+    document.getElementById('cp-eliminar-btn').disabled = document.querySelectorAll('.cp-row-check:checked').length === 0;
+  };
+
+  /* ── Row click ── */
+  window.rowClick = function (idx) { openDrawer(idx); };
+
+  /* ── Drawer ── */
+  window.openDrawer = function (idx) {
+    editIdx = idx;
+    var c = idx >= 0 ? data[idx] : null;
+    document.getElementById('cp-drawer-title').textContent = c ? 'Editar cupón' : 'Nuevo cupón';
+    document.getElementById('cp-f-codigo').value = c ? (c.code||'') : '';
+    document.getElementById('cp-f-desc').value = '';
+    var dt = c ? (c.discount_type||'') : '';
+    var tipoVal = (dt==='fixed'||dt==='monto') ? 'monto' : (dt==='free_shipping'||dt==='envio') ? 'envio' : 'porcentaje';
+    document.getElementById('cp-f-tipo').value = tipoVal;
+    document.getElementById('cp-f-valor').value = c ? (c.discount_value||'') : '';
+    document.getElementById('cp-f-min-compra').value = c ? (c.min_order_amount||'') : '';
+    document.getElementById('cp-f-max-usos').value = c ? (c.max_uses||'') : '';
+    document.getElementById('cp-f-inicio').value = c ? dateOnly(c.valid_from) : '';
+    document.getElementById('cp-f-fin').value = c ? dateOnly(c.valid_until) : '';
+    var st = c ? computeEstado(c) : 'activo';
+    document.getElementById('cp-f-estado').value = (st === 'expirado') ? 'desactivado' : st;
+    document.getElementById('cp-f-notas').value = '';
+    document.getElementById('cp-f-delete-btn').style.display = c ? '' : 'none';
+    onTipoChange();
+    document.getElementById('cp-drawer').classList.add('is-open');
+    document.getElementById('cp-overlay').classList.add('is-open');
+  };
+
+  window.closeDrawer = function () {
+    document.getElementById('cp-drawer').classList.remove('is-open');
+    document.getElementById('cp-overlay').classList.remove('is-open');
+    editIdx = -1;
+  };
+
+  window.onTipoChange = function () {
+    var tipo = document.getElementById('cp-f-tipo').value;
+    document.getElementById('cp-f-valor-wrap').style.display = tipo === 'envio' ? 'none' : '';
+  };
+
+  window.saveDrawer = function () {
+    var codigo = (document.getElementById('cp-f-codigo').value || '').trim().toUpperCase();
+    if (!codigo) { showToast('El código es obligatorio.'); return; }
+    for (var i = 0; i < data.length; i++) {
+      if (i !== editIdx && (data[i].code||'').toUpperCase() === codigo) {
+        showToast('Ya existe un cupón con ese código.'); return;
+      }
+    }
+    var tipoVista = document.getElementById('cp-f-tipo').value;
+    var estado = document.getElementById('cp-f-estado').value;
+    var payload = {
+      code:              codigo,
+      discount_type:     tipoVista === 'monto' ? 'fixed' : tipoVista === 'envio' ? 'free_shipping' : 'percent',
+      discount_value:    parseFloat(document.getElementById('cp-f-valor').value) || 0,
+      min_order_amount:  parseFloat(document.getElementById('cp-f-min-compra').value) || 0,
+      max_uses:          document.getElementById('cp-f-max-usos').value ? parseInt(document.getElementById('cp-f-max-usos').value, 10) : null,
+      valid_from:        document.getElementById('cp-f-inicio').value || null,
+      valid_until:       document.getElementById('cp-f-fin').value || null,
+      is_active:         estado !== 'desactivado',
+    };
+    var isEdit = editIdx >= 0;
+    var url = isEdit ? '/multitienda/api/cupones/' + data[editIdx].id : '/multitienda/api/cupones';
+    var method = isEdit ? 'PUT' : 'POST';
+    fetch(url, { method: method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        if (!j.success) { showToast('Error al guardar.'); return; }
+        closeDrawer();
+        showToast(isEdit ? 'Cupón actualizado.' : 'Cupón creado.');
+        apiLoad();
+      })
+      .catch(function () { showToast('Error de conexión.'); });
+  };
+
+  /* ── Confirm ── */
+  window.openConfirm = function (mode) {
+    confirmMode = mode;
+    if (mode === 'bulk') {
+      var n = document.querySelectorAll('.cp-row-check:checked').length;
+      document.getElementById('cp-confirm-title').textContent = '¿Eliminar ' + n + ' cupón' + (n > 1 ? 'es' : '') + '?';
+      document.getElementById('cp-confirm-text').textContent = 'Esta acción no se puede deshacer.';
+    } else {
+      var code = editIdx >= 0 ? (data[editIdx].code || 'este cupón') : 'este cupón';
+      document.getElementById('cp-confirm-title').textContent = '¿Eliminar "' + code + '"?';
+      document.getElementById('cp-confirm-text').textContent = 'Esta acción no se puede deshacer.';
+    }
+    document.getElementById('cp-confirm').classList.add('is-open');
+  };
+
+  window.closeConfirm = function () {
+    document.getElementById('cp-confirm').classList.remove('is-open');
+  };
+
+  document.getElementById('cp-confirm-ok').addEventListener('click', function () {
+    closeConfirm();
+    if (confirmMode === 'bulk') {
+      var ids = [];
+      document.querySelectorAll('.cp-row-check:checked').forEach(function (cb) {
+        var id = parseInt(cb.dataset.id, 10);
+        if (id) ids.push(id);
+      });
+      Promise.all(ids.map(function (id) {
+        return fetch('/multitienda/api/cupones/' + id, { method: 'DELETE' });
+      })).then(function () { apiLoad(); showToast('Cupones eliminados.'); });
+    } else {
+      if (editIdx >= 0) {
+        var id = data[editIdx].id;
+        fetch('/multitienda/api/cupones/' + id, { method: 'DELETE' })
+          .then(function () { closeDrawer(); apiLoad(); showToast('Cupón eliminado.'); });
+      }
+    }
+  });
+
+  /* ── Toast ── */
+  function showToast(msg) {
+    var t = document.getElementById('cp-toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(function () { t.classList.remove('show'); }, 2800);
+  }
+
+  /* ── Init ── */
+  apiLoad();
+})();
+</script>
+</body>
+</html>

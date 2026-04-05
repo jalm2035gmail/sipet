@@ -1,98 +1,26 @@
 from __future__ import annotations
 
-from contextlib import contextmanager
 from collections.abc import Awaitable, Callable
-from datetime import datetime
-from decimal import Decimal
-from enum import Enum
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse
-from sqlalchemy.inspection import inspect as sa_inspect
 
-from fastapi_modulo.modulos.multitienda.marketplace.backend.core.db import SessionLocal
 from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.coupons import service as coupon_service
 from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.followers import service as follower_service
+from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.layaways import service as layaway_service
 from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.loyalty import service as loyalty_service
 from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.suppliers import service as supplier_service
 from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.videos import service as video_service
-from fastapi_modulo.modulos.multitienda.servicios.store_tables import (
-    add_layaway_payment,
-    create_layaway,
-    create_layaway_rich,
-    delete_layaway,
-    delete_layaway_payment,
-    list_layaway_payments,
-    list_layaways,
-    mark_overdue_layaways,
-    set_layaway_status,
-    update_layaway,
-    update_layaway_rich,
+from fastapi_modulo.modulos.multitienda.servicios.data_utils import (
+    managed_session as _managed_session,
+    normalize_datetime_fields as _normalize_datetime_fields,
+    orm_list as _orm_list,
+    orm_to_dict as _orm_to_dict,
 )
 
 
 JsonBodyReader = Callable[[Request], Awaitable[dict]]
 StoreIdResolver = Callable[[Request], int]
-
-
-def _coerce(value):
-    if isinstance(value, datetime):
-        return value.isoformat()
-    if isinstance(value, Decimal):
-        return float(value)
-    if isinstance(value, Enum):
-        return value.value
-    return value
-
-
-def _orm_to_dict(instance) -> dict:
-    return {
-        attr.key: _coerce(getattr(instance, attr.key))
-        for attr in sa_inspect(instance.__class__).mapper.column_attrs
-    }
-
-
-def _orm_list(items) -> list:
-    return [_orm_to_dict(item) for item in items]
-
-
-def _parse_datetime_value(value):
-    if value in (None, ""):
-        return None
-    if isinstance(value, datetime):
-        return value
-    if isinstance(value, str):
-        normalized = value.strip()
-        if not normalized:
-            return None
-        normalized = normalized.replace("Z", "+00:00")
-        try:
-            return datetime.fromisoformat(normalized)
-        except ValueError:
-            return value
-    return value
-
-
-def _normalize_datetime_fields(data: dict, *fields: str) -> dict:
-    normalized = dict(data)
-    for field in fields:
-        if field in normalized:
-            normalized[field] = _parse_datetime_value(normalized[field])
-    return normalized
-
-
-@contextmanager
-def _managed_session(*, commit: bool = False):
-    db = SessionLocal()
-    try:
-        yield db
-        if commit:
-            db.commit()
-    except Exception:
-        db.rollback()
-        raise
-    finally:
-        db.close()
 
 
 def create_admin_api_router(require_store_id: StoreIdResolver, json_body: JsonBodyReader) -> APIRouter:
@@ -262,97 +190,110 @@ def create_admin_api_router(require_store_id: StoreIdResolver, json_body: JsonBo
     @router.get("/multitienda/api/apartados", response_class=JSONResponse)
     def api_list_layaways(request: Request):
         store_id = require_store_id(request)
-        return {"success": True, "data": list_layaways(store_id)}
+        with _managed_session() as db:
+            return {"success": True, "data": layaway_service.list_by_vendor(db, store_id)}
 
     @router.post("/multitienda/api/apartados", response_class=JSONResponse)
     async def api_create_layaway(request: Request):
         store_id = require_store_id(request)
         data = await json_body(request)
-        return {"success": True, "data": create_layaway(store_id, data)}
+        with _managed_session(commit=True) as db:
+            return {"success": True, "data": layaway_service.create_basic(db, store_id, data)}
 
     @router.put("/multitienda/api/apartados/{layaway_id}", response_class=JSONResponse)
     async def api_update_layaway(layaway_id: int, request: Request):
         store_id = require_store_id(request)
         data = await json_body(request)
-        result = update_layaway(store_id, layaway_id, data)
-        if result is None:
-            raise HTTPException(status_code=404, detail="Apartado no encontrado.")
-        return {"success": True, "data": result}
+        with _managed_session(commit=True) as db:
+            result = layaway_service.update_basic(db, store_id, layaway_id, data)
+            if result is None:
+                raise HTTPException(status_code=404, detail="Apartado no encontrado.")
+            return {"success": True, "data": result}
 
     @router.delete("/multitienda/api/apartados/{layaway_id}", response_class=JSONResponse)
     def api_delete_layaway(layaway_id: int, request: Request):
         store_id = require_store_id(request)
-        ok = delete_layaway(store_id, layaway_id)
-        if not ok:
-            raise HTTPException(status_code=404, detail="Apartado no encontrado.")
-        return {"success": True}
+        with _managed_session(commit=True) as db:
+            ok = layaway_service.delete_basic(db, store_id, layaway_id)
+            if not ok:
+                raise HTTPException(status_code=404, detail="Apartado no encontrado.")
+            return {"success": True}
 
     @router.post("/multitienda/api/apartados/crear", response_class=JSONResponse)
     async def api_create_layaway_rich(request: Request):
         store_id = require_store_id(request)
         data = await json_body(request)
-        return {"success": True, "data": create_layaway_rich(store_id, data)}
+        with _managed_session(commit=True) as db:
+            return {"success": True, "data": layaway_service.create_rich(db, store_id, data)}
 
     @router.put("/multitienda/api/apartados/{layaway_id}/editar", response_class=JSONResponse)
     async def api_update_layaway_rich(layaway_id: int, request: Request):
         store_id = require_store_id(request)
         data = await json_body(request)
-        result = update_layaway_rich(store_id, layaway_id, data)
-        if result is None:
-            raise HTTPException(status_code=404, detail="Apartado no encontrado.")
-        return {"success": True, "data": result}
+        with _managed_session(commit=True) as db:
+            result = layaway_service.update_rich(db, store_id, layaway_id, data)
+            if result is None:
+                raise HTTPException(status_code=404, detail="Apartado no encontrado.")
+            return {"success": True, "data": result}
 
     @router.get("/multitienda/api/apartados/{layaway_id}/pagos", response_class=JSONResponse)
     def api_list_layaway_payments(layaway_id: int, request: Request):
         store_id = require_store_id(request)
-        return {"success": True, "data": list_layaway_payments(store_id, layaway_id)}
+        with _managed_session() as db:
+            return {"success": True, "data": layaway_service.list_payments(db, store_id, layaway_id)}
 
     @router.post("/multitienda/api/apartados/{layaway_id}/pagos", response_class=JSONResponse)
     async def api_add_layaway_payment(layaway_id: int, request: Request):
         store_id = require_store_id(request)
         data = await json_body(request)
-        result = add_layaway_payment(store_id, layaway_id, data)
-        if result.get("error"):
-            raise HTTPException(status_code=400, detail=result["error"])
-        return {"success": True, "data": result}
+        with _managed_session(commit=True) as db:
+            result = layaway_service.add_payment(db, store_id, layaway_id, data)
+            if result.get("error"):
+                raise HTTPException(status_code=400, detail=result["error"])
+            return {"success": True, "data": result}
 
     @router.delete("/multitienda/api/apartados/{layaway_id}/pagos/{payment_id}", response_class=JSONResponse)
     def api_delete_layaway_payment(layaway_id: int, payment_id: int, request: Request):
         store_id = require_store_id(request)
-        ok = delete_layaway_payment(store_id, layaway_id, payment_id)
-        if not ok:
-            raise HTTPException(status_code=404, detail="Pago no encontrado.")
-        return {"success": True}
+        with _managed_session(commit=True) as db:
+            ok = layaway_service.delete_payment(db, store_id, layaway_id, payment_id)
+            if not ok:
+                raise HTTPException(status_code=404, detail="Pago no encontrado.")
+            return {"success": True}
 
     @router.post("/multitienda/api/apartados/{layaway_id}/cancelar", response_class=JSONResponse)
     def api_cancel_layaway(layaway_id: int, request: Request):
         store_id = require_store_id(request)
-        result = set_layaway_status(store_id, layaway_id, "cancelado")
-        if not result:
-            raise HTTPException(status_code=404, detail="Apartado no encontrado.")
-        return {"success": True, "data": result}
+        with _managed_session(commit=True) as db:
+            result = layaway_service.set_status(db, store_id, layaway_id, "cancelado")
+            if not result:
+                raise HTTPException(status_code=404, detail="Apartado no encontrado.")
+            return {"success": True, "data": result}
 
     @router.post("/multitienda/api/apartados/{layaway_id}/reactivar", response_class=JSONResponse)
     def api_reactivate_layaway(layaway_id: int, request: Request):
         store_id = require_store_id(request)
-        result = set_layaway_status(store_id, layaway_id, "active")
-        if not result:
-            raise HTTPException(status_code=404, detail="Apartado no encontrado.")
-        return {"success": True, "data": result}
+        with _managed_session(commit=True) as db:
+            result = layaway_service.set_status(db, store_id, layaway_id, "active")
+            if not result:
+                raise HTTPException(status_code=404, detail="Apartado no encontrado.")
+            return {"success": True, "data": result}
 
     @router.post("/multitienda/api/apartados/{layaway_id}/entregar", response_class=JSONResponse)
     def api_deliver_layaway(layaway_id: int, request: Request):
         store_id = require_store_id(request)
-        result = set_layaway_status(store_id, layaway_id, "entregado")
-        if not result:
-            raise HTTPException(status_code=404, detail="Apartado no encontrado.")
-        return {"success": True, "data": result}
+        with _managed_session(commit=True) as db:
+            result = layaway_service.set_status(db, store_id, layaway_id, "entregado")
+            if not result:
+                raise HTTPException(status_code=404, detail="Apartado no encontrado.")
+            return {"success": True, "data": result}
 
     @router.post("/multitienda/api/apartados/vencer", response_class=JSONResponse)
     def api_mark_overdue_layaways(request: Request):
         store_id = require_store_id(request)
-        count = mark_overdue_layaways(store_id)
-        return {"success": True, "updated": count}
+        with _managed_session(commit=True) as db:
+            count = layaway_service.mark_overdue(db, store_id)
+            return {"success": True, "updated": count}
 
     @router.get("/multitienda/api/seguidores", response_class=JSONResponse)
     def api_list_followers(request: Request):

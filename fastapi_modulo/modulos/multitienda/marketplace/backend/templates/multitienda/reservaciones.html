@@ -1,0 +1,461 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Reservaciones — Multitienda</title>
+  <link rel="stylesheet" href="/multitienda/static/css/reservaciones.css" />
+</head>
+<body>
+<main>
+
+  <!-- Toolbar -->
+  <div class="rs-toolbar">
+    <div class="rs-toolbar__left">
+      <button class="rs-btn rs-btn--primary" id="rs-nuevo-btn">
+        <i class="fa-solid fa-calendar-plus"></i> Nueva reservación
+      </button>
+      <button class="rs-btn rs-btn--danger" id="rs-eliminar-btn" disabled>
+        <i class="fa-solid fa-trash"></i> Eliminar
+      </button>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <select class="rs-filter-select" id="rs-filter-estado">
+        <option value="">Todos los estados</option>
+        <option value="pendiente">Pendiente</option>
+        <option value="confirmada">Confirmada</option>
+        <option value="completada">Completada</option>
+        <option value="cancelada">Cancelada</option>
+      </select>
+      <div class="rs-search">
+        <i class="fa-solid fa-magnifying-glass" style="color:var(--rs-muted);font-size:.82rem"></i>
+        <input id="rs-search" type="search" placeholder="Buscar cliente o servicio…" />
+      </div>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="rs-stats">
+    <div class="rs-stat">
+      <div class="rs-stat__icon rs-stat__icon--blue"><i class="fa-solid fa-calendar-days"></i></div>
+      <div><div class="rs-stat__value" id="rs-stat-total">0</div><div class="rs-stat__label">Total</div></div>
+    </div>
+    <div class="rs-stat">
+      <div class="rs-stat__icon rs-stat__icon--amber"><i class="fa-solid fa-hourglass-half"></i></div>
+      <div><div class="rs-stat__value" id="rs-stat-pendientes">0</div><div class="rs-stat__label">Pendientes</div></div>
+    </div>
+    <div class="rs-stat">
+      <div class="rs-stat__icon rs-stat__icon--green"><i class="fa-solid fa-circle-check"></i></div>
+      <div><div class="rs-stat__value" id="rs-stat-confirmadas">0</div><div class="rs-stat__label">Confirmadas</div></div>
+    </div>
+    <div class="rs-stat">
+      <div class="rs-stat__icon rs-stat__icon--red"><i class="fa-solid fa-circle-xmark"></i></div>
+      <div><div class="rs-stat__value" id="rs-stat-canceladas">0</div><div class="rs-stat__label">Canceladas</div></div>
+    </div>
+  </div>
+
+  <!-- Calendar strip (próximos 14 días) -->
+  <div class="rs-cal-strip" id="rs-cal-strip"></div>
+
+  <!-- Tabla -->
+  <div class="rs-table-wrap">
+    <table class="rs-table">
+      <thead>
+        <tr>
+          <th style="width:32px"><input type="checkbox" id="rs-select-all" /></th>
+          <th class="sortable" data-col="cliente">Cliente <span class="sarr">↕</span></th>
+          <th class="sortable" data-col="servicio">Servicio <span class="sarr">↕</span></th>
+          <th class="sortable" data-col="fecha">Fecha <span class="sarr">↕</span></th>
+          <th class="sortable" data-col="hora">Hora <span class="sarr">↕</span></th>
+          <th class="sortable" data-col="estado">Estado <span class="sarr">↕</span></th>
+          <th>Contacto</th>
+          <th style="width:36px"></th>
+        </tr>
+      </thead>
+      <tbody id="rs-tbody"></tbody>
+    </table>
+    <div id="rs-empty" class="rs-empty" hidden>
+      <i class="fa-regular fa-calendar-xmark"></i>
+      Sin reservaciones registradas. Haz clic en <strong>Nueva reservación</strong> para agregar la primera.
+    </div>
+  </div>
+
+  <!-- Drawer / Formulario -->
+  <div class="rs-drawer" id="rs-drawer" role="dialog" aria-modal="true" aria-labelledby="rs-drawer-title">
+    <div class="rs-drawer__head">
+      <h2 class="rs-drawer__title" id="rs-drawer-title">Nueva reservación</h2>
+      <button class="rs-drawer__close" id="rs-drawer-close"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="rs-drawer__body">
+
+      <p class="rs-section-label">Cliente</p>
+      <div class="rs-row-2">
+        <div class="rs-field">
+          <label for="rs-cliente">Nombre del cliente *</label>
+          <input class="rs-input" id="rs-cliente" type="text" placeholder="Nombre completo" />
+        </div>
+        <div class="rs-field">
+          <label for="rs-email">Correo electrónico</label>
+          <input class="rs-input" id="rs-email" type="email" placeholder="correo@ejemplo.com" />
+        </div>
+      </div>
+      <div class="rs-row-2">
+        <div class="rs-field">
+          <label for="rs-telefono">Teléfono</label>
+          <input class="rs-input" id="rs-telefono" type="tel" placeholder="55 1234 5678" />
+        </div>
+        <div class="rs-field">
+          <label for="rs-personas">N.° de personas</label>
+          <input class="rs-input" id="rs-personas" type="number" min="1" step="1" placeholder="1" />
+        </div>
+      </div>
+
+      <p class="rs-section-label">Reservación</p>
+      <div class="rs-field">
+        <label for="rs-servicio">Servicio / producto *</label>
+        <input class="rs-input" id="rs-servicio" type="text" placeholder="Ej. Mesa para 2, Consulta, Tour guiado…" />
+      </div>
+      <div class="rs-row-3">
+        <div class="rs-field">
+          <label for="rs-fecha">Fecha *</label>
+          <input class="rs-input" id="rs-fecha" type="date" />
+        </div>
+        <div class="rs-field">
+          <label for="rs-hora">Hora inicio</label>
+          <input class="rs-input" id="rs-hora" type="time" />
+        </div>
+        <div class="rs-field">
+          <label for="rs-hora-fin">Hora fin</label>
+          <input class="rs-input" id="rs-hora-fin" type="time" />
+        </div>
+      </div>
+      <div class="rs-row-2">
+        <div class="rs-field">
+          <label for="rs-estado">Estado</label>
+          <select class="rs-select" id="rs-estado">
+            <option value="pendiente">Pendiente</option>
+            <option value="confirmada">Confirmada</option>
+            <option value="completada">Completada</option>
+            <option value="cancelada">Cancelada</option>
+          </select>
+        </div>
+        <div class="rs-field">
+          <label for="rs-monto">Monto ($)</label>
+          <input class="rs-input" id="rs-monto" type="number" min="0" step="0.01" placeholder="0.00" />
+        </div>
+      </div>
+      <div class="rs-field">
+        <label for="rs-notas">Notas internas</label>
+        <textarea class="rs-textarea" id="rs-notas" placeholder="Observaciones, requerimientos especiales…"></textarea>
+      </div>
+
+    </div>
+    <div class="rs-drawer__foot">
+      <div class="rs-drawer__foot-left">
+        <button class="rs-btn rs-btn--primary" id="rs-guardar-btn">Guardar</button>
+        <button class="rs-btn" id="rs-descartar-btn">Cancelar</button>
+      </div>
+      <button class="rs-btn rs-btn--danger" id="rs-form-eliminar-btn" style="display:none">
+        <i class="fa-solid fa-trash"></i> Eliminar
+      </button>
+    </div>
+  </div>
+
+  <!-- Confirm delete -->
+  <div class="rs-confirm" id="rs-confirm" hidden>
+    <div class="rs-confirm__card">
+      <h3 class="rs-confirm__title"><i class="fa-solid fa-triangle-exclamation"></i> Eliminar reservación(es)</h3>
+      <p class="rs-confirm__msg" id="rs-confirm-msg">¿Confirmar eliminación?</p>
+      <div class="rs-confirm__actions">
+        <button class="rs-btn" id="rs-confirm-cancel">Cancelar</button>
+        <button class="rs-btn rs-btn--danger" id="rs-confirm-ok">Eliminar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="rs-toast" id="rs-toast"></div>
+
+</main>
+<script>
+(function () {
+  'use strict';
+
+  var STORAGE_KEY = 'multitienda_reservaciones';
+
+  /* ── State ── */
+  var reservaciones = [];
+  var filtered  = [];
+  var selected  = new Set();
+  var editId    = null;
+  var pendingDeleteIds = [];
+  var sortCol = 'fecha', sortAsc = true;
+  var filterEstado = '';
+  var filterDia = null;   /* ISO date string YYYY-MM-DD | null = todos */
+
+  /* ── Elements ── */
+  var tbody         = document.getElementById('rs-tbody');
+  var emptyEl       = document.getElementById('rs-empty');
+  var selectAll     = document.getElementById('rs-select-all');
+  var searchInput   = document.getElementById('rs-search');
+  var filterSelect  = document.getElementById('rs-filter-estado');
+  var nuevoBtn      = document.getElementById('rs-nuevo-btn');
+  var eliminarBtn   = document.getElementById('rs-eliminar-btn');
+  var drawer        = document.getElementById('rs-drawer');
+  var drawerTitle   = document.getElementById('rs-drawer-title');
+  var drawerClose   = document.getElementById('rs-drawer-close');
+  var guardarBtn    = document.getElementById('rs-guardar-btn');
+  var descartarBtn  = document.getElementById('rs-descartar-btn');
+  var formElimBtn   = document.getElementById('rs-form-eliminar-btn');
+  var confirm_      = document.getElementById('rs-confirm');
+  var confirmMsg    = document.getElementById('rs-confirm-msg');
+  var confirmOk     = document.getElementById('rs-confirm-ok');
+  var confirmCancel = document.getElementById('rs-confirm-cancel');
+  var toast         = document.getElementById('rs-toast');
+
+  /* ── Persistence ── */
+  function load() {
+    try { reservaciones = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }
+    catch (e) { reservaciones = []; }
+    reservaciones.forEach(function (r) { if (!r._id) r._id = uid(); });
+  }
+  function save() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(reservaciones)); }
+    catch (e) { showToast('Almacenamiento lleno.', 'error'); }
+  }
+
+  /* ── Utils ── */
+  function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+  function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function fmtDate(iso) {
+    if (!iso) return '—';
+    try { return new Intl.DateTimeFormat('es-MX', { dateStyle: 'medium' }).format(new Date(iso + 'T12:00:00')); }
+    catch (e) { return iso; }
+  }
+  function fmtTime(t) { return t || '—'; }
+
+  /* ── Toast ── */
+  var _toastT;
+  function showToast(msg, type) {
+    toast.textContent = msg;
+    toast.className = 'rs-toast visible' + (type ? ' ' + type : '');
+    clearTimeout(_toastT);
+    _toastT = setTimeout(function () { toast.className = 'rs-toast'; }, 3000);
+  }
+
+  /* ── Stats ── */
+  function updateStats() {
+    document.getElementById('rs-stat-total').textContent = String(reservaciones.length);
+    document.getElementById('rs-stat-pendientes').textContent = String(reservaciones.filter(function(r){ return r.estado === 'pendiente'; }).length);
+    document.getElementById('rs-stat-confirmadas').textContent = String(reservaciones.filter(function(r){ return r.estado === 'confirmada'; }).length);
+    document.getElementById('rs-stat-canceladas').textContent = String(reservaciones.filter(function(r){ return r.estado === 'cancelada'; }).length);
+  }
+
+  /* ── Calendar strip (próximos 14 días) ── */
+  function buildCalStrip() {
+    var strip = document.getElementById('rs-cal-strip');
+    strip.innerHTML = '';
+    var today = new Date(); today.setHours(0,0,0,0);
+    var dows = ['Do','Lu','Ma','Mi','Ju','Vi','Sa'];
+    /* "Todos" pill */
+    var all = document.createElement('div');
+    all.className = 'rs-cal-day' + (!filterDia ? ' active' : '');
+    all.style.width = '64px';
+    all.innerHTML = '<span class="rs-cal-day__dow">Todo</span><span class="rs-cal-day__num" style="font-size:.85rem">el mes</span>';
+    all.addEventListener('click', function () { filterDia = null; buildCalStrip(); applyFilterSort(); });
+    strip.appendChild(all);
+
+    for (var i = 0; i < 14; i++) {
+      var d = new Date(today); d.setDate(today.getDate() + i);
+      var iso = d.toISOString().slice(0, 10);
+      var hasEvents = reservaciones.some(function (r) { return r.fecha === iso; });
+      var el = document.createElement('div');
+      el.className = 'rs-cal-day' + (filterDia === iso ? ' active' : '') + (hasEvents ? ' has-events' : '');
+      el.innerHTML =
+        '<span class="rs-cal-day__dow">' + dows[d.getDay()] + '</span>' +
+        '<span class="rs-cal-day__num">' + d.getDate() + '</span>';
+      el.dataset.iso = iso;
+      el.addEventListener('click', function () {
+        filterDia = this.dataset.iso === filterDia ? null : this.dataset.iso;
+        buildCalStrip(); applyFilterSort();
+      });
+      strip.appendChild(el);
+    }
+  }
+
+  /* ── Filter / Sort ── */
+  function applyFilterSort() {
+    var q = (searchInput.value || '').toLowerCase();
+    filtered = reservaciones.filter(function (r) {
+      if (filterDia && r.fecha !== filterDia) return false;
+      if (filterEstado && r.estado !== filterEstado) return false;
+      if (!q) return true;
+      return (r.cliente||'').toLowerCase().includes(q) ||
+             (r.servicio||'').toLowerCase().includes(q) ||
+             (r.email||'').toLowerCase().includes(q);
+    });
+    filtered.sort(function (a, b) {
+      var va = String(a[sortCol] || ''), vb = String(b[sortCol] || '');
+      if (sortCol === 'monto') { va = parseFloat(va)||0; vb = parseFloat(vb)||0; return sortAsc ? va-vb : vb-va; }
+      return sortAsc ? va.localeCompare(vb, 'es') : vb.localeCompare(va, 'es');
+    });
+    renderTable();
+  }
+
+  /* badge config */
+  var BADGE = {
+    pendiente:  { cls: 'pending',   label: 'Pendiente',   icon: 'fa-hourglass-half' },
+    confirmada: { cls: 'confirmed', label: 'Confirmada',  icon: 'fa-circle-check' },
+    completada: { cls: 'completed', label: 'Completada',  icon: 'fa-flag-checkered' },
+    cancelada:  { cls: 'cancelled', label: 'Cancelada',   icon: 'fa-circle-xmark' },
+  };
+
+  /* ── Render ── */
+  function renderTable() {
+    tbody.innerHTML = '';
+    emptyEl.hidden = filtered.length > 0;
+    filtered.forEach(function (r) {
+      var tr = document.createElement('tr');
+      tr.dataset.id = r._id;
+      var b = BADGE[r.estado] || { cls: 'pending', label: r.estado || '—', icon: 'fa-circle' };
+      tr.innerHTML =
+        '<td><input type="checkbox" class="rs-check" data-id="' + esc(r._id) + '" ' + (selected.has(r._id) ? 'checked' : '') + ' /></td>' +
+        '<td><strong>' + esc(r.cliente||'—') + '</strong>' + (r.personas && r.personas > 1 ? ' <span style="font-size:.76rem;color:var(--rs-muted)">×' + r.personas + '</span>' : '') + '</td>' +
+        '<td>' + esc(r.servicio||'—') + '</td>' +
+        '<td>' + fmtDate(r.fecha) + '</td>' +
+        '<td>' + fmtTime(r.hora) + (r.horaFin ? ' – ' + fmtTime(r.horaFin) : '') + '</td>' +
+        '<td><span class="rs-badge rs-badge--' + b.cls + '"><i class="fa-solid ' + b.icon + '"></i>' + b.label + '</span></td>' +
+        '<td style="font-size:.8rem;color:var(--rs-muted)">' + esc(r.telefono || r.email || '—') + '</td>' +
+        '<td><button class="rs-btn" style="min-height:28px;padding:0 10px;font-size:.76rem" data-edit="' + esc(r._id) + '"><i class="fa-solid fa-pen"></i></button></td>';
+      tbody.appendChild(tr);
+    });
+    /* sort arrows */
+    document.querySelectorAll('.rs-table th.sortable').forEach(function (th) {
+      var sp = th.querySelector('.sarr'); if (!sp) return;
+      if (th.dataset.col === sortCol) { sp.textContent = sortAsc ? '↑' : '↓'; sp.style.color = 'var(--rs-accent)'; }
+      else { sp.textContent = '↕'; sp.style.color = 'var(--rs-muted)'; }
+    });
+    syncEliminarBtn();
+    updateStats();
+    selectAll.checked = filtered.length > 0 && filtered.every(function (r) { return selected.has(r._id); });
+    selectAll.indeterminate = !selectAll.checked && filtered.some(function (r) { return selected.has(r._id); });
+  }
+
+  /* ── Selection ── */
+  function syncEliminarBtn() { eliminarBtn.disabled = selected.size === 0; }
+
+  tbody.addEventListener('change', function (e) {
+    var cb = e.target.closest('.rs-check'); if (!cb) return;
+    if (cb.checked) selected.add(cb.dataset.id); else selected.delete(cb.dataset.id);
+    renderTable();
+  });
+  selectAll.addEventListener('change', function () {
+    filtered.forEach(function (r) { if (selectAll.checked) selected.add(r._id); else selected.delete(r._id); });
+    renderTable();
+  });
+  document.querySelectorAll('.rs-table th.sortable').forEach(function (th) {
+    th.addEventListener('click', function () {
+      if (sortCol === th.dataset.col) sortAsc = !sortAsc; else { sortCol = th.dataset.col; sortAsc = true; }
+      applyFilterSort();
+    });
+  });
+  searchInput.addEventListener('input', applyFilterSort);
+  filterSelect.addEventListener('change', function () { filterEstado = this.value; applyFilterSort(); });
+
+  tbody.addEventListener('click', function (e) {
+    var editBtn = e.target.closest('[data-edit]');
+    if (editBtn) { openDrawer(editBtn.dataset.edit); return; }
+    var tr = e.target.closest('tr[data-id]');
+    if (tr && !e.target.closest('.rs-check') && !e.target.closest('[data-edit]')) openDrawer(tr.dataset.id);
+  });
+
+  /* ── Drawer ── */
+  function openDrawer(id) {
+    editId = id || null;
+    var r = id ? reservaciones.find(function (x) { return x._id === id; }) : null;
+    drawerTitle.textContent = r ? 'Editar reservación' : 'Nueva reservación';
+    document.getElementById('rs-cliente').value   = r ? (r.cliente  || '') : '';
+    document.getElementById('rs-email').value     = r ? (r.email    || '') : '';
+    document.getElementById('rs-telefono').value  = r ? (r.telefono || '') : '';
+    document.getElementById('rs-personas').value  = r ? (r.personas || '') : '';
+    document.getElementById('rs-servicio').value  = r ? (r.servicio || '') : '';
+    document.getElementById('rs-fecha').value     = r ? (r.fecha    || '') : '';
+    document.getElementById('rs-hora').value      = r ? (r.hora     || '') : '';
+    document.getElementById('rs-hora-fin').value  = r ? (r.horaFin  || '') : '';
+    document.getElementById('rs-estado').value    = r ? (r.estado   || 'pendiente') : 'pendiente';
+    document.getElementById('rs-monto').value     = r ? (r.monto    || '') : '';
+    document.getElementById('rs-notas').value     = r ? (r.notas    || '') : '';
+    formElimBtn.style.display = r ? '' : 'none';
+    drawer.classList.add('open');
+    document.getElementById('rs-cliente').focus();
+  }
+
+  function closeDrawer() { drawer.classList.remove('open'); editId = null; }
+
+  drawerClose.addEventListener('click', closeDrawer);
+  descartarBtn.addEventListener('click', closeDrawer);
+  nuevoBtn.addEventListener('click', function () { openDrawer(null); });
+
+  /* ── Save ── */
+  guardarBtn.addEventListener('click', function () {
+    var cliente = document.getElementById('rs-cliente').value.trim();
+    var servicio = document.getElementById('rs-servicio').value.trim();
+    var fecha = document.getElementById('rs-fecha').value;
+    if (!cliente) { showToast('El nombre del cliente es obligatorio.', 'error'); return; }
+    if (!servicio) { showToast('El servicio es obligatorio.', 'error'); return; }
+    if (!fecha) { showToast('La fecha es obligatoria.', 'error'); return; }
+    var r = {
+      cliente:  cliente,
+      email:    document.getElementById('rs-email').value.trim(),
+      telefono: document.getElementById('rs-telefono').value.trim(),
+      personas: document.getElementById('rs-personas').value,
+      servicio: servicio,
+      fecha:    fecha,
+      hora:     document.getElementById('rs-hora').value,
+      horaFin:  document.getElementById('rs-hora-fin').value,
+      estado:   document.getElementById('rs-estado').value,
+      monto:    document.getElementById('rs-monto').value,
+      notas:    document.getElementById('rs-notas').value.trim(),
+      creadoEn: editId ? (reservaciones.find(function(x){return x._id===editId;})||{}).creadoEn || new Date().toISOString() : new Date().toISOString(),
+    };
+    if (editId) {
+      var idx = reservaciones.findIndex(function (x) { return x._id === editId; });
+      if (idx >= 0) { r._id = editId; reservaciones[idx] = r; }
+    } else {
+      r._id = uid(); reservaciones.push(r);
+    }
+    save(); closeDrawer(); buildCalStrip(); applyFilterSort();
+    showToast(editId ? 'Reservación actualizada.' : 'Reservación registrada.', 'success');
+  });
+
+  /* ── Delete ── */
+  function askDelete(ids, msg) { pendingDeleteIds = ids; confirmMsg.textContent = msg; confirm_.hidden = false; }
+  var pendingDeleteIds = [];
+
+  confirmCancel.addEventListener('click', function () { confirm_.hidden = true; pendingDeleteIds = []; });
+  confirmOk.addEventListener('click', function () {
+    pendingDeleteIds.forEach(function (id) {
+      reservaciones = reservaciones.filter(function (r) { return r._id !== id; });
+      selected.delete(id);
+    });
+    confirm_.hidden = true; pendingDeleteIds = [];
+    save(); closeDrawer(); buildCalStrip(); applyFilterSort();
+    showToast('Reservación(es) eliminada(s).', 'success');
+  });
+
+  eliminarBtn.addEventListener('click', function () {
+    if (!selected.size) return;
+    askDelete(Array.from(selected), '¿Eliminar ' + selected.size + ' reservación(es)? Esta acción no se puede deshacer.');
+  });
+  formElimBtn.addEventListener('click', function () {
+    if (!editId) return;
+    var r = reservaciones.find(function (x) { return x._id === editId; });
+    askDelete([editId], '¿Eliminar la reservación de "' + (r ? r.cliente : editId) + '"? Esta acción no se puede deshacer.');
+  });
+
+  /* ── Init ── */
+  load(); buildCalStrip(); applyFilterSort();
+})();
+</script>
+</body>
+</html>

@@ -1,37 +1,16 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime
-from decimal import Decimal
-from enum import Enum
 
 from sqlalchemy import text
-from sqlalchemy.inspection import inspect as sa_inspect
 from sqlalchemy.orm import Session
 
 from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.products.models import ProductImage
 from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.vendors.models import VendorStore
-
-
-def _coerce(value):
-    if isinstance(value, datetime):
-        return value.isoformat()
-    if isinstance(value, Decimal):
-        return float(value)
-    if isinstance(value, Enum):
-        return value.value
-    return value
-
-
-def _orm_to_dict(instance) -> dict:
-    return {
-        attr.key: _coerce(getattr(instance, attr.key))
-        for attr in sa_inspect(instance.__class__).mapper.column_attrs
-    }
-
-
-def _orm_list(query) -> list:
-    return [_orm_to_dict(item) for item in query.all()]
+from fastapi_modulo.modulos.multitienda.servicios.data_utils import (
+    coerce_value as _coerce,
+    orm_list as _orm_list,
+)
 
 
 def _rows(db: Session, sql: str, params=None) -> list:

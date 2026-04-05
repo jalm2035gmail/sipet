@@ -17,12 +17,20 @@ class StoreEmployeeCreate(BaseModel):
     user_id: int
     role: EmployeeRole = EmployeeRole.seller
     position: Optional[str] = ""
+    full_name: Optional[str] = ""
+    job_title: Optional[str] = ""
+    phone: Optional[str] = ""
+    department: Optional[str] = ""
     is_active: bool = True
 
 
 class StoreEmployeeUpdate(BaseModel):
     role: Optional[EmployeeRole] = None
     position: Optional[str] = None
+    full_name: Optional[str] = None
+    job_title: Optional[str] = None
+    phone: Optional[str] = None
+    department: Optional[str] = None
     is_active: Optional[bool] = None
 
 
@@ -32,6 +40,10 @@ class StoreEmployeeRead(BaseModel):
     user_id: int
     role: EmployeeRole
     position: Optional[str]
+    full_name: Optional[str]
+    job_title: Optional[str]
+    phone: Optional[str]
+    department: Optional[str]
     is_active: bool
     created_at: datetime
     updated_at: datetime
