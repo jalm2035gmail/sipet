@@ -30,14 +30,32 @@ def test_inspect_module_zip_reports_new_changed_and_unchanged(monkeypatch, tmp_p
         },
     )
     monkeypatch.setattr(package_repository, "get_module_upload_root", lambda module_key: str(module_root))
-    monkeypatch.setattr(package_repository, "_validate_staged_module_architecture", lambda module_key, target_root, staging_root: None)
+    monkeypatch.setattr(
+        package_repository,
+        "_validate_staged_module_architecture",
+        lambda module_key, target_root, staging_root, entries: {
+            "architecture_mode": "full",
+            "architecture_ok": True,
+            "architecture_errors": [],
+            "architecture_warnings": [],
+        },
+    )
 
     inspection = package_repository.inspect_module_zip("modulo", str(zip_path))
 
+    assert inspection["inspection_id"].startswith("modulo-")
     assert inspection["total_files"] == 3
     assert inspection["new_files"] == 1
     assert inspection["changed_files"] == 1
     assert inspection["unchanged_files"] == 1
+    assert inspection["architecture_mode"] == "full"
+    changed_entry = next(entry for entry in inspection["entries"] if entry["relative_path"] == "edit.txt")
+    assert changed_entry["destination_checksum"]
+    assert changed_entry["staged_checksum"]
+    assert changed_entry["existed_before"] is True
+    new_entry = next(entry for entry in inspection["entries"] if entry["relative_path"] == "new.txt")
+    assert new_entry["destination_checksum"] == ""
+    assert new_entry["existed_before"] is False
     assert (module_root / "new.txt").exists() is False
     assert Path(str(inspection["staging_root"])).is_dir()
     package_repository.cleanup_staging_dir(str(inspection["staging_root"]))
@@ -77,10 +95,19 @@ def test_apply_module_zip_uses_staging_before_target(monkeypatch, tmp_path: Path
     zip_path = tmp_path / "package.zip"
     _build_zip(zip_path, {"modulo/edit.txt": b"new", "modulo/new.txt": b"fresh"})
     monkeypatch.setattr(package_repository, "get_module_upload_root", lambda module_key: str(module_root))
-    monkeypatch.setattr(package_repository, "_validate_staged_module_architecture", lambda module_key, target_root, staging_root: None)
+    monkeypatch.setattr(
+        package_repository,
+        "_validate_staged_module_architecture",
+        lambda module_key, target_root, staging_root, entries: {
+            "architecture_mode": "full",
+            "architecture_ok": True,
+            "architecture_errors": [],
+            "architecture_warnings": [],
+        },
+    )
 
     inspection = package_repository.inspect_module_zip("modulo", str(zip_path))
-    package_repository.apply_module_zip(str(zip_path), inspection)
+    package_repository.apply_staged_entries(inspection)
 
     assert (module_root / "edit.txt").read_text(encoding="utf-8") == "new"
     assert (module_root / "new.txt").read_text(encoding="utf-8") == "fresh"
@@ -93,7 +120,16 @@ def test_inspect_module_zip_accepts_alias_root_named_after_module_key(monkeypatc
     zip_path = tmp_path / "package.zip"
     _build_zip(zip_path, {"organizacion/empleados.txt": b"fresh"})
     monkeypatch.setattr(package_repository, "get_module_upload_root", lambda module_key: str(module_root))
-    monkeypatch.setattr(package_repository, "_validate_staged_module_architecture", lambda module_key, target_root, staging_root: None)
+    monkeypatch.setattr(
+        package_repository,
+        "_validate_staged_module_architecture",
+        lambda module_key, target_root, staging_root, entries: {
+            "architecture_mode": "light",
+            "architecture_ok": True,
+            "architecture_errors": [],
+            "architecture_warnings": [],
+        },
+    )
 
     inspection = package_repository.inspect_module_zip("organizacion", str(zip_path))
 
@@ -114,13 +150,39 @@ def test_inspect_module_zip_accepts_wrapper_directory_around_module_root(monkeyp
         },
     )
     monkeypatch.setattr(package_repository, "get_module_upload_root", lambda module_key: str(module_root))
-    monkeypatch.setattr(package_repository, "_validate_staged_module_architecture", lambda module_key, target_root, staging_root: None)
+    monkeypatch.setattr(
+        package_repository,
+        "_validate_staged_module_architecture",
+        lambda module_key, target_root, staging_root, entries: {
+            "architecture_mode": "full",
+            "architecture_ok": True,
+            "architecture_errors": [],
+            "architecture_warnings": [],
+        },
+    )
 
     inspection = package_repository.inspect_module_zip("capacitacion", str(zip_path))
 
     preview_paths = [entry["path"] for entry in inspection["preview_files"]]
     assert preview_paths == ["__manifest__.py", "static/js/app.js"]
     package_repository.cleanup_staging_dir(str(inspection["staging_root"]))
+
+
+def test_validate_staged_module_architecture_uses_light_mode_for_non_critical_paths(tmp_path: Path) -> None:
+    module_root = tmp_path / "modulo"
+    staging_root = tmp_path / "stage"
+    module_root.mkdir()
+    staging_root.mkdir()
+
+    result = package_repository._validate_staged_module_architecture(
+        "modulo",
+        str(module_root),
+        str(staging_root),
+        [{"relative_path": "static/js/app.js", "status": "changed"}],
+    )
+
+    assert result["architecture_mode"] == "light"
+    assert result["architecture_ok"] is True
 
 
 def test_restore_module_snapshot_restores_previous_state(monkeypatch, tmp_path: Path) -> None:

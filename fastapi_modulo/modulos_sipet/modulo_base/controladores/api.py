@@ -4,9 +4,14 @@ import logging
 from typing import Annotated
 
 from fastapi import APIRouter, BackgroundTasks, Depends
+from sqlalchemy.orm import Session
 
 from fastapi_modulo.modulos_sipet.modulo_base.bootstrap import response_builder
-from fastapi_modulo.modulos_sipet.modulo_base.controladores.dependencies import get_modulo_base_request_context, get_modulo_base_tenant_id
+from fastapi_modulo.modulos_sipet.modulo_base.controladores.dependencies import (
+    get_modulo_base_db,
+    get_modulo_base_request_context,
+    get_modulo_base_tenant_id,
+)
 from fastapi_modulo.modulos_sipet.modulo_base.modelos.schemas import (
     APIErrorResponse,
     APIHealthResponse,
@@ -44,9 +49,17 @@ def modulo_base_health(
     response_model=APIResumenResponse,
     responses={403: {"model": APIErrorResponse}, 422: {"model": APIErrorResponse}},
 )
-def modulo_base_resumen(tenant_id: Annotated[str, Depends(get_modulo_base_tenant_id)]):
+def modulo_base_resumen(
+    tenant_id: Annotated[str, Depends(get_modulo_base_tenant_id)],
+    db: Annotated[Session, Depends(get_modulo_base_db)],
+):
     try:
-        payload = ModuloBaseResumenResponse.model_validate(get_modulo_base_resumen(tenant_id))
+        payload = ModuloBaseResumenResponse.model_validate(
+            get_modulo_base_resumen(
+                db=db,
+                tenant_id=tenant_id,
+            )
+        )
     except PermissionError as exc:
         return response_builder.forbidden_response(str(exc))
     except ValueError as exc:

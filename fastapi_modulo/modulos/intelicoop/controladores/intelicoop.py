@@ -59,6 +59,7 @@ from fastapi_modulo.modulos.intelicoop.modelos.intelicoop_store import (
     list_transacciones,
 )
 from fastapi_modulo.modulos.intelicoop.services.analytics_service import (
+    get_aggregate_consumption_summary_service,
     get_cohortes_service,
     get_dashboard_resumen_service,
     get_descriptive_analytics_service,
@@ -1083,6 +1084,11 @@ def api_foundation_materialize(payload: FoundationMaterializeInput):
 @router.get("/api/intelicoop/analitica/resumen")
 def api_analitica_resumen():
     return JSONResponse(get_descriptive_analytics_service())
+
+
+@router.get("/api/intelicoop/consumo-agregado/resumen")
+def api_consumo_agregado_resumen():
+    return JSONResponse(get_aggregate_consumption_summary_service())
 
 
 @router.get("/api/intelicoop/analitica/tendencias")

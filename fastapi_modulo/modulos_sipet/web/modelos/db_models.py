@@ -92,6 +92,7 @@ class WebLoginIdentity(MAIN):
     company_short_name = Column(String(60), nullable=False, default="AVAN")
     login_message = Column(String(200), nullable=False, default="Incrementando el nivel de eficiencia")
     menu_position = Column(String(16), nullable=False, default="arriba")
+    sidebar_style_variant = Column(String(16), nullable=False, default="modern")
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 

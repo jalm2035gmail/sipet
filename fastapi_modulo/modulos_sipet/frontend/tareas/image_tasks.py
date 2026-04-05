@@ -59,6 +59,7 @@ _THUMB_WIDTH       = int(os.environ.get("THUMBNAIL_WIDTH", "320"))
 _THUMB_HEIGHT      = int(os.environ.get("THUMBNAIL_HEIGHT", "240"))
 _ALLOWED_EXTS      = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
 _SKIP_OPTIMIZE_EXT = {".svg", ".gif"}   # SVG no se rasteriza; GIF pierde animación
+_GALLERY_CACHE_KEY = "gallery:list"
 
 logger       = logging.getLogger(__name__)
 task_logger  = get_task_logger(__name__)
@@ -173,13 +174,16 @@ def optimize_gallery_image(
     max_height: Optional[int] = None,
     quality: Optional[int] = None,
     convert_to_webp: bool = True,
+    image_id: Optional[str] = None,
 ) -> Dict:
     """
     Optimiza una imagen de la galería en background:
       1. Redimensiona a máx max_width × max_height manteniendo aspect ratio.
       2. Convierte a WebP (si convert_to_webp=True y el formato lo permite).
       3. Elimina el archivo original si se guardó con un nombre distinto.
-      4. Devuelve un dict con la nueva URL y métricas de ahorro.
+      4. Actualiza el registro BD (si image_id está presente).
+      5. Invalida la caché de la lista de galería.
+      6. Devuelve un dict con la nueva URL y métricas de ahorro.
 
     Args:
         filename:        Nombre del archivo en _GALLERY_DIR (ej. "abc123.png").
@@ -187,6 +191,8 @@ def optimize_gallery_image(
         max_height:      Override del alto máximo (default: _MAX_HEIGHT).
         quality:         Override de calidad WebP 1-100 (default: _WEBP_QUALITY).
         convert_to_webp: Si False, guarda en el formato original.
+        image_id:        UUID hex del registro en BD (opcional). Si se provee,
+                         se actualizan filename, url, status y size_kb al terminar.
 
     Returns:
         {
@@ -202,15 +208,37 @@ def optimize_gallery_image(
     src_path = Path(_GALLERY_DIR) / filename
     ext      = src_path.suffix.lower()
 
-    task_logger.info("optimize_gallery_image: procesando '%s'", filename)
+    task_logger.info("optimize_gallery_image: procesando '%s' (image_id=%s)", filename, image_id)
+
+    # ── Helpers para BD y caché ───────────────────────────────────────────────
+    def _db_update(**kwargs):
+        if not image_id:
+            return
+        try:
+            from fastapi_modulo.modulos_sipet.frontend.modelos.frontend_store import update_gallery_image
+            update_gallery_image(image_id, **kwargs)
+        except Exception as db_exc:
+            task_logger.warning("optimize_gallery_image: no se pudo actualizar BD: %s", db_exc)
+
+    def _cache_invalidate():
+        try:
+            from fastapi_modulo.modulos_sipet.frontend.servicios import cache_service
+            cache_service.delete(_GALLERY_CACHE_KEY)
+        except Exception as cache_exc:
+            task_logger.warning("optimize_gallery_image: no se pudo invalidar caché: %s", cache_exc)
 
     # ── Validaciones previas ──────────────────────────────────────────────────
     if not src_path.exists():
         task_logger.warning("optimize_gallery_image: archivo no encontrado: %s", src_path)
+        _db_update(status="failed", error=f"Archivo no encontrado: {filename}")
+        _cache_invalidate()
         return {"status": "error", "error": f"Archivo no encontrado: {filename}"}
 
     if ext in _SKIP_OPTIMIZE_EXT:
         task_logger.info("optimize_gallery_image: formato %s omitido (sin optimización)", ext)
+        final_kb = _file_size_kb(src_path)
+        _db_update(status="optimized", size_kb=round(final_kb, 1))
+        _cache_invalidate()
         return {
             "status":        "skipped",
             "original_file": filename,
@@ -252,17 +280,26 @@ def optimize_gallery_image(
 
         final_kb  = _file_size_kb(dest_path)
         saved_pct = round((1 - final_kb / original_kb) * 100, 1) if original_kb > 0 else 0.0
+        final_url = f"/static/gallery/{dest_path.name}"
 
         task_logger.info(
             "optimize_gallery_image: '%s' → '%s' | %.1fKB → %.1fKB (%.1f%% ahorrado)",
             filename, dest_path.name, original_kb, final_kb, saved_pct,
         )
 
+        _db_update(
+            filename=dest_path.name,
+            url=final_url,
+            status="optimized",
+            size_kb=round(final_kb, 1),
+        )
+        _cache_invalidate()
+
         return {
             "status":        "optimized",
             "original_file": filename,
             "final_file":    dest_path.name,
-            "final_url":     f"/static/gallery/{dest_path.name}",
+            "final_url":     final_url,
             "original_kb":   round(original_kb, 1),
             "final_kb":      round(final_kb, 1),
             "saved_pct":     saved_pct,
@@ -273,6 +310,8 @@ def optimize_gallery_image(
         try:
             raise self.retry(exc=exc)
         except self.MaxRetriesExceededError:
+            _db_update(status="failed", error=str(exc))
+            _cache_invalidate()
             return {"status": "error", "original_file": filename, "error": str(exc)}
 
 
@@ -471,6 +510,16 @@ def cleanup_orphan_images() -> Dict:
     if not all_files:
         return {"status": "skipped", "reason": "Galería vacía", "orphans": 0}
 
+    # Recopilar estados desde BD: no mover imágenes aún en tránsito
+    transient_filenames: set[str] = set()
+    try:
+        from fastapi_modulo.modulos_sipet.frontend.modelos.frontend_store import list_gallery_images
+        for record in list_gallery_images():
+            if record.get("status") in ("uploaded", "processing"):
+                transient_filenames.add(record["filename"])
+    except Exception as exc:
+        task_logger.warning("cleanup_orphan_images: no se pudo consultar BD de galería: %s", exc)
+
     # Recopilar todo el HTML de páginas desde la BD
     try:
         from fastapi_modulo.modulos_sipet.frontend.modelos.frontend_store import list_pages
@@ -486,9 +535,10 @@ def cleanup_orphan_images() -> Dict:
         return {"status": "error", "error": str(exc)}
 
     # Detectar huérfanas: archivos cuyo nombre no aparece en ningún HTML
+    # y que no estén en proceso de optimización (transient states)
     orphans = [
         fname for fname in all_files
-        if fname not in all_html
+        if fname not in all_html and fname not in transient_filenames
     ]
 
     if not orphans:

@@ -1,0 +1,84 @@
+{% extends "app_base.html" %}
+
+{% block title %}Notificaciones · {{ app_name }}{% endblock %}
+{% block topbar_title %}Notificaciones{% endblock %}
+{% block nav_notifications %}nav-active{% endblock %}
+
+{% block content %}
+<div class="page-toolbar">
+  <button class="btn btn-ghost btn-sm" id="notif-mark-all" type="button">Marcar todas leídas</button>
+</div>
+
+<div class="notif-filters">
+  <button class="filter-chip filter-active" data-filter="all">Todas</button>
+  <button class="filter-chip" data-filter="unread">No leídas</button>
+  <button class="filter-chip" data-filter="critical">Críticas</button>
+</div>
+
+<div id="notif-list" class="notif-list">
+  <p class="loading-text">Cargando notificaciones…</p>
+</div>
+
+<!-- Push permission card -->
+<div class="push-card" id="push-card" style="display:none">
+  <p class="push-card-text">Activa las notificaciones push para recibir alertas aunque la app esté cerrada.</p>
+  <button class="btn btn-primary" id="push-enable-btn" type="button">Activar notificaciones push</button>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="/static/js/notifications.js"></script>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.addEventListener("DOMContentLoaded", async () => {
+    NotifApp.init("notif-list");
+
+    // Filter chips
+    document.querySelectorAll(".filter-chip").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        document.querySelectorAll(".filter-chip").forEach((b) => b.classList.remove("filter-active"));
+        btn.classList.add("filter-active");
+        const filter = btn.dataset.filter;
+        const container = document.getElementById("notif-list");
+        container.innerHTML = '<p class="loading-text">Cargando…</p>';
+
+        const params = { limit: 50 };
+        if (filter === "unread") params.unread_only = "true";
+
+        const res = await apiFetch(`/api/v2/pwa/notifications?${new URLSearchParams(params)}`);
+        if (res.ok) {
+          const notifs = await res.json();
+          container.innerHTML = "";
+          const filtered = filter === "critical"
+            ? notifs.filter((n) => n.severity === "crítica")
+            : notifs;
+          if (!filtered.length) {
+            container.innerHTML = '<p class="empty-state">Sin notificaciones en esta categoría.</p>';
+          } else {
+            NotifApp.init("notif-list"); // re-init will reload
+          }
+        }
+      });
+    });
+
+    // Push permission
+    if (Push.isSupported()) {
+      const status = await Push.getStatus();
+      if (status.permission !== "granted") {
+        document.getElementById("push-card").style.display = "";
+        document.getElementById("push-enable-btn").addEventListener("click", async () => {
+          try {
+            await Push.subscribe();
+            document.getElementById("push-card").style.display = "none";
+            toast("Notificaciones push activadas", "success");
+          } catch (err) {
+            toast(err.message, "error");
+          }
+        });
+      }
+    }
+  });
+</script>
+{% endblock %}

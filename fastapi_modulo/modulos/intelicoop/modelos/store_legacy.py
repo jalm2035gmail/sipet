@@ -5266,3 +5266,223 @@ def get_dashboard_resumen(cut_key: str | None = None) -> Dict[str, Any]:
         }
     finally:
         db.close()
+
+
+def _safe_growth(current_value: float, previous_value: float) -> float:
+    previous = float(previous_value or 0)
+    current = float(current_value or 0)
+    if previous <= 0:
+        return 0.0 if current <= 0 else 1.0
+    return round((current - previous) / previous, 4)
+
+
+def _build_aggregate_segment_rows(
+    grouped_rows: Dict[str, List[Dict[str, Any]]],
+    entity_label: str,
+) -> List[Dict[str, Any]]:
+    aggregates = []
+    for label, rows in grouped_rows.items():
+        total_entities = len(rows)
+        volumen = round(sum(float(row.get("volumen", 0) or 0) for row in rows), 2)
+        recurrencia = round(
+            sum(float(row.get("recurrencia", 0) or 0) for row in rows) / total_entities,
+            4,
+        ) if total_entities else 0.0
+        ticket = round(
+            sum(float(row.get("ticket", 0) or 0) for row in rows) / total_entities,
+            2,
+        ) if total_entities else 0.0
+        crecimiento = round(
+            sum(float(row.get("crecimiento", 0) or 0) for row in rows) / total_entities,
+            4,
+        ) if total_entities else 0.0
+        financiables = sum(1 for row in rows if row.get("financiable"))
+        riesgo_alto = sum(1 for row in rows if str(row.get("riesgo") or "") == "alto")
+        riesgo_medio = sum(1 for row in rows if str(row.get("riesgo") or "") == "medio")
+        aggregates.append({
+            "segmento": label,
+            "entity_type": entity_label,
+            "total": total_entities,
+            "volumen": volumen,
+            "recurrencia": recurrencia,
+            "ticket": ticket,
+            "crecimiento": crecimiento,
+            "financiables": financiables,
+            "riesgo_alto": riesgo_alto,
+            "riesgo_medio": riesgo_medio,
+        })
+    return sorted(aggregates, key=lambda row: (-row["volumen"], -row["total"], row["segmento"]))
+
+
+def get_aggregate_consumption_summary(cut_key: str | None = None) -> Dict[str, Any]:
+    db = _db()
+    try:
+        resolved_cut_key = _resolve_cut_key(db, cut_key)
+        dashboard = get_dashboard_resumen(cut_key=resolved_cut_key)
+        segmentation = get_segmentation_propensity_summary(cut_key=resolved_cut_key) if resolved_cut_key else {"resumen": {}, "socios": []}
+        tendencias = _compute_tendencias_resumen(db, n_cuts=2)
+
+        if not resolved_cut_key:
+            return {
+                "cut_key": None,
+                "dataset_contract": {
+                    "scope": "consumo_agregado",
+                    "privacy_mode": "sin_datos_individuales",
+                    "contains_individual_data": False,
+                    "segments_enabled": ["comercios", "usuarios", "zonas"],
+                },
+                "datasets": {
+                    "consumo_agregado": [],
+                    "segmentacion": {"comercios": [], "usuarios": [], "zonas": []},
+                },
+                "indicadores": {"volumen": 0.0, "recurrencia": 0.0, "ticket": 0.0, "crecimiento": 0.0},
+                "scoring_comercial": {"score_promedio": 0.0, "financiables_detectados": 0, "bandas": []},
+                "entregables": {
+                    "tablero_financiero": {"disponible": True, "route": "/inicio/intelicoop", "api": "/api/intelicoop/dashboard/resumen"},
+                    "indicadores": {"disponible": True, "api": "/api/intelicoop/consumo-agregado/resumen"},
+                    "alertas": {"disponible": True, "api": "/api/intelicoop/batch/alertas"},
+                },
+            }
+
+        socio_feature_rows = (
+            db.query(IntelicoopSocioFeatureSnapshot)
+            .filter(IntelicoopSocioFeatureSnapshot.cut_key == resolved_cut_key)
+            .all()
+        )
+        socios = (
+            db.query(IntelicoopSocio)
+            .filter(IntelicoopSocio.id.in_([row.socio_id for row in socio_feature_rows] or [0]))
+            .all()
+        )
+        socio_map = {int(row.id): row for row in socios}
+
+        previous_cut = (
+            db.query(IntelicoopAnalyticCut)
+            .filter(IntelicoopAnalyticCut.cut_key != resolved_cut_key)
+            .order_by(IntelicoopAnalyticCut.cut_date.desc(), IntelicoopAnalyticCut.id.desc())
+            .first()
+        )
+        previous_socio_rows = (
+            db.query(IntelicoopSocioFeatureSnapshot)
+            .filter(IntelicoopSocioFeatureSnapshot.cut_key == str(previous_cut.cut_key))
+            .all()
+        ) if previous_cut else []
+        previous_by_socio = {int(row.socio_id): row for row in previous_socio_rows}
+
+        users_group: Dict[str, List[Dict[str, Any]]] = {}
+        commerces_group: Dict[str, List[Dict[str, Any]]] = {}
+        zones_group: Dict[str, List[Dict[str, Any]]] = {}
+        scoring_bands = Counter()
+
+        for row in socio_feature_rows:
+            socio = socio_map.get(int(row.socio_id))
+            if socio is None:
+                continue
+            previous = previous_by_socio.get(int(row.socio_id))
+            current_volume = float(row.monto_creditos_total or 0) + float(row.saldo_cuentas_total or 0)
+            previous_volume = (
+                float(previous.monto_creditos_total or 0) + float(previous.saldo_cuentas_total or 0)
+            ) if previous else 0.0
+            growth = _safe_growth(current_volume, previous_volume)
+            financial_score = max(
+                float(row.score_scoring_reciente or 0),
+                float(row.estabilidad_financiera or 0),
+                float(row.score_propension_referencia or 0),
+            )
+            band = (
+                "financiable_alto" if financial_score >= 0.75 else
+                "financiable_medio" if financial_score >= 0.55 else
+                "monitoreo"
+            )
+            scoring_bands[band] += 1
+            record = {
+                "volumen": current_volume,
+                "recurrencia": float(row.transacciones_total or 0),
+                "ticket": _safe_div(float(row.monto_creditos_total or 0), max(int(row.creditos_total or 0), 1), 0.0),
+                "crecimiento": growth,
+                "financiable": bool(
+                    financial_score >= 0.55
+                    and float(row.score_abandono or 0) < 0.45
+                    and str(row.riesgo_scoring_reciente or "") != "alto"
+                ),
+                "riesgo": str(row.riesgo_scoring_reciente or "sin_dato"),
+            }
+            users_group.setdefault(str(row.segmento_actual or "sin_segmento"), []).append(record)
+            commerces_group.setdefault(str(socio.sector_economico or "sin_sector"), []).append(record)
+            zone_label = str(socio.ubicacion_municipio or socio.ubicacion_estado or socio.direccion or "sin_zona")
+            zones_group.setdefault(zone_label, []).append(record)
+
+        tendencias_map = {row["kpi_key"]: row for row in tendencias}
+        captacion_points = list((tendencias_map.get("captacion_neta") or {}).get("puntos") or [])
+        crecimiento_global = 0.0
+        if len(captacion_points) >= 2:
+            crecimiento_global = _safe_growth(captacion_points[-1].get("value", 0), captacion_points[-2].get("value", 0))
+
+        average_recurrencia = round(
+            sum(float(row.frecuencia_transaccional or 0) for row in db.query(IntelicoopAhorroFeatureSnapshot).filter(IntelicoopAhorroFeatureSnapshot.cut_key == resolved_cut_key).all())
+            / max(
+                db.query(IntelicoopAhorroFeatureSnapshot).filter(IntelicoopAhorroFeatureSnapshot.cut_key == resolved_cut_key).count(),
+                1,
+            ),
+            4,
+        )
+
+        financiables_total = sum(1 for rows in users_group.values() for row in rows if row.get("financiable"))
+        average_scoring = round(
+            sum(float(row.score_scoring_reciente or 0) for row in socio_feature_rows) / max(len(socio_feature_rows), 1),
+            4,
+        )
+        return {
+            "cut_key": resolved_cut_key,
+            "dataset_contract": {
+                "scope": "consumo_agregado",
+                "privacy_mode": "sin_datos_individuales",
+                "contains_individual_data": False,
+                "segments_enabled": ["comercios", "usuarios", "zonas"],
+                "entity_grain": "agregados_por_segmento",
+            },
+            "datasets": {
+                "consumo_agregado": [
+                    {"dataset_key": "usuarios_agregado", "grain": "segmento_usuario", "records": len(users_group)},
+                    {"dataset_key": "comercios_agregado", "grain": "sector_economico", "records": len(commerces_group)},
+                    {"dataset_key": "zonas_agregado", "grain": "municipio_estado", "records": len(zones_group)},
+                ],
+                "segmentacion": {
+                    "usuarios": _build_aggregate_segment_rows(users_group, "usuarios"),
+                    "comercios": _build_aggregate_segment_rows(commerces_group, "comercios"),
+                    "zonas": _build_aggregate_segment_rows(zones_group, "zonas"),
+                },
+            },
+            "indicadores": {
+                "volumen": round(float((dashboard.get("salud_cartera") or {}).get("cartera_total", 0)) + float((dashboard.get("captacion") or {}).get("depositos_total", 0)), 2),
+                "recurrencia": average_recurrencia,
+                "ticket": round(float((dashboard.get("colocacion") or {}).get("ticket_promedio", 0)), 2),
+                "crecimiento": round(crecimiento_global, 4),
+            },
+            "scoring_comercial": {
+                "score_promedio": average_scoring,
+                "financiables_detectados": financiables_total,
+                "oportunidades_comerciales": int((segmentation.get("resumen") or {}).get("oportunidades_comerciales", 0)),
+                "bandas": [
+                    {"band": band, "total": int(total)}
+                    for band, total in sorted(scoring_bands.items(), key=lambda item: (-item[1], item[0]))
+                ],
+            },
+            "entregables": {
+                "tablero_financiero": {
+                    "disponible": True,
+                    "route": "/inicio/intelicoop",
+                    "api": "/api/intelicoop/dashboard/resumen",
+                },
+                "indicadores": {
+                    "disponible": True,
+                    "api": "/api/intelicoop/consumo-agregado/resumen",
+                },
+                "alertas": {
+                    "disponible": True,
+                    "api": "/api/intelicoop/batch/alertas",
+                },
+            },
+        }
+    finally:
+        db.close()

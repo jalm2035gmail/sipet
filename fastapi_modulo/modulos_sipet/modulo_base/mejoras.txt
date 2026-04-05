@@ -1,0 +1,720 @@
+Revisé la lógica y la estructura del módulo modulo_base, y la conclusión es clara:
+
+como plantilla base está bien pensada, pero hoy arrastra demasiado peso para ser una base realmente eficiente.
+
+Tiene una buena intención de arquitectura por capas, pero en la práctica todavía mezcla:
+
+plantilla reutilizable
+runtime completo
+utilerías genéricas
+tareas async
+ML
+editor visual
+seguridad
+bootstrap de BD
+app monolítica
+
+Eso hace que el módulo base sea más pesado de lo que debería.
+
+Diagnóstico general
+Lo que está bien
+
+El módulo ya trae varios aciertos:
+
+manifest bastante completo
+separación nominal entre controladores, servicios, repositorios, modelos
+contratos base reutilizables
+soporte de assets
+base para permisos
+tareas async
+migraciones
+tests
+schemas tipados
+
+Como “framework interno” tiene buena dirección.
+
+Problemas principales de eficiencia
+1. El módulo base está demasiado cargado para ser “base”
+
+El mayor problema no es una función específica.
+
+Es que el módulo base quiere ser al mismo tiempo:
+
+plantilla de módulo
+núcleo técnico
+runtime app
+utilería de seguridad
+utilería de caché
+utilería HTTP
+utilería media
+utilería ML
+utilería visual
+utilería task queue
+Impacto
+
+Eso genera:
+
+más acoplamiento
+más tiempo de carga mental
+más dificultad para reutilizar solo lo necesario
+más imports cruzados
+más riesgo de que todos los módulos dependan de demasiadas piezas
+Mejora
+
+El modulo_base debe quedarse solo con lo mínimo indispensable para arrancar módulos nuevos.
+
+Todo lo demás conviene moverlo a un paquete común tipo:
+
+fastapi_modulo.core_modular
+o
+fastapi_modulo.framework
+
+Y dejar modulo_base como una plantilla delgada.
+
+2. runtime_app.py es un monolito enorme
+
+Este es uno de los puntos más claros.
+
+runtime_app.py concentra muchísimo:
+
+configuración
+cookies/sesión
+auth
+DB
+branding
+backend shell
+módulos activos
+login identity
+frontend migration
+CSS template embebido
+imports de medio sistema
+Problema
+
+Aunque parte del módulo esté ordenada por capas, runtime_app.py rompe esa disciplina.
+
+Impacto
+alto acoplamiento
+arranque pesado
+testing más difícil
+difícil aislar responsabilidades
+más riesgo de efectos colaterales
+Mejora
+
+Separarlo por dominios:
+
+runtime/config.py
+runtime/auth_runtime.py
+runtime/session_runtime.py
+runtime/ui_runtime.py
+runtime/database_runtime.py
+runtime/module_runtime.py
+
+Y dejar runtime_app.py como ensamblador mínimo.
+
+3. Estás duplicando servicios entre core/ y servicios/
+
+Aquí hay una ineficiencia estructural importante.
+
+Existen ambos:
+
+core/ml_service.py y servicios/ml_service.py
+core/http_service.py y servicios/http_service.py
+core/cache_service.py y servicios/cache_service.py
+core/lock_service.py y servicios/lock_service.py
+core/media_service.py y servicios/media_service.py
+core/visual_editor_service.py y servicios/visual_editor_service.py
+Problema
+
+Esto genera confusión sobre cuál es la capa correcta.
+
+Impacto
+duplicidad conceptual
+mantenimiento más difícil
+más imports innecesarios
+mayor riesgo de divergencia
+Mejora
+
+Debes elegir una sola convención.
+
+Recomendación
+
+Usar:
+
+core/ para abstracciones base y contratos
+servicios/ para implementación concreta del módulo
+
+o mejor aún:
+
+mover utilidades compartidas reales a fastapi_modulo/core
+dejar en modulo_base/servicios solo lo específico del módulo base
+
+Hoy está demasiado duplicado.
+
+4. El bootstrap ejecuta creación de esquema en inicialización
+
+En bootstrap.py:
+
+ensure_modulo_base_schema(...)
+
+se llama en init() del módulo.
+
+Problema
+
+Eso significa que el módulo puede intentar crear esquema al inicializarse.
+
+Impacto
+side effects al arrancar
+dependencia del entorno
+riesgo en producción si el flujo no está bien controlado
+más acoplamiento entre runtime y persistencia
+Mejora
+
+Para una base seria, el esquema debe quedar gobernado por migraciones, no por create_all en inicialización normal.
+
+Recomendación
+
+Dejar create_all solo para:
+
+tests
+entorno local muy controlado
+
+y nunca como comportamiento base por defecto.
+
+5. get_modulo_base_resumen() abre sesión manual en servicio simple
+
+En servicios/base_service.py:
+
+abre sesión con get_db()
+crea repositorio
+cuenta
+cierra en finally
+Problema
+
+Funciona, pero el patrón no escala bien si todos los servicios hacen eso manualmente.
+
+Mejora
+
+Usar inyección consistente de sesión:
+
+el endpoint obtiene db
+el servicio recibe db
+el repositorio usa esa sesión
+
+Eso reduce duplicidad y mejora testeo.
+
+6. El repositorio base es demasiado minimalista para la plantilla
+
+ModuloBaseRepository hoy solo expone:
+
+count_by_tenant
+list_by_tenant
+
+Como plantilla está bien, pero le falta dejar claro el patrón recomendado para:
+
+paginación
+filtros
+soft delete
+ordenamiento
+búsqueda por texto
+eager loading cuando hay relaciones
+Impacto
+
+Cada módulo futuro probablemente inventará su propia forma.
+
+Mejora
+
+Conviene que la plantilla base ya traiga helpers estándar como:
+
+paginate_by_tenant(...)
+search_by_name(...)
+list_active_by_tenant(...)
+get_or_404_by_tenant(...)
+7. La dependencia de acceso es demasiado rígida y muy manual
+
+En controladores/dependencies.py haces validación de rol basada en strings:
+
+"admin"
+"administrador"
+"superadmin"
+etc.
+Problema
+
+Eso sirve, pero es poco escalable y duplica lógica de permisos.
+
+Mejora
+
+El módulo base debería apoyarse en un servicio único de autorización, no en listas hardcodeadas por módulo.
+
+Mejor enfoque
+permiso requerido por endpoint
+resolución centralizada de permisos/roles
+evitar repetir normalización de rol en todos los módulos
+8. El router base está bien, pero puede volverse más delgado
+
+controladores/modulo_base.py está razonable, pero sigue dependiendo de:
+
+init del módulo
+access dependency
+lista de subrouters
+
+No está mal, pero el patrón base puede estandarizar aún más.
+
+Mejora
+
+Dejar un router factory muy delgado y reusable, por ejemplo:
+
+páginas
+api
+assets
+settings
+
+con registro automático opcional.
+
+9. El módulo carga demasiadas capacidades que no siempre usarás
+
+Dentro del módulo base ya vienen carpetas y servicios para:
+
+ML
+visual
+celery
+media
+editor visual
+http service
+cache
+lock
+Problema
+
+Eso está bien como “ecosistema”, pero no como base mínima.
+
+Impacto
+
+Los nuevos módulos arrancan con sobrecarga innecesaria.
+
+Mejora
+
+Dividir en perfiles:
+
+Perfil mínimo
+manifest
+bootstrap
+router
+controller
+schemas
+db_models
+repository
+service
+tests
+assets básicos
+Perfil extendido
+tareas
+ml
+visual
+cache
+locks
+media
+http integrations
+
+Así el nuevo módulo usa solo lo que necesita.
+
+10. El paquete viene sucio
+
+Trae:
+
+__pycache__
+.pyc
+__MACOSX
+Impacto
+
+No afecta lógica de negocio, pero sí:
+
+peso del ZIP
+limpieza
+despliegue
+señal de deuda técnica
+Mejora
+
+Excluirlos siempre del empaquetado.
+
+11. Hay riesgo de sobre-ingeniería en una plantilla
+
+El módulo base quiere resolver demasiados escenarios futuros.
+
+Problema
+
+Una plantilla demasiado compleja tiende a provocar que cada nuevo módulo:
+
+copie demasiadas cosas
+herede archivos que nunca usará
+mantenga capas innecesarias
+Mejora
+
+La plantilla debe ser más pequeña, con extensiones opcionales.
+
+12. Los assets y vistas están bien separados, pero el runtime global sigue mezclando UI
+
+En el módulo base:
+
+static/css/modulo_base.css
+static/js/modulo_base.js
+vistas/*.html
+
+eso está bien.
+
+Pero en runtime_app.py sigues teniendo CSS embebido enorme (SIPET_PREMIUM_UI_TEMPLATE_CSS) y mucha lógica visual global.
+
+Mejora
+
+Sacar eso a archivos estáticos versionados.
+
+Mejoras prioritarias
+Prioridad alta
+adelgazar modulo_base y mover utilidades genéricas fuera del módulo
+partir runtime_app.py en varios archivos
+eliminar duplicidad entre core/ y servicios/
+quitar creación de esquema del flujo normal de init
+estandarizar mejor inyección de sesión y repositorios
+Prioridad media
+mejorar repositorio base con paginación/filtros/búsqueda
+centralizar autorización en permisos, no strings hardcodeados
+crear perfil mínimo y perfil extendido para nuevos módulos
+sacar CSS visual global embebido a assets reales
+Prioridad baja
+limpiar empaquetado
+reforzar tests de contrato
+documentar mejor qué archivos son obligatorios y cuáles opcionales
+Plan de trabajo
+Fase 1. Adelgazar el módulo base
+
+Objetivo: convertirlo en una plantilla realmente reutilizable y ligera.
+
+Tareas
+definir qué sí pertenece a modulo_base
+mover fuera del módulo base las utilerías genéricas que no son específicas
+dejar solo:
+manifest
+bootstrap
+router
+controllers mínimos
+schemas
+db_models
+repositorio base
+servicio base
+assets mínimos
+tests mínimos
+Resultado
+
+Plantilla más clara y menos pesada.
+
+Fase 2. Reestructurar runtime_app.py
+
+Objetivo: eliminar el monolito principal.
+
+Tareas
+
+Dividir runtime_app.py en módulos como:
+
+runtime/config.py
+runtime/security.py
+runtime/sessions.py
+runtime/database.py
+runtime/ui.py
+runtime/modules.py
+
+Y dejar runtime_app.py solo para ensamblar.
+
+Resultado
+
+Menor acoplamiento y arranque más limpio.
+
+Fase 3. Eliminar duplicidad core/ vs servicios/
+
+Objetivo: dejar una sola ruta clara para cada responsabilidad.
+
+Tareas
+revisar archivos duplicados por nombre y propósito
+decidir cuáles quedan en core
+decidir cuáles quedan en servicios
+eliminar alias redundantes
+corregir imports
+Resultado
+
+Arquitectura más comprensible.
+
+Fase 4. Normalizar acceso a base de datos
+
+Objetivo: evitar sesiones abiertas manualmente en cada servicio.
+
+Tareas
+inyectar db desde controlador
+pasar db al servicio
+pasar db al repositorio
+definir patrón único de manejo de sesión
+Resultado
+
+Menos duplicidad y mejor testabilidad.
+
+Fase 5. Ajustar gestión de esquema y migraciones
+
+Objetivo: evitar side effects en init().
+
+Tareas
+quitar ensure_modulo_base_schema() del flujo normal del módulo
+dejarlo disponible solo para:
+tests
+entorno local controlado
+formalizar migraciones como mecanismo principal
+Resultado
+
+Arranque más predecible y seguro.
+
+Fase 6. Mejorar repositorio base
+
+Objetivo: que los nuevos módulos hereden buenas prácticas de datos.
+
+Tareas
+
+Agregar al repositorio base patrones para:
+
+paginación
+búsqueda
+filtros por tenant
+filtros por estado
+ordenamiento
+soft delete consistente
+Resultado
+
+Los nuevos módulos nacerán mejor.
+
+Fase 7. Centralizar permisos
+
+Objetivo: no depender de listas manuales de roles.
+
+Tareas
+reemplazar checks de roles hardcodeados
+usar permisos del registro central
+definir dependencias tipo:
+require_permission("modulo_base.ver")
+Resultado
+
+Menos lógica repetida y más consistencia.
+
+Fase 8. Crear dos perfiles de plantilla
+
+Objetivo: evitar copiar estructura innecesaria.
+
+Tareas
+
+Definir:
+
+plantilla mínima
+CRUD
+página
+api
+assets
+repo
+schema
+test
+plantilla extendida
+tareas
+cache
+locks
+media
+ML
+visual
+http
+Resultado
+
+Cada módulo usa solo lo necesario.
+
+Fase 9. Extraer UI embebida a assets
+
+Objetivo: mejorar mantenibilidad y caché del frontend.
+
+Tareas
+mover SIPET_PREMIUM_UI_TEMPLATE_CSS a CSS real
+versionar assets
+dejar solo variables mínimas inline cuando sea necesario
+Resultado
+
+Frontend más ordenado.
+
+Fase 10. Limpieza final
+
+Objetivo: dejar la plantilla lista para uso serio.
+
+Tareas
+excluir __pycache__, .pyc, __MACOSX
+revisar imports muertos
+documentar estructura final
+actualizar tests base
+Resultado
+
+Módulo más limpio y portable.
+
+Orden recomendado
+Etapa 1
+adelgazar módulo base
+partir runtime_app.py
+quitar duplicidad core/servicios
+Etapa 2
+normalizar DB
+migraciones correctas
+centralizar permisos
+Etapa 3
+mejorar repositorio base
+crear plantilla mínima y extendida
+sacar UI embebida a assets
+Etapa 4
+limpieza
+pruebas
+documentación
+Recomendación directa
+
+La mejora más importante es esta:
+
+dejar de usar modulo_base como “cajón de todo” y convertirlo en una plantilla mínima, mientras lo genérico se mueve a un núcleo compartido externo.
+
+Ese cambio te dará:
+
+más eficiencia estructural
+menos acoplamiento
+mejor mantenibilidad
+módulos nuevos más ligeros
+menos deuda técnica acumulada
+
+
+Plan de trabajo validado para la siguiente ejecución
+
+Objetivo de esta etapa
+
+Hacer una primera refactorización segura, de bajo riesgo y con impacto real en mantenibilidad, sin mover todavía la arquitectura completa del módulo.
+
+Criterio de alcance
+
+En esta etapa solo se trabajará sobre problemas que ya están confirmados en código y que pueden corregirse sin rediseñar todo el runtime ni cambiar masivamente la estructura del proyecto.
+
+Sí entra en esta etapa
+
+1. Ajustar gestión de esquema y migraciones
+
+Se eliminará ensure_modulo_base_schema() del flujo normal de init() del módulo.
+
+Se dejará disponible solo para tests o para entorno local controlado, mediante un punto de entrada explícito.
+
+También se revisará que el comportamiento por defecto quede alineado con el manifest: migraciones como mecanismo principal y sin side effects al iniciar.
+
+2. Normalizar acceso a base de datos en el flujo actual
+
+Se dejará de abrir y cerrar sesiones manualmente dentro de servicios simples como base_service.py.
+
+El patrón objetivo de esta etapa será:
+
+controlador obtiene db
+servicio recibe db
+repositorio usa db
+
+Si hace falta, se incorporará una dependencia mínima para inyectar sesión sin alterar todavía toda la arquitectura del módulo.
+
+3. Centralizar control de acceso del módulo
+
+Se reemplazará la validación rígida basada en strings hardcodeados de roles por una validación orientada a permisos.
+
+El objetivo concreto será que el módulo use permisos declarados como:
+
+modulo_base.ver
+modulo_base.administrar
+
+La validación deberá apoyarse en un punto central reutilizable, evitando repetir listas manuales de roles.
+
+4. Consolidar el contrato entre core y servicios en lo estrictamente necesario
+
+No se eliminarán todavía carpetas ni bloques grandes del módulo.
+
+En esta etapa solo se revisará la duplicidad que esté afectando imports, responsabilidad o claridad inmediata.
+
+Si existen archivos duplicados por nombre pero no están generando conflicto operativo hoy, se documentarán para la siguiente etapa en vez de moverlos de inmediato.
+
+5. Refuerzo mínimo de pruebas y validación
+
+Se ajustarán o agregarán pruebas mínimas para cubrir:
+
+arranque sin create_all implícito
+flujo básico de resumen con db inyectada
+control de acceso basado en permiso
+
+Si alguna prueba no puede automatizarse con el contexto actual, se dejará documentado el caso y la validación manual esperada.
+
+Orden exacto de ejecución de esta etapa
+
+✅ Paso 1
+✅ revisar bootstrap.py y common.py para retirar la creación automática de esquema del flujo normal
+
+✅ Paso 2
+✅ revisar controladores/api.py, controladores/modulo_base.py y servicios/base_service.py para introducir el patrón consistente de sesión
+
+✅ Paso 3
+✅ revisar controladores/dependencies.py y permisos.json para migrar el acceso hacia permisos declarados
+
+✅ Paso 4
+✅ revisar imports afectados y asegurar compatibilidad del módulo actual
+
+✅ Paso 5
+✅ actualizar tests base y ejecutar verificación
+
+Resultado esperado al cerrar esta etapa
+
+El módulo seguirá funcionando como hasta ahora, pero con arranque más predecible, menor acoplamiento en el acceso a datos y un control de acceso más consistente.
+
+Lo que explícitamente se deja para una siguiente etapa
+
+1. Adelgazar estructuralmente modulo_base
+
+No se moverán todavía utilerías genéricas fuera del módulo base hacia un paquete compartido externo.
+
+Ese trabajo implica redefinir límites de arquitectura y debe hacerse cuando la base ya esté estabilizada.
+
+2. Partir runtime_app.py
+
+No se dividirá todavía runtime_app.py en submódulos como runtime/config.py, runtime/security.py o runtime/ui.py.
+
+Aunque el diagnóstico es correcto, ese cambio toca demasiadas responsabilidades al mismo tiempo y conviene abordarlo después de estabilizar arranque, db y permisos.
+
+3. Eliminar masivamente duplicidad entre core/ y servicios/
+
+No se hará una limpieza completa de archivos duplicados en esta etapa.
+
+Solo se corregirá lo mínimo necesario para evitar confusión operativa o imports inconsistentes.
+
+La consolidación completa de capas se difiere a una fase estructural posterior.
+
+4. Crear perfiles de plantilla mínima y extendida
+
+No se redefinirá todavía el módulo en dos perfiles de scaffolding.
+
+Primero conviene cerrar una versión estable del contrato base real y luego decidir qué entra en la plantilla mínima y qué se vuelve opcional.
+
+5. Expandir el repositorio base con paginación, filtros, búsqueda y soft delete
+
+No se enriquecerá todavía ModuloBaseRepository con todas las capacidades propuestas.
+
+Ese trabajo tiene valor, pero no es bloqueante para corregir los problemas más urgentes de arranque, acceso y manejo de sesión.
+
+6. Extraer la UI embebida de runtime_app.py a assets versionados
+
+No se moverá todavía SIPET_PREMIUM_UI_TEMPLATE_CSS a archivos estáticos.
+
+Ese cambio depende de la futura partición del runtime y conviene tratarlo junto con la reorganización del frontend global.
+
+7. Limpieza final de empaquetado y documentación extensa
+
+No será una prioridad en esta ejecución limpiar completamente artefactos, imports muertos y documentación amplia.
+
+Se podrá hacer al cierre de la etapa estructural, cuando la organización final del módulo ya no esté cambiando.
+
+Regla de decisión para la siguiente etapa
+
+La siguiente etapa solo debe iniciar cuando esta etapa deje resueltos y verificados estos tres puntos:
+
+el módulo ya no crea esquema automáticamente en init()
+el acceso a datos sigue un patrón consistente de sesión
+el control de acceso ya no depende de listas manuales de roles

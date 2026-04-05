@@ -4,6 +4,7 @@ import hashlib
 import os
 import shutil
 import tempfile
+import uuid
 import zipfile
 from pathlib import Path, PurePosixPath
 from typing import Any
@@ -38,6 +39,14 @@ DISALLOWED_EXTENSIONS = {
     ".sh",
     ".so",
 }
+CRITICAL_ARCHITECTURE_PATHS = (
+    "__manifest__.py",
+    "__init__.py",
+    "controladores/",
+    "modelos/",
+    "servicios/",
+    "repositorios/",
+)
 
 
 def _resolve_module_root_from_manifest(module_key: str) -> str | None:
@@ -240,11 +249,13 @@ def _extract_archive_to_staging(
             shutil.copyfileobj(source, target)
 
         staged_checksum = _file_checksum(staged_path)
-        if not os.path.exists(destination):
+        existed_before = os.path.exists(destination)
+        destination_checksum = _file_checksum(destination) if existed_before else ""
+        if not existed_before:
             status = "new"
             new_files += 1
         else:
-            status = "unchanged" if _file_checksum(destination) == staged_checksum else "changed"
+            status = "unchanged" if destination_checksum == staged_checksum else "changed"
             if status == "changed":
                 changed_files += 1
             else:
@@ -258,6 +269,9 @@ def _extract_archive_to_staging(
                 "staged_path": staged_path,
                 "file_size": int(info.file_size),
                 "status": status,
+                "existed_before": existed_before,
+                "staged_checksum": staged_checksum,
+                "destination_checksum": destination_checksum,
             }
         )
 
@@ -278,7 +292,33 @@ def _extract_archive_to_staging(
     }
 
 
-def _validate_staged_module_architecture(module_key: str, target_root: str, staging_root: str) -> None:
+def _requires_full_architecture_validation(entries: list[dict[str, Any]]) -> bool:
+    for entry in entries:
+        rel_path = str(entry.get("relative_path") or "").strip().replace("\\", "/")
+        if not rel_path:
+            continue
+        if rel_path in {"__manifest__.py", "__init__.py"}:
+            return True
+        if any(rel_path.startswith(prefix) for prefix in CRITICAL_ARCHITECTURE_PATHS[2:]):
+            return True
+    return False
+
+
+def _validate_staged_module_architecture(
+    module_key: str,
+    target_root: str,
+    staging_root: str,
+    entries: list[dict[str, Any]],
+) -> dict[str, Any]:
+    mode = "full" if _requires_full_architecture_validation(entries) else "light"
+    if mode == "light":
+        return {
+            "architecture_mode": mode,
+            "architecture_ok": True,
+            "architecture_errors": [],
+            "architecture_warnings": [],
+        }
+
     validation_root = tempfile.mkdtemp(prefix=f"apps-validate-{str(module_key or '').strip()}-")
     try:
         if os.path.isdir(target_root):
@@ -295,6 +335,7 @@ def _validate_staged_module_architecture(module_key: str, target_root: str, stag
                 status_code=400,
                 detail={
                     "message": "El modulo no cumple las reglas de arquitectura.",
+                    "architecture_mode": mode,
                     "architecture_ok": False,
                     "architecture_errors": [
                         {"code": finding.code, "message": finding.message, "path": finding.path}
@@ -307,6 +348,18 @@ def _validate_staged_module_architecture(module_key: str, target_root: str, stag
                     "summary": " | ".join(detail_lines[:8]),
                 },
             )
+        return {
+            "architecture_mode": mode,
+            "architecture_ok": result.ok,
+            "architecture_errors": [
+                {"code": finding.code, "message": finding.message, "path": finding.path}
+                for finding in result.errors
+            ],
+            "architecture_warnings": [
+                {"code": finding.code, "message": finding.message, "path": finding.path}
+                for finding in result.warnings
+            ],
+        }
     finally:
         shutil.rmtree(validation_root, ignore_errors=True)
 
@@ -343,19 +396,20 @@ def inspect_module_zip(module_key: str, zip_path: str) -> dict[str, Any]:
                 raise HTTPException(status_code=400, detail="El archivo ZIP esta corrupto.")
             staging_root = tempfile.mkdtemp(prefix=f"apps-stage-{str(module_key or '').strip()}-")
             staged = _extract_archive_to_staging(archive, target_root, module_key=module_key, staging_root=staging_root)
-            _validate_staged_module_architecture(module_key, target_root, staging_root)
+            architecture = _validate_staged_module_architecture(module_key, target_root, staging_root, staged["entries"])
             return {
+                "inspection_id": f"{str(module_key or '').strip()}-{uuid.uuid4().hex}",
                 "module_key": module_key,
                 "target_root": target_root,
                 "staging_root": staging_root,
                 **staged,
-                **get_module_architecture_report(module_key, staging_root),
+                **architecture,
             }
     except zipfile.BadZipFile as exc:
         raise HTTPException(status_code=400, detail="El archivo ZIP no es valido.") from exc
 
 
-def apply_module_zip(_zip_path: str, inspection: dict[str, Any]) -> int:
+def apply_staged_entries(inspection: dict[str, Any]) -> int:
     extracted_files = 0
     for entry in inspection["entries"]:
         destination = str(entry["destination"])
@@ -366,6 +420,11 @@ def apply_module_zip(_zip_path: str, inspection: dict[str, Any]) -> int:
     if extracted_files == 0:
         raise HTTPException(status_code=400, detail="El ZIP no contiene archivos para actualizar.")
     return extracted_files
+
+
+def apply_module_zip(_zip_path: str, inspection: dict[str, Any]) -> int:
+    # Alias de compatibilidad; la aplicación real ya depende del staging inspeccionado.
+    return apply_staged_entries(inspection)
 
 
 def cleanup_staging_dir(staging_root: str) -> None:
@@ -474,6 +533,7 @@ def uninstall_module_files(module_key: str) -> dict[str, Any]:
 
 
 __all__ = [
+    "apply_staged_entries",
     "apply_module_zip",
     "cleanup_staging_dir",
     "get_module_image_path",

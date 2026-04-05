@@ -13,19 +13,18 @@ from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.commissions.mod
 )
 from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.orders.models import Order, OrderItem
 from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.users.models import User
+from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.users.routes import require_any_role, get_current_user
 from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.vendors.models import VendorStore as Vendor
 from fastapi_modulo.modulos.multitienda.marketplace.backend.core.db import get_db
-#from backend.apps.products.models import Product
-#from backend.apps.commissions.schemas import WithdrawalRequestCreate
-#from backend.core.auth import get_current_vendor, get_admin_user
+from fastapi_modulo.modulos.multitienda.marketplace.backend.core.dependencies import get_current_vendor
 
 router = APIRouter(prefix="/api/commissions", tags=["commissions"])
+
 
 @router.get("/vendor/balance")
 async def get_vendor_balance(
     db: Session = Depends(get_db),
-    #current_vendor: Vendor = Depends(get_current_vendor)
-    current_vendor: Vendor = Depends(lambda: None)  # TODO: reemplazar por auth real
+    current_vendor: Vendor = Depends(get_current_vendor),
 ):
     """Obtener balance actual del vendedor"""
     last_transaction = db.query(VendorBalance).filter(

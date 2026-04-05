@@ -1,0 +1,113 @@
+.backend-master-detail,
+.notebook.config-workspace {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.backend-master-detail__nav,
+.config-nav {
+  position: sticky;
+  top: 24px;
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  border: 1px solid var(--mt-border-soft, var(--field-border, #d1d5db));
+  border-radius: 22px;
+  background: color-mix(in srgb, var(--content-bg, #ffffff) 92%, var(--page-bg, #f5f6f8) 8%);
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.06);
+}
+
+.backend-master-detail__nav-title,
+.config-nav-title {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--mt-muted, var(--body-text, #64748b));
+}
+
+.backend-master-detail__tabs,
+.notebook-tabs {
+  display: grid;
+  gap: 10px;
+}
+
+.backend-master-detail__tab,
+.notebook-tab {
+  width: 100%;
+  border: 1px solid transparent;
+  border-radius: 18px;
+  background: transparent;
+  color: var(--mt-text, var(--body-text, #1f2937));
+  padding: 14px 16px;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.16s ease, border-color 0.16s ease, transform 0.16s ease;
+}
+
+.backend-master-detail__tab:hover,
+.notebook-tab:hover {
+  background: color-mix(in srgb, var(--mt-surface-soft, #f8fafc) 86%, #ffffff 14%);
+  border-color: var(--mt-border-soft, var(--field-border, #d1d5db));
+  transform: translateX(2px);
+}
+
+.backend-master-detail__tab.active,
+.notebook-tab.active {
+  background: color-mix(in srgb, var(--mt-accent, var(--button-bg, #1a6b3c)) 10%, var(--mt-surface, var(--content-bg, #ffffff)) 90%);
+  border-color: color-mix(in srgb, var(--mt-accent, var(--button-bg, #1a6b3c)) 24%, var(--mt-border-soft, var(--field-border, #d1d5db)) 76%);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+}
+
+.backend-master-detail__tab-title,
+.config-tab-title {
+  display: block;
+  font-size: 0.98rem;
+  font-weight: 800;
+  color: inherit;
+  margin-bottom: 4px;
+}
+
+.backend-master-detail__tab-copy,
+.config-tab-copy {
+  display: block;
+  font-size: 0.84rem;
+  line-height: 1.4;
+  color: var(--mt-muted, var(--body-text, #64748b));
+}
+
+.backend-master-detail__content,
+.config-content {
+  min-width: 0;
+  display: grid;
+  gap: 18px;
+}
+
+.backend-master-detail__panel,
+.notebook-panel {
+  border: 1px solid var(--mt-border-soft, var(--field-border, #d1d5db));
+  border-radius: 24px;
+  background: var(--mt-surface, var(--content-bg, #ffffff));
+  box-shadow: 0 22px 56px rgba(15, 23, 42, 0.08);
+  padding: 26px;
+}
+
+.backend-master-detail__panel[hidden],
+.notebook-panel[hidden] {
+  display: none;
+}
+
+@media (max-width: 920px) {
+  .backend-master-detail,
+  .notebook.config-workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .backend-master-detail__nav,
+  .config-nav {
+    position: static;
+  }
+}

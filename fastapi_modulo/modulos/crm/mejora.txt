@@ -1,0 +1,706 @@
+===============================================================================
+PLAN DE TRABAJO DETALLADO — MEJORAS MÓDULO CRM
+Fecha: 2 de abril de 2026 | Avance general: 100%
+===============================================================================
+Avance: FASE 1 ✅ | FASE 2 ✅ | FASE 3 ✅ | FASE 4 ✅ | FASE 5 ✅ | FASE 6 ✅ | FASE 7 ✅ | FASE 8 ✅ | FASE 9 ✅
+
+========================================
+FASE 1 — FORTALECER EL EMBUDO DE VENTAS  [COMPLETADA ✅]
+========================================
+
+Objetivo: Convertir el pipeline de 5 etapas simples en un embudo comercial
+auditable, con alertas por inactividad, motivos de cierre y trazabilidad
+completa de cambios de etapa.
+
+---------------------------------------
+1.1  Ampliar etapas (enum EtapaOportunidad)
+---------------------------------------
+Etapas nuevas a agregar en modelos/enums.py:
+
+  Fase lead:
+    - nuevo_lead
+    - por_contactar
+    - contactado
+    - calificado
+    - no_calificado
+
+  Fase oportunidad:
+    - diagnostico
+    - negociacion
+    - propuesta_enviada
+    - seguimiento_propuesta
+    - decision
+
+  Cierre:
+    - cerrado_ganado
+    - cerrado_perdido
+    - congelado
+    - sin_respuesta
+
+Archivos a modificar:
+  - modelos/enums.py              → agregar nuevas etapas
+  - modelos/crm_db_models.py      → ajustar columna etapa
+  - modelos/crm_models.py         → actualizar schemas Pydantic
+  - servicios/oportunidad_service.py → ajustar lógica de transición
+  - controladores/api_oportunidades.py → validar rutas afectadas
+
+---------------------------------------
+1.2  Tabla crm_historial_etapas
+---------------------------------------
+Nueva tabla para registrar cada transición de etapa.
+
+Columnas:
+  - id
+  - tenant_id
+  - oportunidad_id (FK)
+  - etapa_anterior
+  - etapa_nueva
+  - fecha_cambio
+  - actor (usuario)
+  - comentario
+  - motivo
+
+Archivos a crear/modificar:
+  - modelos/crm_db_models.py         → agregar modelo HistorialEtapa
+  - repositorios/oportunidad_repository.py → registrar historial en cada cambio de etapa
+  - servicios/oportunidad_service.py  → llamar al repositorio al cambiar etapa
+  - controladores/api_oportunidades.py → endpoint GET /oportunidades/{id}/historial
+
+---------------------------------------
+1.3  Motivos de pérdida y ganancia
+---------------------------------------
+Catálogo configurable por tenant.
+
+Motivos de pérdida (tabla crm_motivos_perdida):
+  precio, competencia, no_cumple_perfil, no_respondio,
+  sin_presupuesto, decision_pospuesta, duplicado,
+  producto_inadecuado, mala_atencion, otro
+
+Motivos de ganancia (tabla crm_motivos_ganada):
+  rapidez_respuesta, precio_competitivo, confianza,
+  referido, campania_efectiva, propuesta_personalizada,
+  seguimiento_constante, otro
+
+Archivos a crear/modificar:
+  - modelos/crm_db_models.py         → agregar modelos MotivoPerdida, MotivoGanancia
+  - modelos/crm_models.py            → schemas asociados
+  - repositorios/                    → nuevo motivo_repository.py
+  - servicios/oportunidad_service.py → exigir motivo al cerrar ganada/perdida
+  - controladores/api_oportunidades.py → endpoints CRUD catálogos de motivos
+
+---------------------------------------
+1.4  Reglas de negocio obligatorias por etapa
+---------------------------------------
+Validaciones que el servicio debe forzar al transicionar etapas:
+
+  - prospecto/nuevo_lead:
+      fuente obligatoria, responsable, fecha objetivo primer contacto
+  - negociacion:
+      monto_estimado obligatorio, responsable, fecha_cierre_estimada
+  - propuesta_enviada:
+      fecha_seguimiento obligatoria, probabilidad >= 40%
+  - cerrado_perdido:
+      motivo_perdida_id obligatorio
+  - cerrado_ganado:
+      fecha_cierre_real, monto_real, campo producto_vendido
+
+Archivos a modificar:
+  - servicios/oportunidad_service.py → método _validar_transicion_etapa()
+  - modelos/crm_models.py           → añadir campos monto_real, fecha_cierre_real,
+                                       producto_vendido, motivo_perdida_id,
+                                       motivo_ganancia_id a OportunidadUpdate
+
+---------------------------------------
+1.5  Tiempo por etapa y KPIs del embudo
+---------------------------------------
+Calcular métricas de conversión/abandono:
+
+  - tasa de contacto, calificación, propuesta, cierre, pérdida
+  - tiempo promedio por etapa
+  - tiempo total de conversión
+  - abandono por etapa
+  - monto por etapa
+  - forecast ponderado
+  - tasa de avance por ejecutivo y por sucursal
+  - tasa de conversión por fuente y campaña
+
+Archivos a modificar:
+  - servicios/dashboard_service.py → agregar métodos get_metricas_embudo(),
+                                      get_tiempo_por_etapa(), get_tasa_conversion()
+  - controladores/pages.py         → exponer nuevos endpoints de analítica
+
+---------------------------------------
+1.6  Alertas de oportunidad sin movimiento
+---------------------------------------
+Campo semáforo calculado en base a ultimo_movimiento_en:
+
+  - verde:   movimiento < 7 días
+  - amarillo: 7–14 días sin movimiento
+  - rojo:    > 14 días sin movimiento
+
+Archivos a modificar:
+  - modelos/crm_db_models.py         → campo semaforo (o calculado en servicio)
+  - servicios/oportunidad_service.py → calcular semáforo al leer
+  - modelos/crm_models.py            → incluir semaforo en OportunidadRead
+  - controladores/api_oportunidades.py → endpoint GET /oportunidades/sin-movimiento
+
+
+===========================================
+FASE 2 — FORTALECER SEGUIMIENTO COMERCIAL  [COMPLETADA ✅]
+===========================================
+
+Objetivo: Que el sistema dirija y obligue el trabajo comercial mediante SLAs,
+prioridades, actividades automáticas y notificaciones.
+
+---------------------------------------
+2.1  Enriquecer modelo de Actividad
+---------------------------------------
+Nuevos campos en crm_actividades:
+
+  - prioridad:  baja | media | alta | critica
+  - estado:     pendiente | en_proceso | completada | cancelada |
+                vencida | reprogramada
+  - tipo_resultado: no_contesto | interesado | no_interesado |
+                    reagendar | envio_documentos | pendiente_propuesta
+  - sla_horas:  número de horas máximo permitido según tipo/etapa
+
+Archivos a modificar:
+  - modelos/enums.py              → agregar PrioridadActividad, EstadoActividad,
+                                     TipoResultadoActividad
+  - modelos/crm_db_models.py      → agregar columnas
+  - modelos/crm_models.py         → actualizar ActividadCreate/Update/Read
+  - repositorios/actividad_repository.py
+  - servicios/actividad_service.py
+  - controladores/api_actividades.py
+
+---------------------------------------
+2.2  Motor de SLA comercial
+---------------------------------------
+Reglas base:
+
+  - lead nuevo → primer contacto en ≤ 24 h
+  - propuesta enviada → seguimiento en ≤ 48 h
+  - oportunidad sin movimiento 7 d → alerta amarilla
+  - oportunidad sin movimiento 14 d → alerta roja / subir prioridad
+
+Archivos a crear/modificar:
+  - servicios/ → nuevo automation_service.py con:
+      verificar_sla_actividades()
+      generar_alertas_oportunidades_inactivas()
+      marcar_actividades_vencidas()
+  - Invocar desde bootstrap.py o tarea periódica
+
+---------------------------------------
+2.3  Actividades automáticas extendidas
+---------------------------------------
+Trigger automático (además del cambio de etapa actual) para:
+
+  - lead nuevo asignado
+  - actividad vencida sin resultado
+  - campaña activada
+  - propuesta enviada
+  - contacto convertido a cliente
+  - oportunidad reabierta/descongelada
+
+Archivos a modificar:
+  - servicios/oportunidad_service.py → _ensure_stage_activity() extendido
+  - servicios/actividad_service.py   → método crear_actividad_automatica()
+  - servicios/automation_service.py  → orquestador de reglas
+
+---------------------------------------
+2.4  Siguiente acción obligatoria
+---------------------------------------
+Al completar o cancelar una actividad, el sistema debe exigir o sugerir
+la siguiente acción antes de continuar.
+
+Archivos a modificar:
+  - servicios/actividad_service.py      → validar siguiente_accion al completar
+  - controladores/api_actividades.py    → retornar sugerencia de siguiente acción
+
+
+=====================================================
+FASE 3 — FORTALECER SCORING Y PRIORIZACIÓN DE LEADS  [COMPLETADA ✅]
+=====================================================
+
+Objetivo: Scoring conductual multicapa con temperatura del lead
+y ranking de oportunidades.
+
+---------------------------------------
+3.1  Lead score multicapa
+---------------------------------------
+Dividir calculate_lead_score() en tres componentes:
+
+  A. score_completitud (datos del perfil)
+     - email, teléfono, empresa, puesto, sucursal, fuente, fuente_detalle, tipo
+
+  B. score_interaccion (actividad comercial)
+     - días desde primer contacto
+     - número de actividades realizadas / vencidas
+     - número de notas
+     - número de campañas activas
+     - si respondió alguna vez
+     - tiempo de respuesta del ejecutivo
+
+  C. score_intencion (señales de compra)
+     - si ya tiene oportunidad creada
+     - etapa máxima alcanzada
+     - monto potencial estimado
+     - fuente con tasa histórica de conversión
+     - similitud con clientes ya convertidos
+
+  Resultado final:
+    - lead_score_total = A + B + C (ponderado)
+    - lead_temperatura: frio (0–30) | tibio (31–60) | caliente (61–100)
+
+Archivos a modificar:
+  - servicios/contacto_service.py → refactorizar calculate_lead_score()
+  - servicios/ → nuevo lead_scoring_service.py con los tres subcálculos
+  - modelos/crm_db_models.py     → agregar lead_temperatura
+  - modelos/crm_models.py        → incluir lead_temperatura en ContactoRead
+
+---------------------------------------
+3.2  Probabilidad de cierre inteligente
+---------------------------------------
+Dividir en:
+  - probabilidad_sistema: calculada por el motor
+  - probabilidad_usuario: ingresada manualmente
+
+Motor considera:
+  - lead_score del contacto
+  - días sin movimiento
+  - actividad futura programada (sí/no)
+  - si ya hay propuesta enviada
+  - si viene de referido
+  - interacciones previas
+  - campaña activa relacionada
+  - historial del ejecutivo (tasa de cierre personal)
+
+Archivos a modificar:
+  - servicios/oportunidad_service.py   → método calcular_probabilidad_sistema()
+  - modelos/crm_db_models.py          → campos probabilidad_sistema, probabilidad_usuario
+  - modelos/crm_models.py             → OportunidadRead con ambos campos
+
+---------------------------------------
+3.3  Nuevo servicio: pipeline_service.py
+---------------------------------------
+Centralizar lógica del embudo que hoy está dispersa:
+
+  - get_pipeline_por_etapa()
+  - get_pipeline_por_ejecutivo()
+  - get_pipeline_por_sucursal()
+  - get_forecast_ponderado()
+  - get_aging_pipeline()
+  - get_oportunidades_en_riesgo()
+
+Archivo a crear:
+  - servicios/pipeline_service.py
+
+Archivos a modificar:
+  - servicios/dashboard_service.py → delegar a pipeline_service
+
+
+======================================
+FASE 4 — FORTALECER CAMPAÑAS  [COMPLETADA ✅]
+======================================
+
+Implementado el 2 de abril de 2026:
+  ✓ 4.1 TipoObjetivoCampania (enum) + tipo_objetivo + costo_campania en DB
+  ✓ 4.2 segmentar_contactos(): filtros por fuente, sucursal, score, temperatura,
+         etapa_oportunidad, inactividad, campaña anterior + endpoint POST /segmentar
+  ✓ 4.3 Tabla crm_atribucion_campania + campaign_analytics_service.py
+         (registrar_atribucion, get_kpis_campania, list_atribuciones)
+         + endpoints GET /kpis y GET /atribuciones
+  ✓ 4.4 activar_campania() con side-effects: estado ACTIVA + actividades automáticas
+         de seguimiento por contacto + endpoint POST /activar
+
+Objetivo: Convertir el catálogo de campañas en un motor de campañas
+comerciales con segmentación, atribución y ROI.
+
+---------------------------------------
+4.1  Objetivo de campaña
+---------------------------------------
+Nuevo campo tipo_objetivo en crm_campanias:
+
+  captacion | reactivacion | referidos | promocion |
+  cobranza_preventiva | colocacion | fidelizacion | evento
+
+Archivos a modificar:
+  - modelos/enums.py           → agregar TipoObjetivoCampania
+  - modelos/crm_db_models.py   → columna tipo_objetivo
+  - modelos/crm_models.py      → CampaniaCreate/Read
+
+---------------------------------------
+4.2  Segmentación automática de contactos
+---------------------------------------
+Nuevo endpoint: POST /campanias/{id}/segmentar
+
+Parámetros de filtro:
+  - fuente, sucursal, score_min/max, temperatura,
+    etapa_oportunidad, días de inactividad,
+    campaña anterior, responsable
+
+Archivos a modificar:
+  - servicios/campania_service.py    → método segmentar_contactos()
+  - controladores/api_campanias.py   → endpoint /segmentar
+  - servicios/ → nuevo campaign_analytics_service.py
+
+---------------------------------------
+4.3  Atribución y ROI de campaña
+---------------------------------------
+Tabla crm_atribucion_campania:
+  - campania_id
+  - contacto_id
+  - oportunidad_id (nullable)
+  - etapa_alcanzada
+  - convertido (bool)
+  - monto_ganado
+  - fecha_atribucion
+
+KPIs por campaña:
+  - leads generados / contactados
+  - oportunidades abiertas / ganadas
+  - monto ganado
+  - costo_campania (campo en CampaniaDB)
+  - ROI = (monto_ganado - costo) / costo * 100
+  - tasa de respuesta
+
+Archivos a crear/modificar:
+  - modelos/crm_db_models.py         → AtribucionCampania
+  - servicios/campaign_analytics_service.py → calcular_roi(), get_kpis_campania()
+  - controladores/api_campanias.py   → GET /campanias/{id}/kpis
+
+---------------------------------------
+4.4  Automatización al activar campaña
+---------------------------------------
+Al cambiar estado a ACTIVA la campaña debe:
+  - crear actividades de seguimiento para ejecutivos del segmento
+  - notificar a responsables
+  - generar recordatorios automáticos
+
+Archivos a modificar:
+  - servicios/campania_service.py  → activar_campania() con side-effects
+  - servicios/automation_service.py
+
+
+=========================================
+FASE 5 — FORTALECER ARQUITECTURA Y CÓDIGO
+=========================================
+
+Objetivo: Escalar el módulo sin comprometer rendimiento ni trazabilidad.
+
+---------------------------------------
+5.1  Soft delete en entidades clave
+---------------------------------------
+Agregar a crm_contactos, crm_oportunidades, crm_actividades,
+crm_notas, crm_campanias:
+
+  - activo: bool = True
+  - archivado_en: datetime nullable
+  - archivado_por: str nullable
+
+Reemplazar DELETE físico por archivado lógico.
+Agregar filtro activo=True en todos los listados.
+
+Archivos a modificar:
+  - modelos/crm_db_models.py → mixin SoftDeleteMixin
+  - repositorios/*.py → filtros y método archivar()
+  - controladores/*.py → endpoint PATCH /archivar en lugar de DELETE
+
+---------------------------------------
+5.2  Paginación y búsqueda real
+---------------------------------------
+Reemplazar .all() por consultas paginadas con:
+  - skip / limit
+  - q (búsqueda por texto sobre nombre/email/empresa)
+  - filtro por rango de fechas
+  - filtro por responsable
+  - filtro por sucursal
+  - ordenamiento: campo + dirección
+
+Archivos a modificar:
+  - repositorios/contacto_repository.py
+  - repositorios/oportunidad_repository.py
+  - repositorios/actividad_repository.py
+  - repositorios/campania_repository.py
+  - modelos/crm_models.py → PaginatedResponse, QueryParams schemas
+  - controladores/*.py    → aceptar query params
+
+---------------------------------------
+5.3  Agregaciones en SQL (no en memoria)
+---------------------------------------
+Mover conteos, sumas y agrupaciones de Python puro
+a consultas SQL con func.count, func.sum, group_by.
+
+Prioridad en:
+  - get_crm_resumen() del dashboard
+  - forecast ponderado
+  - agrupación por etapa/responsable/sucursal
+
+Archivos a modificar:
+  - servicios/dashboard_service.py
+  - servicios/pipeline_service.py (nuevo)
+  - repositorios/oportunidad_repository.py
+
+---------------------------------------
+5.4  Validación de negocio por estado
+---------------------------------------
+Bloquear acciones inválidas:
+  - oportunidad cerrada → no permite cambio de etapa sin reabrir
+  - campaña finalizada → no acepta nuevos contactos
+  - actividad vencida → exige reprogramación explícita
+  - convertir contacto → revisar si existe oportunidad ganada
+
+Archivos a modificar:
+  - servicios/oportunidad_service.py
+  - servicios/actividad_service.py
+  - servicios/campania_service.py
+  - servicios/contacto_service.py
+
+---------------------------------------
+5.5  Separar servicios especializados
+---------------------------------------
+Crear/extraer servicios independientes:
+
+  - servicios/lead_scoring_service.py     (score multicapa)
+  - servicios/pipeline_service.py         (métricas del embudo)
+  - servicios/automation_service.py       (motor de reglas/alertas)
+  - servicios/campaign_analytics_service.py (ROI, atribución)
+  - servicios/conversion_service.py       (lead → oportunidad → cliente)
+  - servicios/notification_service.py     (alertas internas)
+
+  Dashboard dividido por bloque:
+  - servicios/dashboard_pipeline_service.py
+  - servicios/dashboard_activity_service.py
+  - servicios/dashboard_leads_service.py
+  - servicios/dashboard_campaigns_service.py
+  - servicios/dashboard_sales_service.py
+  (dashboard_service.py como agregador central)
+
+---------------------------------------
+5.6  Control de concurrencia optimista
+---------------------------------------
+Agregar campo version: int en entidades críticas.
+Al actualizar, verificar que version coincida con la BD.
+
+Archivos a modificar:
+  - modelos/crm_db_models.py          → campo version
+  - repositorios/oportunidad_repository.py → check version en update
+  - modelos/crm_models.py             → OportunidadUpdate incluye version
+
+
+===========================================
+FASE 6 — NUEVAS TABLAS / ENTIDADES
+===========================================
+
+Objetivo: Dar soporte de datos a todas las mejoras anteriores.
+
+Tabla                          | Propósito
+-------------------------------|-----------------------------------------------
+crm_motivos_perdida            | Catálogo de razones de pérdida
+crm_motivos_ganada             | Catálogo de razones de ganancia
+crm_historial_etapas           | Trazabilidad de cambios de etapa
+crm_productos_interes          | Productos/servicios de interés por contacto
+crm_fuentes_detalladas         | Catálogo de fuentes enriquecido
+crm_segmentos                  | Segmentos calculados/manuales
+crm_objetivos_comerciales      | Metas por ejecutivo/sucursal/periodo
+crm_notificaciones             | Alertas entregadas a usuarios
+crm_reglas_automatizacion      | Reglas configurables de automatización
+crm_adjuntos                   | Archivos ligados a oportunidad/contacto
+crm_recordatorios              | Recordatorios visibles en UI
+crm_atribucion_campania        | Conversiones atribuidas a campaña
+crm_metricas_diarias           | Snapshot diario de KPIs para histórico
+crm_snapshot_pipeline          | Foto del embudo en momentos clave
+
+Archivo principal:
+  - modelos/crm_db_models.py → agregar todos los modelos
+  - ensure_crm_schema() → registrar tablas nuevas
+
+
+=========================================
+FASE 7 — NOTIFICACIONES Y AUTOMATIZACIÓN
+=========================================
+
+Objetivo: Que el CRM deje de ser pasivo y actúe sobre eventos.
+
+---------------------------------------
+7.1  Motor de notificaciones
+---------------------------------------
+Notificaciones mínimas a generar:
+
+  - lead nuevo asignado
+  - actividad vencida
+  - actividad próxima a vencer (< 2 h)
+  - oportunidad sin movimiento (amarilla/roja)
+  - cambio de etapa en oportunidad importante
+  - propuesta pendiente de seguimiento
+  - campaña por iniciar / finalizada
+  - oportunidad perdida de alto valor
+  - cierre ganado
+
+Tabla crm_notificaciones:
+  tenant_id, usuario_dest, tipo, referencia_id,
+  referencia_tipo, mensaje, leida, fecha_creacion
+
+Archivos a crear:
+  - servicios/notification_service.py
+  - controladores/ → nuevo api_notificaciones.py
+
+---------------------------------------
+7.2  Reglas de automatización configurables
+---------------------------------------
+Tabla crm_reglas_automatizacion:
+  tenant_id, evento_trigger, condicion_json,
+  accion_tipo, accion_params_json, activa
+
+Archivos a crear:
+  - servicios/automation_service.py → evaluar_reglas(evento, contexto)
+  - controladores/ → nuevo api_automatizacion.py (CRUD de reglas)
+
+
+=============================================
+FASE 8 — MEJORAS DE FRONTEND
+=============================================
+
+Objetivo: Hacer visible la operación comercial en tiempo real.
+
+---------------------------------------
+8.1  Vista Kanban de oportunidades
+---------------------------------------
+  - columnas = etapas del embudo
+  - drag & drop entre etapas
+  - semáforo visual en cada tarjeta
+  - monto y probabilidad visible en tarjeta
+  - filtros: ejecutivo, sucursal, fuente, score
+
+Archivos a modificar:
+  - static/js/crm/oportunidades.js → kanban renderer
+  - static/css/crm.css             → estilos kanban
+  - vistas/crm.html                → sección kanban
+
+---------------------------------------
+8.2  Panel "Mis pendientes"
+---------------------------------------
+  - actividades vencidas propias
+  - leads sin contacto > 24 h
+  - oportunidades sin siguiente acción
+  - propuestas sin seguimiento
+
+---------------------------------------
+8.3  Vista de embudo con tasas y montos
+---------------------------------------
+  - funnel chart por etapa
+  - tasa de conversión entre etapas
+  - monto acumulado por etapa
+  - tiempo promedio por etapa
+
+---------------------------------------
+8.4  Bandeja de leads nuevos
+---------------------------------------
+  - leads sin asignar
+  - leads sin actividad inicial
+  - filtro por fecha de entrada
+  - acción rápida: asignar / crear actividad
+
+---------------------------------------
+8.5  Timeline por contacto/oportunidad
+---------------------------------------
+  - historial de etapas
+  - actividades (realizadas y pendientes)
+  - notas
+  - campañas asociadas
+  - documentos adjuntos
+
+Archivos a modificar:
+  - static/js/crm/contactos.js
+  - static/js/crm/oportunidades.js
+  - vistas/crm.html
+
+
+=============================================
+FASE 9 — INTEGRACIÓN CON ECOSISTEMA SIPET
+=============================================
+
+(Implementar tras estabilizar fases 1–5)
+
+---------------------------------------
+9.1  Integración con Conversaciones
+---------------------------------------
+Conversaciones contextuales por:
+  - contacto
+  - oportunidad
+  - actividad
+  - campaña
+
+Acciones:
+  - comentar seguimiento de lead
+  - pedir apoyo a ejecutivo/supervisor
+  - validar propuesta
+  - dejar observaciones de cierre
+
+---------------------------------------
+9.2  Integración con Multitienda
+---------------------------------------
+Si módulo Multitienda activo:
+  - crear leads desde registros de clientes / formularios
+  - detectar carritos abandonados → generar oportunidad
+  - clientes inactivos → trigger reactivación
+  - pedidos de alto valor → generar seguimiento postventa
+  - enriquecer scoring con: frecuencia de compra,
+    ticket promedio, productos de interés, última compra
+
+
+=====================================================================
+ORDEN DE EJECUCIÓN Y PRIORIDADES
+=====================================================================
+
+PRIORIDAD 1 — FASE 1: Embudo de ventas
+  [✅] 1.1 Ampliar etapas (16 etapas: nuevo_lead, por_contactar, contactado, calificado, no_calificado, diagnostico, negociacion, propuesta_enviada, seguimiento_propuesta, decision, cerrado_ganado, cerrado_perdido, congelado, sin_respuesta + 2 legado)
+  [✅] 1.2 Tabla historial_etapas (crm_historial_etapas + repositorio + endpoint GET /oportunidades/{id}/historial)
+  [✅] 1.3 Motivos de pérdida/ganancia (crm_motivos_perdida, crm_motivos_ganancia + repositorio + api_motivos.py)
+  [✅] 1.4 Reglas de negocio por etapa (_validar_transicion_etapa: negociacion exige monto+responsable+fecha, propuesta exige fecha+prob>=40%, perdida exige motivo)
+  [✅] 1.5 KPIs del embudo (embudo_comercial con todas las etapas + monto, tasas_conversion_embudo, tasa_ganancia, tasa_perdida en dashboard)
+  [✅] 1.6 Semáforo / alertas de inactividad (campo semaforo en mapper, endpoint GET /oportunidades/sin-movimiento?dias=N)
+
+PRIORIDAD 2 — FASE 2: Seguimiento comercial
+  [✅] 2.1 Enriquecer modelo Actividad (PrioridadActividad, EstadoActividad, TipoResultadoActividad, SLA_POR_TIPO; columnas prioridad/estado/tipo_resultado/sla_horas/siguiente_accion en DB; mapper con _calcular_estado(); schemas ActividadCreate/Update + ActividadCompletarRequest + ActividadCancelarRequest)
+  [✅] 2.2 Motor SLA (automation_service.py: verificar_sla_actividades(), ejecutar_ciclo_automatizacion(); endpoint POST /actividades/automatizacion/ejecutar; GET /actividades/sla/alertas)
+  [✅] 2.3 Actividades automáticas extendidas (crear_actividad_automatica() con SLA_POR_TIPO; triggers: lead_nuevo, actividad_vencida, propuesta_enviada, contacto_convertido, oportunidad_reabierta)
+  [✅] 2.4 Siguiente acción obligatoria (completar_actividad() exige tipo_resultado; guarda siguiente_accion; cancelar_actividad() con motivo; endpoints POST /completar y POST /cancelar con body)
+
+PRIORIDAD 3 — FASE 3: Scoring y priorización
+  [✅] 3.1 Lead score multicapa (lead_scoring_service.py: score_completitud A=40%, score_interaccion B=35%, score_intencion C=25%; lead_temperatura frio/tibio/caliente; columna lead_temperatura en DB; refactored calculate_lead_score en contacto_service)
+  [✅] 3.2 Probabilidad de cierre inteligente (calcular_probabilidad_sistema() en oportunidad_service; considera etapa base, inactividad, actividad futura, fuente referido, lead_score, fecha_cierre próxima; columnas probabilidad_sistema/probabilidad_usuario en DB + mapper)
+  [✅] 3.3 pipeline_service.py (get_pipeline_por_etapa/ejecutivo/sucursal, get_forecast_ponderado, get_aging_pipeline, get_oportunidades_en_riesgo; 6 endpoints GET /api/crm/pipeline/*)
+
+PRIORIDAD 4 — FASE 4: Campañas
+  [✅] 4.1 Objetivo de campaña (TipoObjetivoCampania enum; tipo_objetivo + costo_campania en DB y schemas)
+  [✅] 4.2 Segmentación automática (segmentar_contactos() con filtros; endpoint POST /campanias/{id}/segmentar)
+  [✅] 4.3 Atribución y ROI (crm_atribucion_campania; campaign_analytics_service.py; endpoints /kpis y /atribuciones)
+  [✅] 4.4 Automatización al activar campaña (activar_campania() crea actividades por segmento; endpoint POST /activar)
+
+PRIORIDAD 5 — FASE 5: Arquitectura
+  [✅] 5.1 Soft delete
+  [✅] 5.2 Paginación y búsqueda
+  [✅] 5.3 Agregaciones SQL
+  [✅] 5.4 Validaciones por estado
+  [✅] 5.5 Separar servicios especializados
+  [✅] 5.6 Control de concurrencia
+
+PRIORIDAD 6 — FASE 6: Nuevas tablas
+  [✅] Crear todos los modelos listados
+  [✅] Registrar en ensure_crm_schema()
+
+PRIORIDAD 7 — FASES 7–8: Notificaciones y Frontend
+  [✅] 7.1 Motor de notificaciones
+  [✅] 7.2 Reglas de automatización
+  [✅] 8.1 Kanban mejorado (todos los stages, semáforo, drag & drop, filtros)
+  [✅] 8.2 Panel Mis pendientes (vencidas, leads sin asignar, opps sin acción)
+  [✅] 8.3 Embudo visual (barras proporcionales + tasas de conversión)
+  [✅] 8.4 Bandeja leads nuevos (leads por crear_en DESC, sin asignar resaltado)
+  [✅] 8.5 Timeline enriquecido (seguimiento + actividades + notas fusionados)
+
+PRIORIDAD 8 — FASE 9: Integraciones ecosistema
+  [✅] 9.1 Conversaciones: CrmConversacion + CrmMensaje (DB), conversacion_service.py, api_conversaciones.py (10 endpoints: CRUD + 4 acciones tipificadas: comentar/apoyo/validar/cierre)
+  [✅] 9.2 Multitienda: multitienda_service.py (sync-clientes, detectar-carritos, reactivar-inactivos, postventa-pedidos, enriquecer-scoring, ejecutar-ciclo), api_integraciones.py (7 endpoints)
+
+===============================================================================

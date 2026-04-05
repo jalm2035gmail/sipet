@@ -53,6 +53,22 @@ def test_resolve_sipet_config_path_prefers_domain_specific_conf(tmp_path, monkey
     assert resolved == domain_conf
 
 
+def test_resolve_sipet_config_path_uses_localhost_conf_for_loopback_alias(tmp_path, monkeypatch) -> None:
+    domain_dir = tmp_path / "dominios"
+    domain_dir.mkdir(parents=True)
+    global_conf = tmp_path / "sipet.conf"
+    global_conf.write_text("[options]\ndomain = default.local\n", encoding="utf-8")
+    localhost_conf = domain_dir / "localhost.conf"
+    localhost_conf.write_text("[options]\ndomain = localhost\nsqlite_db_path = /tmp/local.db\n", encoding="utf-8")
+
+    monkeypatch.setattr(database_router_module, "DOMAIN_CONFIG_DIR", domain_dir)
+    monkeypatch.setattr(database_router_module, "SIPET_CONFIG_PATH", global_conf)
+
+    resolved = database_router_module.resolve_sipet_config_path("127.0.0.1")
+
+    assert resolved == localhost_conf
+
+
 def test_get_sipet_superadmin_settings_uses_domain_conf(tmp_path, monkeypatch) -> None:
     domain_dir = tmp_path / "dominios"
     domain_dir.mkdir(parents=True)
@@ -120,3 +136,21 @@ def test_has_complete_database_config_accepts_complete_domain_conf(tmp_path, mon
     monkeypatch.setattr(database_router_module, "SIPET_CONFIG_PATH", tmp_path / "sipet.conf")
 
     assert database_router_module.has_complete_database_config("oaxaca.tunegociovale.com") is True
+
+
+def test_load_domain_database_map_reuses_localhost_mapping_for_loopback_aliases(tmp_path, monkeypatch) -> None:
+    domain_dir = tmp_path / "dominios"
+    domain_dir.mkdir(parents=True)
+    domain_conf = domain_dir / "localhost.conf"
+    domain_conf.write_text(
+        "[options]\n"
+        "domain = localhost\n"
+        "sqlite_db_path = /tmp/local.db\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(database_router_module, "DOMAIN_CONFIG_DIR", domain_dir)
+
+    mapping = database_router_module.load_domain_database_map()
+
+    assert mapping["localhost"] == "sqlite:////tmp/local.db"
+    assert mapping["127.0.0.1"] == "sqlite:////tmp/local.db"

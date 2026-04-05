@@ -225,9 +225,15 @@ def _presentation_pages(instance: SurveyInstance) -> List[Dict[str, Any]]:
 
 def _live_state(instance: SurveyInstance) -> Dict[str, Any]:
     s = instance.settings_json or {}
+    live_pages = s.get("live_pages") or []
+    if not live_pages:
+        live_pages = _presentation_pages(instance)
+    live_mode = s.get("live_mode", "questions")
+    if live_pages and live_mode != "presentation":
+        live_mode = "presentation"
     return {
         "live_status": s.get("live_status", "idle"),
-        "live_mode": s.get("live_mode", "questions"),
+        "live_mode": live_mode,
         "live_current_question_id": s.get("live_current_question_id"),
         "live_current_question_index": s.get("live_current_question_index", 0),
         "live_current_page_index": s.get("live_current_page_index", 0),
@@ -235,7 +241,7 @@ def _live_state(instance: SurveyInstance) -> Dict[str, Any]:
         "live_started_at": s.get("live_started_at"),
         "live_ended_at": s.get("live_ended_at"),
         "live_question_ids": s.get("live_question_ids", []),
-        "live_pages": s.get("live_pages", []),
+        "live_pages": live_pages,
     }
 
 
@@ -269,9 +275,9 @@ def start_live_session(instance_id: int, tenant_id: str) -> Dict[str, Any]:
             raise ValueError("La encuesta debe estar publicada para iniciar una sesión en vivo.")
 
         presentation_pages = _presentation_pages(instance)
-        is_presentation_mode = (
-            str((instance.publication_rules_json or {}).get("response_mode") or "standard").strip().lower() == "presentation"
-            and len(presentation_pages) > 0
+        response_mode = str((instance.publication_rules_json or {}).get("response_mode") or "standard").strip().lower()
+        is_presentation_mode = len(presentation_pages) > 0 and (
+            response_mode == "presentation" or response_mode == "standard"
         )
 
         question_ids = _flat_question_ids(instance)
@@ -527,6 +533,7 @@ def get_live_status_audience(
             "live_current_page_index": settings.get("live_current_page_index", 0),
             "total_questions": len(settings.get("live_question_ids", [])),
             "total_pages": len(settings.get("live_pages", [])),
+            "pages": settings.get("live_pages", []),
             "show_results": show_results,
             "current_question": None,
             "current_page": None,

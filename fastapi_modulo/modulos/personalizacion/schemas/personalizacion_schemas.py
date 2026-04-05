@@ -29,7 +29,7 @@ MAX_FILE_BYTES = 5 * 1024 * 1024  # 5 MB
 
 class ColorPayloadSchema(BaseModel):
     """
-    Valida los 5 colores MAIN del tema institucional para el form multipart.
+    Valida los colores MAIN del tema institucional para el form multipart.
     Acepta #RGB (shorthand) y lo expande a #RRGGBB.
     Los campos None se ignoran — no sobreescriben el valor guardado en DB.
     """
@@ -38,10 +38,13 @@ class ColorPayloadSchema(BaseModel):
     sidebar_bottom: Optional[str] = None
     field_color:    Optional[str] = None
     button_bg:      Optional[str] = None
+    screen_bg:      Optional[str] = None
+    panel_1_bg:     Optional[str] = None
+    panel_2_bg:     Optional[str] = None
 
     @field_validator(
         "navbar_bg", "sidebar_top", "sidebar_bottom",
-        "field_color", "button_bg",
+        "field_color", "button_bg", "screen_bg", "panel_1_bg", "panel_2_bg",
         mode="before",
     )
     @classmethod
@@ -67,6 +70,9 @@ class ColorPayloadSchema(BaseModel):
             "sidebar-bottom": self.sidebar_bottom,
             "field-color":    self.field_color,
             "button-bg":      self.button_bg,
+            "screen-bg":      self.screen_bg,
+            "panel-1-bg":     self.panel_1_bg,
+            "panel-2-bg":     self.panel_2_bg,
         }
         return {k: v for k, v in mapping.items() if v is not None}
 
@@ -76,14 +82,15 @@ class ColorPayloadSchema(BaseModel):
             v is not None
             for v in (
                 self.navbar_bg, self.sidebar_top, self.sidebar_bottom,
-                self.field_color, self.button_bg,
+                self.field_color, self.button_bg, self.screen_bg,
+                self.panel_1_bg, self.panel_2_bg,
             )
         )
 
 
 class FullColorPayloadSchema(BaseModel):
     """
-    Valida un payload JSON con los 5 colores MAIN completos (todos requeridos).
+    Valida un payload JSON con todos los colores MAIN completos.
     Usado en el endpoint POST /guardar-colores que recibe JSON directo.
     """
     navbar_bg:      str
@@ -91,10 +98,13 @@ class FullColorPayloadSchema(BaseModel):
     sidebar_bottom: str
     field_color:    str
     button_bg:      str
+    screen_bg:      str
+    panel_1_bg:     str
+    panel_2_bg:     str
 
     @field_validator(
         "navbar_bg", "sidebar_top", "sidebar_bottom",
-        "field_color", "button_bg",
+        "field_color", "button_bg", "screen_bg", "panel_1_bg", "panel_2_bg",
         mode="before",
     )
     @classmethod
@@ -117,6 +127,9 @@ class FullColorPayloadSchema(BaseModel):
             "sidebar-bottom": self.sidebar_bottom,
             "field-color":    self.field_color,
             "button-bg":      self.button_bg,
+            "screen-bg":      self.screen_bg,
+            "panel-1-bg":     self.panel_1_bg,
+            "panel-2-bg":     self.panel_2_bg,
         }
 
     @classmethod
@@ -131,6 +144,9 @@ class FullColorPayloadSchema(BaseModel):
             sidebar_bottom=data.get("sidebar-bottom", ""),
             field_color=data.get("field-color", ""),
             button_bg=data.get("button-bg", ""),
+            screen_bg=data.get("screen-bg", ""),
+            panel_1_bg=data.get("panel-1-bg", ""),
+            panel_2_bg=data.get("panel-2-bg", ""),
         )
 
 

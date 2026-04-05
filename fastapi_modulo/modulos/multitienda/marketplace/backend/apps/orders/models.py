@@ -9,11 +9,11 @@ from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.vendors.models 
 from fastapi_modulo.modulos.multitienda.marketplace.backend.core.db import Base
 
 class Order(Base):
-    __tablename__ = 'order'
+    __tablename__ = 'orders'
     id = Column(Integer, primary_key=True)
     order_number = Column(String(20), unique=True, index=True)
     uuid = Column(String(36), default=lambda: str(uuid.uuid4()), unique=True, index=True)
-    customer_id = Column(Integer, ForeignKey('user.id'), nullable=True)
+    customer_id = Column(Integer, ForeignKey('users.id'), nullable=True)
     guest_email = Column(String(255), nullable=True)
     billing_address = Column(JSON)
     shipping_address = Column(JSON, nullable=True)
@@ -40,12 +40,12 @@ class Order(Base):
     payments = relationship('Payment', back_populates='order', cascade='all, delete-orphan')
 
 class OrderItem(Base):
-    __tablename__ = 'order_item'
+    __tablename__ = 'order_items'
     id = Column(Integer, primary_key=True)
-    order_id = Column(Integer, ForeignKey('order.id'))
-    vendor_id = Column(Integer, ForeignKey('vendor_store.id'))
-    product_id = Column(Integer, ForeignKey('product.id'), nullable=True)
-    variant_id = Column(Integer, ForeignKey('product_variant.id'), nullable=True)
+    order_id = Column(Integer, ForeignKey('orders.id'))
+    vendor_id = Column(Integer, ForeignKey('vendors.id'))
+    product_id = Column(Integer, ForeignKey('products.id'), nullable=True)
+    variant_id = Column(Integer, ForeignKey('product_variants.id'), nullable=True)
     product_name = Column(String(200))
     product_sku = Column(String(50), default='')
     price = Column(Numeric(10,2))
@@ -62,10 +62,10 @@ class OrderItem(Base):
     variant = relationship('ProductVariant')
 
 class ShippingGroup(Base):
-    __tablename__ = 'shipping_group'
+    __tablename__ = 'shipping_groups'
     id = Column(Integer, primary_key=True)
-    order_id = Column(Integer, ForeignKey('order.id'))
-    vendor_id = Column(Integer, ForeignKey('vendor_store.id'))
+    order_id = Column(Integer, ForeignKey('orders.id'))
+    vendor_id = Column(Integer, ForeignKey('vendors.id'))
     shipping_method = Column(String(50))
     shipping_cost = Column(Numeric(10,2), default=0)
     tracking_number = Column(String(100), default='')
@@ -76,9 +76,9 @@ class ShippingGroup(Base):
     vendor = relationship('VendorStore')
 
 class Payment(Base):
-    __tablename__ = 'payment'
+    __tablename__ = 'payments'
     id = Column(Integer, primary_key=True)
-    order_id = Column(Integer, ForeignKey('order.id'))
+    order_id = Column(Integer, ForeignKey('orders.id'))
     payment_method = Column(String(50))
     transaction_id = Column(String(100), unique=True)
     amount = Column(Numeric(10,2))

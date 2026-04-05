@@ -38,6 +38,13 @@ body {
     color: var(--body-text, #0f172a);
 }
 
+.module-screen-surface,
+.sipet-module-screen {
+    background:
+        radial-gradient(circle at top left, color-mix(in srgb, var(--institutional-navbar-accent, #cbd5e1) 10%, transparent) 0%, transparent 30%),
+        var(--module-screen-bg, var(--page-bg, #f4f6fb));
+}
+
 .main-content,
 .content-shell,
 .content-section,
@@ -46,6 +53,22 @@ body {
 .modal-box,
 .drawer-content {
     background-color: var(--content-bg, #ffffff);
+}
+
+.module-panel-1,
+.sipet-module-panel-1 {
+    background: var(--module-panel-1-bg, var(--content-bg, #ffffff));
+    color: var(--panel-1-text, var(--body-text, #0f172a));
+    border: 1px solid var(--module-panel-1-border, color-mix(in srgb, var(--field-border, #cbd5e1) 64%, #ffffff 36%));
+    box-shadow: 0 12px 26px color-mix(in srgb, var(--module-panel-1-shadow, #0f172a) 10%, transparent);
+}
+
+.module-panel-2,
+.sipet-module-panel-2 {
+    background: var(--module-panel-2-bg, var(--institutional-panel-soft, #eff6ff));
+    color: var(--panel-2-text, var(--body-text, #0f172a));
+    border: 1px solid var(--module-panel-2-border, color-mix(in srgb, var(--field-border, #cbd5e1) 64%, #ffffff 36%));
+    box-shadow: 0 14px 30px color-mix(in srgb, var(--module-panel-2-shadow, #0f172a) 12%, transparent);
 }
 
 .content-section,

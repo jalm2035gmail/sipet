@@ -12,263 +12,7 @@ _HTML = """
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Inicio — Multitienda</title>
-  <style>
-    :root {
-      --db-bg: var(--page-bg, #f4f6fb);
-      --db-surface: var(--content-bg, #ffffff);
-      --db-border: var(--field-border, #d1d5db);
-      --db-text: var(--body-text, #1f2937);
-      --db-muted: color-mix(in srgb, var(--body-text, #1f2937) 60%, #ffffff 40%);
-      --db-accent: var(--button-bg, #1a6b3c);
-      --db-accent-fg: var(--button-text, #ffffff);
-    }
-
-    html, body {
-      margin: 0;
-      padding: 0;
-      background: var(--db-bg);
-      font-family: system-ui, Arial, sans-serif;
-      color: var(--db-text);
-    }
-
-    * { box-sizing: border-box; }
-
-    /* ── Welcome banner ── */
-    .db-welcome {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      padding: 20px 24px;
-      border-radius: 18px;
-      background: linear-gradient(135deg,
-        color-mix(in srgb, var(--db-accent) 14%, var(--db-surface)) 0%,
-        var(--db-surface) 100%);
-      border: 1px solid color-mix(in srgb, var(--db-border) 70%, transparent);
-      margin-bottom: 20px;
-    }
-
-    .db-welcome__avatar {
-      width: 56px;
-      height: 56px;
-      border-radius: 50%;
-      background: color-mix(in srgb, var(--db-accent) 18%, var(--db-surface));
-      border: 2px solid color-mix(in srgb, var(--db-accent) 30%, transparent);
-      display: grid;
-      place-items: center;
-      flex-shrink: 0;
-      font-size: 1.5rem;
-      color: var(--db-accent);
-    }
-
-    .db-welcome__copy { min-width: 0; }
-    .db-welcome__copy h2 {
-      margin: 0 0 4px;
-      font-size: 1.15rem;
-      font-weight: 700;
-      color: var(--db-text);
-    }
-    .db-welcome__copy p {
-      margin: 0;
-      font-size: 0.85rem;
-      color: var(--db-muted);
-    }
-
-    /* ── Stats row ── */
-    .db-stats {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-      gap: 14px;
-      margin-bottom: 20px;
-    }
-
-    .db-stat {
-      background: var(--db-surface);
-      border: 1px solid var(--db-border);
-      border-radius: 16px;
-      padding: 16px 18px;
-      display: flex;
-      align-items: center;
-      gap: 14px;
-    }
-
-    .db-stat__icon {
-      width: 44px;
-      height: 44px;
-      border-radius: 12px;
-      display: grid;
-      place-items: center;
-      font-size: 1.1rem;
-      flex-shrink: 0;
-    }
-
-    .db-stat__icon--blue   { background: #dbeafe; color: #1d4ed8; }
-    .db-stat__icon--green  { background: #dcfce7; color: #15803d; }
-    .db-stat__icon--amber  { background: #fef9c3; color: #b45309; }
-    .db-stat__icon--violet { background: #ede9fe; color: #7c3aed; }
-
-    .db-stat__body { min-width: 0; }
-    .db-stat__value {
-      font-size: 1.55rem;
-      font-weight: 800;
-      letter-spacing: -0.03em;
-      line-height: 1;
-      color: var(--db-text);
-    }
-    .db-stat__label {
-      font-size: 0.78rem;
-      color: var(--db-muted);
-      margin-top: 3px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    /* ── Two-column grid ── */
-    .db-grid {
-      display: grid;
-      grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
-      gap: 16px;
-      margin-bottom: 20px;
-    }
-
-    .db-card {
-      background: var(--db-surface);
-      border: 1px solid var(--db-border);
-      border-radius: 16px;
-      overflow: hidden;
-    }
-
-    .db-card__head {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 14px 18px;
-      border-bottom: 1px solid var(--db-border);
-      font-size: 0.88rem;
-      font-weight: 700;
-      color: var(--db-text);
-    }
-
-    .db-card__head i {
-      font-size: 0.9rem;
-      color: var(--db-muted);
-    }
-
-    .db-card__body { padding: 18px; }
-
-    /* ── Chart canvas ── */
-    .db-chart-wrap {
-      position: relative;
-      height: 200px;
-    }
-
-    /* ── Product stats bars ── */
-    .db-bars {
-      display: grid;
-      gap: 12px;
-    }
-
-    .db-bar-item { display: grid; gap: 4px; }
-    .db-bar-label {
-      display: flex;
-      justify-content: space-between;
-      font-size: 0.82rem;
-      color: var(--db-muted);
-    }
-    .db-bar-track {
-      height: 8px;
-      border-radius: 999px;
-      background: color-mix(in srgb, var(--db-border) 80%, transparent);
-      overflow: hidden;
-    }
-    .db-bar-fill {
-      height: 100%;
-      border-radius: 999px;
-      transition: width 0.6s ease;
-    }
-    .db-bar-fill--blue   { background: #3b82f6; }
-    .db-bar-fill--green  { background: #22c55e; }
-    .db-bar-fill--amber  { background: #f59e0b; }
-
-    /* ── Bottom row ── */
-    .db-bottom {
-      display: grid;
-      grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
-      gap: 16px;
-    }
-
-    /* ── Notifications ── */
-    .db-notif-list { list-style: none; margin: 0; padding: 0; }
-    .db-notif-item {
-      display: flex;
-      align-items: flex-start;
-      gap: 10px;
-      padding: 10px 0;
-      border-bottom: 1px solid color-mix(in srgb, var(--db-border) 60%, transparent);
-      font-size: 0.85rem;
-    }
-    .db-notif-item:last-child { border-bottom: none; }
-    .db-notif-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      margin-top: 5px;
-      flex-shrink: 0;
-      background: #3b82f6;
-    }
-    .db-notif-dot--green { background: #22c55e; }
-    .db-notif-dot--amber { background: #f59e0b; }
-    .db-notif-text { color: var(--db-text); line-height: 1.45; }
-    .db-notif-when { color: var(--db-muted); font-size: 0.78rem; }
-
-    /* ── Quick actions ── */
-    .db-actions { display: grid; gap: 10px; }
-    .db-action-btn {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 12px 14px;
-      border-radius: 12px;
-      border: 1px solid var(--db-border);
-      background: color-mix(in srgb, var(--db-surface) 95%, var(--db-bg) 5%);
-      color: var(--db-text);
-      text-decoration: none;
-      font-size: 0.88rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
-    }
-    .db-action-btn:hover {
-      background: color-mix(in srgb, var(--db-accent) 8%, var(--db-surface));
-      border-color: color-mix(in srgb, var(--db-accent) 40%, transparent);
-      transform: translateY(-1px);
-    }
-    .db-action-btn i {
-      width: 32px;
-      height: 32px;
-      border-radius: 10px;
-      display: grid;
-      place-items: center;
-      font-size: 0.9rem;
-      flex-shrink: 0;
-      background: color-mix(in srgb, var(--db-accent) 12%, var(--db-surface));
-      color: var(--db-accent);
-    }
-
-    /* ── Empty state ── */
-    .db-empty {
-      text-align: center;
-      padding: 28px 16px;
-      color: var(--db-muted);
-      font-size: 0.88rem;
-    }
-
-    @media (max-width: 900px) {
-      .db-grid, .db-bottom {
-        grid-template-columns: 1fr;
-      }
-    }
-  </style>
+  <link rel="stylesheet" href="/multitienda/static/css/inicio.css" />
 </head>
 <body>
 <main id="db-root">
@@ -277,7 +21,7 @@ _HTML = """
   <div class="db-welcome">
     <div class="db-welcome__avatar"><i class="fa-regular fa-user"></i></div>
     <div class="db-welcome__copy">
-      <h2>Bienvenido, <span id="db-username">...</span></h2>
+      <h2>Bienvenido <span id="db-username">...</span></h2>
       <p><i class="fa-regular fa-clock" style="margin-right:4px"></i>Último acceso: <span id="db-last-access">—</span></p>
     </div>
   </div>
@@ -401,7 +145,7 @@ _HTML = """
             <i class="fa-solid fa-box"></i>
             <span>Gestionar productos</span>
           </a>
-          <a class="db-action-btn" href="/multitienda/configuracion">
+          <a class="db-action-btn" href="/multitienda/configuracion" id="db-link-config" style="display:none">
             <i class="fa-solid fa-gear"></i>
             <span>Configurar tienda</span>
           </a>
@@ -454,15 +198,19 @@ _HTML = """
     setText('db-last-access', now.toLocaleString());
   }
 
-  /* ── local product count ── */
+  /* ── Stats reales desde API ── */
   var localProducts = 0;
-  try {
-    var raw = JSON.parse(window.localStorage.getItem('multitienda_productos') || '[]');
-    localProducts = Array.isArray(raw) ? raw.length : 0;
-  } catch(e) {}
-  setText('db-stat-products', localProducts);
+  fetch('/multitienda/api/inicio-stats', { headers: { 'Accept': 'application/json' } })
+    .then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(payload) {
+      var d = (payload && payload.success && payload.data) ? payload.data : {};
+      localProducts = d.products || 0;
+      setText('db-stat-products', localProducts);
+      buildAnalyticsChart(d.chart_values && d.chart_values.length ? d.chart_values : [0,0,0,0,0,0,0]);
+    })
+    .catch(function() { buildAnalyticsChart([0,0,0,0,0,0,0]); });
 
-  /* ── analítica chart (últimos 7 días simulados hasta que haya endpoint real) ── */
+  /* ── Gráfica analítica (últimos 7 días) ── */
   function buildAnalyticsChart(values) {
     var canvas = document.getElementById('db-analytics-chart');
     if (!canvas || typeof Chart === 'undefined') return;
@@ -501,9 +249,6 @@ _HTML = """
       }
     });
   }
-
-  /* placeholder data — replace with real API when available */
-  buildAnalyticsChart([0, 0, 0, 0, 0, 0, 0]);
 
   /* ── stores ── */
   fetch('/multitienda/api/stores', { headers: { 'Accept': 'application/json' } })
@@ -589,6 +334,10 @@ _HTML = """
   try {
     var roleMeta = document.querySelector('meta[name="user-role"]');
     var roleName = roleMeta ? roleMeta.content : '';
+    if (/administrador_tienda/i.test(roleName)) {
+      var linkConfig = document.getElementById('db-link-config');
+      if (linkConfig) linkConfig.style.display = '';
+    }
     if (/superadmin/i.test(roleName)) {
       var linkGestion = document.getElementById('db-link-gestion');
       if (linkGestion) linkGestion.style.display = '';
@@ -598,6 +347,10 @@ _HTML = """
   /* fallback: show gestion link based on localStorage flag set by sipet auth */
   try {
     var storedRole = window.localStorage.getItem('sipet_user_role') || '';
+    if (/administrador_tienda/i.test(storedRole)) {
+      var lc = document.getElementById('db-link-config');
+      if (lc) lc.style.display = '';
+    }
     if (/superadmin/i.test(storedRole)) {
       var lg = document.getElementById('db-link-gestion');
       if (lg) lg.style.display = '';

@@ -1,251 +1,232 @@
+from __future__ import annotations
+
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
-from sqlalchemy.orm import Session, joinedload
-from typing import Optional
-from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.cart.models import Cart, CartItem
-from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.cart.schemas import (
-    CartItemCreate,
-    CartItemUpdate,
-)
-from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.products.models import Product, ProductVariant
-from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.users.models import User
-from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.vendors.models import VendorStore
-from fastapi_modulo.modulos.multitienda.marketplace.backend.core.auth import get_current_user_or_none
+from sqlalchemy.orm import Session
+
 from fastapi_modulo.modulos.multitienda.marketplace.backend.core.db import get_db
-from decimal import Decimal
-import secrets
+from fastapi_modulo.modulos.multitienda.marketplace.backend.core.dependencies import get_session_key as _get_session_key
+from .models import Cart, CartItem
+from .schemas import CartItemIn, CartItemOut, CartItemUpdate, CartOut
+from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.products.models import ProductRelated
 
 router = APIRouter(prefix="/api/cart", tags=["cart"])
 
-def get_or_create_cart(request: Request, db: Session, user: Optional[User] = None):
-    cart = None
-    if user and getattr(user, 'id', None):
-        cart = db.query(Cart).filter(Cart.user_id == user.id).first()
+
+def _get_or_create_cart(session_key: str, db: Session) -> Cart:
+    cart = db.query(Cart).filter(Cart.session_key == session_key).first()
     if not cart:
-        session_key = request.cookies.get('session_id')
-        if session_key:
-            cart = db.query(Cart).filter(Cart.session_key == session_key).first()
-    if not cart:
-        cart = Cart()
-        if user and getattr(user, 'id', None):
-            cart.user_id = user.id
-        else:
-            session_key = request.cookies.get('session_id') or secrets.token_urlsafe(32)
-            cart.session_key = session_key
+        cart = Cart(session_key=session_key)
         db.add(cart)
         db.commit()
         db.refresh(cart)
     return cart
 
-def calculate_shipping_cost(vendor, items):
-    # Simplificado: flat rate por vendedor
-    return Decimal('5.00')
 
-@router.get("/")
-async def get_cart(
-    request: Request,
-    db: Session = Depends(get_db),
-    current_user: Optional[User] = Depends(get_current_user_or_none)
-):
-    cart = get_or_create_cart(request, db, current_user)
-    items = db.query(CartItem).filter(CartItem.cart_id == cart.id).options(
-        joinedload(CartItem.product).joinedload(Product.vendor),
-        joinedload(CartItem.variant),
-        joinedload(CartItem.product).joinedload(Product.images)
-    ).all()
-    subtotal = sum(item.get_total() for item in items)
-    items_by_vendor = {}
-    for item in items:
-        vendor_id = item.product.vendor_id
-        if vendor_id not in items_by_vendor:
-            items_by_vendor[vendor_id] = {
-                'vendor': item.product.vendor,
-                'items': [],
-                'subtotal': Decimal('0.00'),
-                'shipping_cost': Decimal('0.00')
-            }
-        items_by_vendor[vendor_id]['items'].append(item)
-        items_by_vendor[vendor_id]['subtotal'] += item.get_total()
-    shipping_total = 0
-    for vendor_data in items_by_vendor.values():
-        vendor_data['shipping_cost'] = calculate_shipping_cost(
-            vendor_data['vendor'],
-            vendor_data['items']
-        )
-        shipping_total += vendor_data['shipping_cost']
-    total = subtotal + shipping_total
+def _serialize_item(item: CartItem) -> dict:
+    unit = float(item.unit_price or 0)
     return {
-        "cart": {
-            "id": cart.id,
-            "items_count": len(items),
-            "subtotal": float(subtotal),
-            "shipping_total": float(shipping_total),
-            "total": float(total)
-        },
-        "items": [
-            {
-                "id": item.id,
-                "product": {
-                    "id": item.product.id,
-                    "name": item.product.name,
-                    "slug": item.product.slug,
-                    "image": getattr(item.product, 'primary_image', None),
-                    "vendor": {
-                        "id": item.product.vendor.id,
-                        "name": item.product.vendor.store_name,
-                        "slug": item.product.vendor.store_slug
-                    }
-                },
-                "variant": item.variant_id,
-                "quantity": item.quantity,
-                "price": float(item.price),
-                "total": float(item.get_total()),
-                "is_available": item.is_available()
-            }
-            for item in items
-        ],
-        "grouped_by_vendor": [
-            {
-                "vendor": {
-                    "id": data['vendor'].id,
-                    "name": data['vendor'].store_name,
-                    "slug": data['vendor'].store_slug
-                },
-                "items": [
-                    {
-                        "id": item.id,
-                        "product_name": item.product.name,
-                        "quantity": item.quantity,
-                        "price": float(item.price)
-                    }
-                    for item in data['items']
-                ],
-                "subtotal": float(data['subtotal']),
-                "shipping_cost": float(data['shipping_cost']),
-                "vendor_total": float(data['subtotal'] + data['shipping_cost'])
-            }
-            for vendor_id, data in items_by_vendor.items()
-        ]
+        "id": item.id,
+        "product_id": item.product_id,
+        "product_name": item.product_name,
+        "product_image": item.product_image,
+        "store_name": item.store_name,
+        "vendor_id": item.vendor_id,
+        "quantity": item.quantity,
+        "unit_price": unit,
+        "subtotal": round(unit * (item.quantity or 1), 2),
     }
 
-@router.post("/items")
-async def add_to_cart(
+
+def _compute_cart_benefits(items: list, db: Session) -> list:
+    """
+    Dado el listado de CartItem, devuelve los beneficios activos.
+    Solo se consideran items cuyo product_id sea un entero válido.
+    Cada entrada indica:
+      - trigger_product_id/name: el producto que activa el beneficio
+      - related_product_id/name: el producto que recibe el beneficio
+      - benefit_type / benefit_value
+      - applied: True si el producto beneficiado también está en el carrito
+      - discount_amount: monto ahorrado (si applied y hay precio disponible)
+    """
+    int_ids: dict[int, CartItem] = {}
+    for item in items:
+        try:
+            int_ids[int(item.product_id)] = item
+        except (TypeError, ValueError):
+            pass
+
+    if not int_ids:
+        return []
+
+    rels = (
+        db.query(ProductRelated)
+        .filter(ProductRelated.product_id.in_(list(int_ids.keys())))
+        .all()
+    )
+
+    result = []
+    for r in rels:
+        trigger_item = int_ids.get(r.product_id)
+        applied = r.related_product_id in int_ids
+        related_item = int_ids.get(r.related_product_id)
+
+        discount_amount = None
+        if applied and related_item is not None:
+            unit = float(related_item.unit_price or 0)
+            bv = float(r.benefit_value or 0)
+            if r.benefit_type == "discount_pct":
+                discount_amount = round(unit * bv / 100, 2)
+            elif r.benefit_type == "discount_fixed":
+                discount_amount = round(min(bv, unit), 2)
+            elif r.benefit_type == "free_shipping":
+                discount_amount = 0.0
+
+        result.append({
+            "trigger_product_id":   r.product_id,
+            "trigger_product_name": trigger_item.product_name if trigger_item else None,
+            "related_product_id":   r.related_product_id,
+            "related_product_name": r.related_product.name if r.related_product else None,
+            "benefit_type":         r.benefit_type,
+            "benefit_value":        float(r.benefit_value or 0),
+            "applied":              applied,
+            "discount_amount":      discount_amount,
+        })
+
+    return result
+
+
+# ── Endpoints ──────────────────────────────────────────────────────────────────
+
+@router.get("/", response_model=CartOut)
+def get_cart(
     request: Request,
     response: Response,
-    item_data: CartItemCreate,
     db: Session = Depends(get_db),
-    current_user: Optional[User] = Depends(get_current_user_or_none)
 ):
-    cart = get_or_create_cart(request, db, current_user)
-    product = db.query(Product).filter(
-        Product.id == item_data.product_id,
-        Product.status == 'published'
-    ).first()
-    if not product:
-        raise HTTPException(status_code=404, detail="Product not found")
-    variant = None
-    if item_data.variant_id:
-        variant = db.query(ProductVariant).filter(
-            ProductVariant.id == item_data.variant_id,
-            ProductVariant.product_id == product.id
-        ).first()
-        if not variant:
-            raise HTTPException(status_code=404, detail="Variant not found")
-    if product.manage_stock:
-        if variant:
-            if variant.stock_quantity < item_data.quantity:
-                raise HTTPException(status_code=400, detail="Insufficient stock")
-        else:
-            if product.stock_quantity < item_data.quantity:
-                raise HTTPException(status_code=400, detail="Insufficient stock")
-    existing_item = db.query(CartItem).filter(
-        CartItem.cart_id == cart.id,
-        CartItem.product_id == product.id,
-        CartItem.variant_id == (variant.id if variant else None)
-    ).first()
-    if existing_item:
-        existing_item.quantity += item_data.quantity
-        if product.manage_stock:
-            total_quantity = existing_item.quantity
-            if variant:
-                if variant.stock_quantity < total_quantity:
-                    raise HTTPException(status_code=400, detail="Insufficient stock")
-            elif product.stock_quantity < total_quantity:
-                raise HTTPException(status_code=400, detail="Insufficient stock")
-    else:
-        existing_item = CartItem(
-            cart_id=cart.id,
-            product_id=product.id,
-            variant_id=variant.id if variant else None,
-            quantity=item_data.quantity,
-            price=variant.price if variant else product.price
-        )
-        db.add(existing_item)
+    """Devuelve el carrito de la sesión actual, incluyendo beneficios activos."""
+    session_key = _get_session_key(request, response)
+    cart = _get_or_create_cart(session_key, db)
+    items = (
+        db.query(CartItem)
+        .filter(CartItem.cart_id == cart.id)
+        .order_by(CartItem.created_at.asc())
+        .all()
+    )
+    items_out = [_serialize_item(i) for i in items]
+    total = round(sum(i["subtotal"] for i in items_out), 2)
+
+    # ── Calcular beneficios por productos relacionados ─────────────────────
+    benefits = _compute_cart_benefits(items, db)
+
+    return {
+        "session_key": session_key,
+        "items": items_out,
+        "total": total,
+        "items_count": len(items_out),
+        "benefits": benefits,
+    }
+
+
+@router.post("/items", status_code=201)
+def add_item(
+    payload: CartItemIn,
+    request: Request,
+    response: Response,
+    db: Session = Depends(get_db),
+):
+    """Agrega un producto al carrito o incrementa su cantidad si ya existe."""
+    session_key = _get_session_key(request, response)
+    cart = _get_or_create_cart(session_key, db)
+
+    existing = (
+        db.query(CartItem)
+        .filter(CartItem.cart_id == cart.id, CartItem.product_id == payload.product_id)
+        .first()
+    )
+    if existing:
+        existing.quantity += payload.quantity
+        db.commit()
+        db.refresh(existing)
+        return {"message": "Cantidad actualizada", "item": _serialize_item(existing)}
+
+    item = CartItem(
+        cart_id=cart.id,
+        product_id=payload.product_id,
+        product_name=payload.product_name,
+        product_image=payload.product_image,
+        store_name=payload.store_name,
+        vendor_id=payload.vendor_id,
+        quantity=payload.quantity,
+        unit_price=payload.unit_price,
+    )
+    db.add(item)
     db.commit()
-    db.refresh(existing_item)
-    if not current_user and not request.cookies.get('session_id'):
-        response.set_cookie(
-            key='session_id',
-            value=cart.session_key,
-            httponly=True,
-            max_age=30 * 24 * 60 * 60
-        )
-    return {"message": "Item added to cart", "item_id": existing_item.id}
+    db.refresh(item)
+    return {"message": "Producto agregado al carrito", "item": _serialize_item(item)}
+
 
 @router.put("/items/{item_id}")
-async def update_cart_item(
+def update_item(
     item_id: int,
-    update_data: CartItemUpdate,
+    payload: CartItemUpdate,
     request: Request,
+    response: Response,
     db: Session = Depends(get_db),
-    current_user: Optional[User] = Depends(get_current_user_or_none)
 ):
-    cart = get_or_create_cart(request, db, current_user)
-    item = db.query(CartItem).filter(
-        CartItem.id == item_id,
-        CartItem.cart_id == cart.id
-    ).options(joinedload(CartItem.product)).first()
+    """Actualiza la cantidad de un ítem (quantity=0 lo elimina)."""
+    session_key = _get_session_key(request, response)
+    cart = db.query(Cart).filter(Cart.session_key == session_key).first()
+    if not cart:
+        raise HTTPException(status_code=404, detail="Carrito no encontrado")
+    item = (
+        db.query(CartItem)
+        .filter(CartItem.id == item_id, CartItem.cart_id == cart.id)
+        .first()
+    )
     if not item:
-        raise HTTPException(status_code=404, detail="Item not found in cart")
-    if update_data.quantity > item.quantity:
-        if item.product.manage_stock:
-            if item.variant:
-                variant = db.query(ProductVariant).get(item.variant_id)
-                if variant.stock_quantity < update_data.quantity:
-                    raise HTTPException(status_code=400, detail="Insufficient stock")
-            elif item.product.stock_quantity < update_data.quantity:
-                raise HTTPException(status_code=400, detail="Insufficient stock")
-    if update_data.quantity <= 0:
+        raise HTTPException(status_code=404, detail="Item no encontrado en el carrito")
+    if payload.quantity <= 0:
         db.delete(item)
-    else:
-        item.quantity = update_data.quantity
+        db.commit()
+        return {"message": "Item eliminado del carrito"}
+    item.quantity = payload.quantity
     db.commit()
-    return {"message": "Cart updated"}
+    db.refresh(item)
+    return {"message": "Carrito actualizado", "item": _serialize_item(item)}
 
-@router.delete("/items/{item_id}")
-async def remove_cart_item(
+
+@router.delete("/items/{item_id}", status_code=204)
+def remove_item(
     item_id: int,
     request: Request,
+    response: Response,
     db: Session = Depends(get_db),
-    current_user: Optional[User] = Depends(get_current_user_or_none)
 ):
-    cart = get_or_create_cart(request, db, current_user)
-    item = db.query(CartItem).filter(
-        CartItem.id == item_id,
-        CartItem.cart_id == cart.id
-    ).first()
-    if not item:
-        raise HTTPException(status_code=404, detail="Item not found in cart")
-    db.delete(item)
-    db.commit()
-    return {"message": "Item removed from cart"}
+    """Elimina un ítem del carrito."""
+    session_key = _get_session_key(request, response)
+    cart = db.query(Cart).filter(Cart.session_key == session_key).first()
+    if cart:
+        item = (
+            db.query(CartItem)
+            .filter(CartItem.id == item_id, CartItem.cart_id == cart.id)
+            .first()
+        )
+        if item:
+            db.delete(item)
+            db.commit()
+    return Response(status_code=204)
 
-@router.delete("/")
-async def clear_cart(
+
+@router.delete("/", status_code=204)
+def clear_cart(
     request: Request,
+    response: Response,
     db: Session = Depends(get_db),
-    current_user: Optional[User] = Depends(get_current_user_or_none)
 ):
-    cart = get_or_create_cart(request, db, current_user)
-    db.query(CartItem).filter(CartItem.cart_id == cart.id).delete()
-    db.commit()
-    return {"message": "Cart cleared"}
+    """Vacía el carrito completo de la sesión."""
+    session_key = _get_session_key(request, response)
+    cart = db.query(Cart).filter(Cart.session_key == session_key).first()
+    if cart:
+        db.query(CartItem).filter(CartItem.cart_id == cart.id).delete()
+        db.commit()
+    return Response(status_code=204)

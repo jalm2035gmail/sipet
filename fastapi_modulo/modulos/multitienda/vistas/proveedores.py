@@ -1,8 +1,57 @@
 from __future__ import annotations
 
+from html import escape
 
-def proveedores_html() -> str:
-    return _HTML
+
+def _js_bool(value: bool) -> str:
+    return "true" if value else "false"
+
+
+def proveedores_html(
+    intelicoop_enabled: bool = False,
+    intelicoop_route: str = "",
+    intelicoop_api_base: str = "",
+) -> str:
+    return (
+        _HTML
+        .replace("__INTELICOOP_ENABLED__", _js_bool(intelicoop_enabled))
+        .replace("__INTELICOOP_ROUTE__", intelicoop_route or "#")
+        .replace("__INTELICOOP_API_BASE__", intelicoop_api_base or "")
+        .replace("__INTELICOOP_CONTACT_BANNER__", _build_contact_banner(intelicoop_enabled, intelicoop_route))
+        .replace("__INTELICOOP_CAMPAIGN_BANNER__", _build_campaign_banner(intelicoop_enabled, intelicoop_route))
+    )
+
+
+def _build_contact_banner(intelicoop_enabled: bool, intelicoop_route: str) -> str:
+    if intelicoop_enabled and intelicoop_route:
+        return (
+            '<div class="pv-intel-banner">'
+            '<i class="fa-solid fa-circle-nodes"></i>'
+            '<span>Guardado en <a href="{route}" target="_blank">Intelicoop</a> como prospecto.</span>'
+            "</div>"
+        ).format(route=escape(intelicoop_route))
+    return (
+        '<div class="pv-intel-banner pv-intel-banner--disabled">'
+        '<i class="fa-solid fa-plug-circle-xmark"></i>'
+        "<span>Intelicoop no está habilitado. Esta vista sigue disponible sin sincronización financiera.</span>"
+        "</div>"
+    )
+
+
+def _build_campaign_banner(intelicoop_enabled: bool, intelicoop_route: str) -> str:
+    if intelicoop_enabled and intelicoop_route:
+        return (
+            '<div class="pv-intel-banner">'
+            '<i class="fa-solid fa-circle-nodes"></i>'
+            '<span>Sincronizado con <a href="{route}" target="_blank">Intelicoop</a>.</span>'
+            "</div>"
+        ).format(route=escape(intelicoop_route))
+    return (
+        '<div class="pv-intel-banner pv-intel-banner--disabled">'
+        '<i class="fa-solid fa-plug-circle-xmark"></i>'
+        "<span>Intelicoop no está habilitado. Las campañas quedan desacopladas del módulo financiero.</span>"
+        "</div>"
+    )
 
 
 _HTML = """
@@ -12,232 +61,7 @@ _HTML = """
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Proveedores — Multitienda</title>
-  <style>
-    :root {
-      --pv-bg: var(--page-bg, #f4f6fb);
-      --pv-surface: var(--content-bg, #ffffff);
-      --pv-border: var(--field-border, #d1d5db);
-      --pv-text: var(--body-text, #1f2937);
-      --pv-muted: color-mix(in srgb, var(--body-text, #1f2937) 58%, #ffffff 42%);
-      --pv-accent: var(--button-bg, #1a6b3c);
-      --pv-accent-fg: var(--button-text, #ffffff);
-      --pv-danger: #dc2626;
-      --pv-danger-soft: color-mix(in srgb, #dc2626 9%, var(--pv-surface));
-      --pv-teal: #0d9488;
-      --pv-teal-soft: color-mix(in srgb, #0d9488 10%, var(--pv-surface));
-      --pv-warning: #d97706;
-      --pv-success: #16a34a;
-    }
-    html, body { margin: 0; padding: 0; background: var(--pv-bg); font-family: system-ui, Arial, sans-serif; color: var(--pv-text); }
-    * { box-sizing: border-box; }
-
-    /* ── Stats ── */
-    .pv-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 18px; }
-    .pv-stat {
-      background: var(--pv-surface); border: 1px solid var(--pv-border);
-      border-radius: 14px; padding: 14px 16px;
-      display: flex; align-items: center; gap: 12px;
-    }
-    .pv-stat__icon { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; font-size: .95rem; flex-shrink: 0; }
-    .pv-stat__icon--teal   { background: color-mix(in srgb,#0d9488 12%,var(--pv-surface)); color: var(--pv-teal); }
-    .pv-stat__icon--green  { background: #dcfce7; color: #15803d; }
-    .pv-stat__icon--amber  { background: #fef9c3; color: #b45309; }
-    .pv-stat__icon--blue   { background: #dbeafe; color: #1d4ed8; }
-    .pv-stat__value { font-size: 1.35rem; font-weight: 800; letter-spacing: -.03em; line-height: 1; }
-    .pv-stat__label { font-size: .74rem; color: var(--pv-muted); margin-top: 2px; }
-
-    /* ── Toolbar ── */
-    .pv-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
-    .pv-toolbar__left { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-
-    /* ── Buttons ── */
-    .pv-btn {
-      display: inline-flex; align-items: center; gap: 7px;
-      min-height: 38px; padding: 0 16px; border-radius: 10px;
-      border: 1px solid var(--pv-border); background: var(--pv-surface);
-      color: var(--pv-text); font-size: .86rem; font-weight: 700;
-      cursor: pointer; text-decoration: none;
-      transition: background .14s, border-color .14s, transform .14s;
-    }
-    .pv-btn:hover { background: color-mix(in srgb, var(--pv-surface) 85%, var(--pv-bg)); transform: translateY(-1px); }
-    .pv-btn--primary { background: var(--pv-teal); color: #fff; border-color: var(--pv-teal); }
-    .pv-btn--primary:hover { background: color-mix(in srgb, var(--pv-teal) 85%, #000 15%); border-color: color-mix(in srgb, var(--pv-teal) 85%, #000 15%); }
-    .pv-btn--danger { color: var(--pv-danger); border-color: color-mix(in srgb, var(--pv-danger) 30%, var(--pv-border)); }
-    .pv-btn--danger:hover { background: var(--pv-danger-soft); }
-    .pv-btn:disabled { opacity: .4; cursor: not-allowed; transform: none; }
-
-    /* ── Search / filter ── */
-    .pv-search {
-      display: flex; align-items: center; gap: 8px;
-      min-height: 38px; padding: 0 12px;
-      border: 1px solid var(--pv-border); border-radius: 10px; background: var(--pv-surface);
-    }
-    .pv-search input { border: none; outline: none; background: transparent; color: var(--pv-text); font-size: .86rem; width: 200px; }
-    .pv-search input::placeholder { color: var(--pv-muted); }
-    .pv-filter-select {
-      min-height: 38px; padding: 0 10px; border: 1px solid var(--pv-border);
-      border-radius: 10px; background: var(--pv-surface); color: var(--pv-text);
-      font-size: .84rem; cursor: pointer; outline: none;
-    }
-
-    /* ── Table ── */
-    .pv-table-wrap { overflow-x: auto; }
-    .pv-table { width: 100%; border-collapse: collapse; }
-    .pv-table thead tr { border-bottom: 2px solid var(--pv-border); }
-    .pv-table th {
-      padding: 10px 14px; text-align: left; font-size: .80rem; font-weight: 700;
-      color: var(--pv-text); white-space: nowrap; user-select: none;
-    }
-    .pv-table th.sortable { cursor: pointer; }
-    .pv-table th.sortable:hover { color: var(--pv-teal); }
-    .pv-table th .sarr { margin-left: 3px; font-size: .68rem; color: var(--pv-muted); }
-    .pv-table tbody tr {
-      border-bottom: 1px solid color-mix(in srgb, var(--pv-border) 55%, transparent);
-      cursor: pointer; transition: background .12s;
-    }
-    .pv-table tbody tr:hover td { background: var(--pv-teal-soft); }
-    .pv-table td { padding: 10px 14px; font-size: .875rem; color: var(--pv-text); vertical-align: middle; }
-
-    /* ── Score bar ── */
-    .pv-score-wrap { display: flex; align-items: center; gap: 8px; }
-    .pv-score-bar { flex: 1; height: 6px; border-radius: 999px; background: color-mix(in srgb,var(--pv-border) 60%,var(--pv-bg)); overflow: hidden; min-width: 60px; }
-    .pv-score-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--pv-teal), #0891b2); }
-    .pv-score-fill.is-high { background: linear-gradient(90deg, var(--pv-success), #0d9488); }
-    .pv-score-fill.is-low  { background: linear-gradient(90deg, var(--pv-warning), #f59e0b); }
-    .pv-score-num { font-size: .78rem; font-weight: 700; color: var(--pv-muted); width: 32px; text-align: right; flex-shrink: 0; }
-
-    /* ── Fuente chip ── */
-    .pv-fuente {
-      display: inline-flex; align-items: center; gap: 4px;
-      padding: 2px 9px; border-radius: 999px;
-      font-size: .72rem; font-weight: 700; white-space: nowrap;
-    }
-    .pv-fuente--referido    { background: #dbeafe; color: #1d4ed8; }
-    .pv-fuente--directo     { background: #dcfce7; color: #15803d; }
-    .pv-fuente--feria       { background: #fef9c3; color: #b45309; }
-    .pv-fuente--online      { background: #ede9fe; color: #7c3aed; }
-    .pv-fuente--campana     { background: color-mix(in srgb,var(--pv-teal) 10%,var(--pv-surface)); color: var(--pv-teal); }
-    .pv-fuente--otro        { background: #f3f4f6; color: #374151; }
-
-    .pv-empty { text-align: center; padding: 52px 20px; color: var(--pv-muted); font-size: .9rem; }
-    .pv-empty i { font-size: 2.4rem; display: block; margin-bottom: 10px; }
-
-    /* ── Drawer ── */
-    .pv-drawer {
-      position: fixed; top: 0; right: 0;
-      width: min(480px, 100vw); height: 100%;
-      background: var(--pv-surface); border-left: 1px solid var(--pv-border);
-      box-shadow: -12px 0 40px rgba(0,0,0,.10);
-      transform: translateX(100%); transition: transform .22s ease;
-      z-index: 800; display: flex; flex-direction: column;
-    }
-    .pv-drawer.is-open { transform: translateX(0); }
-    .pv-drawer__head {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 16px 20px; border-bottom: 1px solid var(--pv-border); flex-shrink: 0;
-    }
-    .pv-drawer__title { font-size: 1rem; font-weight: 700; }
-    .pv-drawer__close {
-      width: 34px; height: 34px; border-radius: 10px; border: 1px solid var(--pv-border);
-      background: transparent; cursor: pointer; display: grid; place-items: center;
-      color: var(--pv-muted); transition: background .14s;
-    }
-    .pv-drawer__close:hover { background: var(--pv-danger-soft); color: var(--pv-danger); }
-    .pv-drawer__body { flex: 1; overflow-y: auto; padding: 20px; display: grid; gap: 14px; align-content: start; }
-    .pv-drawer__footer {
-      padding: 14px 20px; border-top: 1px solid var(--pv-border);
-      display: flex; gap: 10px; flex-shrink: 0;
-    }
-    .pv-drawer__footer .pv-btn { flex: 1; justify-content: center; }
-
-    /* ── Intel banner ── */
-    .pv-intel-banner {
-      display: flex; align-items: center; gap: 10px; padding: 10px 14px;
-      background: var(--pv-teal-soft); border: 1px solid color-mix(in srgb,var(--pv-teal) 25%,var(--pv-border));
-      border-radius: 12px; font-size: .82rem; color: var(--pv-teal);
-    }
-    .pv-intel-banner i { font-size: 1rem; flex-shrink: 0; }
-    .pv-intel-banner a { color: var(--pv-teal); font-weight: 700; text-decoration: underline; }
-
-    /* ── Campañas card ── */
-    .pv-section-title { font-size: .80rem; font-weight: 700; color: var(--pv-muted); text-transform: uppercase; letter-spacing: .08em; margin: 4px 0 8px; }
-    .pv-camp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; margin-bottom: 20px; }
-    .pv-camp-card {
-      background: var(--pv-surface); border: 1px solid var(--pv-border); border-radius: 12px;
-      padding: 12px 14px; cursor: pointer;
-      transition: box-shadow .14s, border-color .14s;
-    }
-    .pv-camp-card:hover { box-shadow: 0 4px 14px rgba(0,0,0,.07); border-color: color-mix(in srgb,var(--pv-teal) 35%,var(--pv-border)); }
-    .pv-camp-card__name { font-weight: 700; font-size: .88rem; margin-bottom: 4px; }
-    .pv-camp-card__meta { font-size: .76rem; color: var(--pv-muted); display: flex; gap: 8px; flex-wrap: wrap; }
-
-    /* ── Status badge ── */
-    .pv-badge {
-      display: inline-flex; align-items: center; gap: 4px;
-      padding: 2px 8px; border-radius: 999px; font-size: .72rem; font-weight: 700;
-    }
-    .pv-badge--activa  { background: #dcfce7; color: #15803d; }
-    .pv-badge--borrador{ background: #f3f4f6; color: #6b7280; }
-    .pv-badge--cerrada { background: #fee2e2; color: #b91c1c; }
-
-    /* ── Form fields ── */
-    .pv-field { display: grid; gap: 5px; }
-    .pv-field label { font-size: .80rem; font-weight: 700; color: var(--pv-text); }
-    .pv-field input, .pv-field select, .pv-field textarea {
-      width: 100%; padding: 8px 12px; border: 1px solid var(--pv-border);
-      border-radius: 9px; background: var(--pv-bg); color: var(--pv-text);
-      font-size: .88rem; outline: none; transition: border-color .14s;
-    }
-    .pv-field input:focus, .pv-field select:focus, .pv-field textarea:focus { border-color: var(--pv-teal); }
-    .pv-field textarea { resize: vertical; min-height: 70px; }
-    .pv-field--row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    .pv-field--hint { font-size: .75rem; color: var(--pv-muted); margin-top: 2px; }
-
-    /* ── Tabs ── */
-    .pv-tabs { display: flex; gap: 2px; border-bottom: 2px solid var(--pv-border); margin-bottom: 18px; }
-    .pv-tab {
-      display: inline-flex; align-items: center; gap: 7px;
-      padding: 9px 16px; border: none; background: none;
-      font-size: .875rem; font-weight: 700; color: var(--pv-muted);
-      cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -2px;
-      transition: color .14s, border-color .14s;
-    }
-    .pv-tab:hover { color: var(--pv-text); }
-    .pv-tab.is-active { color: var(--pv-teal); border-bottom-color: var(--pv-teal); }
-    .pv-tab-panel { display: none; }
-    .pv-tab-panel.is-active { display: block; }
-
-    /* ── Overlay / Confirm / Toast ── */
-    .pv-overlay {
-      position: fixed; inset: 0; background: rgba(0,0,0,.32);
-      z-index: 799; opacity: 0; pointer-events: none; transition: opacity .2s;
-    }
-    .pv-overlay.is-open { opacity: 1; pointer-events: all; }
-    .pv-confirm {
-      position: fixed; inset: 0; z-index: 900;
-      display: flex; align-items: center; justify-content: center;
-      background: rgba(0,0,0,.38); opacity: 0; pointer-events: none; transition: opacity .18s;
-    }
-    .pv-confirm.is-open { opacity: 1; pointer-events: all; }
-    .pv-confirm__card {
-      background: var(--pv-surface); border: 1px solid var(--pv-border);
-      border-radius: 18px; padding: 28px 28px 22px;
-      max-width: 360px; width: 90%; text-align: center;
-      box-shadow: 0 20px 60px rgba(0,0,0,.15);
-    }
-    .pv-confirm__icon { font-size: 2rem; color: var(--pv-danger); margin-bottom: 12px; }
-    .pv-confirm__title { font-size: 1rem; font-weight: 700; margin-bottom: 8px; }
-    .pv-confirm__text  { font-size: .86rem; color: var(--pv-muted); margin-bottom: 20px; line-height: 1.5; }
-    .pv-confirm__actions { display: flex; gap: 10px; justify-content: center; }
-    .pv-confirm__actions .pv-btn { min-width: 110px; justify-content: center; }
-    .pv-toast {
-      position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(20px);
-      background: #1f2937; color: #fff; padding: 10px 22px; border-radius: 999px;
-      font-size: .86rem; font-weight: 600; z-index: 1000;
-      opacity: 0; transition: opacity .2s, transform .2s; pointer-events: none;
-    }
-    .pv-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-  </style>
+  <link rel="stylesheet" href="/multitienda/static/css/proveedores.css" />
 </head>
 <body>
 <main>
@@ -350,8 +174,6 @@ _HTML = """
       </div>
     </div>
   </div>
-</main>
-
 <div class="pv-overlay" id="pv-overlay" onclick="closeAllDrawers()"></div>
 
 <!-- Contact drawer -->
@@ -361,10 +183,7 @@ _HTML = """
     <button class="pv-drawer__close" onclick="closeAllDrawers()"><i class="fa-solid fa-xmark"></i></button>
   </div>
   <div class="pv-drawer__body">
-    <div class="pv-intel-banner">
-      <i class="fa-solid fa-circle-nodes"></i>
-      <span>Guardado en <a href="/intelicoop" target="_blank">Intelicoop</a> como prospecto.</span>
-    </div>
+    __INTELICOOP_CONTACT_BANNER__
     <div class="pv-field">
       <label for="pv-f-nombre">Nombre completo <span style="color:var(--pv-danger)">*</span></label>
       <input id="pv-f-nombre" type="text" placeholder="Nombre Apellido / Empresa" />
@@ -417,10 +236,7 @@ _HTML = """
     <button class="pv-drawer__close" onclick="closeAllDrawers()"><i class="fa-solid fa-xmark"></i></button>
   </div>
   <div class="pv-drawer__body">
-    <div class="pv-intel-banner">
-      <i class="fa-solid fa-circle-nodes"></i>
-      <span>Sincronizado con <a href="/intelicoop" target="_blank">Intelicoop</a>.</span>
-    </div>
+    __INTELICOOP_CAMPAIGN_BANNER__
     <div class="pv-field">
       <label for="pv-cf-nombre">Nombre de la campaña <span style="color:var(--pv-danger)">*</span></label>
       <input id="pv-cf-nombre" type="text" placeholder="Ej. Captación proveedores Q2" />
@@ -462,9 +278,13 @@ _HTML = """
 </aside>
 
 <div class="pv-toast" id="pv-toast"></div>
+</main>
 
 <script>
 (function () {
+  var INTELICOOP_ENABLED = __INTELICOOP_ENABLED__;
+  var INTELICOOP_API_BASE = '__INTELICOOP_API_BASE__';
+  var LOCAL_API = '/multitienda/api/proveedores';
   var prospectos = [];
   var campanas   = [];
   var sortCol = 'nombre';
@@ -473,18 +293,63 @@ _HTML = """
   var confirmMode    = '';
   var confirmCallback = null;
 
+  function normalizeLocal(s) {
+    return {
+      id:               s.id,
+      nombre:           s.name || s.nombre || '',
+      telefono:         s.phone || s.telefono || '',
+      fuente:           s.fuente || 'directo',
+      direccion:        s.address || s.direccion || '',
+      score_propension: parseFloat(s.score_propension || 0),
+      fecha_creacion:   s.created_at || s.fecha_creacion || '',
+      notas:            s.notes || s.notas || '',
+    };
+  }
+
   /* ── Load ── */
   function load() {
+    function loadLocalFallback() {
+      fetch(LOCAL_API, { credentials: 'same-origin' })
+        .then(function (r) { return r.json(); })
+        .then(function (res) {
+          prospectos = (res.data || []).map(normalizeLocal);
+          campanas = [];
+          renderContactos();
+          renderCampanas();
+          updateStats();
+        })
+        .catch(function () {
+          prospectos = []; campanas = [];
+          renderContactos();
+          renderCampanas();
+          updateStats();
+        });
+    }
+
+    if (!INTELICOOP_ENABLED || !INTELICOOP_API_BASE) {
+      loadLocalFallback();
+      return;
+    }
     Promise.all([
-      fetch('/api/intelicoop/prospectos', { credentials: 'same-origin' }).then(function (r) { return r.json(); }),
-      fetch('/api/intelicoop/campanas',   { credentials: 'same-origin' }).then(function (r) { return r.json(); }),
+      fetch(INTELICOOP_API_BASE + '/prospectos', { credentials: 'same-origin' }).then(function (r) {
+        if (!r.ok) throw new Error(String(r.status || 500));
+        return r.json();
+      }),
+      fetch(INTELICOOP_API_BASE + '/campanas',   { credentials: 'same-origin' }).then(function (r) {
+        if (!r.ok) throw new Error(String(r.status || 500));
+        return r.json();
+      }),
     ]).then(function (results) {
       prospectos = Array.isArray(results[0]) ? results[0] : (results[0].data || []);
       campanas   = Array.isArray(results[1]) ? results[1] : (results[1].data || []);
       renderContactos();
       renderCampanas();
       updateStats();
-    }).catch(function () {
+    }).catch(function (error) {
+      if (String(error && error.message || '') === '403') {
+        loadLocalFallback();
+        return;
+      }
       prospectos = []; campanas = [];
       renderContactos();
       renderCampanas();
@@ -587,10 +452,17 @@ _HTML = """
       fuente:           document.getElementById('pv-f-fuente').value,
       direccion:        document.getElementById('pv-f-dir').value.trim(),
       score_propension: parseFloat(document.getElementById('pv-f-score').value || '0') || 0,
+      notas:            document.getElementById('pv-f-notas').value.trim(),
     };
     var isNew = editContactId === null;
-    var url    = isNew ? '/api/intelicoop/prospectos' : '/api/intelicoop/prospectos/' + editContactId;
-    var method = isNew ? 'POST' : 'PUT';
+    var url, method;
+    if (INTELICOOP_ENABLED && INTELICOOP_API_BASE) {
+      url    = isNew ? INTELICOOP_API_BASE + '/prospectos' : INTELICOOP_API_BASE + '/prospectos/' + editContactId;
+      method = isNew ? 'POST' : 'PUT';
+    } else {
+      url    = isNew ? LOCAL_API : LOCAL_API + '/' + editContactId;
+      method = isNew ? 'POST' : 'PUT';
+    }
     fetch(url, {
       method: method,
       headers: { 'Content-Type': 'application/json' },
@@ -600,7 +472,7 @@ _HTML = """
       .then(function (r) { return r.json(); })
       .then(function (res) {
         if (res.id || res.success) {
-          closeAllDrawers(); showToast(isNew ? 'Contacto agregado.' : 'Contacto actualizado.'); load();
+          closeAllDrawers(); showToast(isNew ? 'Proveedor agregado.' : 'Proveedor actualizado.'); load();
         } else { showToast(res.detail || res.error || 'Error al guardar.'); }
       })
       .catch(function () { showToast('Error de conexión.'); });
@@ -645,6 +517,7 @@ _HTML = """
   };
 
   window.saveCampaña = function () {
+    if (!INTELICOOP_ENABLED || !INTELICOOP_API_BASE) { showToast('Intelicoop no está habilitado.'); return; }
     var nombre = (document.getElementById('pv-cf-nombre').value || '').trim();
     if (!nombre) { showToast('El nombre es obligatorio.'); return; }
     var payload = {
@@ -654,7 +527,7 @@ _HTML = """
       fecha_fin:    document.getElementById('pv-cf-fin').value || null,
       estado:       document.getElementById('pv-cf-estado').value,
     };
-    fetch('/api/intelicoop/campanas', {
+    fetch(INTELICOOP_API_BASE + '/campanas', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'same-origin',
@@ -674,22 +547,26 @@ _HTML = """
     confirmMode = mode;
     if (mode === 'bulk') {
       var n = document.querySelectorAll('.pv-row-check:checked').length;
-      document.getElementById('pv-confirm-title').textContent = '¿Eliminar ' + n + ' contacto' + (n !== 1 ? 's' : '') + '?';
-      document.getElementById('pv-confirm-text').textContent  = 'Se eliminarán también de Intelicoop.';
+      document.getElementById('pv-confirm-title').textContent = '¿Eliminar ' + n + ' proveedor' + (n !== 1 ? 'es' : '') + '?';
+      document.getElementById('pv-confirm-text').textContent  = (INTELICOOP_ENABLED && INTELICOOP_API_BASE)
+        ? 'Se eliminarán también de Intelicoop.' : 'Esta acción no se puede deshacer.';
       confirmCallback = function () {
         var ids = [];
         document.querySelectorAll('.pv-row-check:checked').forEach(function (cb) { ids.push(parseInt(cb.dataset.id, 10)); });
+        var base = (INTELICOOP_ENABLED && INTELICOOP_API_BASE) ? INTELICOOP_API_BASE + '/prospectos' : LOCAL_API;
         Promise.all(ids.map(function (id) {
-          return fetch('/api/intelicoop/prospectos/' + id, { method: 'DELETE', credentials: 'same-origin' });
-        })).then(function () { showToast('Contactos eliminados.'); load(); });
+          return fetch(base + '/' + id, { method: 'DELETE', credentials: 'same-origin' });
+        })).then(function () { showToast('Proveedores eliminados.'); load(); });
       };
     } else {
       var p = editContactId !== null ? prospectos.find(function (x) { return x.id === editContactId; }) : null;
-      document.getElementById('pv-confirm-title').textContent = '¿Eliminar "' + ((p && p.nombre) || 'este contacto') + '"?';
-      document.getElementById('pv-confirm-text').textContent  = 'Se eliminará también de Intelicoop.';
+      document.getElementById('pv-confirm-title').textContent = '¿Eliminar "' + ((p && p.nombre) || 'este proveedor') + '"?';
+      document.getElementById('pv-confirm-text').textContent  = (INTELICOOP_ENABLED && INTELICOOP_API_BASE)
+        ? 'Se eliminará también de Intelicoop.' : 'Esta acción no se puede deshacer.';
       confirmCallback = function () {
-        fetch('/api/intelicoop/prospectos/' + editContactId, { method: 'DELETE', credentials: 'same-origin' })
-          .then(function () { closeAllDrawers(); showToast('Contacto eliminado.'); load(); });
+        var base = (INTELICOOP_ENABLED && INTELICOOP_API_BASE) ? INTELICOOP_API_BASE + '/prospectos' : LOCAL_API;
+        fetch(base + '/' + editContactId, { method: 'DELETE', credentials: 'same-origin' })
+          .then(function () { closeAllDrawers(); showToast('Proveedor eliminado.'); load(); });
       };
     }
     document.getElementById('pv-confirm').classList.add('is-open');

@@ -1,6 +1,22 @@
 <section style="width:100%;min-height:52vh;background:#ffffff;border:1px solid #dbe2ea;border-radius:24px;padding:24px;box-sizing:border-box;display:grid;grid-template-rows:auto 1fr;gap:16px;">
     <div style="display:flex;align-items:flex-start;justify-content:flex-start;">
-        <img src="{{ no_access_logo_url or '/templates/icon/icon.png' }}" alt="Logo de la empresa" style="max-width:180px;max-height:72px;width:auto;height:auto;object-fit:contain;">
+        <img
+            src="{{ no_access_logo_url or company_logo_url or sidebar_logo_url or login_logo_url or '/templates/icon/icon.png' }}"
+            data-fallback-primary="{{ company_logo_url or sidebar_logo_url or login_logo_url or '/templates/icon/icon.png' }}"
+            data-fallback-final="/templates/icon/icon.png"
+            alt="Logo de la empresa"
+            style="max-width:180px;max-height:72px;width:auto;height:auto;object-fit:contain;"
+            onerror="
+                if (!this.dataset.fallbackUsed) {
+                    this.dataset.fallbackUsed = '1';
+                    this.src = this.dataset.fallbackPrimary || this.dataset.fallbackFinal;
+                    return;
+                }
+                if (this.src !== this.dataset.fallbackFinal) {
+                    this.src = this.dataset.fallbackFinal;
+                }
+            "
+        >
     </div>
     <div style="display:flex;align-items:center;justify-content:center;">
         <div style="text-align:center;max-width:640px;">

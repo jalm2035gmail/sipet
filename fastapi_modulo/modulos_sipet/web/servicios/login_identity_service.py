@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import secrets
 import threading
 from typing import Dict, Optional
 
 from fastapi import HTTPException, UploadFile
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import inspect, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -22,9 +24,12 @@ from fastapi_modulo.modulos_sipet.web.servicios.login_identity_constants import 
 )
 
 IDENTITY_UPLOAD_MAX_BYTES = int((os.environ.get("IDENTITY_UPLOAD_MAX_BYTES") or str(5 * 1024 * 1024)).strip() or str(5 * 1024 * 1024))
+IDENTITY_UPLOAD_IMAGE_MAX_BYTES = int((os.environ.get("IDENTITY_UPLOAD_IMAGE_MAX_BYTES") or str(5 * 1024 * 1024)).strip() or str(5 * 1024 * 1024))
+IDENTITY_UPLOAD_SVG_MAX_BYTES = int((os.environ.get("IDENTITY_UPLOAD_SVG_MAX_BYTES") or str(512 * 1024)).strip() or str(512 * 1024))
 _READY_DATABASES: set[str] = set()
 _READY_LOCK = threading.Lock()
 _SINGLETON_KEY = "default"
+logger = logging.getLogger(__name__)
 
 
 def ensure_login_identity_paths() -> None:
@@ -64,6 +69,7 @@ def ensure_login_identity_schema(host: Optional[str] = None) -> None:
                     company_short_name VARCHAR(60) NOT NULL DEFAULT 'AVAN',
                     login_message VARCHAR(200) NOT NULL DEFAULT 'Incrementando el nivel de eficiencia',
                     menu_position VARCHAR(16) NOT NULL DEFAULT 'arriba',
+                    sidebar_style_variant VARCHAR(16) NOT NULL DEFAULT 'modern',
                     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
                 )
@@ -86,6 +92,14 @@ def ensure_login_identity_schema(host: Optional[str] = None) -> None:
                 text(
                     "ALTER TABLE web_login_identity "
                     "ADD COLUMN login_logo_filename VARCHAR(255) NOT NULL DEFAULT 'icon.png'"
+                )
+            )
+    if "sidebar_style_variant" not in columns:
+        with engine.begin() as connection:
+            connection.execute(
+                text(
+                    "ALTER TABLE web_login_identity "
+                    "ADD COLUMN sidebar_style_variant VARCHAR(16) NOT NULL DEFAULT 'modern'"
                 )
             )
 
@@ -181,6 +195,9 @@ def _sanitize_identity_payload(data: Dict[str, str]) -> Dict[str, str]:
         "company_short_name": str(data.get("company_short_name") or payload["company_short_name"]).strip() or payload["company_short_name"],
         "login_message": str(data.get("login_message") or payload["login_message"]).strip() or payload["login_message"],
         "menu_position": "abajo" if str(data.get("menu_position") or payload["menu_position"]).strip().lower() == "abajo" else "arriba",
+        "sidebar_style_variant": "original"
+        if str(data.get("sidebar_style_variant") or "").strip().lower() == "original"
+        else "modern",
     })
     return payload
 
@@ -203,11 +220,13 @@ def _load_login_identity() -> Dict[str, str]:
                     "company_short_name": row.company_short_name,
                     "login_message": row.login_message,
                     "menu_position": row.menu_position,
+                    "sidebar_style_variant": getattr(row, "sidebar_style_variant", "modern"),
                 }
             )
         finally:
             db.close()
     except Exception:
+        logger.exception("login identity load failed")
         return _sanitize_identity_payload(DEFAULT_LOGIN_IDENTITY.copy())
 
 
@@ -227,9 +246,10 @@ def save_login_identity(data: Dict[str, str]) -> None:
         row.company_short_name = payload["company_short_name"]
         row.login_message = payload["login_message"]
         row.menu_position = payload["menu_position"]
+        row.sidebar_style_variant = payload["sidebar_style_variant"]
         try:
             db.commit()
-        except Exception:
+        except SQLAlchemyError:
             db.rollback()
             row = db.query(WebLoginIdentity).filter(WebLoginIdentity.singleton_key == _SINGLETON_KEY).first()
             if row is None:
@@ -242,6 +262,7 @@ def save_login_identity(data: Dict[str, str]) -> None:
             row.company_short_name = payload["company_short_name"]
             row.login_message = payload["login_message"]
             row.menu_position = payload["menu_position"]
+            row.sidebar_style_variant = payload["sidebar_style_variant"]
             db.commit()
     finally:
         db.close()
@@ -261,6 +282,53 @@ def _get_upload_ext(upload: UploadFile) -> str:
     if "jpeg" in content_type or "jpg" in content_type:
         return ".jpg"
     return ".png"
+
+
+def _looks_like_svg(data: bytes) -> bool:
+    sample = data[:512].lstrip().lower()
+    return sample.startswith(b"<?xml") or sample.startswith(b"<svg") or b"<svg" in sample
+
+
+def _detect_image_kind(data: bytes) -> str:
+    if _looks_like_svg(data):
+        return "svg"
+    try:
+        from PIL import Image
+
+        with Image.open(__import__("io").BytesIO(data)) as image:
+            return str(image.format or "").strip().lower()
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail="El archivo no es una imagen valida.") from exc
+
+
+def _validate_identity_upload(data: bytes, upload: UploadFile, prefix: str) -> tuple[str, int]:
+    filename = os.path.basename((upload.filename or "").strip())
+    if not filename:
+        raise HTTPException(status_code=400, detail="El archivo no tiene un nombre valido.")
+    detected_kind = _detect_image_kind(data)
+    detected_ext = {
+        "svg": ".svg",
+        "png": ".png",
+        "jpeg": ".jpg",
+        "jpg": ".jpg",
+        "webp": ".webp",
+    }.get(detected_kind)
+    if not detected_ext:
+        raise HTTPException(status_code=400, detail="Formato de imagen no permitido.")
+    allowed_by_prefix = {
+        "favicon": {".png", ".jpg", ".webp", ".svg"},
+        "logo_empresa": {".png", ".jpg", ".webp", ".svg"},
+        "logo_login": {".png", ".jpg", ".webp", ".svg"},
+        "fondo_escritorio": {".png", ".jpg", ".webp"},
+        "fondo_movil": {".png", ".jpg", ".webp"},
+    }
+    allowed_exts = allowed_by_prefix.get(prefix, {".png", ".jpg", ".webp", ".svg"})
+    if detected_ext not in allowed_exts:
+        raise HTTPException(status_code=400, detail="El formato no es valido para este recurso visual.")
+    max_bytes = IDENTITY_UPLOAD_SVG_MAX_BYTES if detected_ext == ".svg" else IDENTITY_UPLOAD_IMAGE_MAX_BYTES
+    if len(data) > max_bytes:
+        raise HTTPException(status_code=413, detail="La imagen supera el tamaño maximo permitido para este recurso.")
+    return detected_ext, max_bytes
 
 
 def remove_login_image_if_custom(filename: Optional[str]) -> None:
@@ -283,24 +351,28 @@ def remove_login_image_if_custom(filename: Optional[str]) -> None:
 async def store_login_image(upload: UploadFile, prefix: str) -> Optional[str]:
     if not upload or not upload.filename:
         return None
-    content_type = (upload.content_type or "").lower().strip()
-    filename = (upload.filename or "").lower()
-    ext = os.path.splitext(filename)[1]
-    allowed_exts = {".png", ".jpg", ".jpeg", ".webp", ".svg"}
-    if content_type and not content_type.startswith("image/") and ext not in allowed_exts:
-        raise HTTPException(status_code=400, detail="Solo se permiten imágenes para identidad institucional")
     data = await upload.read()
     if not data:
         return None
     if len(data) > max(1, IDENTITY_UPLOAD_MAX_BYTES):
-        raise HTTPException(status_code=413, detail="La imagen supera el tamaño máximo permitido")
+        raise HTTPException(status_code=413, detail="La imagen supera el tamaño maximo permitido")
+    ext, _ = _validate_identity_upload(data, upload, prefix)
     ensure_login_identity_paths()
-    ext = _get_upload_ext(upload)
-    optimized, ext = optimize_image(data, ext, profile=profile_for_prefix(prefix))
+    try:
+        optimized, ext = optimize_image(data, ext, profile=profile_for_prefix(prefix))
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("identity image optimization failed", extra={"prefix": prefix, "filename": os.path.basename(upload.filename or "")})
+        raise HTTPException(status_code=500, detail="No se pudo procesar la imagen.") from exc
     new_filename = f"{prefix}_{secrets.token_hex(6)}{ext}"
     image_path = os.path.join(LOGIN_IDENTITY_IMAGE_DIR, new_filename)
-    with open(image_path, "wb") as fh:
-        fh.write(optimized)
+    try:
+        with open(image_path, "wb") as fh:
+            fh.write(optimized)
+    except OSError as exc:
+        logger.exception("identity image write failed", extra={"prefix": prefix, "filename": new_filename})
+        raise HTTPException(status_code=500, detail="No se pudo guardar la imagen en el servidor.") from exc
     return new_filename
 
 

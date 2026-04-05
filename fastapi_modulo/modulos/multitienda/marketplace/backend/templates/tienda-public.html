@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tiendas</title>
+  <link rel="stylesheet" href="/multitienda/static/css/tienda.css" />
+</head>
+<body>
+
+  <!-- Sticky mini header (aparece al hacer scroll) -->
+  <div class="sticky-mini-header" id="stickyMiniHeader" aria-hidden="true">
+    <div class="sticky-mini-header__inner">
+      <a class="sticky-mini-header__brand" href="/multitienda/tiendas">
+        <span class="sticky-mini-header__logo-wrap">
+          <img id="sl-sticky-logo" class="sticky-mini-header__logo"
+               src="/static/imagenes/logo_vale.png" alt="Logo" />
+        </span>
+      </a>
+      <nav class="sticky-mini-header__nav" aria-label="Navegación compacta">
+        <a href="/multitienda/tiendas" class="sticky-mini-header__link is-active">Tiendas</a>
+        <a href="/multitienda/tiendas?filter=ofertas" class="sticky-mini-header__link">Ofertas</a>
+        <a href="/multitienda/tiendas?filter=recomendaciones" class="sticky-mini-header__link">Recomendaciones</a>
+      </nav>
+    </div>
+  </div>
+
+  <!-- Barra de navegación principal -->
+  <header class="sl-nav" id="sl-nav">
+    <div class="sl-nav-inner">
+      <a class="sl-nav-brand" href="/multitienda/tiendas">
+        <span class="sl-nav-logo-wrap">
+          <img id="sl-nav-logo" class="sl-nav-logo"
+               src="/static/imagenes/logo_vale.png" alt="Logo" />
+        </span>
+        <span class="sl-nav-brand-name" id="sl-nav-brand-name"></span>
+      </a>
+      <nav class="sl-nav-links" aria-label="Navegación principal">
+        <a href="/multitienda/tiendas" class="sl-nav-link is-active">Tiendas</a>
+        <a href="/multitienda/tiendas?filter=ofertas" class="sl-nav-link">Ofertas</a>
+        <a href="/multitienda/tiendas?filter=recomendaciones" class="sl-nav-link">Recomendaciones</a>
+      </nav>
+    </div>
+  </header>
+
+  <div class="sl-page">
+    <section class="sl-hero sl-hero--banner-only" id="heroMarketplace" hidden>
+      <div class="sl-hero-banner" id="sl-hero-banner" aria-hidden="true">
+        <img id="sl-hero-banner-img"
+             src="/multitienda/static/imagenes/banner.png"
+             alt=""
+             style="border-radius:inherit;" />
+      </div>
+    </section>
+
+    <section class="sl-store-showcase" id="sl-store-showcase" hidden>
+      <div class="sl-store-showcase__logo-wrap">
+        <img id="sl-store-showcase-logo"
+             class="sl-store-showcase__logo"
+             src="/static/imagenes/logo_vale.png"
+             alt="Logo de la tienda" />
+      </div>
+      <div class="sl-store-showcase__body">
+        <span class="sl-store-showcase__eyebrow">Tienda</span>
+        <h1 class="sl-store-showcase__title" id="sl-store-showcase-title">Tienda</h1>
+        <p class="sl-store-showcase__copy" id="sl-store-showcase-copy" hidden></p>
+        <div class="sl-store-showcase__meta" id="sl-store-showcase-meta"></div>
+      </div>
+      <div class="sl-store-showcase__actions">
+        <a class="sl-store-showcase__cta" id="sl-store-showcase-cta" href="#sl-store-panel-products">Explorar catálogo</a>
+      </div>
+    </section>
+
+    <section class="sl-store-actions" id="sl-store-actions" hidden>
+      <div class="sl-store-actions__grid" id="sl-store-actions-grid"></div>
+    </section>
+
+    <section class="sl-toolbar" id="sl-toolbar">
+      <div class="sl-featured">
+        <span class="sl-featured-label">Categorias destacadas</span>
+        <div id="sl-featured-categories"></div>
+      </div>
+    </section>
+
+    <section class="sl-store-panel is-active" id="sl-store-panel-products" data-store-panel="productos">
+      <section class="sl-content">
+      <aside class="sl-sidebar">
+        <div class="sl-filter-card">
+          <a class="sl-sidebar-link" id="sl-all-stores-link" href="/multitienda/tiendas">Ver todas las tiendas</a>
+          <div class="sl-filter-heading">
+            <div>
+              <h2>Buscar</h2>
+            </div>
+            <button class="sl-clear-btn" id="sl-clear-filters" type="button">Borrar filtros</button>
+          </div>
+
+          <div class="sl-accordion">
+            <section class="sl-acc-item" data-open="true" id="sl-stores-accordion">
+              <button class="sl-acc-toggle" type="button" data-target="stores">
+                <span class="sl-acc-title">
+                  <strong>Tiendas</strong>
+                  <span>Directorio visible en landing</span>
+                </span>
+                <span class="sl-acc-icon">⌄</span>
+              </button>
+              <div class="sl-acc-body" id="sl-acc-stores">
+                <ul class="sl-list" id="sl-store-list"></ul>
+              </div>
+            </section>
+
+            <section class="sl-acc-item" data-open="true">
+              <button class="sl-acc-toggle" type="button" data-target="categories">
+                <span class="sl-acc-title">
+                  <strong>Categorias</strong>
+                  <span>Explora por familia de producto</span>
+                </span>
+                <span class="sl-acc-icon">⌄</span>
+              </button>
+              <div class="sl-acc-body" id="sl-acc-categories">
+                <ul class="sl-list" id="sl-category-list"></ul>
+              </div>
+            </section>
+
+            <section class="sl-acc-item" data-open="true">
+              <button class="sl-acc-toggle" type="button" data-target="offers">
+                <span class="sl-acc-title">
+                  <strong>Ofertas</strong>
+                  <span>Atajos para promos y destacados</span>
+                </span>
+                <span class="sl-acc-icon">⌄</span>
+              </button>
+              <div class="sl-acc-body" id="sl-acc-offers">
+                <ul class="sl-list" id="sl-offer-list"></ul>
+              </div>
+            </section>
+          </div>
+        </div>
+      </aside>
+
+      <main class="sl-products-shell">
+        <div class="sl-products-topbar">
+          <div class="sl-view-switch" aria-label="Cambiar vista">
+            <button class="sl-view-btn active" id="sl-view-grid" type="button" title="Vista grid">▦</button>
+            <button class="sl-view-btn" id="sl-view-list" type="button" title="Vista lista">☰</button>
+          </div>
+
+          <label class="sl-search-wrap" for="sl-search-input">
+            <span class="sl-search-icon">⌕</span>
+            <input id="sl-search-input" class="sl-search-input" type="search" placeholder="Buscar producto, descripcion o categoria" />
+          </label>
+
+          <div class="sl-results-meta">
+            <span id="sl-results-count">0 resultados</span>
+            <select id="sl-sort-select" class="sl-sort-select" aria-label="Ordenar productos">
+              <option value="featured">Destacado</option>
+              <option value="price-asc">Precio: menor a mayor</option>
+              <option value="price-desc">Precio: mayor a menor</option>
+              <option value="name-asc">Nombre A-Z</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="sl-products-summary">
+          <strong id="sl-summary-title">Todos los productos</strong>
+          <div class="sl-active-filters" id="sl-active-filters"></div>
+        </div>
+
+        <div id="sl-products-container" class="sl-products-grid"></div>
+      </main>
+      </section>
+    </section>
+
+    <div class="sl-store-drawer-overlay" id="sl-store-drawer-overlay" hidden></div>
+
+    <aside class="sl-store-drawer" id="sl-store-drawer" aria-hidden="true">
+      <div class="sl-store-drawer__head">
+        <div>
+          <p class="sl-info-kicker">Información de la tienda</p>
+          <h2 class="sl-info-title" id="sl-store-drawer-title">Nosotros</h2>
+        </div>
+        <button class="sl-store-drawer__close" id="sl-store-drawer-close" type="button" aria-label="Cerrar panel">✕</button>
+      </div>
+
+      <div class="sl-store-drawer__body">
+        <section class="sl-store-drawer-panel" id="sl-store-drawer-panel-nosotros" data-store-drawer-panel="nosotros" hidden>
+          <article class="sl-store-copy-card" id="sl-about-card" hidden>
+            <span class="sl-info-kicker">Landing Page</span>
+            <h2 class="sl-info-title">Nosotros</h2>
+            <p class="sl-info-text" id="sl-store-slogan" hidden></p>
+            <div class="sl-info-stack">
+              <div class="sl-info-block" id="sl-mission-block" hidden>
+                <h3>Misión</h3>
+                <p id="sl-store-mission"></p>
+              </div>
+              <div class="sl-info-block" id="sl-vision-block" hidden>
+                <h3>Visión</h3>
+                <p id="sl-store-vision"></p>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <section class="sl-store-drawer-panel" id="sl-store-drawer-panel-rights" data-store-drawer-panel="rights" hidden>
+          <article class="sl-store-copy-card" id="sl-policy-rights-card" hidden>
+            <span class="sl-info-kicker">Landing Page</span>
+            <h2 class="sl-info-title">Derechos del consumidor</h2>
+            <div class="sl-store-copy-richtext" id="sl-policy-rights"></div>
+          </article>
+        </section>
+
+        <section class="sl-store-drawer-panel" id="sl-store-drawer-panel-privacy" data-store-drawer-panel="privacy" hidden>
+          <article class="sl-store-copy-card" id="sl-policy-privacy-card" hidden>
+            <span class="sl-info-kicker">Landing Page</span>
+            <h2 class="sl-info-title">Privacidad de los datos</h2>
+            <div class="sl-store-copy-richtext" id="sl-policy-privacy"></div>
+          </article>
+        </section>
+
+        <section class="sl-store-drawer-panel" id="sl-store-drawer-panel-contact" data-store-drawer-panel="contact" hidden>
+          <div class="sl-store-two-column">
+            <article class="sl-store-copy-card" id="sl-contact-card" hidden>
+              <span class="sl-info-kicker">Visibilidad</span>
+              <h2 class="sl-info-title">Datos de contacto</h2>
+              <div class="sl-contact-list">
+                <div class="sl-contact-item" id="sl-contact-email-wrap" hidden>
+                  <strong>Correo</strong>
+                  <span id="sl-contact-email"></span>
+                </div>
+                <div class="sl-contact-item" id="sl-contact-phone-wrap" hidden>
+                  <strong>Teléfono</strong>
+                  <span id="sl-contact-phone"></span>
+                </div>
+                <div class="sl-contact-item" id="sl-contact-website-wrap" hidden>
+                  <strong>Sitio web</strong>
+                  <a id="sl-contact-website" href="#" target="_blank" rel="noopener noreferrer"></a>
+                </div>
+                <div class="sl-contact-item" id="sl-contact-address-wrap" hidden>
+                  <strong>Dirección</strong>
+                  <span id="sl-contact-address"></span>
+                </div>
+              </div>
+            </article>
+
+            <article class="sl-store-copy-card" id="sl-map-card" hidden>
+              <span class="sl-info-kicker">Visibilidad</span>
+              <h2 class="sl-info-title">Ubicación</h2>
+              <div class="sl-map-placeholder">
+                <p id="sl-map-copy"></p>
+                <a class="sl-map-link" id="sl-map-link" href="#" target="_blank" rel="noopener noreferrer">Abrir mapa</a>
+              </div>
+            </article>
+          </div>
+        </section>
+      </div>
+    </aside>
+
+    <!-- Vista detalle de producto (oculta por defecto) -->
+    <section id="sl-product-detail" hidden></section>
+  </div>
+
+  <script src="/multitienda/static/js/tienda.js"></script>
+</body>
+</html>

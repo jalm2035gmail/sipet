@@ -1,30 +1,24 @@
 from __future__ import annotations
 
-import unicodedata
+from collections.abc import Generator
 
 from fastapi import Depends, HTTPException, Request
+from sqlalchemy.orm import Session
 
+from fastapi_modulo.modulos_sipet.modulo_base.bootstrap import permission_registry
 from fastapi_modulo.modulos_sipet.modulo_base.modelos.schemas import ModuloBaseRequestContext
-
-
-def _normalize_role(value: str | None) -> str:
-    raw = str(value or "").strip().lower()
-    if not raw:
-        return "usuario"
-    normalized = unicodedata.normalize("NFKD", raw)
-    normalized = "".join(ch for ch in normalized if not unicodedata.combining(ch))
-    normalized = normalized.replace(" ", "_").replace("-", "_")
-    return normalized.strip("_") or "usuario"
+from fastapi_modulo.modulos_sipet.modulo_base.repositorios.common import get_db
 
 
 def require_modulo_base_access(request: Request) -> None:
-    role = _normalize_role(
-        getattr(request.state, "user_role", None)
-        or getattr(request.state, "role", None)
-        or request.headers.get("x-role")
-    )
-    if role not in {"admin", "administrador", "superadmin", "superadministrador", "administrador_multiempresa"}:
-        raise HTTPException(status_code=403, detail="Acceso restringido al núcleo base.")
+    try:
+        permission_registry.require_permission(
+            request,
+            "modulo_base.ver",
+            detail="Acceso restringido al núcleo base.",
+        )
+    except HTTPException as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
 
 
 def get_modulo_base_request_context(request: Request) -> ModuloBaseRequestContext:
@@ -35,3 +29,11 @@ def get_modulo_base_request_context(request: Request) -> ModuloBaseRequestContex
 
 def get_modulo_base_tenant_id(context: ModuloBaseRequestContext = Depends(get_modulo_base_request_context)) -> str:
     return context.tenant_id
+
+
+def get_modulo_base_db() -> Generator[Session, None, None]:
+    db = get_db()
+    try:
+        yield db
+    finally:
+        db.close()

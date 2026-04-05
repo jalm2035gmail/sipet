@@ -1,8 +1,13 @@
 from __future__ import annotations
 
 from html import escape
+from pathlib import Path
 import json
+import logging
 import re
+from urllib.parse import urlencode
+
+_log = logging.getLogger("multitienda.config")
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse
@@ -11,6 +16,8 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import text
 
 from fastapi_modulo.core import db as core_db
+from fastapi_modulo.core.module_registry import is_module_enabled, list_modules_payload
+from fastapi_modulo.modulos.multitienda.__manifest__ import MANIFEST
 from fastapi_modulo.modulos.multitienda.controladores.marketplace_backend import (
     build_marketplace_backend_app,
     SessionLocal,
@@ -19,6 +26,22 @@ from fastapi_modulo.modulos.multitienda.controladores.marketplace_backend import
     save_store_settings,
 )
 from fastapi_modulo.modulos.multitienda.servicios.access_roles import ensure_multitienda_access_roles
+from fastapi_modulo.modulos.multitienda.servicios.store_tables import (
+    ensure_store_tables,
+    get_store_stats, get_public_products,
+    list_employees, create_employee, update_employee, delete_employee, change_employee_password,
+    list_coupons, create_coupon, update_coupon, delete_coupon,
+    validate_coupon, redeem_coupon,
+    list_layaways, create_layaway, update_layaway, delete_layaway,
+    create_layaway_rich, update_layaway_rich,
+    list_layaway_payments, add_layaway_payment, delete_layaway_payment,
+    set_layaway_status, mark_overdue_layaways,
+    list_followers, create_follower, update_follower, delete_follower,
+    list_videos, create_video, delete_video,
+    list_suppliers, create_supplier, update_supplier, delete_supplier,
+    get_loyalty_plan, upsert_loyalty_plan,
+    list_loyalty_customers, adjust_loyalty_points, get_loyalty_history,
+)
 from fastapi_modulo.modulos.multitienda.vistas.utils import _prefix_root_relative_urls
 from fastapi_modulo.modulos.multitienda.vistas.configuracion import configuracion_html
 from fastapi_modulo.modulos.multitienda.vistas.gestion import gestion_html
@@ -29,35 +52,51 @@ from fastapi_modulo.modulos.multitienda.vistas.cupones import cupones_html
 from fastapi_modulo.modulos.multitienda.vistas.empleados import empleados_html
 from fastapi_modulo.modulos.multitienda.vistas.seguidores import seguidores_html
 from fastapi_modulo.modulos.multitienda.vistas.whatsapp import whatsapp_html
-from fastapi_modulo.modulos.multitienda.vistas.reservaciones import reservaciones_html
 from fastapi_modulo.modulos.multitienda.vistas.videos import videos_html
 from fastapi_modulo.modulos.multitienda.vistas.proveedores import proveedores_html
 from fastapi_modulo.modulos.multitienda.vistas.ia import ia_html
-from fastapi_modulo.modulos.multitienda.vistas.institucion_financiera import institucion_financiera_html
 from fastapi_modulo.modulos.multitienda.vistas.apartados import apartados_html
-from fastapi_modulo.modulos.multitienda.vistas.subastas import subastas_html
+from fastapi_modulo.modulos.multitienda.vistas.fidelizacion import fidelizacion_html
+from fastapi_modulo.modulos.multitienda.vistas.sidebar import build_sidebar_markup as render_sidebar_markup, load_sidebar_css
+from fastapi_modulo.modulos.personalizacion.controladores.personalizar import resolve_logo_empresa_url
 from fastapi_modulo.modulos_sipet.aplicaciones.controladores.membresia import Membresia, _ensure_membresia_table, _seed_membresias
 from fastapi_modulo.modulos_sipet.web.modelos.core_models import Rol, Usuario
 from fastapi_modulo.modulos_sipet.web.servicios.access_service import normalize_role_name
-from fastapi_modulo.modulos_sipet.web.servicios.auth_service import decrypt_sensitive
-from fastapi_modulo.modulos_sipet.web.servicios.template_context_service import build_backend_context
-from fastapi_modulo.modulos_sipet.web.servicios.template_service import BACKEND_BASE_TEMPLATE, get_templates
+from fastapi_modulo.modulos_sipet.web.servicios.auth_service import decrypt_sensitive, find_user_by_login
+from fastapi_modulo.modulos_sipet.web.servicios.template_context_service import (
+    build_backend_context,
+    get_login_identity_context,
+    resolve_sidebar_logo_url,
+)
+from fastapi_modulo.modulos_sipet.web.servicios.template_service import (
+    BACKEND_BASE_TEMPLATE,
+    get_templates,
+    render_not_found_template,
+)
 
 router = APIRouter()
 marketplace_app = build_marketplace_backend_app()
 ensure_multitienda_access_roles()
 
 _STYLE_RE = re.compile(r"<style>(.*?)</style>", re.IGNORECASE | re.DOTALL)
+_LINK_CSS_RE = re.compile(r'<link\b[^>]*rel=["\']stylesheet["\'][^>]*/?>', re.IGNORECASE)
 _MAIN_RE = re.compile(r"<main\b[^>]*>(.*?)</main>", re.IGNORECASE | re.DOTALL)
 _SCRIPT_RE = re.compile(r"(<script\b.*?</script>)", re.IGNORECASE | re.DOTALL)
+_OPTIONAL_SECTION_INTEGRATIONS = {
+    str(item.get("section_id") or "").strip(): item
+    for item in (MANIFEST.get("integration_points") or [])
+    if str(item.get("section_id") or "").strip()
+}
 
 _MODULE_SECTIONS = [
     {"id": "inicio", "label": "Inicio", "icon": "fa-solid fa-house", "route": "/multitienda/inicio"},
     {"id": "videos", "label": "Videos", "icon": "fa-solid fa-video", "route": "/multitienda/videos"},
     {"id": "productos", "label": "Productos", "icon": "fa-solid fa-box", "route": "/multitienda/productos"},
     {"id": "referidos", "label": "Referidos", "icon": "fa-solid fa-user-group", "route": "/multitienda/referidos"},
+    {"id": "notificaciones_pwa", "label": "Notificaciones PWA", "icon": "fa-solid fa-mobile-screen-button", "route": "/multitienda/notificaciones-pwa"},
     {"id": "reservaciones", "label": "Reservaciones", "icon": "fa-solid fa-calendar-check", "route": "/multitienda/reservaciones"},
     {"id": "cupones", "label": "Cupones", "icon": "fa-solid fa-ticket", "route": "/multitienda/cupones"},
+    {"id": "fidelizacion", "label": "Fidelización", "icon": "fa-solid fa-star", "route": "/multitienda/fidelizacion"},
     {"id": "whatsapp", "label": "WhatsApp Business", "icon": "fa-brands fa-whatsapp", "route": "/multitienda/whatsapp"},
     {"id": "empleados", "label": "Empleados", "icon": "fa-solid fa-id-badge", "route": "/multitienda/empleados"},
     {"id": "seguidores", "label": "Seguidores", "icon": "fa-solid fa-user-group", "route": "/multitienda/seguidores"},
@@ -65,9 +104,52 @@ _MODULE_SECTIONS = [
     {"id": "ia", "label": "IA", "icon": "fa-solid fa-robot", "route": "/multitienda/ia"},
     {"id": "institucion_financiera", "label": "Institución financiera", "icon": "fa-solid fa-building-columns", "route": "/multitienda/institucion_financiera"},
     {"id": "apartados", "label": "Apartados", "icon": "fa-solid fa-box-archive", "route": "/multitienda/apartados"},
+    {"id": "crm", "label": "CRM", "icon": "fa-solid fa-users-rectangle", "route": "/multitienda/crm"},
     {"id": "subastas", "label": "Subastas", "icon": "fa-solid fa-gavel", "route": "/multitienda/subastas"},
     {"id": "configuracion", "label": "Configuración", "icon": "fa-solid fa-gear", "route": "/multitienda/configuracion"},
     {"id": "gestion", "label": "Administración de tiendas", "icon": "fa-solid fa-store", "route": "/multitienda/administracion_tiendas"},
+    {"id": "repartidores", "label": "Repartidores", "icon": "fa-solid fa-motorcycle", "route": "/multitienda/repartidores"},
+]
+
+_PUBLIC_LANDING_RESERVED = {
+    "tiendas",
+    "destacados",
+    "destaacados",
+    "carrito",
+    "multitienda",
+    "configuracion",
+    "api",
+    "static",
+    "templates",
+    "icon",
+}
+_SECTION_HINTS = {
+    "inicio": "Resumen del marketplace",
+    "videos": "Contenido de tienda",
+    "productos": "Catalogo y fichas",
+    "referidos": "Programa de crecimiento",
+    "notificaciones_pwa": "Mensajes a clientes de la tienda",
+    "reservaciones": "Agenda y seguimiento",
+    "cupones": "Descuentos y promociones",
+    "fidelizacion": "Clientes frecuentes",
+    "whatsapp": "Campanas y mensajeria",
+    "empleados": "Equipo interno",
+    "seguidores": "Clientes y socios",
+    "proveedores": "Red comercial",
+    "ia": "Asistentes del negocio",
+    "institucion_financiera": "Creditos y comisiones",
+    "apartados": "Abonos y entregas",
+    "crm": "Relación con clientes",
+    "subastas": "Pujas y adjudicacion",
+    "configuracion": "Ajustes de tienda",
+    "gestion": "Operacion del marketplace",
+    "repartidores": "Logistica y entregas",
+}
+_SECTION_GROUPS = [
+    ("General", {"inicio", "configuracion", "gestion"}),
+    ("Contenido", {"videos", "productos"}),
+    ("Comercial", {"referidos", "notificaciones_pwa", "cupones", "fidelizacion", "whatsapp", "seguidores", "proveedores", "crm", "subastas"}),
+    ("Operacion", {"reservaciones", "empleados", "apartados", "repartidores", "institucion_financiera", "ia"}),
 ]
 _MODULE_NAVBAR_BOOTSTRAP = """
 <script>
@@ -79,523 +161,20 @@ _MODULE_NAVBAR_BOOTSTRAP = """
 })();
 </script>
 """
-_MODULE_LAYOUT_OVERRIDES = """
-<style>
-.navbar-section-menu {
-    display: none !important;
-}
-
-html.ui-sidebar-modern .main-content {
-    padding-right: 24px !important;
-}
-
-html.ui-sidebar-modern .content-shell,
-html.ui-sidebar-modern .content-section,
-.multitienda-official-view,
-.multitienda-official-view .page {
-    width: 100% !important;
-    max-width: 100% !important;
-}
-
-.multitienda-official-view {
-    padding: 8px 0 28px;
-}
-
-.multitienda-shell {
-    display: grid;
-    grid-template-columns: 280px minmax(0, 1fr);
-    gap: 24px;
-    align-items: start;
-    min-height: calc(100vh - 132px);
-}
-
-.multitienda-shell__sidebar {
-    position: sticky;
-    top: 20px;
-    display: grid;
-    gap: 18px;
-    padding: 24px 18px 20px;
-    border-radius: 28px;
-    background:
-        linear-gradient(180deg, color-mix(in srgb, var(--sidebar-bottom, #0f172a) 92%, #0b1120 8%) 0%, color-mix(in srgb, var(--sidebar-top, #142132) 96%, #0b1120 4%) 100%);
-    color: #ecf5ff;
-    box-shadow: 0 30px 70px rgba(15, 23, 42, 0.22);
-}
-
-.multitienda-shell__brand {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    padding-bottom: 16px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-}
-
-.multitienda-shell__brand-mark {
-    width: 52px;
-    height: 52px;
-    border-radius: 18px;
-    display: grid;
-    place-items: center;
-    background: linear-gradient(135deg, #25b7d3 0%, #2f8fdf 100%);
-    color: #ffffff;
-    font-size: 1.25rem;
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
-}
-
-.multitienda-shell__brand-copy {
-    min-width: 0;
-    display: grid;
-    gap: 2px;
-}
-
-.multitienda-shell__brand-copy strong {
-    font-size: 1.15rem;
-    font-weight: 800;
-    letter-spacing: -0.02em;
-}
-
-.multitienda-shell__brand-copy span {
-    color: rgba(236, 245, 255, 0.74);
-    font-size: 0.82rem;
-}
-
-.multitienda-shell__nav {
-    display: grid;
-    gap: 8px;
-}
-
-.multitienda-shell__nav-label {
-    margin: 0 0 4px;
-    color: rgba(236, 245, 255, 0.58);
-    font-size: 0.74rem;
-    font-weight: 700;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-}
-
-.multitienda-shell__nav-link {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    min-height: 50px;
-    padding: 0 14px;
-    border-radius: 16px;
-    color: rgba(236, 245, 255, 0.86);
-    text-decoration: none;
-    transition: transform 0.16s ease, background 0.16s ease, color 0.16s ease, box-shadow 0.16s ease;
-}
-
-.multitienda-shell__nav-link:hover {
-    transform: translateX(2px);
-    background: rgba(255, 255, 255, 0.08);
-}
-
-.multitienda-shell__nav-link.is-active {
-    background: linear-gradient(135deg, rgba(37, 183, 211, 0.24) 0%, rgba(47, 143, 223, 0.26) 100%);
-    color: #ffffff;
-    box-shadow: inset 0 0 0 1px rgba(107, 203, 255, 0.2);
-}
-
-.multitienda-shell__nav-icon {
-    width: 34px;
-    height: 34px;
-    border-radius: 12px;
-    display: grid;
-    place-items: center;
-    background: rgba(255, 255, 255, 0.08);
-    color: inherit;
-    flex-shrink: 0;
-}
-
-.multitienda-shell__nav-copy {
-    display: grid;
-    gap: 2px;
-}
-
-.multitienda-shell__nav-copy strong {
-    font-size: 1rem;
-    font-weight: 700;
-}
-
-.multitienda-shell__nav-copy span {
-    font-size: 0.79rem;
-    color: rgba(236, 245, 255, 0.62);
-}
-
-.multitienda-shell__content {
-    display: grid;
-    gap: 20px;
-    min-width: 0;
-}
-
-.multitienda-shell__hero {
-    border-radius: 32px;
-    padding: 28px 30px;
-    background:
-        radial-gradient(circle at top right, rgba(37, 183, 211, 0.18), transparent 34%),
-        linear-gradient(160deg, color-mix(in srgb, var(--content-bg, #ffffff) 92%, #ecfeff 8%) 0%, color-mix(in srgb, var(--content-bg, #ffffff) 96%, #f8fafc 4%) 100%);
-    border: 1px solid color-mix(in srgb, var(--field-border, #cbd5e1) 56%, #ffffff 44%);
-    box-shadow: 0 22px 58px rgba(15, 23, 42, 0.08);
-}
-
-.multitienda-shell__hero[hidden] {
-    display: none !important;
-}
-
-.multitienda-shell__hero-grid {
-    display: grid;
-    grid-template-columns: minmax(0, 1.2fr) minmax(300px, 0.8fr);
-    gap: 18px;
-    align-items: start;
-}
-
-.multitienda-shell__hero-copy {
-    display: grid;
-    gap: 10px;
-}
-
-.multitienda-shell__eyebrow {
-    display: inline-flex;
-    width: fit-content;
-    align-items: center;
-    gap: 8px;
-    padding: 7px 12px;
-    border-radius: 999px;
-    background: rgba(15, 23, 42, 0.06);
-    color: color-mix(in srgb, var(--body-text, #0f172a) 72%, #ffffff 28%);
-    font-size: 0.78rem;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-}
-
-.multitienda-shell__hero-copy h1 {
-    margin: 0;
-    font-size: clamp(1.8rem, 3vw, 2.45rem);
-    line-height: 1.05;
-    letter-spacing: -0.03em;
-    color: var(--body-text, #0f172a);
-}
-
-.multitienda-shell__hero-copy p {
-    margin: 0;
-    max-width: 60ch;
-    color: color-mix(in srgb, var(--body-text, #0f172a) 68%, #ffffff 32%);
-    line-height: 1.6;
-}
-
-.multitienda-shell__hero-meta {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    margin-top: 4px;
-}
-
-.multitienda-shell__meta-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    min-height: 38px;
-    padding: 0 14px;
-    border-radius: 999px;
-    background: color-mix(in srgb, var(--content-bg, #ffffff) 86%, #e2e8f0 14%);
-    border: 1px solid color-mix(in srgb, var(--field-border, #cbd5e1) 54%, #ffffff 46%);
-    color: color-mix(in srgb, var(--body-text, #0f172a) 74%, #ffffff 26%);
-    font-size: 0.88rem;
-    font-weight: 600;
-}
-
-.multitienda-shell__stats {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 14px;
-}
-
-.multitienda-shell__stat {
-    min-height: 122px;
-    padding: 18px;
-    border-radius: 22px;
-    background: color-mix(in srgb, var(--content-bg, #ffffff) 92%, #f0f9ff 8%);
-    border: 1px solid color-mix(in srgb, var(--field-border, #cbd5e1) 52%, #ffffff 48%);
-    display: grid;
-    gap: 8px;
-}
-
-.multitienda-shell__stat-label {
-    font-size: 0.82rem;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: color-mix(in srgb, var(--body-text, #0f172a) 58%, #ffffff 42%);
-}
-
-.multitienda-shell__stat-value {
-    font-size: clamp(1.5rem, 2vw, 2rem);
-    font-weight: 800;
-    letter-spacing: -0.03em;
-    color: var(--body-text, #0f172a);
-}
-
-.multitienda-shell__stat-note {
-    font-size: 0.86rem;
-    color: color-mix(in srgb, var(--body-text, #0f172a) 64%, #ffffff 36%);
-}
-
-.multitienda-shell__body {
-    min-width: 0;
-    border-radius: 28px;
-    background: color-mix(in srgb, var(--content-bg, #ffffff) 98%, #eef2ff 2%);
-    border: 1px solid color-mix(in srgb, var(--field-border, #cbd5e1) 58%, #ffffff 42%);
-    box-shadow: 0 24px 60px rgba(15, 23, 42, 0.08);
-    padding: 24px;
-}
-
-.multitienda-shell__panel-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 18px;
-    flex-wrap: wrap;
-}
-
-.multitienda-shell__panel-actions {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.multitienda-shell__toggle {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    min-height: 40px;
-    padding: 0 14px;
-    border-radius: 999px;
-    border: 1px solid color-mix(in srgb, var(--field-border, #cbd5e1) 58%, #ffffff 42%);
-    background: color-mix(in srgb, var(--content-bg, #ffffff) 90%, #f8fafc 10%);
-    color: var(--body-text, #0f172a);
-    font-size: 0.84rem;
-    font-weight: 700;
-    cursor: pointer;
-    transition: background 0.16s ease, border-color 0.16s ease, transform 0.16s ease;
-}
-
-.multitienda-shell__toggle:hover {
-    background: color-mix(in srgb, var(--content-bg, #ffffff) 80%, #e2e8f0 20%);
-    transform: translateY(-1px);
-}
-
-.multitienda-shell__panel-title {
-    display: grid;
-    gap: 4px;
-}
-
-.multitienda-shell__panel-title h2 {
-    margin: 0;
-    font-size: 1.18rem;
-    color: var(--body-text, #0f172a);
-}
-
-.multitienda-shell__panel-title p {
-    margin: 0;
-    font-size: 0.9rem;
-    color: color-mix(in srgb, var(--body-text, #0f172a) 66%, #ffffff 34%);
-}
-
-.multitienda-shell__module-body {
-    min-width: 0;
-}
-
-.multitienda-official-view .page {
-    margin: 0 !important;
-    padding: 0 !important;
-    font-size: 16px !important;
-}
-
-.multitienda-official-view .title,
-.multitienda-official-view .subtitle {
-    text-align: left;
-}
-
-.multitienda-official-view .section {
-    overflow: hidden;
-}
-
-.multitienda-official-view .notebook {
-    background: var(--content-bg, #ffffff);
-    border: 1px solid color-mix(in srgb, var(--field-border, #cbd5e1) 64%, #ffffff 36%);
-    border-radius: 18px;
-    overflow: hidden;
-    box-shadow: 0 12px 26px color-mix(in srgb, var(--sidebar-bottom, #0f172a) 8%, transparent);
-}
-
-.multitienda-official-view .notebook-tabs {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0;
-    border-bottom: 1px solid color-mix(in srgb, var(--field-border, #cbd5e1) 56%, #ffffff 44%);
-    background: color-mix(in srgb, var(--content-bg, #ffffff) 88%, var(--page-bg, #f4f6fb) 12%);
-}
-
-.multitienda-official-view .notebook-tab {
-    padding: 12px 22px;
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: color-mix(in srgb, var(--body-text, #0f172a) 72%, #ffffff 28%);
-    background: none;
-    border: none;
-    border-bottom: 2px solid transparent;
-    cursor: pointer;
-    transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
-}
-
-.multitienda-official-view .notebook-tab:hover {
-    color: var(--body-text, #0f172a);
-}
-
-.multitienda-official-view .notebook-tab.active {
-    color: var(--button-bg, #0f172a);
-    border-bottom-color: var(--button-bg, #0f172a);
-    background: var(--content-bg, #ffffff);
-}
-
-.multitienda-official-view .notebook-panel {
-    padding: 24px;
-}
-
-.multitienda-official-view .notebook-panel[hidden] {
-    display: none !important;
-}
-
-.multitienda-official-view .notebook-panel .section {
-    margin-bottom: 0;
-}
-
-.multitienda-official-view .section-grid {
-    display: grid !important;
-    grid-template-columns: minmax(0, 1.35fr) minmax(280px, 360px) !important;
-    gap: 24px !important;
-    align-items: start !important;
-}
-
-.multitienda-official-view .field-input,
-.multitienda-official-view .field-select,
-.multitienda-official-view .avan-input,
-.multitienda-official-view input,
-.multitienda-official-view select,
-.multitienda-official-view textarea {
-    max-width: 100%;
-    width: 100%;
-    min-height: 42px;
-    border-radius: 12px;
-    border: 1px solid var(--field-border, #cbd5e1);
-    background: var(--field-color, #ffffff);
-    color: var(--field-text, #0f172a);
-    box-shadow: none;
-    transition: border-color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
-}
-
-.multitienda-official-view textarea {
-    min-height: 110px;
-    padding: 12px 14px;
-    resize: vertical;
-}
-
-.multitienda-official-view input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="file"]),
-.multitienda-official-view select {
-    padding: 0 14px;
-}
-
-.multitienda-official-view .field-input:focus,
-.multitienda-official-view .field-select:focus,
-.multitienda-official-view .avan-input:focus,
-.multitienda-official-view input:focus,
-.multitienda-official-view select:focus,
-.multitienda-official-view textarea:focus {
-    outline: 0;
-    border-color: var(--field-focus, var(--button-bg, #0f172a));
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--field-focus, #0f172a) 16%, transparent);
-}
-
-.multitienda-official-view input::placeholder,
-.multitienda-official-view textarea::placeholder {
-    color: color-mix(in srgb, var(--field-text, #0f172a) 48%, #ffffff 52%);
-}
-
-.multitienda-official-view input[type="checkbox"],
-.multitienda-official-view input[type="radio"] {
-    accent-color: var(--button-bg, #0f172a);
-}
-
-.multitienda-official-view .section,
-.multitienda-official-view .section-card,
-.multitienda-official-view .logo-box,
-.multitienda-official-view .photo-box,
-.multitienda-official-view table {
-    color: var(--body-text, #0f172a);
-}
-
-.multitienda-official-view table {
-    background: var(--content-bg, #ffffff);
-}
-
-.multitienda-official-view th,
-.multitienda-official-view td {
-    border-color: color-mix(in srgb, var(--field-border, #cbd5e1) 58%, #ffffff 42%);
-}
-
-.multitienda-official-view .photo-box,
-.multitienda-official-view .logo-box {
-    background: color-mix(in srgb, var(--field-color, #ffffff) 92%, var(--page-bg, #f4f6fb) 8%);
-    border: 1px dashed color-mix(in srgb, var(--field-border, #cbd5e1) 76%, #ffffff 24%);
-}
-
-.multitienda-official-view .logo-box,
-.multitienda-official-view .photo-box {
-    max-width: 100%;
-}
-
-@media (max-width: 1180px) {
-    .multitienda-shell {
-        grid-template-columns: 1fr;
-    }
-
-    .multitienda-shell__sidebar {
-        position: static;
-    }
-
-    .multitienda-shell__hero-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .multitienda-official-view .section-grid {
-        grid-template-columns: 1fr !important;
-    }
-}
-
-@media (max-width: 760px) {
-    html.ui-sidebar-modern .main-content {
-        padding-right: 12px !important;
-    }
-
-    .multitienda-shell__sidebar,
-    .multitienda-shell__hero,
-    .multitienda-shell__body {
-        border-radius: 22px;
-    }
-
-    .multitienda-shell__hero,
-    .multitienda-shell__body {
-        padding: 18px;
-    }
-
-    .multitienda-shell__stats {
-        grid-template-columns: 1fr;
-    }
-}
-</style>
-"""
+_SIDEBAR_STYLE_TAG = f"<style>\n{load_sidebar_css()}\n</style>"
+_SHELL_CSS_PATH = Path(__file__).resolve().parent.parent / 'static' / 'css' / 'multitienda-shell.css'
+_MODULE_LAYOUT_OVERRIDES = f'<style>\n{_SHELL_CSS_PATH.read_text(encoding="utf-8")}\n</style>'
+_MULTITIENDA_FAVICON_TAGS = (
+    '<link rel="icon" type="image/png" href="/multitienda/multitienda/static/imagenes/logo_vale.png" />'
+    '<link rel="shortcut icon" type="image/png" href="/multitienda/multitienda/static/imagenes/logo_vale.png" />'
+)
+
+
+def _coerce_theme_bool(value: object) -> bool:
+    if isinstance(value, bool):
+        return value
+    normalized = str(value or "").strip().lower()
+    return normalized in {"1", "true", "verdadero", "si", "sí", "yes", "on", "habilitado", "enabled"}
 
 
 def _resolve_store_permissions(db, scope: dict) -> dict:
@@ -613,22 +192,114 @@ def _resolve_store_permissions(db, scope: dict) -> dict:
             ).mappings().first()
         else:
             return {}
-        return _decode_store_theme(row["store_theme"]) if row else {}
+        theme = _decode_store_theme(row["store_theme"]) if row else {}
+        if not theme:
+            return {}
+        theme["can_upload_videos"] = _coerce_theme_bool(theme.get("can_upload_videos"))
+        theme["referrals"] = _coerce_theme_bool(theme.get("referrals"))
+        theme["fidelizacion"] = _coerce_theme_bool(theme.get("fidelizacion"))
+        theme["pwa_notifications"] = _coerce_theme_bool(theme.get("pwa_notifications"))
+        theme["appointments"] = _coerce_theme_bool(theme.get("appointments"))
+        theme["coupons"] = _coerce_theme_bool(theme.get("coupons"))
+        theme["whatsapp"] = _coerce_theme_bool(theme.get("whatsapp"))
+        theme["can_use_ai"] = _coerce_theme_bool(theme.get("can_use_ai"))
+        theme["can_use_financial"] = _coerce_theme_bool(theme.get("can_use_financial"))
+        theme["can_use_layaway"] = _coerce_theme_bool(theme.get("can_use_layaway"))
+        theme["can_use_auctions"] = _coerce_theme_bool(theme.get("can_use_auctions"))
+        return theme
     except Exception:
         return {}
+
+
+def _get_optional_section_integration(section_id: str) -> dict:
+    return dict(_OPTIONAL_SECTION_INTEGRATIONS.get(str(section_id or "").strip(), {}))
+
+
+def _resolve_enabled_module_route(module_key: str) -> str:
+    normalized_key = str(module_key or "").strip()
+    if not normalized_key or not is_module_enabled(normalized_key):
+        return ""
+    for item in list_modules_payload():
+        if str(item.get("key") or "").strip() == normalized_key:
+            return str(item.get("route") or "").strip()
+    return ""
+
+
+def _optional_section_available(section_id: str) -> bool:
+    integration = _get_optional_section_integration(section_id)
+    module_key = str(integration.get("module_key") or "").strip()
+    if not module_key:
+        return True
+    return bool(_resolve_enabled_module_route(module_key))
+
+
+def _resolve_integrated_section_target(section_id: str, scope: dict | None = None) -> str:
+    integration = _get_optional_section_integration(section_id)
+    module_key = str(integration.get("module_key") or "").strip()
+    explicit_target = str(integration.get("target_route") or "").strip()
+    target_route = explicit_target or _resolve_enabled_module_route(module_key)
+    if not target_route:
+        return ""
+    scope_query_param = str(integration.get("scope_query_param") or "").strip()
+    scope_value = str((scope or {}).get("store_slug") or "").strip()
+    if scope_query_param and scope_value:
+        separator = "&" if "?" in target_route else "?"
+        return f"{target_route}{separator}{urlencode({scope_query_param: scope_value})}"
+    return target_route
+
+
+def _resolve_integrated_module_context(section_id: str, scope: dict | None = None) -> dict[str, str | bool]:
+    integration = _get_optional_section_integration(section_id)
+    module_key = str(integration.get("module_key") or "").strip()
+    target_route = _resolve_integrated_section_target(section_id, scope)
+    route = _resolve_enabled_module_route(module_key)
+    return {
+        "enabled": bool(route),
+        "module_key": module_key,
+        "route": route,
+        "target_route": target_route or route,
+        "api_base": f"/api/{module_key}" if module_key else "",
+    }
+
+
+def _is_store_assigned_admin(role_name: str | None) -> bool:
+    return normalize_role_name(role_name) == "administrador_tienda"
+
+
+def _can_access_store_config(role_name: str | None) -> bool:
+    """Returns True for store‑assigned admins and platform-level admins."""
+    normalized = normalize_role_name(role_name)
+    return normalized in {
+        "administrador_tienda",
+        "superadministrador",
+        "superadmin",
+        "administrador_multiempresa",
+        "administrador",
+    }
 
 
 def _visible_module_sections(role_name: str | None, store_permissions: dict | None = None) -> list[dict[str, str]]:
     normalized_role = normalize_role_name(role_name)
     is_superadmin = normalized_role in {"superadministrador", "superadmin"}
+    is_platform_admin = is_superadmin or normalized_role in {"administrador_multiempresa", "administrador"}
     perms = store_permissions or {}
     sections = []
     for section in _MODULE_SECTIONS:
-        if section["id"] == "gestion" and not is_superadmin:
+        if not _optional_section_available(section["id"]):
+            continue
+        if section["id"] == "gestion" and not is_platform_admin:
+            continue
+        if section["id"] == "repartidores" and not is_platform_admin:
+            continue
+        if section["id"] == "configuracion" and not _can_access_store_config(normalized_role):
             continue
         if section["id"] == "videos" and not is_superadmin and not perms.get("can_upload_videos"):
             continue
         if section["id"] == "referidos" and not is_superadmin and not perms.get("referrals"):
+            continue
+        if section["id"] == "fidelizacion" and not is_superadmin and not perms.get("fidelizacion"):
+            continue
+        if section["id"] == "notificaciones_pwa" and not is_superadmin and not perms.get("pwa_notifications"):
             continue
         if section["id"] == "reservaciones" and not is_superadmin and not perms.get("appointments"):
             continue
@@ -636,11 +307,7 @@ def _visible_module_sections(role_name: str | None, store_permissions: dict | No
             continue
         if section["id"] == "whatsapp" and not is_superadmin and not perms.get("whatsapp"):
             continue
-        if section["id"] == "empleados" and not is_superadmin and int(perms.get("max_internal_users") or 0) <= 0:
-            continue
         if section["id"] == "seguidores" and not is_superadmin and int(perms.get("max_portal_users") or 0) <= 0:
-            continue
-        if section["id"] == "proveedores" and not is_superadmin and not perms.get("can_use_providers"):
             continue
         if section["id"] == "ia" and not is_superadmin and not perms.get("can_use_ai"):
             continue
@@ -658,107 +325,26 @@ def _can_access_module_section(role_name: str | None, section_id: str, store_per
     return any(section["id"] == section_id for section in _visible_module_sections(role_name, store_permissions))
 
 
-def _build_module_sidebar_markup(sections: list[dict[str, str]], current_section: str) -> str:
-    nav_items = []
-    for section in sections:
-        is_active = section["id"] == current_section
-        nav_items.append(
-            '<a class="multitienda-shell__nav-link{active}" href="{route}">'
-            '<span class="multitienda-shell__nav-icon"><i class="{icon}" aria-hidden="true"></i></span>'
-            '<span class="multitienda-shell__nav-copy"><strong>{label}</strong><span>{hint}</span></span>'
-            "</a>".format(
-                active=" is-active" if is_active else "",
-                route=escape(section["route"]),
-                icon=escape(section["icon"]),
-                label=escape(section["label"]),
-                hint=escape(
-                    "Tablero y resumen del marketplace"
-                    if section["id"] == "inicio"
-                    else (
-                        "Sube y gestiona videos de tu tienda"
-                        if section["id"] == "videos"
-                        else (
-                            "Gestión del programa de referidos"
-                            if section["id"] == "referidos"
-                            else (
-                                "Agenda y control de reservaciones"
-                                if section["id"] == "reservaciones"
-                                else (
-                                    "Códigos de descuento y promociones"
-                                    if section["id"] == "cupones"
-                                    else (
-                                        "Mensajería y campañas WhatsApp"
-                                        if section["id"] == "whatsapp"
-                                        else (
-                                            "Equipo interno de la tienda"
-                                            if section["id"] == "empleados"
-                                            else (
-                                                "Clientes y socios de la tienda"
-                                                if section["id"] == "seguidores"
-                                                else (
-                                                    "Red de contactos y campañas"
-                                                    if section["id"] == "proveedores"
-                                                    else (
-                                                        "Asistentes de IA para tu negocio"
-                                                        if section["id"] == "ia"
-                                                        else (
-                                                            "Comisiones y créditos colocados"
-                                                            if section["id"] == "institucion_financiera"
-                                                            else (
-                                                                "Reserva de productos con abonos"
-                                                                if section["id"] == "apartados"
-                                                                else (
-                                                                    "Pujas y adjudicación en tiempo real"
-                                                                    if section["id"] == "subastas"
-                                                                    else (
-                                                                        "Panel principal del módulo"
-                                                                        if section["id"] == "configuracion"
-                                                                        else ("Catálogo y ficha de producto" if section["id"] == "productos" else "Alta y control de tiendas")
-                                                                    )
-                                                                )
-                                                            )
-                                                        )
-                                                    )
-                                                )
-                                            )
-                                        )
-                                    )
-                                )
-                            )
-                        )
-                    )
-                ),
-            )
-        )
-    return (
-        '<aside class="multitienda-shell__sidebar">'
-        '<div class="multitienda-shell__brand">'
-        '<div class="multitienda-shell__brand-mark"><i class="fa-solid fa-store" aria-hidden="true"></i></div>'
-        '<div class="multitienda-shell__brand-copy"><strong>Multitienda</strong><span>Operación del marketplace</span></div>'
-        "</div>"
-        '<div class="multitienda-shell__nav">'
-        '<p class="multitienda-shell__nav-label">Navegación</p>'
-        + "".join(nav_items)
-        + "</div>"
-        "</aside>"
-    )
-
-
 def _build_marketplace_workspace_script() -> str:
     return """
 <script>
 (function () {
     var root = document.querySelector('.multitienda-shell');
     if (!root) return;
+    var sidebar = root.querySelector('.sidebar-dark');
     var heroSection = root.querySelector('.multitienda-shell__hero');
     var heroToggleBtn = root.querySelector('[data-multitienda-hero-toggle="1"]');
+    var sidebarToggleBtn = root.querySelector('[data-multitienda-sidebar-toggle="1"]');
     var storesCountEl = root.querySelector('[data-multitienda-stat="stores"]');
     var productsCountEl = root.querySelector('[data-multitienda-stat="products"]');
     var membershipEl = root.querySelector('[data-multitienda-stat="membership"]');
     var inventoryEl = root.querySelector('[data-multitienda-stat="inventory"]');
     var storeNameEls = root.querySelectorAll('[data-multitienda-store-name]');
     var storeSubtitleEls = root.querySelectorAll('[data-multitienda-store-subtitle]');
+    var sidebarStoreEls = root.querySelectorAll('[data-multitienda-sidebar-store]');
+    var sidebarStoreMetaEls = root.querySelectorAll('[data-multitienda-sidebar-store-meta]');
     var accessMomentEl = root.querySelector('[data-multitienda-access-moment]');
+    var collapsibles = root.querySelectorAll('[data-sb-collapsible]');
 
     function setText(nodeList, value) {
         (nodeList || []).forEach(function (node) { node.textContent = value; });
@@ -771,6 +357,18 @@ def _build_marketplace_workspace_script() -> str:
         heroToggleBtn.innerHTML = hidden
             ? '<i class="fa-solid fa-eye" aria-hidden="true"></i><span>Mostrar resumen</span>'
             : '<i class="fa-solid fa-eye-slash" aria-hidden="true"></i><span>Ocultar resumen</span>';
+    }
+
+    function applySidebarCollapsed(collapsed) {
+        root.classList.toggle('is-sidebar-collapsed', !!collapsed);
+        if (sidebar) {
+            sidebar.classList.toggle('is-collapsed', !!collapsed);
+        }
+        if (!sidebarToggleBtn) return;
+        sidebarToggleBtn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+        sidebarToggleBtn.innerHTML = collapsed
+            ? '<i class="fa-solid fa-chevron-left" aria-hidden="true"></i>'
+            : '<i class="fa-solid fa-chevron-right" aria-hidden="true"></i>';
     }
 
     function countLocalProducts() {
@@ -793,6 +391,12 @@ def _build_marketplace_workspace_script() -> str:
         applyHeroVisibility(false);
     }
 
+    try {
+        applySidebarCollapsed(window.localStorage.getItem('multitienda_sidebar_collapsed') === '1');
+    } catch (error) {
+        applySidebarCollapsed(false);
+    }
+
     if (heroToggleBtn) {
         heroToggleBtn.addEventListener('click', function () {
             var nextHidden = !(heroSection && heroSection.hidden);
@@ -802,6 +406,25 @@ def _build_marketplace_workspace_script() -> str:
             } catch (error) {}
         });
     }
+
+    if (sidebarToggleBtn) {
+        sidebarToggleBtn.addEventListener('click', function () {
+            var nextCollapsed = !(sidebar && sidebar.classList.contains('is-collapsed'));
+            applySidebarCollapsed(nextCollapsed);
+            try {
+                window.localStorage.setItem('multitienda_sidebar_collapsed', nextCollapsed ? '1' : '0');
+            } catch (error) {}
+        });
+    }
+
+    collapsibles.forEach(function (item) {
+        var toggle = item.querySelector('[data-sb-collapsible-toggle]');
+        if (!toggle) return;
+        toggle.addEventListener('click', function () {
+            var open = item.classList.toggle('is-open');
+            toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+        });
+    });
 
     if (accessMomentEl) {
         try {
@@ -818,16 +441,27 @@ def _build_marketplace_workspace_script() -> str:
         .then(function (response) { return response.ok ? response.json() : null; })
         .then(function (payload) {
             var stores = payload && Array.isArray(payload.data) ? payload.data : [];
-            if (storesCountEl) storesCountEl.textContent = String(stores.length);
             if (!stores.length) {
-                setText(storeNameEls, 'Sin tienda asignada');
-                setText(storeSubtitleEls, 'Asigna una tienda para activar la operación del marketplace.');
-                if (membershipEl) membershipEl.textContent = 'Sin membresía';
-                if (inventoryEl) inventoryEl.textContent = 'Pendiente';
+                var hasInitialStore = false;
+                (storeNameEls || []).forEach(function (node) {
+                    if (String(node.textContent || '').trim() && String(node.textContent || '').trim() !== 'Nombre de la tienda') {
+                        hasInitialStore = true;
+                    }
+                });
+                if (storesCountEl) storesCountEl.textContent = hasInitialStore ? '1' : '0';
+                if (!hasInitialStore) {
+                    setText(storeNameEls, 'Sin tienda asignada');
+                    setText(storeSubtitleEls, 'Asigna una tienda para activar la operación del marketplace.');
+                    setText(sidebarStoreEls, 'Sin tienda');
+                    if (membershipEl) membershipEl.textContent = 'Sin membresía';
+                    if (inventoryEl) inventoryEl.textContent = 'Pendiente';
+                }
                 return;
             }
+            if (storesCountEl) storesCountEl.textContent = String(stores.length);
             var store = stores[0] || {};
-            setText(storeNameEls, String(store.name || 'Mi tienda'));
+            setText(storeNameEls, String(store.name || 'Nombre de la tienda'));
+            setText(sidebarStoreEls, String(store.name || 'Mi tienda'));
             setText(
                 storeSubtitleEls,
                 store.slug
@@ -851,9 +485,17 @@ def _build_marketplace_shell_content(
     *,
     sections: list[dict[str, str]],
     viewer_name: str,
+    initial_store_name: str = "",
+    initial_store_subtitle: str = "",
+    initial_membership: str = "",
+    initial_inventory: str = "",
 ) -> str:
     prefixed = _prefix_root_relative_urls(document_html, "/multitienda")
-    styles = "\n".join(match.group(0) for match in _STYLE_RE.finditer(prefixed))
+    link_styles = "\n".join(m.group(0) for m in _LINK_CSS_RE.finditer(prefixed))
+    inline_styles = "\n".join(
+        f"<style>{m.group(1)}</style>" for m in _STYLE_RE.finditer(prefixed)
+    )
+    styles = "\n".join(filter(None, [link_styles, inline_styles]))
     main_match = _MAIN_RE.search(prefixed)
     main_markup = main_match.group(1).strip() if main_match else prefixed
     section_meta = next((item for item in sections if item["id"] == section_id), None)
@@ -876,9 +518,10 @@ def _build_marketplace_shell_content(
             '<section class="multitienda-shell__hero">'
             + '<div class="multitienda-shell__hero-grid">'
             + '<div class="multitienda-shell__hero-copy">'
-            + '<span class="multitienda-shell__eyebrow"><i class="fa-solid fa-chart-line" aria-hidden="true"></i> Dashboard de tienda</span>'
-            + '<h1><span data-multitienda-store-name>Mi tienda</span></h1>'
-            + '<p>Administra productos, identidad comercial y configuración operativa desde una sola vista. La navegación lateral reemplaza el submenú superior para mantener el módulo autónomo.</p>'
+            + '<span class="multitienda-shell__eyebrow"><i class="fa-solid fa-chart-line" aria-hidden="true"></i> Tablero de control</span>'
+            + '<h1><span class="multitienda-shell__store-name" data-multitienda-store-name>'
+            + escape(initial_store_name or "Nombre de la tienda")
+            + "</span></h1>"
             + '<div class="multitienda-shell__hero-meta">'
             + '<span class="multitienda-shell__meta-pill"><i class="fa-regular fa-user" aria-hidden="true"></i> '
             + escape(viewer_name or "Usuario")
@@ -888,13 +531,19 @@ def _build_marketplace_shell_content(
             + escape(section_label)
             + "</span>"
             + "</div>"
-            + '<p data-multitienda-store-subtitle>Configura la identidad comercial y la operación de tu tienda.</p>'
+            + '<p data-multitienda-store-subtitle>'
+            + escape(initial_store_subtitle or "Configura la identidad comercial y la operación de tu tienda.")
+            + "</p>"
             + "</div>"
             + '<div class="multitienda-shell__stats">'
-            + '<article class="multitienda-shell__stat"><span class="multitienda-shell__stat-label">Tiendas visibles</span><strong class="multitienda-shell__stat-value" data-multitienda-stat="stores">0</strong><span class="multitienda-shell__stat-note">Alcance del usuario actual.</span></article>'
-            + '<article class="multitienda-shell__stat"><span class="multitienda-shell__stat-label">Productos locales</span><strong class="multitienda-shell__stat-value" data-multitienda-stat="products">0</strong><span class="multitienda-shell__stat-note">Catálogo del módulo en este navegador.</span></article>'
-            + '<article class="multitienda-shell__stat"><span class="multitienda-shell__stat-label">Membresía</span><strong class="multitienda-shell__stat-value" data-multitienda-stat="membership">Sin membresía</strong><span class="multitienda-shell__stat-note">Configuración comercial cargada desde la tienda.</span></article>'
-            + '<article class="multitienda-shell__stat"><span class="multitienda-shell__stat-label">Inventario</span><strong class="multitienda-shell__stat-value" data-multitienda-stat="inventory">Pendiente</strong><span class="multitienda-shell__stat-note">Estado de la operación interna.</span></article>'
+            + '<article class="multitienda-shell__stat"><span class="multitienda-shell__stat-label">Tiendas visibles</span><strong class="multitienda-shell__stat-value" data-multitienda-stat="stores">0</strong></article>'
+            + '<article class="multitienda-shell__stat"><span class="multitienda-shell__stat-label">Productos locales</span><strong class="multitienda-shell__stat-value" data-multitienda-stat="products">0</strong></article>'
+            + '<article class="multitienda-shell__stat"><span class="multitienda-shell__stat-label">Membresía</span><strong class="multitienda-shell__stat-value" data-multitienda-stat="membership">'
+            + escape(initial_membership or "Sin membresía")
+            + "</strong></article>"
+            + '<article class="multitienda-shell__stat"><span class="multitienda-shell__stat-label">Inventario</span><strong class="multitienda-shell__stat-value" data-multitienda-stat="inventory">'
+            + escape(initial_inventory or "Pendiente")
+            + "</strong></article>"
             + "</div>"
             + "</div>"
             + "</section>"
@@ -911,16 +560,17 @@ def _build_marketplace_shell_content(
         '<div class="multitienda-official-view">'
         + _MODULE_NAVBAR_BOOTSTRAP
         + _MODULE_LAYOUT_OVERRIDES
+        + _SIDEBAR_STYLE_TAG
         + styles
         + '<section class="multitienda-shell">'
-        + _build_module_sidebar_markup(sections, section_id)
+        + render_sidebar_markup(sections, section_id, viewer_name, initial_store_name)
         + '<div class="multitienda-shell__content">'
         + hero_markup
         + '<section class="multitienda-shell__body">'
         + '<div class="multitienda-shell__panel-head">'
         + '<div class="multitienda-shell__panel-title"><h2>'
         + escape(section_label)
-        + '</h2><p>Vista operativa del módulo con navegación propia y alcance por rol.</p></div>'
+        + "</h2></div>"
         + panel_actions_markup
         + "</div>"
         + '<div class="multitienda-shell__module-body"><main class="page">'
@@ -953,10 +603,21 @@ def _render_official_shell(
     try:
         scope = _resolve_store_scope(request, db)
         store_perms = _resolve_store_permissions(db, scope)
+        store_summaries = _resolve_store_summaries(request, db, scope)
     finally:
         db.close()
     role = str(scope.get("role") or getattr(request.state, "user_role", ""))
+    # If domain-DB lookup failed (no user_id), fall back to the session role
+    # so a superadmin/admin who exists in SIPET's auth but lacks a vendor entry
+    # still gets the correct sidebar and can access admin-only sections.
+    if scope.get("user_id") is None:
+        session_role = str(getattr(request.state, "user_role", "") or "")
+        if session_role:
+            role = session_role
     visible_sections = _visible_module_sections(role, store_perms)
+    initial_store = store_summaries[0] if store_summaries else {}
+    initial_store_name = str(initial_store.get("name") or "").strip()
+    initial_store_slug = str(initial_store.get("slug") or "").strip()
     context = build_backend_context(
         request,
         title="Multitienda",
@@ -967,6 +628,14 @@ def _render_official_shell(
             section_id,
             sections=visible_sections,
             viewer_name=_current_username(request),
+            initial_store_name=initial_store_name,
+            initial_store_subtitle=(
+                f"Slug público: {initial_store_slug}"
+                if initial_store_slug
+                else "Configura la identidad comercial y la operación de tu tienda."
+            ),
+            initial_membership=str(initial_store.get("membership") or ""),
+            initial_inventory="Activo" if bool(initial_store.get("inventoryEnabled", False)) else "Desactivado",
         ),
         hide_floating_actions=True,
         show_page_header=False,
@@ -985,11 +654,68 @@ def _render_official_shell(
 
 
 def _render_public_document(document_html: str) -> HTMLResponse:
-    return HTMLResponse(content=_prefix_root_relative_urls(document_html, "/multitienda"))
+    content = _prefix_root_relative_urls(document_html, "/multitienda")
+    if "</head>" in content and "/multitienda/multitienda/static/imagenes/logo_vale.png" not in content:
+        content = content.replace("</head>", f"{_MULTITIENDA_FAVICON_TAGS}</head>", 1)
+    return HTMLResponse(content=content)
 
 
 def _db_session_for_request(request: Request):
-    return core_db.get_session_factory_for_host(core_db.get_request_host())()
+    from fastapi_modulo.core.database_router import normalize_host
+    host = normalize_host(
+        request.headers.get("x-forwarded-host")
+        or request.headers.get("host")
+        or request.url.hostname
+        or ""
+    )
+    return core_db.get_session_factory_for_host(host or core_db.get_request_host())()
+
+
+def _public_store_exists(request: Request, store_slug: str) -> bool:
+    db = _db_session_for_request(request)
+    try:
+        row = db.execute(
+            text(
+                """
+                SELECT id
+                FROM vendors
+                WHERE LOWER(store_slug) = :slug
+                  AND is_active = 1
+                LIMIT 1
+                """
+            ),
+            {"slug": str(store_slug or "").strip().lower()},
+        ).mappings().first()
+        return bool(row)
+    finally:
+        db.close()
+
+
+def _public_store_product_exists(request: Request, store_slug: str, product_slug: str) -> bool:
+    db = _db_session_for_request(request)
+    try:
+        row = db.execute(
+            text(
+                """
+                SELECT p.id
+                FROM products p
+                JOIN vendors v ON v.id = p.vendor_id
+                WHERE LOWER(v.store_slug) = :store_slug
+                  AND v.is_active = 1
+                  AND LOWER(p.slug) = :product_slug
+                  AND p.is_active = 1
+                  AND LOWER(COALESCE(p.status, '')) = 'published'
+                LIMIT 1
+                """
+            ),
+            {
+                "store_slug": str(store_slug or "").strip().lower(),
+                "product_slug": str(product_slug or "").strip().lower(),
+            },
+        ).mappings().first()
+        return bool(row)
+    finally:
+        db.close()
 
 
 def _current_username(request: Request) -> str:
@@ -1007,8 +733,12 @@ def _current_user_record(request: Request, db):
     username = _current_username(request)
     if not username:
         return None
-    normalized_username = username.lower()
+    user = find_user_by_login(db, username)
     roles_by_id = {role.id: normalize_role_name(role.nombre) for role in db.query(Rol).all()}
+    if user is not None:
+        role_name = roles_by_id.get(user.rol_id) or normalize_role_name(getattr(user, "role", "") or "usuario")
+        return user, role_name
+    normalized_username = username.lower()
     for user in db.query(Usuario).all():
         decrypted_username = (decrypt_sensitive(user.usuario) or "").strip().lower()
         decrypted_email = (decrypt_sensitive(user.correo) or "").strip().lower()
@@ -1039,6 +769,20 @@ def _resolve_store_scope(request: Request, db) -> dict[str, object]:
             ),
             {"vendor_id": int(user.id)},
         ).mappings().first()
+        if not store_row:
+            store_row = db.execute(
+                text(
+                    """
+                    SELECT v.id, v.store_slug
+                    FROM store_employees se
+                    JOIN vendors v ON v.id = se.vendor_id
+                    WHERE se.user_id = :user_id
+                    ORDER BY se.id ASC
+                    LIMIT 1
+                    """
+                ),
+                {"user_id": int(user.id)},
+            ).mappings().first()
         store_id = int(store_row["id"]) if store_row and store_row.get("id") is not None else None
         store_slug = str(store_row.get("store_slug") or "") if store_row else ""
     return {
@@ -1048,6 +792,131 @@ def _resolve_store_scope(request: Request, db) -> dict[str, object]:
         "store_slug": store_slug,
         "restricted": restricted,
     }
+
+
+def _list_store_rows(db, where_clause: str = "", params: dict[str, object] | None = None) -> list[dict]:
+    return db.execute(
+        text(
+            """
+            SELECT
+                v.id,
+                v.vendor_id,
+                v.store_name,
+                v.store_slug,
+                v.store_theme,
+                v.is_featured,
+                v.is_active,
+                u.full_name,
+                u.username AS encrypted_username
+            FROM vendors v
+            LEFT JOIN users u ON u.id = v.vendor_id
+            """
+            + where_clause
+            + """
+            ORDER BY lower(v.store_name) ASC, v.id ASC
+            """
+        ),
+        params or {},
+    ).mappings().all()
+
+
+def _store_row_matches_current_user(row: dict, current_username: str) -> bool:
+    normalized_current = str(current_username or "").strip().lower()
+    if not normalized_current:
+        return False
+    return normalized_current in {
+        str(row.get("full_name") or "").strip().lower(),
+        str(decrypt_sensitive(row.get("encrypted_username")) or "").strip().lower(),
+    }
+
+
+def _load_business_type_names(db) -> dict[str, str]:
+    def _fetch_names(source_db) -> dict[str, str]:
+        rows = source_db.execute(
+            text(
+                """
+                SELECT code, name
+                FROM store_business_types
+                ORDER BY name ASC
+                """
+            )
+        ).mappings().all()
+        return {
+            str(row.get("code") or "").strip(): str(row.get("name") or "").strip()
+            for row in rows
+            if str(row.get("code") or "").strip()
+        }
+
+    try:
+        names = _fetch_names(db)
+        if names:
+            return names
+    except Exception:
+        pass
+    fallback_db = SessionLocal()
+    try:
+        return _fetch_names(fallback_db)
+    except Exception:
+        return {}
+    finally:
+        fallback_db.close()
+
+
+def _serialize_store_summary(row: dict) -> dict[str, object]:
+    return _serialize_store_summary_with_types(row, {})
+
+
+def _serialize_store_summary_with_types(row: dict, business_type_names: dict[str, str]) -> dict[str, object]:
+    theme = _decode_store_theme(row.get("store_theme"))
+    type_code = str(theme.get("store_type") or "").strip()
+    stored_type_name = str(theme.get("store_type_name") or "").strip()
+    return {
+        "id": row.get("id"),
+        "name": row.get("store_name") or "",
+        "slug": row.get("store_slug") or "",
+        "adminId": str(row.get("vendor_id") or ""),
+        "adminLabel": (
+            str(row.get("full_name") or "").strip()
+            or str(decrypt_sensitive(row.get("encrypted_username")) or "").strip()
+        ),
+        "typeCode": type_code,
+        "typeLabel": stored_type_name or business_type_names.get(type_code) or type_code,
+        "membership": str(theme.get("membership") or ""),
+        "isActive": bool(row.get("is_active")),
+        "isFeatured": bool(row.get("is_featured")),
+        "inventoryEnabled": bool(theme.get("inventory_enabled", False)),
+        "canUploadVideos": _coerce_theme_bool(theme.get("can_upload_videos", False)),
+        "validity": str(theme.get("validity") or ""),
+        "referrals": _coerce_theme_bool(theme.get("referrals")),
+        "fidelizacion": _coerce_theme_bool(theme.get("fidelizacion")),
+        "pwaNotifications": _coerce_theme_bool(theme.get("pwa_notifications")),
+        "appointments": _coerce_theme_bool(theme.get("appointments")),
+        "coupons": _coerce_theme_bool(theme.get("coupons")),
+        "whatsapp": _coerce_theme_bool(theme.get("whatsapp")),
+        "maxInternalUsers": int(theme.get("max_internal_users") or 0),
+        "maxPortalUsers": int(theme.get("max_portal_users") or 0),
+    }
+
+
+def _resolve_store_summaries(request: Request, db, scope: dict[str, object] | None = None) -> list[dict[str, object]]:
+    effective_scope = scope or _resolve_store_scope(request, db)
+    business_type_names = _load_business_type_names(db)
+    where_clause = ""
+    params: dict[str, object] = {}
+    if effective_scope["restricted"]:
+        if effective_scope["store_id"]:
+            where_clause = "WHERE v.id = :store_id"
+            params["store_id"] = int(effective_scope["store_id"])
+        elif effective_scope["user_id"]:
+            where_clause = "WHERE v.vendor_id = :vendor_id"
+            params["vendor_id"] = int(effective_scope["user_id"])
+        else:
+            return []
+    rows = _list_store_rows(db, where_clause, params)
+    if effective_scope["restricted"] and not rows:
+        current_username = _current_username(request)
+        rows = [row for row in _list_store_rows(db) if _store_row_matches_current_user(row, current_username)]
+    return [_serialize_store_summary_with_types(row, business_type_names) for row in rows]
 
 
 def _ensure_vendor_table() -> None:
@@ -1126,16 +995,347 @@ def _ensure_vendor_table() -> None:
         db.close()
 
 
+def _ensure_product_tables(db) -> None:
+    from fastapi_modulo.modulos.multitienda.marketplace.backend.core.db import Base
+    from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.vendors.models import VendorStore  # noqa: F401
+    from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.products.models import Product, ProductImage  # noqa: F401
+
+    table_names = [Product.__tablename__, ProductImage.__tablename__]
+    tables = [Base.metadata.tables[name] for name in table_names if name in Base.metadata.tables]
+    if tables:
+        Base.metadata.create_all(bind=db.bind, tables=tables, checkfirst=True)
+
+
 def _decode_store_theme(raw_value) -> dict:
-    if isinstance(raw_value, dict):
-        return raw_value
-    if isinstance(raw_value, str):
+    current = raw_value
+    for _ in range(3):
+        if isinstance(current, dict):
+            return current
+        if not isinstance(current, str):
+            return {}
         try:
-            parsed = json.loads(raw_value)
+            current = json.loads(current)
         except Exception:
             return {}
-        return parsed if isinstance(parsed, dict) else {}
     return {}
+
+
+def _allowed_store_config_keys() -> set[str]:
+    return {
+        "site_logo",
+        "landing_banner",
+        "landing_banner_mobile",
+        "landing_banner_list",
+        "website",
+        "phone",
+        "email",
+        "street",
+        "between_streets",
+        "neighborhood",
+        "postal_code",
+        "locality",
+        "municipality",
+        "state",
+        "country",
+        "latitude",
+        "longitude",
+        "schedule_monday_open",
+        "schedule_monday_close",
+        "schedule_monday_break",
+        "schedule_tuesday_open",
+        "schedule_tuesday_close",
+        "schedule_tuesday_break",
+        "schedule_wednesday_open",
+        "schedule_wednesday_close",
+        "schedule_wednesday_break",
+        "schedule_thursday_open",
+        "schedule_thursday_close",
+        "schedule_thursday_break",
+        "schedule_friday_open",
+        "schedule_friday_close",
+        "schedule_friday_break",
+        "schedule_saturday_open",
+        "schedule_saturday_close",
+        "schedule_saturday_break",
+        "schedule_sunday_open",
+        "schedule_sunday_close",
+        "schedule_sunday_break",
+        "slogan",
+        "mission",
+        "vision",
+        "partner_benefits",
+        "legal_name",
+        "tax_id",
+        "tax_regime",
+        "tax_postal_code",
+        "billing_email",
+        "fiscal_street",
+        "fiscal_exterior_number",
+        "fiscal_interior_number",
+        "fiscal_neighborhood",
+        "fiscal_municipality",
+        "fiscal_state",
+        "consumer_rights",
+        "data_privacy",
+        "additional_conditions",
+        "hide_email",
+        "hide_phone",
+        "hide_website",
+        "hide_address",
+        "hide_map",
+        "hide_partner_benefits",
+        "hide_about",
+        "hide_policies",
+        "hide_go_to_store_button",
+        "hide_product_prices",
+        "hide_terms",
+        "hide_cart_buttons",
+        "hide_cart_terms_checkbox",
+    }
+
+
+def _extract_store_config(theme: dict | None) -> dict[str, object]:
+    nested = (theme or {}).get("configuracion")
+    return dict(nested) if isinstance(nested, dict) else {}
+
+
+def _build_store_config_payload(row: dict | None) -> dict[str, object]:
+    if not row:
+        return {}
+    theme = _decode_store_theme(row.get("store_theme"))
+    config = _extract_store_config(theme)
+    if str(config.get("site_logo") or "").strip() == "" and str(row.get("logo") or "").strip():
+        config["site_logo"] = str(row.get("logo") or "").strip()
+    if str(config.get("landing_banner") or "").strip() == "" and str(row.get("banner") or "").strip():
+        config["landing_banner"] = str(row.get("banner") or "").strip()
+    if str(row.get("phone") or "").strip() and not str(config.get("phone") or "").strip():
+        config["phone"] = str(row.get("phone") or "").strip()
+    if str(row.get("address") or "").strip() and not str(config.get("street") or "").strip():
+        config["street"] = str(row.get("address") or "").strip()
+    if str(row.get("country") or "").strip() and not str(config.get("country") or "").strip():
+        config["country"] = str(row.get("country") or "").strip()
+    return config
+
+
+def _extract_catalog_products(theme: dict | None) -> list[dict[str, object]]:
+    raw_products = (theme or {}).get("catalog_products")
+    if not isinstance(raw_products, list):
+        return []
+    return [dict(item) for item in raw_products if isinstance(item, dict)]
+
+
+def _is_catalog_product_public(product: dict | None) -> bool:
+    item = product or {}
+    return bool(item.get("publicado")) or bool(item.get("ecomPublicado"))
+
+
+def _slugify_catalog_product(value: str) -> str:
+    slug = re.sub(r"[^a-z0-9]+", "-", str(value or "").strip().lower()).strip("-")
+    return slug or "producto"
+
+
+def _safe_float(value) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _safe_int(value) -> int:
+    try:
+        return int(float(value))
+    except (TypeError, ValueError):
+        return 0
+
+
+def _fits_vendor_asset_column(value: object) -> bool:
+    raw = str(value or "").strip()
+    if not raw:
+        return True
+    if raw.startswith("data:"):
+        return False
+    return len(raw) <= 255
+
+
+def _sync_catalog_products_to_marketplace(db, store_id: int, previous_products: list[dict[str, object]], catalog_products: list[dict[str, object]]) -> list[dict[str, object]]:
+    previous_db_ids = {
+        int(item.get("db_product_id"))
+        for item in previous_products
+        if str(item.get("db_product_id") or "").isdigit()
+    }
+    current_db_ids: set[int] = set()
+    synced_products: list[dict[str, object]] = []
+
+    for index, raw_product in enumerate(catalog_products):
+        product = dict(raw_product)
+        product_name = str(product.get("nombre") or "").strip()
+        if not product_name:
+            continue
+        is_public = _is_catalog_product_public(product)
+
+        mapped_product_id = int(product["db_product_id"]) if str(product.get("db_product_id") or "").isdigit() else None
+        base_slug = _slugify_catalog_product(product_name)
+        slug = base_slug
+        suffix = 2
+        while True:
+            slug_row = db.execute(
+                text(
+                    """
+                    SELECT id
+                    FROM products
+                    WHERE slug = :slug
+                      AND (:product_id IS NULL OR id <> :product_id)
+                    LIMIT 1
+                    """
+                ),
+                {"slug": slug, "product_id": mapped_product_id},
+            ).mappings().first()
+            if not slug_row:
+                break
+            slug = f"{base_slug}-{suffix}"
+            suffix += 1
+
+        payload = {
+            "vendor_id": store_id,
+            "name": product_name,
+            "description": str(product.get("descCorta") or product.get("descLarga") or product.get("descripcion") or ""),
+            "price": _safe_float(product.get("precio")),
+            "stock_quantity": _safe_int(product.get("stock")),
+            "slug": slug,
+            "is_active": is_public,
+            "status": "published" if is_public else "draft",
+            "type": "simple",
+        }
+
+        if mapped_product_id:
+            updated_row = db.execute(
+                text(
+                    """
+                    UPDATE products
+                    SET name = :name,
+                        description = :description,
+                        price = :price,
+                        stock_quantity = :stock_quantity,
+                        slug = :slug,
+                        is_active = :is_active,
+                        status = :status,
+                        type = :type,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE id = :product_id
+                      AND vendor_id = :vendor_id
+                    RETURNING id
+                    """
+                ),
+                {**payload, "product_id": mapped_product_id},
+            ).mappings().first()
+            if not updated_row:
+                mapped_product_id = None
+
+        if mapped_product_id is None:
+            created_row = db.execute(
+                text(
+                    """
+                    INSERT INTO products (
+                        vendor_id, name, description, price, stock_quantity, slug,
+                        is_active, status, type, created_at, updated_at
+                    ) VALUES (
+                        :vendor_id, :name, :description, :price, :stock_quantity, :slug,
+                        :is_active, :status, :type, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+                    )
+                    RETURNING id
+                    """
+                ),
+                payload,
+            ).mappings().first()
+            mapped_product_id = int(created_row["id"])
+
+        current_db_ids.add(mapped_product_id)
+        product["db_product_id"] = mapped_product_id
+        product["slug"] = slug
+        product["publicado"] = is_public
+
+        primary_image = str(product.get("imagen") or "").strip()
+        if primary_image and not primary_image.startswith("data:") and len(primary_image) <= 255:
+            image_row = db.execute(
+                text(
+                    """
+                    SELECT id
+                    FROM product_images
+                    WHERE product_id = :product_id
+                      AND is_primary = 1
+                    ORDER BY id ASC
+                    LIMIT 1
+                    """
+                ),
+                {"product_id": mapped_product_id},
+            ).mappings().first()
+            if image_row:
+                db.execute(
+                    text(
+                        """
+                        UPDATE product_images
+                        SET image = :image,
+                            alt_text = :alt_text,
+                            "order" = 0
+                        WHERE id = :image_id
+                        """
+                    ),
+                    {
+                        "image_id": int(image_row["id"]),
+                        "image": primary_image,
+                        "alt_text": product_name,
+                    },
+                )
+            else:
+                db.execute(
+                    text(
+                        """
+                        INSERT INTO product_images (product_id, image, alt_text, is_primary, "order")
+                        VALUES (:product_id, :image, :alt_text, 1, 0)
+                        """
+                    ),
+                    {
+                        "product_id": mapped_product_id,
+                        "image": primary_image,
+                        "alt_text": product_name,
+                    },
+                )
+        else:
+            db.execute(
+                text("DELETE FROM product_images WHERE product_id = :product_id AND is_primary = 1"),
+                {"product_id": mapped_product_id},
+            )
+
+        # Sincronizar fotos adicionales (galleryImages)
+        gallery = [
+            img for img in (product.get("galleryImages") or [])
+            if isinstance(img, str) and img and not img.startswith("data:") and len(img) <= 255
+        ]
+        db.execute(
+            text("DELETE FROM product_images WHERE product_id = :product_id AND is_primary = 0"),
+            {"product_id": mapped_product_id},
+        )
+        for gal_order, gal_url in enumerate(gallery):
+            db.execute(
+                text(
+                    """
+                    INSERT INTO product_images (product_id, image, alt_text, is_primary, "order")
+                    VALUES (:product_id, :image, :alt_text, 0, :ord)
+                    """
+                ),
+                {"product_id": mapped_product_id, "image": gal_url, "alt_text": product_name, "ord": gal_order + 1},
+            )
+
+        synced_products.append(product)
+
+    for removed_product_id in previous_db_ids - current_db_ids:
+        db.execute(text("DELETE FROM product_images WHERE product_id = :product_id"), {"product_id": removed_product_id})
+        db.execute(
+            text("DELETE FROM products WHERE id = :product_id AND vendor_id = :vendor_id"),
+            {"product_id": removed_product_id, "vendor_id": store_id},
+        )
+
+    return synced_products
 
 
 @router.get("/multitienda/api/business-types", response_class=JSONResponse)
@@ -1203,66 +1403,7 @@ def multitienda_list_stores(request: Request):
     db = _db_session_for_request(request)
     try:
         scope = _resolve_store_scope(request, db)
-        where_clause = ""
-        params: dict[str, object] = {}
-        if scope["restricted"]:
-            if not scope["user_id"]:
-                return {"success": True, "data": []}
-            where_clause = "WHERE v.vendor_id = :vendor_id"
-            params["vendor_id"] = int(scope["user_id"])
-        rows = db.execute(
-            text(
-                """
-                SELECT
-                    v.id,
-                    v.vendor_id,
-                    v.store_name,
-                    v.store_slug,
-                    v.store_theme,
-                    v.is_featured,
-                    v.is_active,
-                    u.full_name,
-                    u.username AS encrypted_username
-                FROM vendors v
-                LEFT JOIN users u ON u.id = v.vendor_id
-                """
-                + where_clause
-                + """
-                ORDER BY lower(v.store_name) ASC, v.id ASC
-                """
-            ),
-            params,
-        ).mappings().all()
-        data = []
-        for row in rows:
-            theme = _decode_store_theme(row["store_theme"])
-            data.append(
-                {
-                    "id": row["id"],
-                    "name": row["store_name"] or "",
-                    "slug": row["store_slug"] or "",
-                    "adminId": str(row["vendor_id"] or ""),
-                    "adminLabel": (
-                        (row["full_name"] or "").strip()
-                        or (decrypt_sensitive(row["encrypted_username"]) or "").strip()
-                    ),
-                    "typeCode": str(theme.get("store_type") or ""),
-                    "typeLabel": str(theme.get("store_type") or ""),
-                    "membership": str(theme.get("membership") or ""),
-                    "isActive": bool(row["is_active"]),
-                    "isFeatured": bool(row["is_featured"]),
-                    "inventoryEnabled": bool(theme.get("inventory_enabled", False)),
-                    "canUploadVideos": bool(theme.get("can_upload_videos", False)),
-                    "validity": str(theme.get("validity") or ""),
-                    "referrals": str(theme.get("referrals") or ""),
-                    "appointments": str(theme.get("appointments") or ""),
-                    "coupons": str(theme.get("coupons") or ""),
-                    "whatsapp": str(theme.get("whatsapp") or ""),
-                    "maxInternalUsers": int(theme.get("max_internal_users") or 0),
-                    "maxPortalUsers": int(theme.get("max_portal_users") or 0),
-                }
-            )
-        return {"success": True, "data": data}
+        return {"success": True, "data": _resolve_store_summaries(request, db, scope)}
     finally:
         db.close()
 
@@ -1333,10 +1474,26 @@ def multitienda_referidos_entrypoint(request: Request):
     role_name = str(scope.get("role") or getattr(request.state, "user_role", ""))
     if not _can_access_module_section(role_name, "referidos", store_perms):
         return RedirectResponse(url="/multitienda/inicio", status_code=307)
-    store_slug = str(scope.get("store_slug") or "").strip()
-    target = "/referidos"
-    if store_slug:
-        target = f"/referidos?business_slug={store_slug}"
+    target = _resolve_integrated_section_target("referidos", scope)
+    if not target:
+        return RedirectResponse(url="/multitienda/inicio", status_code=307)
+    return RedirectResponse(url=target, status_code=307)
+
+
+@router.get("/multitienda/notificaciones-pwa", include_in_schema=False, response_class=HTMLResponse)
+def multitienda_notificaciones_pwa_entrypoint(request: Request):
+    db = _db_session_for_request(request)
+    try:
+        scope = _resolve_store_scope(request, db)
+        store_perms = _resolve_store_permissions(db, scope)
+    finally:
+        db.close()
+    role_name = str(scope.get("role") or getattr(request.state, "user_role", ""))
+    if not _can_access_module_section(role_name, "notificaciones_pwa", store_perms):
+        return RedirectResponse(url="/multitienda/inicio", status_code=307)
+    target = _resolve_integrated_section_target("notificaciones_pwa", scope)
+    if not target:
+        return RedirectResponse(url="/multitienda/inicio", status_code=307)
     return RedirectResponse(url=target, status_code=307)
 
 
@@ -1351,7 +1508,10 @@ def multitienda_reservaciones_entrypoint(request: Request):
     role_name = str(scope.get("role") or getattr(request.state, "user_role", ""))
     if not _can_access_module_section(role_name, "reservaciones", store_perms):
         return RedirectResponse(url="/multitienda/inicio", status_code=307)
-    return _render_official_shell(request, "reservaciones", reservaciones_html())
+    target = _resolve_integrated_section_target("reservaciones", scope)
+    if not target:
+        return RedirectResponse(url="/multitienda/inicio", status_code=307)
+    return RedirectResponse(url=target, status_code=307)
 
 
 @router.get("/multitienda/cupones", include_in_schema=False, response_class=HTMLResponse)
@@ -1366,6 +1526,20 @@ def multitienda_cupones_entrypoint(request: Request):
     if not _can_access_module_section(role_name, "cupones", store_perms):
         return RedirectResponse(url="/multitienda/inicio", status_code=307)
     return _render_official_shell(request, "cupones", cupones_html())
+
+
+@router.get("/multitienda/fidelizacion", include_in_schema=False, response_class=HTMLResponse)
+def multitienda_fidelizacion_entrypoint(request: Request):
+    db = _db_session_for_request(request)
+    try:
+        scope = _resolve_store_scope(request, db)
+        store_perms = _resolve_store_permissions(db, scope)
+    finally:
+        db.close()
+    role_name = str(scope.get("role") or getattr(request.state, "user_role", ""))
+    if not _can_access_module_section(role_name, "fidelizacion", store_perms):
+        return RedirectResponse(url="/multitienda/inicio", status_code=307)
+    return _render_official_shell(request, "fidelizacion", fidelizacion_html())
 
 
 @router.get("/multitienda/whatsapp", include_in_schema=False, response_class=HTMLResponse)
@@ -1409,7 +1583,18 @@ def multitienda_seguidores_entrypoint(request: Request):
     if not _can_access_module_section(role_name, "seguidores", store_perms):
         return RedirectResponse(url="/multitienda/inicio", status_code=307)
     max_users = int(store_perms.get("max_portal_users") or 0)
-    return _render_official_shell(request, "seguidores", seguidores_html(max_users=max_users))
+    financial_enabled = _can_access_module_section(role_name, "institucion_financiera", store_perms)
+    intelicoop_context = _resolve_integrated_module_context("institucion_financiera", scope) if financial_enabled else {}
+    return _render_official_shell(
+        request,
+        "seguidores",
+        seguidores_html(
+            max_users=max_users,
+            intelicoop_enabled=bool(intelicoop_context.get("enabled")),
+            intelicoop_route=str(intelicoop_context.get("target_route") or ""),
+            intelicoop_api_base=str(intelicoop_context.get("api_base") or ""),
+        ),
+    )
 
 
 @router.get("/multitienda/proveedores", include_in_schema=False, response_class=HTMLResponse)
@@ -1423,7 +1608,17 @@ def multitienda_proveedores_entrypoint(request: Request):
     role_name = str(scope.get("role") or getattr(request.state, "user_role", ""))
     if not _can_access_module_section(role_name, "proveedores", store_perms):
         return RedirectResponse(url="/multitienda/inicio", status_code=307)
-    return _render_official_shell(request, "proveedores", proveedores_html())
+    financial_enabled = _can_access_module_section(role_name, "institucion_financiera", store_perms)
+    intelicoop_context = _resolve_integrated_module_context("institucion_financiera", scope) if financial_enabled else {}
+    return _render_official_shell(
+        request,
+        "proveedores",
+        proveedores_html(
+            intelicoop_enabled=bool(intelicoop_context.get("enabled")),
+            intelicoop_route=str(intelicoop_context.get("target_route") or ""),
+            intelicoop_api_base=str(intelicoop_context.get("api_base") or ""),
+        ),
+    )
 
 
 @router.get("/multitienda/ia", include_in_schema=False, response_class=HTMLResponse)
@@ -1451,7 +1646,10 @@ def multitienda_institucion_financiera_entrypoint(request: Request):
     role_name = str(scope.get("role") or getattr(request.state, "user_role", ""))
     if not _can_access_module_section(role_name, "institucion_financiera", store_perms):
         return RedirectResponse(url="/multitienda/inicio", status_code=307)
-    return _render_official_shell(request, "institucion_financiera", institucion_financiera_html())
+    target = _resolve_integrated_section_target("institucion_financiera", scope)
+    if not target:
+        return RedirectResponse(url="/multitienda/inicio", status_code=307)
+    return RedirectResponse(url=target, status_code=307)
 
 
 @router.get("/multitienda/apartados", include_in_schema=False, response_class=HTMLResponse)
@@ -1479,7 +1677,27 @@ def multitienda_subastas_entrypoint(request: Request):
     role_name = str(scope.get("role") or getattr(request.state, "user_role", ""))
     if not _can_access_module_section(role_name, "subastas", store_perms):
         return RedirectResponse(url="/multitienda/inicio", status_code=307)
-    return _render_official_shell(request, "subastas", subastas_html())
+    target = _resolve_integrated_section_target("subastas", scope)
+    if not target:
+        return RedirectResponse(url="/multitienda/inicio", status_code=307)
+    return RedirectResponse(url=target, status_code=307)
+
+
+@router.get("/multitienda/crm", include_in_schema=False, response_class=HTMLResponse)
+def multitienda_crm_entrypoint(request: Request):
+    db = _db_session_for_request(request)
+    try:
+        scope = _resolve_store_scope(request, db)
+        store_perms = _resolve_store_permissions(db, scope)
+    finally:
+        db.close()
+    role_name = str(scope.get("role") or getattr(request.state, "user_role", ""))
+    if not _can_access_module_section(role_name, "crm", store_perms):
+        return RedirectResponse(url="/multitienda/inicio", status_code=307)
+    target = _resolve_integrated_section_target("crm", scope)
+    if not target:
+        return RedirectResponse(url="/multitienda/inicio", status_code=307)
+    return RedirectResponse(url=target, status_code=307)
 
 
 @router.get("/multitienda/administracion_tiendas", include_in_schema=False, response_class=HTMLResponse)
@@ -1490,9 +1708,81 @@ def multitienda_gestion_entrypoint(request: Request):
     return _render_official_shell(request, "gestion", gestion_html())
 
 
+@router.get("/multitienda/repartidores", include_in_schema=False, response_class=HTMLResponse)
+def multitienda_repartidores_entrypoint(request: Request):
+    role_name = str(getattr(request.state, "user_role", "") or "").strip()
+    if not _can_access_module_section(role_name, "repartidores"):
+        return RedirectResponse(url="/multitienda/inicio", status_code=307)
+    target = _resolve_integrated_section_target("repartidores")
+    if not target:
+        return RedirectResponse(url="/multitienda/inicio", status_code=307)
+    return RedirectResponse(url=target, status_code=307)
+
+
+
 @router.get("/multitienda/configuracion", include_in_schema=False, response_class=HTMLResponse)
 def multitienda_config_entrypoint(request: Request):
-    return _render_official_shell(request, "configuracion", configuracion_html())
+    db = _db_session_for_request(request)
+    effective_store_id = None
+    redirect_to_canonical = False
+    try:
+        scope = _resolve_store_scope(request, db)
+        if not _can_access_store_config(scope.get("role") or getattr(request.state, "user_role", "")):
+            return RedirectResponse(url="/multitienda/inicio", status_code=307)
+        store_summaries = _resolve_store_summaries(request, db, scope)
+        requested_store_id = str(request.query_params.get("store_id") or "").strip()
+        config_row = None
+        if scope.get("store_id"):
+            effective_store_id = int(scope["store_id"])
+        elif requested_store_id.isdigit():
+            effective_store_id = int(requested_store_id)
+        elif store_summaries:
+            first_id = store_summaries[0].get("id")
+            effective_store_id = int(first_id) if str(first_id or "").isdigit() else None
+            redirect_to_canonical = effective_store_id is not None
+        if effective_store_id:
+            config_row = db.execute(
+                text(
+                    """
+                    SELECT id, logo, banner, address, country, store_theme
+                    , phone
+                    FROM vendors
+                    WHERE id = :store_id
+                    LIMIT 1
+                    """
+                ),
+                {"store_id": effective_store_id},
+            ).mappings().first()
+    finally:
+        db.close()
+    if redirect_to_canonical and effective_store_id:
+        return RedirectResponse(url=f"/multitienda/configuracion?store_id={effective_store_id}", status_code=307)
+    initial_store = store_summaries[0] if store_summaries else {}
+    if effective_store_id:
+        matching_store = next((item for item in store_summaries if int(item.get("id") or 0) == int(effective_store_id)), None)
+        if matching_store:
+            initial_store = matching_store
+    initial_config_json = json.dumps(_build_store_config_payload(config_row), ensure_ascii=True).replace("</", "<\\/")
+    login_identity = get_login_identity_context(request)
+    default_logo_url = str(
+        resolve_logo_empresa_url()
+        or login_identity.get("company_logo_url")
+        or login_identity.get("login_logo_url")
+        or resolve_sidebar_logo_url(login_identity)
+        or "/multitienda/static/imagenes/logo_vale.png"
+    ).strip()
+    return _render_official_shell(
+        request,
+        "configuracion",
+        configuracion_html(
+            initial_store_id=str(effective_store_id or ""),
+            initial_store_name=str(initial_store.get("name") or ""),
+            initial_store_type=str(initial_store.get("typeLabel") or initial_store.get("typeCode") or ""),
+            initial_store_admin=str(initial_store.get("adminLabel") or ""),
+            default_logo_url=default_logo_url,
+            initial_config_json=initial_config_json,
+        ),
+    )
 
 
 @router.get("/configuracion", include_in_schema=False)
@@ -1531,6 +1821,1008 @@ def public_multitienda_tiendas_entrypoint():
     return _render_public_document(tienda_html())
 
 
-router.mount("/multitienda", marketplace_app)
+@router.get("/destacados", include_in_schema=False, response_class=HTMLResponse)
+def public_destacados_entrypoint():
+    return _render_public_document(tienda_html())
+
+
+@router.get("/destacados/", include_in_schema=False, response_class=HTMLResponse)
+def public_destacados_entrypoint_slash():
+    return _render_public_document(tienda_html())
+
+
+@router.get("/carrito", include_in_schema=False, response_class=HTMLResponse)
+def public_cart_entrypoint():
+    from fastapi_modulo.modulos.multitienda.vistas.carrito import carrito_html
+    return _render_public_document(carrito_html())
+
+
+@router.get("/carrito/", include_in_schema=False, response_class=HTMLResponse)
+def public_cart_entrypoint_slash():
+    from fastapi_modulo.modulos.multitienda.vistas.carrito import carrito_html
+    return _render_public_document(carrito_html())
+
+
+@router.get("/destaacados", include_in_schema=False, response_class=HTMLResponse)
+def public_destacados_typo_entrypoint():
+    return RedirectResponse(url="/destacados", status_code=307)
+
+
+@router.get("/destaacados/", include_in_schema=False, response_class=HTMLResponse)
+def public_destacados_typo_entrypoint_slash():
+    return RedirectResponse(url="/destacados", status_code=307)
+
+
+# ─── API CRUD — store_tables ──────────────────────────────────────────────────
+# Helpers compartidos
+
+def _require_store_id(request: Request) -> int:
+    """Devuelve el store_id del vendedor autenticado o lanza 401/403."""
+    db = _db_session_for_request(request)
+    try:
+        scope = _resolve_store_scope(request, db)
+    finally:
+        db.close()
+    if not scope["user_id"]:
+        raise HTTPException(status_code=401, detail="No autenticado.")
+    if scope["store_id"] is None:
+        # superadmin puede pasar store_id por query param
+        qp = request.query_params.get("store_id")
+        if qp and qp.isdigit():
+            return int(qp)
+        raise HTTPException(status_code=403, detail="No tienes una tienda asignada.")
+    return int(scope["store_id"])
+
+
+async def _json_body(request: Request) -> dict:
+    try:
+        return await request.json()
+    except Exception:
+        return {}
+
+
+# ── Inicio Stats ─────────────────────────────────────────────────────────────
+
+@router.get("/multitienda/api/inicio-stats", response_class=JSONResponse)
+def api_inicio_stats(request: Request):
+    store_id = _require_store_id(request)
+    return {"success": True, "data": get_store_stats(store_id)}
+
+
+@router.put("/multitienda/api/configuracion", response_class=JSONResponse)
+async def api_update_store_configuration(request: Request):
+    db = _db_session_for_request(request)
+    try:
+        scope = _resolve_store_scope(request, db)
+    finally:
+        db.close()
+    if not _can_access_store_config(scope.get("role") or getattr(request.state, "user_role", "")):
+        raise HTTPException(status_code=403, detail="Solo el administrador de la tienda puede ver y editar esta información.")
+    store_id = _require_store_id(request)
+    payload = await _json_body(request)
+    raw_config = payload.get("config") if isinstance(payload.get("config"), dict) else payload
+    _MULTITIENDA_PREFIX = "/multitienda"
+    filtered_config: dict[str, object] = {}
+    for key, value in (raw_config or {}).items():
+        normalized_key = str(key or "").strip()
+        if normalized_key not in _allowed_store_config_keys():
+            continue
+        if isinstance(value, bool):
+            filtered_config[normalized_key] = value
+        else:
+            str_value = str(value or "")
+            # Strip erroneous /multitienda prefix that _prefix_root_relative_urls may have injected
+            if str_value.startswith(_MULTITIENDA_PREFIX + "/"):
+                str_value = str_value[len(_MULTITIENDA_PREFIX):]
+            filtered_config[normalized_key] = str_value
+
+    _log.warning("[PUT configuracion] store_id=%r role=%r payload_keys=%r filtered_keys=%r",
+                 store_id, scope.get("role"), list((raw_config or {}).keys())[:5], list(filtered_config.keys())[:5])
+
+    db = _db_session_for_request(request)
+    try:
+        row = db.execute(
+            text(
+                """
+                SELECT id, logo, banner, address, country, phone, store_theme
+                FROM vendors
+                WHERE id = :store_id
+                LIMIT 1
+                """
+            ),
+            {"store_id": store_id},
+        ).mappings().first()
+        if not row:
+            raise HTTPException(status_code=404, detail="Tienda no encontrada.")
+        theme = _decode_store_theme(row.get("store_theme"))
+        theme["configuracion"] = {**_extract_store_config(theme), **filtered_config}
+        db.execute(
+            text(
+                """
+                UPDATE vendors
+                SET logo = :logo,
+                    banner = :banner,
+                    phone = :phone,
+                    address = :address,
+                    country = :country,
+                    store_theme = :store_theme,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = :store_id
+                """
+            ),
+            {
+                "store_id": store_id,
+                "logo": (
+                    str(filtered_config.get("site_logo") or row.get("logo") or "")
+                    if _fits_vendor_asset_column(filtered_config.get("site_logo") or row.get("logo"))
+                    else str(row.get("logo") or "")
+                ),
+                "banner": (
+                    str(filtered_config.get("landing_banner") or row.get("banner") or "")
+                    if _fits_vendor_asset_column(filtered_config.get("landing_banner") or row.get("banner"))
+                    else str(row.get("banner") or "")
+                ),
+                "phone": str(filtered_config.get("phone") or row.get("phone") or ""),
+                "address": str(filtered_config.get("street") or row.get("address") or ""),
+                "country": str(filtered_config.get("country") or row.get("country") or ""),
+                "store_theme": json.dumps(theme, ensure_ascii=True),
+            },
+        )
+        db.commit()
+        result_data = _build_store_config_payload({"logo": filtered_config.get("site_logo") or row.get("logo"), "banner": filtered_config.get("landing_banner") or row.get("banner"), "phone": filtered_config.get("phone") or row.get("phone"), "address": filtered_config.get("street") or row.get("address"), "country": filtered_config.get("country") or row.get("country"), "store_theme": json.dumps(theme, ensure_ascii=True)})
+        _log.warning("[PUT configuracion] committed ok store_id=%r result_data_keys=%r", store_id, list(result_data.keys())[:5])
+        return {"success": True, "data": result_data}
+    finally:
+        db.close()
+
+
+@router.get("/multitienda/api/configuracion", response_class=JSONResponse)
+def api_get_store_configuration(request: Request):
+    db = _db_session_for_request(request)
+    try:
+        scope = _resolve_store_scope(request, db)
+    finally:
+        db.close()
+    if not _can_access_store_config(scope.get("role") or getattr(request.state, "user_role", "")):
+        raise HTTPException(status_code=403, detail="Solo el administrador de la tienda puede ver esta información.")
+    store_id = _require_store_id(request)
+    db = _db_session_for_request(request)
+    try:
+        row = db.execute(
+            text(
+                """
+                SELECT id, logo, banner, address, country, phone, store_theme
+                FROM vendors
+                WHERE id = :store_id
+                LIMIT 1
+                """
+            ),
+            {"store_id": store_id},
+        ).mappings().first()
+        if not row:
+            raise HTTPException(status_code=404, detail="Tienda no encontrada.")
+        return {"success": True, "data": _build_store_config_payload(row)}
+    finally:
+        db.close()
+
+
+# ── Productos privados (tienda) ──────────────────────────────────────────────
+
+@router.get("/multitienda/api/productos", response_class=JSONResponse)
+def api_list_store_products(request: Request):
+    store_id = _require_store_id(request)
+    db = _db_session_for_request(request)
+    try:
+        row = db.execute(
+            text(
+                """
+                SELECT store_theme
+                FROM vendors
+                WHERE id = :store_id
+                LIMIT 1
+                """
+            ),
+            {"store_id": store_id},
+        ).mappings().first()
+        theme = _decode_store_theme(row.get("store_theme")) if row else {}
+        return {"success": True, "data": _extract_catalog_products(theme)}
+    finally:
+        db.close()
+
+
+@router.put("/multitienda/api/productos", response_class=JSONResponse)
+async def api_replace_store_products(request: Request):
+    store_id = _require_store_id(request)
+    payload = await _json_body(request)
+    incoming_products = payload.get("products") if isinstance(payload.get("products"), list) else payload
+    if not isinstance(incoming_products, list):
+        raise HTTPException(status_code=400, detail="Se esperaba una lista de productos.")
+
+    db = _db_session_for_request(request)
+    try:
+        _ensure_product_tables(db)
+        row = db.execute(
+            text(
+                """
+                SELECT store_theme
+                FROM vendors
+                WHERE id = :store_id
+                LIMIT 1
+                """
+            ),
+            {"store_id": store_id},
+        ).mappings().first()
+        if not row:
+            raise HTTPException(status_code=404, detail="Tienda no encontrada.")
+        theme = _decode_store_theme(row.get("store_theme"))
+        previous_products = _extract_catalog_products(theme)
+        normalized_products = [dict(item) for item in incoming_products if isinstance(item, dict)]
+        try:
+            synced_products = _sync_catalog_products_to_marketplace(db, store_id, previous_products, normalized_products)
+        except Exception:
+            _log.exception("No se pudieron sincronizar los productos de la tienda %s con las tablas del marketplace.", store_id)
+            # Fallback: conserva el catalogo dentro de store_theme para no bloquear la gestion del modulo.
+            synced_products = normalized_products
+        theme["catalog_products"] = synced_products
+        db.execute(
+            text(
+                """
+                UPDATE vendors
+                SET store_theme = :store_theme,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = :store_id
+                """
+            ),
+            {"store_id": store_id, "store_theme": json.dumps(theme, ensure_ascii=True)},
+        )
+        db.commit()
+        return {"success": True, "data": synced_products}
+    finally:
+        db.close()
+
+
+# ── Empleados ─────────────────────────────────────────────────────────────────
+
+@router.get("/multitienda/api/empleados", response_class=JSONResponse)
+def api_list_employees(request: Request):
+    db = _db_session_for_request(request)
+    try:
+        scope = _resolve_store_scope(request, db)
+        if not scope.get("user_id"):
+            raise HTTPException(status_code=401, detail="No autenticado.")
+        store_id = scope.get("store_id")
+        if store_id is None:
+            qp = request.query_params.get("store_id")
+            store_id = int(qp) if (qp and qp.isdigit()) else None
+        if store_id is None:
+            raise HTTPException(status_code=403, detail="No tienes una tienda asignada.")
+        store_id = int(store_id)
+        rows = db.execute(text(
+            """
+            SELECT se.id, se.role as rol, se.position, se.is_active, se.created_at,
+                   u.username as usuario, u.email as correo
+            FROM store_employees se
+            JOIN users u ON u.id = se.user_id
+            WHERE se.vendor_id = :vid
+            ORDER BY se.id
+            """
+        ), {"vid": store_id}).mappings().all()
+        result = []
+        for row in rows:
+            d = dict(row)
+            pos_raw = d.pop("position", "") or ""
+            try:
+                meta = json.loads(pos_raw)
+                full_name = meta.get("n") or d["usuario"]
+                puesto = meta.get("p") or ""
+                celular = meta.get("t") or ""
+                departamento = meta.get("d") or ""
+            except Exception:
+                full_name = d["usuario"]
+                puesto = pos_raw
+                celular = ""
+                departamento = ""
+            is_active = d.pop("is_active", True)
+            created_at = d.pop("created_at", None)
+            d["full_name"] = full_name
+            d["nombre"] = full_name
+            d["puesto"] = puesto
+            d["celular"] = celular
+            d["departamento"] = departamento
+            d["estado"] = "Activo" if is_active else "Inactivo"
+            d["created_at"] = str(created_at) if created_at else ""
+            result.append(d)
+        return {"success": True, "data": result}
+    finally:
+        db.close()
+
+
+@router.post("/multitienda/api/empleados", response_class=JSONResponse)
+async def api_create_employee(request: Request):
+    from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.users.routes import get_password_hash
+    db = _db_session_for_request(request)
+    try:
+        scope = _resolve_store_scope(request, db)
+        if not scope.get("user_id"):
+            raise HTTPException(status_code=401, detail="No autenticado.")
+        store_id = scope.get("store_id")
+        if store_id is None:
+            qp = request.query_params.get("store_id")
+            store_id = int(qp) if (qp and qp.isdigit()) else None
+        if store_id is None:
+            raise HTTPException(status_code=403, detail="No tienes una tienda asignada.")
+        store_id = int(store_id)
+
+        store_perms = _resolve_store_permissions(db, scope)
+        max_users = int(store_perms.get("max_internal_users") or 0)
+        if max_users > 0:
+            count_row = db.execute(
+                text("SELECT COUNT(*) as cnt FROM store_employees WHERE vendor_id = :vid"),
+                {"vid": store_id},
+            ).mappings().first()
+            current_count = int((count_row or {}).get("cnt", 0))
+            if current_count >= max_users:
+                raise HTTPException(status_code=422, detail="LIMIT_REACHED")
+
+        data = await _json_body(request)
+        usuario = (data.get("usuario") or "").strip()
+        correo = (data.get("correo") or "").strip()
+        contrasena = (data.get("contrasena") or "").strip()
+        if not usuario:
+            raise HTTPException(status_code=400, detail="El usuario es obligatorio.")
+        if not contrasena:
+            raise HTTPException(status_code=400, detail="La contraseña es obligatoria.")
+
+        existing = db.execute(
+            text("SELECT id FROM users WHERE username = :u"), {"u": usuario}
+        ).mappings().first()
+        if existing:
+            raise HTTPException(status_code=409, detail="El nombre de usuario ya está en uso.")
+
+        hashed = get_password_hash(contrasena)
+        email_to_use = correo if correo else f"{usuario}@tienda.local"
+        user_row = db.execute(
+            text("INSERT INTO users (username, email, hashed_password, user_type) VALUES (:u, :e, :h, 'store_employee') RETURNING id"),
+            {"u": usuario, "e": email_to_use, "h": hashed},
+        ).mappings().first()
+        user_id = user_row["id"]
+
+        nombre = (data.get("nombre") or usuario).strip()
+        puesto = (data.get("puesto") or "").strip()
+        celular = (data.get("celular") or "").strip()
+        departamento = (data.get("departamento") or "").strip()
+        pos_json = json.dumps({"n": nombre, "p": puesto, "t": celular, "d": departamento}, ensure_ascii=False)[:400]
+
+        rol_form = (data.get("rol") or "usuario").lower()
+        emp_role = "manager" if rol_form == "administrador" else "seller"
+
+        emp_row = db.execute(
+            text("INSERT INTO store_employees (vendor_id, user_id, role, position, is_active) VALUES (:vid, :uid, :role, :pos, true) RETURNING id"),
+            {"vid": store_id, "uid": user_id, "role": emp_role, "pos": pos_json},
+        ).mappings().first()
+        db.commit()
+        return {"success": True, "data": {"id": emp_row["id"], "usuario": usuario, "correo": correo, "nombre": nombre, "puesto": puesto}}
+    except HTTPException:
+        raise
+    except Exception:
+        db.rollback()
+        _log.exception("Error creando empleado")
+        raise HTTPException(status_code=500, detail="Error interno al crear el empleado.")
+    finally:
+        db.close()
+
+
+@router.put("/multitienda/api/empleados/{employee_id}", response_class=JSONResponse)
+async def api_update_employee(employee_id: int, request: Request):
+    db = _db_session_for_request(request)
+    try:
+        scope = _resolve_store_scope(request, db)
+        store_id = scope.get("store_id")
+        if store_id is None:
+            qp = request.query_params.get("store_id")
+            store_id = int(qp) if (qp and qp.isdigit()) else None
+        if store_id is None:
+            raise HTTPException(status_code=403, detail="No tienes una tienda asignada.")
+        store_id = int(store_id)
+
+        data = await _json_body(request)
+        emp = db.execute(
+            text("SELECT id, user_id, position FROM store_employees WHERE id = :eid AND vendor_id = :vid"),
+            {"eid": employee_id, "vid": store_id},
+        ).mappings().first()
+        if not emp:
+            raise HTTPException(status_code=404, detail="Empleado no encontrado.")
+
+        pos_raw = emp["position"] or ""
+        try:
+            meta = json.loads(pos_raw)
+        except Exception:
+            meta = {"p": pos_raw}
+        if "nombre" in data:
+            meta["n"] = data["nombre"]
+        if "puesto" in data:
+            meta["p"] = data["puesto"]
+        if "celular" in data:
+            meta["t"] = data["celular"]
+        if "departamento" in data:
+            meta["d"] = data["departamento"]
+        pos_json = json.dumps(meta, ensure_ascii=False)[:400]
+
+        fields = ["position = :pos"]
+        params: dict = {"pos": pos_json, "eid": employee_id, "vid": store_id}
+
+        rol_form = (data.get("rol") or "").lower()
+        if rol_form == "administrador":
+            fields.append("role = :role")
+            params["role"] = "manager"
+        elif rol_form == "usuario":
+            fields.append("role = :role")
+            params["role"] = "seller"
+
+        is_active = data.get("is_active")
+        if is_active is None and "estado" in data:
+            is_active = str(data["estado"]).lower() != "inactivo"
+        if is_active is not None:
+            fields.append("is_active = :active")
+            params["active"] = bool(is_active)
+
+        db.execute(
+            text("UPDATE store_employees SET " + ", ".join(fields) + ", updated_at = CURRENT_TIMESTAMP WHERE id = :eid AND vendor_id = :vid"),
+            params,
+        )
+        if data.get("correo"):
+            db.execute(
+                text("UPDATE users SET email = :e WHERE id = :uid"),
+                {"e": data["correo"], "uid": emp["user_id"]},
+            )
+        db.commit()
+        return {"success": True}
+    except HTTPException:
+        raise
+    except Exception:
+        db.rollback()
+        _log.exception("Error actualizando empleado")
+        raise HTTPException(status_code=500, detail="Error interno al actualizar el empleado.")
+    finally:
+        db.close()
+
+
+@router.delete("/multitienda/api/empleados/{employee_id}", response_class=JSONResponse)
+def api_delete_employee(employee_id: int, request: Request):
+    db = _db_session_for_request(request)
+    try:
+        scope = _resolve_store_scope(request, db)
+        store_id = scope.get("store_id")
+        if store_id is None:
+            qp = request.query_params.get("store_id")
+            store_id = int(qp) if (qp and qp.isdigit()) else None
+        if store_id is None:
+            raise HTTPException(status_code=403, detail="No tienes una tienda asignada.")
+        store_id = int(store_id)
+
+        emp = db.execute(
+            text("SELECT user_id FROM store_employees WHERE id = :eid AND vendor_id = :vid"),
+            {"eid": employee_id, "vid": store_id},
+        ).mappings().first()
+        if not emp:
+            raise HTTPException(status_code=404, detail="Empleado no encontrado.")
+        user_id = emp["user_id"]
+
+        db.execute(
+            text("DELETE FROM store_employees WHERE id = :eid AND vendor_id = :vid"),
+            {"eid": employee_id, "vid": store_id},
+        )
+        other_refs = db.execute(
+            text("SELECT COUNT(*) as cnt FROM store_employees WHERE user_id = :uid"),
+            {"uid": user_id},
+        ).mappings().first()
+        if int((other_refs or {}).get("cnt", 1)) == 0:
+            db.execute(
+                text("DELETE FROM users WHERE id = :uid AND user_type = 'store_employee'"),
+                {"uid": user_id},
+            )
+        db.commit()
+        return {"success": True}
+    except HTTPException:
+        raise
+    except Exception:
+        db.rollback()
+        _log.exception("Error eliminando empleado")
+        raise HTTPException(status_code=500, detail="Error interno al eliminar el empleado.")
+    finally:
+        db.close()
+
+
+@router.post("/multitienda/api/empleados/{employee_id}/password", response_class=JSONResponse)
+async def api_change_employee_password(employee_id: int, request: Request):
+    from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.users.routes import get_password_hash
+    db = _db_session_for_request(request)
+    try:
+        scope = _resolve_store_scope(request, db)
+        store_id = scope.get("store_id")
+        if store_id is None:
+            qp = request.query_params.get("store_id")
+            store_id = int(qp) if (qp and qp.isdigit()) else None
+        if store_id is None:
+            raise HTTPException(status_code=403, detail="No tienes una tienda asignada.")
+        store_id = int(store_id)
+
+        data = await _json_body(request)
+        pwd = str(data.get("password") or "").strip()
+        if not pwd:
+            raise HTTPException(status_code=400, detail="La contraseña no puede estar vacía.")
+
+        emp = db.execute(
+            text("SELECT user_id FROM store_employees WHERE id = :eid AND vendor_id = :vid"),
+            {"eid": employee_id, "vid": store_id},
+        ).mappings().first()
+        if not emp:
+            raise HTTPException(status_code=404, detail="Empleado no encontrado.")
+
+        hashed = get_password_hash(pwd)
+        db.execute(
+            text("UPDATE users SET hashed_password = :h WHERE id = :uid"),
+            {"h": hashed, "uid": emp["user_id"]},
+        )
+        db.commit()
+        return {"success": True}
+    except HTTPException:
+        raise
+    except Exception:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Error interno al cambiar la contraseña.")
+    finally:
+        db.close()
+
+
+# ── Productos públicos (tienda) ───────────────────────────────────────────────
+
+@router.get("/multitienda/api/store-info", response_class=JSONResponse)
+def api_public_store_info(request: Request):
+    """Retorna info pública de una tienda (nombre, logo, banner) por store_slug."""
+    store_slug = str(request.query_params.get("store_slug") or "").strip().lower()
+    if not store_slug:
+        return {"success": False, "data": {}}
+    db = _db_session_for_request(request)
+    try:
+        row = db.execute(
+            text(
+                """
+                SELECT id, store_name, store_slug, logo, banner, store_theme
+                FROM vendors
+                WHERE LOWER(store_slug) = :slug
+                  AND is_active = 1
+                LIMIT 1
+                """
+            ),
+            {"slug": store_slug},
+        ).mappings().first()
+        if not row:
+            return {"success": False, "data": {}}
+        theme = _decode_store_theme(row.get("store_theme"))
+        config = _extract_store_config(theme)
+        landing_banner = (
+            str(config.get("landing_banner") or "").strip()
+            or str(row.get("banner") or "").strip()
+        )
+        logo = (
+            str(config.get("site_logo") or "").strip()
+            or str(row.get("logo") or "").strip()
+        )
+        return {
+            "success": True,
+            "data": {
+                "store_name": str(row.get("store_name") or ""),
+                "store_slug": str(row.get("store_slug") or ""),
+                "logo": logo,
+                "landing_banner": landing_banner,
+                "email": str(config.get("email") or ""),
+                "phone": str(config.get("phone") or ""),
+                "slogan": str(config.get("slogan") or ""),
+                "website": str(config.get("website") or ""),
+                "street": str(config.get("street") or ""),
+                "between_streets": str(config.get("between_streets") or ""),
+                "neighborhood": str(config.get("neighborhood") or ""),
+                "postal_code": str(config.get("postal_code") or ""),
+                "locality": str(config.get("locality") or ""),
+                "municipality": str(config.get("municipality") or ""),
+                "state": str(config.get("state") or ""),
+                "country": str(config.get("country") or ""),
+                "latitude": str(config.get("latitude") or ""),
+                "longitude": str(config.get("longitude") or ""),
+                "mission": str(config.get("mission") or ""),
+                "vision": str(config.get("vision") or ""),
+                "partner_benefits": str(config.get("partner_benefits") or ""),
+                "consumer_rights": str(config.get("consumer_rights") or ""),
+                "data_privacy": str(config.get("data_privacy") or ""),
+                "additional_conditions": str(config.get("additional_conditions") or ""),
+                "hide_email": bool(config.get("hide_email")),
+                "hide_phone": bool(config.get("hide_phone")),
+                "hide_website": bool(config.get("hide_website")),
+                "hide_address": bool(config.get("hide_address")),
+                "hide_map": bool(config.get("hide_map")),
+                "hide_partner_benefits": bool(config.get("hide_partner_benefits")),
+                "hide_about": bool(config.get("hide_about")),
+                "hide_policies": bool(config.get("hide_policies")),
+                "hide_product_prices": bool(config.get("hide_product_prices")),
+                "hide_cart_buttons": bool(config.get("hide_cart_buttons")),
+            },
+        }
+    finally:
+        db.close()
+
+
+@router.get("/multitienda/api/productos-publicos", response_class=JSONResponse)
+def api_public_products(request: Request):
+    """Retorna productos publicados visibles en la tienda pública."""
+    mode = str(request.query_params.get("mode") or "all").strip().lower()
+    store_slug = str(request.query_params.get("store_slug") or "").strip().lower()
+    store_id = None
+    featured_only = mode == "featured"
+
+    if store_slug:
+        db = _db_session_for_request(request)
+        try:
+            row = db.execute(
+                text(
+                    """
+                    SELECT id
+                    FROM vendors
+                    WHERE LOWER(store_slug) = :slug
+                      AND is_active = 1
+                    LIMIT 1
+                    """
+                ),
+                {"slug": store_slug},
+            ).mappings().first()
+            store_id = int(row["id"]) if row and row.get("id") is not None else None
+        finally:
+            db.close()
+    elif mode == "store":
+        try:
+            store_id = _require_store_id(request)
+        except Exception:
+            store_id = None
+
+    return {"success": True, "data": get_public_products(store_id, featured_only=featured_only)}
+
+
+@router.get("/{store_slug}", include_in_schema=False, response_class=HTMLResponse)
+def public_store_landing_entrypoint(request: Request, store_slug: str):
+    normalized = str(store_slug or "").strip().lower()
+    if not normalized or normalized in _PUBLIC_LANDING_RESERVED:
+        return render_not_found_template(request, title="Pagina no encontrada", status_code=404)
+    if not _public_store_exists(request, normalized):
+        return render_not_found_template(request, title="Tienda no encontrada", status_code=404)
+    return _render_public_document(tienda_html())
+
+
+@router.get("/{store_slug}/{product_slug}", include_in_schema=False, response_class=HTMLResponse)
+def public_store_product_landing_entrypoint(request: Request, store_slug: str, product_slug: str):
+    normalized_store = str(store_slug or "").strip().lower()
+    normalized_product = str(product_slug or "").strip().lower()
+    if (
+        not normalized_store
+        or not normalized_product
+        or normalized_store in _PUBLIC_LANDING_RESERVED
+        or normalized_product in _PUBLIC_LANDING_RESERVED
+    ):
+        return render_not_found_template(request, title="Pagina no encontrada", status_code=404)
+    if not _public_store_product_exists(request, normalized_store, normalized_product):
+        return render_not_found_template(request, title="Producto no encontrado", status_code=404)
+    return _render_public_document(tienda_html())
+
+
+# ── Cupones ───────────────────────────────────────────────────────────────────
+
+@router.get("/multitienda/api/cupones", response_class=JSONResponse)
+def api_list_coupons(request: Request):
+    store_id = _require_store_id(request)
+    return {"success": True, "data": list_coupons(store_id)}
+
+
+@router.post("/multitienda/api/cupones", response_class=JSONResponse)
+async def api_create_coupon(request: Request):
+    store_id = _require_store_id(request)
+    data = await _json_body(request)
+    return {"success": True, "data": create_coupon(store_id, data)}
+
+
+@router.put("/multitienda/api/cupones/{coupon_id}", response_class=JSONResponse)
+async def api_update_coupon(coupon_id: int, request: Request):
+    store_id = _require_store_id(request)
+    data = await _json_body(request)
+    result = update_coupon(store_id, coupon_id, data)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Cupón no encontrado.")
+    return {"success": True, "data": result}
+
+
+@router.delete("/multitienda/api/cupones/{coupon_id}", response_class=JSONResponse)
+def api_delete_coupon(coupon_id: int, request: Request):
+    store_id = _require_store_id(request)
+    ok = delete_coupon(store_id, coupon_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Cupón no encontrado.")
+    return {"success": True}
+
+
+@router.post("/multitienda/api/cupones/validar", response_class=JSONResponse)
+async def api_validate_coupon(request: Request):
+    store_id = _require_store_id(request)
+    data = await _json_body(request)
+    code = str(data.get("code") or data.get("codigo") or "").strip()
+    cart_total = float(data.get("cart_total") or data.get("total_carrito") or 0)
+    if not code:
+        raise HTTPException(status_code=400, detail="Se requiere el código del cupón.")
+    return validate_coupon(store_id, code, cart_total)
+
+
+@router.post("/multitienda/api/cupones/{coupon_id}/redimir", response_class=JSONResponse)
+def api_redeem_coupon(coupon_id: int, request: Request):
+    store_id = _require_store_id(request)
+    ok = redeem_coupon(store_id, coupon_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Cupón no encontrado.")
+    return {"success": True}
+
+
+# ── Fidelización ──────────────────────────────────────────────────────────────
+
+@router.get("/multitienda/api/fidelizacion/plan", response_class=JSONResponse)
+def api_get_loyalty_plan(request: Request):
+    store_id = _require_store_id(request)
+    return {"success": True, "data": get_loyalty_plan(store_id)}
+
+
+@router.put("/multitienda/api/fidelizacion/plan", response_class=JSONResponse)
+async def api_update_loyalty_plan(request: Request):
+    store_id = _require_store_id(request)
+    data = await _json_body(request)
+    return {"success": True, "data": upsert_loyalty_plan(store_id, data)}
+
+
+@router.get("/multitienda/api/fidelizacion/clientes", response_class=JSONResponse)
+def api_list_loyalty_customers(request: Request):
+    store_id = _require_store_id(request)
+    return {"success": True, "data": list_loyalty_customers(store_id)}
+
+
+@router.get("/multitienda/api/fidelizacion/clientes/{email}/historial", response_class=JSONResponse)
+def api_loyalty_history(email: str, request: Request):
+    store_id = _require_store_id(request)
+    return {"success": True, "data": get_loyalty_history(store_id, email)}
+
+
+@router.post("/multitienda/api/fidelizacion/clientes/{email}/ajustar", response_class=JSONResponse)
+async def api_adjust_loyalty(email: str, request: Request):
+    store_id = _require_store_id(request)
+    data = await _json_body(request)
+    points = int(data.get("points") or data.get("puntos") or 0)
+    if points == 0:
+        raise HTTPException(status_code=400, detail="Se requiere una cantidad de puntos distinta de 0.")
+    tx_type = str(data.get("type") or ("adjusted" if points > 0 else "adjusted"))
+    result = adjust_loyalty_points(
+        store_id, email, points, tx_type=tx_type,
+        notes=str(data.get("notes") or data.get("notas") or ""),
+        reference=str(data.get("reference") or ""),
+        name=str(data.get("name") or data.get("nombre") or ""),
+    )
+    return {"success": True, "data": result}
+
+
+# ── Apartados (layaways) ──────────────────────────────────────────────────────
+
+@router.get("/multitienda/api/apartados", response_class=JSONResponse)
+def api_list_layaways(request: Request):
+    store_id = _require_store_id(request)
+    return {"success": True, "data": list_layaways(store_id)}
+
+
+@router.post("/multitienda/api/apartados", response_class=JSONResponse)
+async def api_create_layaway(request: Request):
+    store_id = _require_store_id(request)
+    data = await _json_body(request)
+    return {"success": True, "data": create_layaway(store_id, data)}
+
+
+@router.put("/multitienda/api/apartados/{layaway_id}", response_class=JSONResponse)
+async def api_update_layaway(layaway_id: int, request: Request):
+    store_id = _require_store_id(request)
+    data = await _json_body(request)
+    result = update_layaway(store_id, layaway_id, data)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Apartado no encontrado.")
+    return {"success": True, "data": result}
+
+
+@router.delete("/multitienda/api/apartados/{layaway_id}", response_class=JSONResponse)
+def api_delete_layaway(layaway_id: int, request: Request):
+    store_id = _require_store_id(request)
+    ok = delete_layaway(store_id, layaway_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Apartado no encontrado.")
+    return {"success": True}
+
+
+@router.post("/multitienda/api/apartados/crear", response_class=JSONResponse)
+async def api_create_layaway_rich(request: Request):
+    store_id = _require_store_id(request)
+    data = await _json_body(request)
+    return {"success": True, "data": create_layaway_rich(store_id, data)}
+
+
+@router.put("/multitienda/api/apartados/{layaway_id}/editar", response_class=JSONResponse)
+async def api_update_layaway_rich(layaway_id: int, request: Request):
+    store_id = _require_store_id(request)
+    data = await _json_body(request)
+    result = update_layaway_rich(store_id, layaway_id, data)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Apartado no encontrado.")
+    return {"success": True, "data": result}
+
+
+@router.get("/multitienda/api/apartados/{layaway_id}/pagos", response_class=JSONResponse)
+def api_list_layaway_payments(layaway_id: int, request: Request):
+    store_id = _require_store_id(request)
+    return {"success": True, "data": list_layaway_payments(store_id, layaway_id)}
+
+
+@router.post("/multitienda/api/apartados/{layaway_id}/pagos", response_class=JSONResponse)
+async def api_add_layaway_payment(layaway_id: int, request: Request):
+    store_id = _require_store_id(request)
+    data = await _json_body(request)
+    result = add_layaway_payment(store_id, layaway_id, data)
+    if result.get("error"):
+        raise HTTPException(status_code=400, detail=result["error"])
+    return {"success": True, "data": result}
+
+
+@router.delete("/multitienda/api/apartados/{layaway_id}/pagos/{payment_id}", response_class=JSONResponse)
+def api_delete_layaway_payment(layaway_id: int, payment_id: int, request: Request):
+    store_id = _require_store_id(request)
+    ok = delete_layaway_payment(store_id, layaway_id, payment_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Pago no encontrado.")
+    return {"success": True}
+
+
+@router.post("/multitienda/api/apartados/{layaway_id}/cancelar", response_class=JSONResponse)
+def api_cancel_layaway(layaway_id: int, request: Request):
+    store_id = _require_store_id(request)
+    result = set_layaway_status(store_id, layaway_id, "cancelado")
+    if not result:
+        raise HTTPException(status_code=404, detail="Apartado no encontrado.")
+    return {"success": True, "data": result}
+
+
+@router.post("/multitienda/api/apartados/{layaway_id}/reactivar", response_class=JSONResponse)
+def api_reactivate_layaway(layaway_id: int, request: Request):
+    store_id = _require_store_id(request)
+    result = set_layaway_status(store_id, layaway_id, "active")
+    if not result:
+        raise HTTPException(status_code=404, detail="Apartado no encontrado.")
+    return {"success": True, "data": result}
+
+
+@router.post("/multitienda/api/apartados/{layaway_id}/entregar", response_class=JSONResponse)
+def api_deliver_layaway(layaway_id: int, request: Request):
+    store_id = _require_store_id(request)
+    result = set_layaway_status(store_id, layaway_id, "entregado")
+    if not result:
+        raise HTTPException(status_code=404, detail="Apartado no encontrado.")
+    return {"success": True, "data": result}
+
+
+@router.post("/multitienda/api/apartados/vencer", response_class=JSONResponse)
+def api_mark_overdue_layaways(request: Request):
+    store_id = _require_store_id(request)
+    count = mark_overdue_layaways(store_id)
+    return {"success": True, "updated": count}
+
+
+# ── Seguidores ────────────────────────────────────────────────────────────────
+
+@router.get("/multitienda/api/seguidores", response_class=JSONResponse)
+def api_list_followers(request: Request):
+    store_id = _require_store_id(request)
+    return {"success": True, "data": list_followers(store_id)}
+
+
+@router.post("/multitienda/api/seguidores", response_class=JSONResponse)
+async def api_create_follower(request: Request):
+    store_id = _require_store_id(request)
+    data = await _json_body(request)
+    return {"success": True, "data": create_follower(store_id, data)}
+
+
+@router.delete("/multitienda/api/seguidores/{follower_id}", response_class=JSONResponse)
+def api_delete_follower(follower_id: int, request: Request):
+    store_id = _require_store_id(request)
+    ok = delete_follower(store_id, follower_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Seguidor no encontrado.")
+    return {"success": True}
+
+
+# ── Videos ────────────────────────────────────────────────────────────────────
+
+@router.get("/multitienda/api/videos", response_class=JSONResponse)
+def api_list_videos(request: Request):
+    store_id = _require_store_id(request)
+    return {"success": True, "data": list_videos(store_id)}
+
+
+@router.post("/multitienda/api/videos", response_class=JSONResponse)
+async def api_create_video(request: Request):
+    store_id = _require_store_id(request)
+    data = await _json_body(request)
+    return {"success": True, "data": create_video(store_id, data)}
+
+
+@router.delete("/multitienda/api/videos/{video_id}", response_class=JSONResponse)
+def api_delete_video(video_id: int, request: Request):
+    store_id = _require_store_id(request)
+    ok = delete_video(store_id, video_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Video no encontrado.")
+    return {"success": True}
+
+
+# ── Proveedores ───────────────────────────────────────────────────────────────
+
+@router.get("/multitienda/api/proveedores", response_class=JSONResponse)
+def api_list_suppliers(request: Request):
+    store_id = _require_store_id(request)
+    db = _db_session_for_request(request)
+    try:
+        ensure_store_tables(db.bind)
+        return {"success": True, "data": list_suppliers(store_id, db=db)}
+    finally:
+        db.close()
+
+
+@router.post("/multitienda/api/proveedores", response_class=JSONResponse)
+async def api_create_supplier(request: Request):
+    store_id = _require_store_id(request)
+    db = _db_session_for_request(request)
+    data = await _json_body(request)
+    try:
+        ensure_store_tables(db.bind)
+        return {"success": True, "data": create_supplier(store_id, data, db=db)}
+    finally:
+        db.close()
+
+
+@router.put("/multitienda/api/proveedores/{supplier_id}", response_class=JSONResponse)
+async def api_update_supplier(supplier_id: int, request: Request):
+    store_id = _require_store_id(request)
+    db = _db_session_for_request(request)
+    data = await _json_body(request)
+    try:
+        ensure_store_tables(db.bind)
+        result = update_supplier(store_id, supplier_id, data, db=db)
+        if result is None:
+            raise HTTPException(status_code=404, detail="Proveedor no encontrado.")
+        return {"success": True, "data": result}
+    finally:
+        db.close()
+
+
+@router.delete("/multitienda/api/proveedores/{supplier_id}", response_class=JSONResponse)
+def api_delete_supplier(supplier_id: int, request: Request):
+    store_id = _require_store_id(request)
+    db = _db_session_for_request(request)
+    try:
+        ensure_store_tables(db.bind)
+        ok = delete_supplier(store_id, supplier_id, db=db)
+        if not ok:
+            raise HTTPException(status_code=404, detail="Proveedor no encontrado.")
+        return {"success": True}
+    finally:
+        db.close()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 
 __all__ = ["router"]

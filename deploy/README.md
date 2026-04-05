@@ -17,6 +17,7 @@ Scripts actuales:
 Notas de sincronizacion:
 
 - El deploy excluye `fastapi_modulo/modulos/`.
+- El deploy excluye los JSON legacy de `fastapi_modulo/modulos_sipet/frontend/` para no migrar contenido local de desarrollo a producción.
 - `deploy-uprocach.sh` valida que `REMOTE_DIR/fastapi_modulo/modulos` ya exista en el servidor antes de continuar.
 - Los modulos se importan y administran por dominio de forma separada.
 

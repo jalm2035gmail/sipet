@@ -62,6 +62,7 @@ def get_login_identity_context(request: Optional[Request] = None) -> Dict[str, s
         "login_company_short_name": data.get("company_short_name") or DEFAULT_LOGIN_IDENTITY["company_short_name"],
         "login_message": data.get("login_message") or DEFAULT_LOGIN_IDENTITY["login_message"],
         "menu_position": data.get("menu_position") or DEFAULT_LOGIN_IDENTITY["menu_position"],
+        "sidebar_style_variant": data.get("sidebar_style_variant") or "modern",
     }
     host = ""
     tenant_id = ""

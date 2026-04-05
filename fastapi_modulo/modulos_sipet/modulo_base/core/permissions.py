@@ -1,13 +1,16 @@
 from __future__ import annotations
 
 import json
+import re
+import unicodedata
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 
-from fastapi import Request
+from fastapi import HTTPException, Request
 
 from fastapi_modulo.modulos_sipet.web.servicios.module_tools import require_app_access
+from fastapi_modulo.modulos_sipet.web.servicios.access_service import has_permission_flag, is_admin_or_superadmin
 
 
 class ModulePermissionAction(str, Enum):
@@ -31,6 +34,26 @@ class ModulePermission:
 
 
 STANDARD_MODULE_ACTIONS = tuple(action.value for action in ModulePermissionAction)
+
+
+def _normalize_permission_code(value: str | None) -> str:
+    raw = str(value or "").strip().lower()
+    if not raw:
+        return ""
+    normalized = unicodedata.normalize("NFKD", raw)
+    normalized = "".join(ch for ch in normalized if not unicodedata.combining(ch))
+    normalized = re.sub(r"[^a-z0-9._-]+", "", normalized)
+    return normalized
+
+
+def _parse_permission_values(value: object) -> set[str]:
+    if isinstance(value, str):
+        items = [item.strip() for item in value.split(",")]
+    elif isinstance(value, (list, tuple, set)):
+        items = [str(item).strip() for item in value]
+    else:
+        return set()
+    return {_normalize_permission_code(item) for item in items if _normalize_permission_code(item)}
 
 
 def build_standard_permissions(module_key: str, module_label: str) -> list[ModulePermission]:
@@ -79,3 +102,26 @@ class ModulePermissionRegistry:
 
     def require_access(self, request: Request) -> None:
         require_app_access(request, self.module_name, self.detail)
+
+    def request_permissions(self, request: Request) -> set[str]:
+        candidates = [
+            getattr(request.state, "permissions", None),
+            getattr(request.state, "user_permissions", None),
+        ]
+        permissions: set[str] = set()
+        for candidate in candidates:
+            permissions.update(_parse_permission_values(candidate))
+        return permissions
+
+    def require_permission(self, request: Request, permission_code: str, detail: str | None = None) -> None:
+        self.require_access(request)
+        required_permission = _normalize_permission_code(permission_code)
+        if not required_permission:
+            return
+        if required_permission in self.request_permissions(request):
+            return
+        if has_permission_flag(request, required_permission):
+            return
+        if is_admin_or_superadmin(request):
+            return
+        raise HTTPException(status_code=403, detail=detail or self.detail)

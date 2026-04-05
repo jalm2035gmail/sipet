@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f172a" />
+  <meta name="description" content="{{ description }}" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  {% if vapid_public_key %}<meta name="vapid-public-key" content="{{ vapid_public_key }}" />{% endif %}
+  <title>{% block title %}{{ app_name }}{% endblock %}</title>
+
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="icon" href="/favicon.ico" sizes="any" />
+  <link rel="apple-touch-icon" href="/static/icons/icon-192x192.png" />
+  <link rel="stylesheet" href="/static/css/main.css" />
+</head>
+<body class="app-shell">
+
+  <!-- Top bar -->
+  <header class="app-topbar">
+    <div class="app-topbar-inner">
+      <button class="topbar-back" id="topbar-back" type="button" aria-label="Atrás" style="display:none">&#8592;</button>
+      <span class="topbar-title">{% block topbar_title %}{{ app_name }}{% endblock %}</span>
+      <div class="topbar-actions">
+        <a class="notif-bell" href="/notifications" aria-label="Notificaciones">
+          🔔
+          <span class="notif-badge is-hidden" id="notif-badge">0</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Offline banner -->
+  <div id="connection-banner" class="banner banner-offline is-hidden">
+    Sin conexión · usando modo offline
+  </div>
+
+  <!-- Page content -->
+  <main class="app-content">
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- Bottom navigation -->
+  <nav class="bottom-nav" role="navigation" aria-label="Navegación principal">
+    <a class="bottom-nav-item {% block nav_dashboard %}{% endblock %}" href="/dashboard">
+      <span class="nav-icon">🏠</span>
+      <span class="nav-label">Inicio</span>
+    </a>
+    <a class="bottom-nav-item {% block nav_activities %}{% endblock %}" href="/activities">
+      <span class="nav-icon">📋</span>
+      <span class="nav-label">Actividades</span>
+    </a>
+    <a class="bottom-nav-item {% block nav_conversations %}{% endblock %}" href="/conversations">
+      <span class="nav-icon">💬</span>
+      <span class="nav-label">Mensajes</span>
+    </a>
+    <a class="bottom-nav-item {% block nav_notifications %}{% endblock %}" href="/notifications">
+      <span class="nav-icon">🔔</span>
+      <span class="nav-label">Alertas</span>
+    </a>
+    <a class="bottom-nav-item {% block nav_settings %}{% endblock %}" href="/settings">
+      <span class="nav-icon">⚙️</span>
+      <span class="nav-label">Ajustes</span>
+    </a>
+  </nav>
+
+  <!-- Toast root -->
+  <div id="toast-root" class="toast-root" aria-live="polite" aria-atomic="true"></div>
+
+  <script src="/static/js/app.js"></script>
+  <script src="/static/js/push.js"></script>
+  <script src="/static/js/notifications.js"></script>
+  {% block extra_scripts %}{% endblock %}
+
+  <script>
+    // Guard: redirect to login if not authenticated
+    (function () {
+      if (!localStorage.getItem("access_token")) {
+        window.location.replace("/login");
+      }
+    })();
+
+    // Load unread count badge
+    document.addEventListener("DOMContentLoaded", () => {
+      if (typeof NotifApp !== "undefined") {
+        NotifApp.loadUnreadBadge("notif-badge");
+      }
+      // Back button
+      const backBtn = document.getElementById("topbar-back");
+      if (backBtn && window.history.length > 1) {
+        backBtn.style.display = "";
+        backBtn.addEventListener("click", () => history.back());
+      }
+    });
+  </script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

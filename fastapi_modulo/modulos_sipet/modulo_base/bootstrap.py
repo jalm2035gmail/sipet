@@ -55,10 +55,6 @@ class ModuloBaseModule(BaseModule):
         self.assets: dict[str, str] = {}
 
     def init(self) -> None:
-        ensure_modulo_base_schema(
-            allow_create_all_in_dev=self.config.allow_create_all_in_dev,
-            uses_migrations=self.config.uses_migrations,
-        )
         if self.requires_data_bootstrap:
             bootstrap_modulo_base_data()
         if self.requires_seeds:
@@ -91,3 +87,11 @@ def seed_modulo_base_data() -> None:
 
 def init_modulo_base() -> None:
     module.init()
+
+
+def prepare_modulo_base_schema_for_dev(*, host: str | None = None) -> None:
+    ensure_modulo_base_schema(
+        allow_create_all_in_dev=MODULE_CONFIG.allow_create_all_in_dev,
+        uses_migrations=MODULE_CONFIG.uses_migrations,
+        host=host,
+    )

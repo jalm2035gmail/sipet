@@ -1,0 +1,687 @@
+Sí tiene muy buena base para evolucionarlo a un sistema de restaurante.
+
+Lo que ya tienes en el módulo actual es valioso porque no empiezas desde cero. Ya contempla:
+
+menú de productos (tortas, pizzas, sushi, hamburguesas, ensaladas, etc.)
+categorías
+toppings / modificadores
+opciones de base (pan, masa, arroz, tortilla, lechuga, etc.)
+alérgenos
+zonas de entrega
+formas de pago
+cupones
+pedidos
+pagos
+corte de caja
+preórdenes
+tablero básico
+
+NOTA IMPORTANTE: El módulo ya no está pensado exclusivamente para tortas.
+Debe adaptarse a cualquier tipo de cocina o concepto de restaurante:
+  - tortas / sándwiches
+  - pizzas
+  - sushi / comida japonesa
+  - hamburguesas
+  - ensaladas / bowls
+  - tacos / burritos
+  - comida corrida
+  - repostería / café
+  - cualquier otro concepto
+
+Los nombres de campos, categorías y opciones deben ser configurables por el operador
+según el tipo de restaurante. El sistema no debe asumir que el producto es una torta.
+
+Pero hoy el módulo todavía está más orientado a un sistema de pedidos simple y no a una
+operación completa de restaurante. Además, el manejo de toppings / modificadores existe,
+pero aún no está modelado con la profundidad que se necesita para personalización real,
+cocina, telefonía, WhatsApp y operación diaria.
+
+1. Cómo lo mejoraría conceptualmente
+
+La idea ya no debe ser "módulo de tortas", sino un módulo de restaurante / comida rápida /
+cocina operativa, adaptable a cualquier concepto gastronómico.
+
+Yo lo llevaría a esta visión:
+
+Núcleo comercial
+productos del menú
+variantes
+modificadores / toppings
+combos
+promociones
+pedidos de mostrador
+pedidos telefónicos
+pedidos por WhatsApp
+pedidos para llevar
+pedidos a domicilio
+preórdenes
+Núcleo operativo
+flujo de cocina
+estaciones de trabajo
+tiempos de preparación
+impresión o cola de cocina
+estados por área
+control de entrega
+repartidores o pickup
+Núcleo administrativo
+caja
+pagos
+descuentos
+cortes
+reportes
+clientes
+historial de consumo
+campañas y fidelización
+2. Elementos conceptuales que debes agregar
+A. Rediseñar el concepto de producto
+
+Hoy el producto (torta, pizza, hamburguesa, etc.) se maneja como algo relativamente fijo,
+con algunos toppings y una opción de base.
+
+Eso debe evolucionar a una estructura más flexible:
+
+Producto base
+
+Ejemplos según tipo de restaurante:
+  Tortas:       Torta Cubana, Torta de Milanesa, Torta Hawaiana
+  Pizzas:       Pizza Margarita, Pizza Hawaiana, Pizza BBQ Pollo
+  Hamburguesas: Hamburguesa Clásica, Doble Carne, Veggie Burger
+  Sushi:        Rollo Especial, Nigiri Salmón, Sashimi Atún
+  Ensaladas:    Ensalada César, Bowl de Quinoa, Ensalada del Chef
+
+Variantes del producto
+
+Ejemplos:
+  tamaño individual / personal / mediano / grande / familiar
+  porción chica / normal / extra
+  piezas: 8, 12, 16 (para pizzas o sushi)
+  sin gluten / versión vegana
+
+Modificadores
+
+Aquí entran los toppings y ajustes. El nombre del grupo debe ser configurable:
+  para pizzas:       ingredientes, extras
+  para hamburguesas: aderezos, complementos
+  para sushi:        acompañamientos, salsas
+  para ensaladas:    aderezos, proteínas, extras
+  para tortas:       ingredientes, salsas, extras
+
+Esto es importante: no todo debe llamarse "topping".
+
+Te conviene separar:
+  ingredientes removibles
+  ingredientes extra
+  sustituciones
+  opciones de base (pan, masa delgada/gruesa, arroz, bowl, wrap, etc.)
+  salsas
+  extras premium
+  notas libres de cocina
+
+Eso te permitirá capturar pedidos reales de restaurante para cualquier tipo de comida.
+
+B. Manejo serio de modificadores y personalización
+
+Hoy el modificador tiene:
+nombre
+tipo
+precio
+unidad
+máximo
+
+Eso es una base, pero le falta lógica de negocio.
+
+Debes agregar
+si el modificador está incluido o es opcional
+si el modificador es obligatorio
+si pertenece a una categoría de selección
+mínimo y máximo por grupo
+si puede repetirse
+si depende del producto
+si solo aplica a ciertas variantes
+si está disponible por horario
+si consume inventario
+si genera instrucción de cocina
+
+Ejemplo conceptual (genérico, adaptable a cualquier concepto):
+
+Grupo: Base del producto (obligatorio, elige 1)
+  Tortas / burgers: bolillo, telera, integral, baguette, pan brioche
+  Pizzas:           masa delgada, masa gruesa, masa integral
+  Bowls / ensaladas: arroz blanco, arroz integral, lechuga, quinoa
+  Wraps / burritos:  tortilla de harina, tortilla integral, sin gluten
+
+Grupo: Salsas (opcional, elige hasta 3)
+  Tortas / burgers: chipotle, mayonesa, mostaza, sin salsa
+  Sushi:            soya, eel sauce, spicy mayo, sin salsa
+  Ensaladas:        César, vinagreta, ranch, balsámico
+
+Grupo: Extras premium (opcional, precio adicional)
+  aguacate / guacamole
+  queso extra / queso premium
+  proteína extra
+  tocino / prosciutto / chorizo
+  trufa / ingrediente especial
+
+Esto es mucho mejor que tener todos los modificadores sueltos sin estructura.
+
+C. Pedidos telefónicos y WhatsApp
+
+Este es uno de los cambios más importantes.
+
+Hoy el pedido solo parece registrarse como una orden general. Debes agregar el concepto
+de canal de venta.
+
+Canales sugeridos
+mostrador
+mesa
+teléfono
+WhatsApp
+web
+app
+Rappi / Uber Eats / Didi Food
+preorden
+evento / catering
+
+Para teléfono y WhatsApp debes contemplar
+canal de origen
+nombre del operador que tomó el pedido
+hora de recepción
+teléfono del cliente
+cliente nuevo o recurrente
+dirección validada
+referencia de chat o conversación
+estatus de confirmación
+evidencia de confirmación
+tiempo prometido
+tipo de entrega
+WhatsApp además puede incluir
+link del pedido
+plantilla de confirmación
+mensaje automático con resumen
+confirmación por botón o palabra clave
+envío de ubicación
+seguimiento del pedido
+D. Flujo operativo de restaurante
+
+Hoy el estado del pedido es útil, pero todavía muy corto.
+
+Actualmente manejas algo como:
+borrador
+confirmado
+en preparación
+listo
+entregado
+cancelado
+
+Eso es funcional, pero para restaurante conviene crecerlo a un flujo más real.
+
+Flujo sugerido
+capturado
+pendiente de confirmación
+confirmado
+enviado a cocina
+en preparación
+en empaque
+listo para entrega
+en reparto
+entregado
+no entregado
+cancelado
+
+Y además separar por tipo de pedido:
+mostrador
+pickup
+domicilio
+preorden
+pedido programado
+E. Cocina y producción
+
+Aquí está una de las mayores áreas de mejora.
+
+No basta con guardar pedidos. El sistema debe ayudar a operar cocina.
+
+Elementos conceptuales
+ticket de cocina
+prioridad de preparación
+tiempo estimado
+área de producción (configurable según el restaurante)
+responsable
+observaciones especiales
+agrupación por pedido
+control de tiempos
+cola de cocina en pantalla
+
+Estaciones posibles (ejemplos, adaptables por concepto):
+  Tortas / burgers: plancha, armado, empaquetado, bebidas, entrega
+  Pizza:            horno, armado, corte, empaquetado
+  Sushi:            preparación de rolls, presentación, empaquetado
+  Ensaladas/bowls:  bowl station, aderezos, presentación
+
+Esto te ayudará si luego quieres una pantalla tipo "Kitchen Display System".
+
+F. Clientes y CRM básico
+
+Hoy el cliente parece ser solo nombre y teléfono dentro del pedido.
+
+Eso te limita mucho.
+
+Debes agregar un modelo real de cliente
+nombre
+teléfono principal
+teléfonos alternos
+WhatsApp
+direcciones frecuentes
+referencias
+colonia
+historial de pedidos
+ticket promedio
+productos favoritos
+restricciones alimentarias / alergias
+cumpleaños
+notas
+consentimiento promocional
+
+Esto es clave para:
+pedidos telefónicos
+pedidos por WhatsApp
+fidelización
+recompra
+promociones personalizadas
+G. Dirección y logística de entrega
+
+Ya tienes zonas de entrega, lo cual está muy bien.
+
+Pero si vas a operar pedidos por teléfono y WhatsApp, debes mejorar la logística.
+
+Elementos a agregar
+catálogo de direcciones del cliente
+validación de zona por colonia / código postal
+costo por zona
+tiempo estimado por zona
+repartidor asignado
+estado de entrega
+evidencia de entrega
+observaciones del domicilio
+ubicación compartida por WhatsApp
+H. Caja y control administrativo
+
+Ya tienes corte de caja, pero falta llevarlo a nivel restaurante.
+
+Conceptualmente debes agregar
+turno
+cajero
+caja por sucursal
+ventas por canal
+ventas por forma de pago
+propinas
+cancelaciones
+devoluciones
+cortes parciales
+diferencias de caja
+arqueo
+I. Promociones, combos y fidelización
+
+Ya tienes cupones, pero restaurante necesita más.
+
+Debes contemplar
+combos (adaptables: combo pizza + refresco, combo sushi 20 piezas, burger + papas, etc.)
+promociones por horario
+2x1
+extra gratis
+descuento por canal
+promoción por WhatsApp
+promoción por primera compra
+puntos
+cliente frecuente
+recompensas
+J. Inventario e insumos
+
+Si el sistema crecerá de verdad, tarde o temprano debes conectar modificadores y
+productos con inventario.
+
+Elementos conceptuales
+insumos (configurable por tipo de restaurante)
+recetas
+consumo por producto
+consumo por modificador / topping
+stock de ingredientes
+productos agotados
+disponibilidad por horario
+
+Ejemplos de insumos por tipo:
+  Tortas:       bolillos, teleras, carne, queso, aguacate, salsas
+  Pizzas:       masa, queso mozzarella, pepperoni, salsa de tomate
+  Sushi:        arroz, alga nori, salmón, atún, pepino, aguacate
+  Hamburguesas: carne molida, pan brioche, lechuga, jitomate, queso
+  Ensaladas:    lechuga, mezcla de hojas, pollo, aderezo, crutones
+
+Esto es muy importante para que el sistema no venda algo que ya no existe.
+
+3. Qué cambios conceptuales haría al módulo actual
+
+Yo lo reestructuraría así:
+
+Catálogos
+concepto / tipo de restaurante (configurable)
+categorías de productos
+productos
+variantes
+grupos de modificadores
+opciones de modificadores
+opciones de base (configurable: pan, masa, arroz, wrap, etc.)
+alérgenos / restricciones alimentarias
+formas de pago
+zonas de entrega
+canales de venta
+estados operativos
+Operación
+pedidos
+líneas de pedido
+modificadores por línea
+pagos
+cocina
+entregas
+preórdenes
+clientes
+Comercial
+cupones
+promociones
+combos
+campañas
+historial del cliente
+Administración
+caja
+cortes
+usuarios
+reportes
+métricas
+4. Fases completas de desarrollo
+Fase 1. Redefinición funcional del módulo
+Objetivo
+
+Pasar de "módulo de tortas" a "módulo de gestión de restaurante adaptable a
+cualquier concepto gastronómico".
+
+Actividades
+redefinir alcance y nombre del módulo (de "tortas" a "restaurante" / "comida")
+definir configuración por tipo de restaurante
+definir tipos de pedido
+definir canales de venta
+definir flujo operativo completo
+definir actores del sistema
+Entregables
+documento de visión funcional
+mapa de procesos
+catálogo de actores
+definición del alcance MVP
+Fase 2. Rediseño del menú y personalización
+Objetivo
+
+Modelar correctamente productos, variantes y modificadores para cualquier tipo de comida.
+
+Actividades
+crear estructura de producto base genérica
+definir variantes adaptables por concepto
+definir grupos de modificadores configurables
+definir opciones por grupo
+definir reglas de selección
+diferenciar incluidos, extras, removibles y sustituciones para cada tipo de comida
+hacer configurable el nombre de "base" (pan, masa, arroz, bowl, wrap, etc.)
+Entregables
+arquitectura del menú genérica
+reglas de configuración por concepto
+matriz de personalización por producto
+Fase 3. Rediseño del pedido
+Objetivo
+
+Que el pedido soporte operación real para cualquier tipo de restaurante.
+
+Actividades
+agregar canal de origen
+agregar cliente formal
+agregar dirección
+agregar tipo de entrega
+agregar tiempo prometido
+agregar observaciones del cliente y cocina
+agregar confirmación y seguimiento
+Entregables
+modelo de pedido rediseñado
+flujo de pedido por canal
+estados del pedido
+Fase 4. Pedidos telefónicos y WhatsApp
+Objetivo
+
+Integrar los canales más usados sin improvisación, independientemente del tipo de comida.
+
+Actividades
+definir proceso de toma de pedido telefónico
+definir proceso de toma de pedido por WhatsApp
+definir scripts operativos adaptables
+definir plantillas de confirmación
+definir reglas de validación de dirección
+definir mensajes de seguimiento
+Entregables
+flujo telefónico
+flujo WhatsApp
+matriz de mensajes
+política de confirmación del pedido
+Fase 5. Cocina y operación interna
+Objetivo
+
+Volver útil el módulo para la producción, no solo para caja, para cualquier concepto.
+
+Actividades
+definir estaciones por tipo de restaurante (configurable)
+definir tiempos de producción
+definir prioridades
+definir cola de cocina
+definir tickets de cocina
+definir flujo de empaque y entrega
+Entregables
+flujo de cocina
+tablero operativo
+estados por área
+Fase 6. Clientes y fidelización
+Objetivo
+
+Construir una base de clientes real, independiente del tipo de menú.
+
+Actividades
+crear ficha del cliente
+crear historial de compra
+registrar direcciones frecuentes
+registrar preferencias y restricciones alimentarias
+definir promociones por cliente
+definir recompensas
+Entregables
+modelo cliente
+historial de pedidos
+lógica de fidelización básica
+Fase 7. Entrega y logística
+Objetivo
+
+Controlar bien los pedidos a domicilio.
+
+Actividades
+mejorar zonas de entrega
+asignar tiempos
+definir costo por zona
+registrar repartidores o pickup
+controlar entrega
+definir evidencia y cierre
+Entregables
+modelo logístico
+flujo de entrega
+validaciones por zona
+Fase 8. Caja y administración
+Objetivo
+
+Profesionalizar la parte operativa y financiera.
+
+Actividades
+definir turnos
+definir cajas
+mejorar corte
+registrar anulaciones
+registrar devoluciones
+separar ventas por canal
+separar ventas por forma de pago
+Entregables
+flujo de caja
+estructura de cortes
+KPIs de venta
+Fase 9. Promociones y combos
+Objetivo
+
+Aumentar capacidad comercial para cualquier tipo de restaurante.
+
+Actividades
+definir combos adaptables por concepto
+definir promociones por horario
+definir promociones por canal
+definir descuentos automáticos
+definir campañas de WhatsApp
+Entregables
+motor de promociones
+reglas de combos
+catálogo comercial
+Fase 10. Inventario y recetas
+Objetivo
+
+Conectar venta con disponibilidad real, para cualquier tipo de insumo.
+
+Actividades
+definir insumos por tipo de restaurante
+definir recetas
+relacionar modificadores con consumo de insumos
+definir stock mínimo
+definir agotados
+definir disponibilidad por producto
+Entregables
+modelo de recetas
+control de stock
+reglas de disponibilidad
+Fase 11. Reportes y analítica
+Objetivo
+
+Tener inteligencia de negocio, no solo operación.
+
+KPIs sugeridos
+ventas por día
+ventas por canal
+ticket promedio
+producto más vendido
+modificador más usado
+tiempo de preparación promedio
+pedidos por WhatsApp
+pedidos por teléfono
+tiempos de entrega
+clientes recurrentes
+promociones más efectivas
+Entregables
+dashboard gerencial
+dashboard operativo
+reportes por canal y producto
+Fase 12. Automatización e integración
+Objetivo
+
+Reducir carga operativa y mejorar experiencia, sin importar el tipo de restaurante.
+
+Actividades
+recordatorios automáticos
+mensajes automáticos por WhatsApp
+confirmaciones automáticas
+cambio de estado automatizado
+integración con repartidores
+integración con reservaciones o marketplace si aplica
+Entregables
+matriz de automatizaciones
+eventos del sistema
+plan de integración
+5. MVP recomendado
+
+Si quieres avanzar con orden, el MVP no debe querer hacerlo todo al mismo tiempo.
+
+MVP ideal
+configuración del concepto de restaurante (tipo de comida, nombre de bases, etc.)
+productos con categorías
+variantes simples
+grupos de modificadores y opciones
+pedidos
+pedidos telefónicos
+pedidos por WhatsApp como canal
+clientes
+zonas de entrega
+pagos
+caja
+flujo básico de cocina
+preórdenes
+dashboard básico
+6. Segunda etapa recomendada
+combos
+promociones automáticas
+fidelización
+direcciones frecuentes
+integración con repartidores
+tablero de cocina avanzado
+mensajes automáticos de WhatsApp
+mejores reportes
+7. Tercera etapa recomendada
+inventario conectado
+recetas
+agotados automáticos
+tiempos de producción por estación
+experiencia omnicanal
+integración con marketplace (Rappi, Uber Eats, Didi Food)
+analítica avanzada
+8. Sobre los nombres del módulo y los modelos
+
+El módulo actualmente se llama "tortas", pero debe pensarse para ser renombrado o
+configurado según el negocio del cliente.
+
+Opciones de renombre del módulo:
+  restaurante
+  comida
+  menu
+  cocina
+  food
+
+Los modelos en db_models.py, schemas, controladores y vistas también deben revisarse
+para que no tengan referencias fijas a "torta". Usar términos genéricos que apliquen
+a cualquier tipo de comida.
+
+Ejemplos de renombramiento de modelos y campos:
+  TipoPan        → BaseProducto  (pan, masa, arroz, wrap, tortilla, lechuga, etc.)
+  Topping        → Modificador   (o dejar configurable: topping, ingrediente, extra)
+  CategoriaMenu  → Categoria     (genérico)
+  PedidoTorta    → Pedido        (genérico)
+  GrupoTopping   → GrupoModificador
+  OpcionTopping  → OpcionModificador
+
+9. Conclusión
+
+El módulo actual ya tiene una base bastante buena, porque ya contempla piezas
+importantes del negocio.
+
+Lo que falta es dejar de pensar solo en:
+torta
+topping
+pedido
+pago
+
+y comenzar a pensarlo como un sistema completo de:
+restaurante (de cualquier tipo: tortas, pizzas, sushi, hamburguesas, ensaladas, etc.)
+producto con personalización flexible
+cocina operativa
+cliente con CRM básico
+canal de venta
+logística
+caja
+promociones
+operación diaria
+
+La clave conceptual más importante es esta:
+
+no todo debe ser "topping"; debes modelar modificadores, variantes, canales y flujo
+operativo completo. Y el sistema no debe asumir el tipo de comida: debe permitir que
+el operador configure su propio concepto gastronómico.

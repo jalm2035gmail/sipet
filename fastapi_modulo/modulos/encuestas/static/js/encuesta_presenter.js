@@ -11,6 +11,9 @@
   const bootstrap = window.__PRESENTER_BOOTSTRAP || {};
   const instanceId = bootstrap.instance_id;
   const tenantId = bootstrap.tenant_id;
+  const searchParams = new URLSearchParams(window.location.search || "");
+  const presentMode = searchParams.get("present") === "1";
+  let presentationFullscreenRequested = false;
 
   /* -------------------------------------------------------------------------
    * DOM refs
@@ -28,6 +31,12 @@
   const sidebarLabel = document.getElementById("enc-pres-sidebar-label");
   const accessModeSelect = document.getElementById("enc-pres-access-mode");
   const accessHelp = document.getElementById("enc-pres-access-help");
+  const btnToggleQr = document.getElementById("enc-pres-btn-toggle-qr");
+  const qrPanel = document.getElementById("enc-pres-qr-panel");
+  const qrImage = document.getElementById("enc-pres-qr-image");
+  const qrEmpty = document.getElementById("enc-pres-qr-empty");
+  const qrLink = document.getElementById("enc-pres-qr-link");
+  const btnCopyPresentationLink = document.getElementById("enc-pres-btn-copy-presentation-link");
 
   const idleMsg = document.getElementById("enc-pres-idle-message");
   const activePanel = document.getElementById("enc-pres-active-panel");
@@ -41,6 +50,9 @@
 
   const btnPrev = document.getElementById("enc-pres-btn-prev");
   const btnNext = document.getElementById("enc-pres-btn-next");
+  const presentationNav = document.getElementById("enc-pres-presentation-nav");
+  const presentationPrevButton = document.getElementById("enc-pres-presentation-prev");
+  const presentationNextButton = document.getElementById("enc-pres-presentation-next");
   const btnToggleResults = document.getElementById("enc-pres-btn-toggle-results");
   const resultsPanel = document.getElementById("enc-pres-results-panel");
   const btnResultsChart = document.getElementById("enc-pres-btn-results-chart");
@@ -61,6 +73,7 @@
   let sectionResultsVisibility = {};
   let resultsViewMode = "chart";
   let pollTimer = null;
+  let qrVisible = false;
   const POLL_INTERVAL = 2500;
 
   /* -------------------------------------------------------------------------
@@ -133,6 +146,9 @@
       presenterToken = state.presenter_token || "";
       sessionStorage.setItem(`pres_token_${instanceId}`, presenterToken);
       applyState(state);
+      if (state.presentation_mode === true || state.live_mode === "presentation") {
+        requestPresentationFullscreen(true);
+      }
     } catch (e) {
       alert("Error al iniciar sesión: " + e.message);
     }
@@ -224,6 +240,9 @@
     renderQuestionList();
     renderCenterPanel();
     renderResults(state.current_results || null);
+    if (presentationMode && liveStatus === "running" && presentMode) {
+      requestPresentationFullscreen(false);
+    }
 
     // Start/stop polling
     if (liveStatus === "running") {
@@ -291,7 +310,10 @@
     qTypeEl.textContent = presentationMode ? "presentation" : (current.question_type || "");
     qTituloEl.textContent = current.title || current.titulo || "";
     qDescEl.textContent = current.description || current.descripcion || "";
-    qDescEl.hidden = !(current.description || current.descripcion);
+    qTituloEl.hidden = presentationMode && !pageShowsTitle(current);
+    qDescEl.hidden = presentationMode
+      ? (!pageShowsTitle(current) || !(current.description || current.descripcion))
+      : !(current.description || current.descripcion);
     if (pageStage) {
       pageStage.hidden = !presentationMode;
       pageStage.classList.toggle("is-presentation-mode", presentationMode);
@@ -303,10 +325,39 @@
       else pageStage.innerHTML = "";
     }
 
-    btnPrev.disabled = currentQIdx === 0;
-    btnNext.disabled = currentQIdx === items.length - 1;
+    if (btnPrev) btnPrev.disabled = currentQIdx === 0;
+    if (btnNext) btnNext.disabled = currentQIdx === items.length - 1;
+    if (presentationNav) presentationNav.hidden = !presentationMode;
+    if (presentationPrevButton) presentationPrevButton.hidden = !presentationMode || currentQIdx === 0;
+    if (presentationNextButton) presentationNextButton.hidden = !presentationMode || currentQIdx === items.length - 1;
 
     btnToggleResults.textContent = showResults ? "Ocultar resultados" : "Mostrar resultados";
+  }
+
+  function goPrev() {
+    if (currentQIdx <= 0 || !items[currentQIdx - 1]) return;
+    if (presentationMode) {
+      setPage(currentQIdx - 1);
+      return;
+    }
+    if (items[currentQIdx - 1].id) {
+      setQuestion(items[currentQIdx - 1].id);
+    }
+  }
+
+  function goNext() {
+    if (currentQIdx >= items.length - 1 || !items[currentQIdx + 1]) return;
+    if (presentationMode) {
+      setPage(currentQIdx + 1);
+      return;
+    }
+    if (items[currentQIdx + 1].id) {
+      setQuestion(items[currentQIdx + 1].id);
+    }
+  }
+
+  function pageShowsTitle(page) {
+    return page && page.show_title != null ? page.show_title !== false && String(page.show_title) !== "false" : true;
   }
 
   function renderPresentationBlock(block) {
@@ -314,7 +365,7 @@
     if (String(block.type || "") === "question") {
       const question = questions.find((item) => Number(item.id) === Number(block.question_id));
       if (!question) return `<div class="enc-presentation-item ${widthClass}"><div class="enc-placeholder">Pregunta no disponible.</div></div>`;
-      return `<div class="enc-presentation-item ${widthClass}"><article class="enc-card"><h4>${escHtml(question.titulo || "")}</h4><p class="enc-question-meta">${escHtml(question.descripcion || "")}</p></article></div>`;
+      return `<div class="enc-presentation-item ${widthClass}">${renderQuestionCard(question)}</div>`;
     }
     if (String(block.type || "") === "image") {
       return `<div class="enc-presentation-item ${widthClass}">${renderImageSection(block)}</div>`;
@@ -366,7 +417,50 @@
     const imageFit = escHtml(section.image_fit || "cover");
     const imageAlt = escHtml(section.image_alt || "");
     if (!imageUrl) return '<div class="enc-placeholder">Imagen no configurada.</div>';
-    return `<div class="enc-presentation-image-surface" role="img" aria-label="${imageAlt}" style="background-image:url('${imageUrl}');background-size:${imageFit};background-position:center;background-repeat:no-repeat;"></div>`;
+    return `<div class="enc-presentation-image-surface" style="background-image:url('${imageUrl}');background-size:${imageFit};background-position:center;background-repeat:no-repeat;"><img class="enc-presentation-image ${imageFit === "contain" ? "is-contain" : "is-cover"}" src="${imageUrl}" alt="${imageAlt}"></div>`;
+  }
+
+  function renderQuestionField(question) {
+    const type = String(question.question_type || "");
+    const options = Array.isArray(question.options) ? question.options : [];
+    if (["single_choice", "live_poll_single_choice", "yes_no", "true_false", "quiz_single_choice"].includes(type)) {
+      return options.map((option) => `
+        <label class="enc-preview-choice">
+          <input type="radio" disabled>
+          <span>${escHtml(option.label || String(option.value || ""))}</span>
+        </label>
+      `).join("");
+    }
+    if (type === "multiple_choice") {
+      return options.map((option) => `
+        <label class="enc-preview-choice">
+          <input type="checkbox" disabled>
+          <span>${escHtml(option.label || String(option.value || ""))}</span>
+        </label>
+      `).join("");
+    }
+    if (type === "dropdown") {
+      return `
+        <select class="enc-input enc-select" disabled>
+          <option>Selecciona una opción</option>
+          ${options.map((option) => `<option>${escHtml(option.label || String(option.value || ""))}</option>`).join("")}
+        </select>
+      `;
+    }
+    if (["scale_1_5", "live_scale_1_5", "nps_0_10"].includes(type)) {
+      return `<div class="enc-response-scale">${options.map((option) => `<button type="button" class="enc-preview-scale" disabled>${escHtml(option.label || String(option.value || ""))}</button>`).join("")}</div>`;
+    }
+    return `<input class="enc-input" type="text" disabled placeholder="Respuesta">`;
+  }
+
+  function renderQuestionCard(question) {
+    return `
+      <article class="enc-card enc-response-card enc-response-question">
+        <h4>${escHtml(question.titulo || "Pregunta")}</h4>
+        <p>${escHtml(question.descripcion || "")}</p>
+        <div class="enc-preview-field">${renderQuestionField(question)}</div>
+      </article>
+    `;
   }
 
   function runEmbeddedEffect(node, effectName) {
@@ -465,26 +559,87 @@
       const total = Number(result.total_responses || 0);
       let body = `<p class="enc-presentation-results-total"><em><span data-enc-animate-count="${total}" data-enc-count-singular=" respuesta" data-enc-count-plural=" respuestas">0 respuestas</span></em></p>`;
       if (question.options && question.options.length) {
-        const maxCount = Math.max(...question.options.map((option) => Number((result.counts || {})[String(option.value)] || 0)), 1);
-        body += `<div class="enc-presentation-results-list">${question.options.map((option) => {
-          const count = Number((result.counts || {})[String(option.value)] || 0);
-          const width = Math.round((count / maxCount) * 100);
-          return `
-            <div class="enc-presentation-results-item is-chart">
-              <div class="enc-presentation-results-copy">
-                <span>${escHtml(option.label || String(option.value))}</span>
-                <strong data-enc-animate-count="${count}">0</strong>
-              </div>
-              <div class="enc-presentation-results-bar"><span data-enc-animate-width="${width}" style="width:0%"></span></div>
-            </div>
-          `;
-        }).join("")}</div>`;
+        body += renderResultOptions(question, result);
       } else if (result.texts && result.texts.length) {
         body += `<div class="enc-presentation-results-list">${result.texts.slice(0, 5).map((text) => `<div class="enc-presentation-results-item"><span>${escHtml(text)}</span></div>`).join("")}</div>`;
       }
       return `<div class="enc-presentation-results-card"><h5>${escHtml(question.titulo || "")}</h5>${body}</div>`;
     }).filter(Boolean).join("");
     return blocks ? `<div class="enc-presentation-section-results">${blocks}</div>` : "";
+  }
+
+  function resultChartType(question) {
+    const type = String((((question || {}).config_json || {}).result_chart_type) || "bar").trim().toLowerCase();
+    return ["bar", "donut", "list"].includes(type) ? type : "bar";
+  }
+
+  function resultPalette(index) {
+    const colors = ["#2563eb", "#14b8a6", "#f97316", "#8b5cf6", "#e11d48", "#f59e0b"];
+    return colors[index % colors.length];
+  }
+
+  function renderResultOptions(question, result) {
+    const options = Array.isArray(question.options) ? question.options : [];
+    const counts = result.counts || {};
+    const total = Number(result.total_responses || 0);
+    const entries = options.map((option, index) => {
+      const count = Number(counts[String(option.value)] || 0);
+      const percent = total > 0 ? Math.round((count / total) * 100) : 0;
+      return {
+        label: option.label || String(option.value),
+        count,
+        percent,
+        color: resultPalette(index),
+      };
+    });
+    const chartType = resultChartType(question);
+    if (chartType === "list") {
+      return `<div class="enc-presentation-results-list is-list">${entries.map((entry) => `
+        <div class="enc-presentation-results-item is-list">
+          <span>${escHtml(entry.label)}</span>
+          <strong><span data-enc-animate-count="${entry.count}">0</span> <small>${entry.percent}%</small></strong>
+        </div>
+      `).join("")}</div>`;
+    }
+    if (chartType === "donut") {
+      let offset = 0;
+      const stops = entries.map((entry) => {
+        const start = offset;
+        offset += entry.percent;
+        return `${entry.color} ${start}% ${offset}%`;
+      });
+      const donut = stops.length ? stops.join(", ") : "#e5e7eb 0% 100%";
+      return `
+        <div class="enc-presentation-results-donut-wrap">
+          <div class="enc-presentation-results-donut" style="background:conic-gradient(${donut});">
+            <div class="enc-presentation-results-donut-core">
+              <strong data-enc-animate-count="${total}">0</strong>
+              <span>respuestas</span>
+            </div>
+          </div>
+          <div class="enc-presentation-results-legend">${entries.map((entry) => `
+            <div class="enc-presentation-results-legend-item">
+              <span class="enc-presentation-results-swatch" style="background:${entry.color};"></span>
+              <span>${escHtml(entry.label)}</span>
+              <strong><span data-enc-animate-count="${entry.count}">0</span> <small>${entry.percent}%</small></strong>
+            </div>
+          `).join("")}</div>
+        </div>
+      `;
+    }
+    const maxCount = Math.max(...entries.map((entry) => entry.count), 1);
+    return `<div class="enc-presentation-results-list">${entries.map((entry) => {
+      const width = Math.round((entry.count / maxCount) * 100);
+      return `
+        <div class="enc-presentation-results-item is-chart">
+          <div class="enc-presentation-results-copy">
+            <span>${escHtml(entry.label)}</span>
+            <strong><span data-enc-animate-count="${entry.count}">0</span> <small>${entry.percent}%</small></strong>
+          </div>
+          <div class="enc-presentation-results-bar"><span data-enc-animate-width="${width}" style="width:0%;background:${entry.color};"></span></div>
+        </div>
+      `;
+    }).join("")}</div>`;
   }
 
   function animatePresentationResultBars(scope) {
@@ -539,7 +694,7 @@
             <span class="enc-presentation-question-count"><span data-enc-animate-count="${totalResponses}" data-enc-count-singular=" respuesta" data-enc-count-plural=" respuestas">0 respuestas</span></span>
             ${firstQuestionId ? `<button type="button" class="enc-presentation-eye" data-enc-toggle-section-results="${firstQuestionId}" aria-label="${isOpen ? "Ocultar respuestas" : "Ver respuestas"}" title="${isOpen ? "Ocultar respuestas" : "Ver respuestas"}">${isOpen ? "🙈" : "👁"}</button>` : ""}
           </div>
-          ${selectedQuestions.map((question) => `<article class="enc-card"><h4>${escHtml(question.titulo || "")}</h4><p class="enc-question-meta">${escHtml(question.descripcion || "")}</p></article>`).join("")}
+          ${selectedQuestions.map((question) => renderQuestionCard(question)).join("")}
           ${isOpen ? renderPresentationSectionResults(selectedQuestions) : ""}
         </article>
       `;
@@ -554,6 +709,7 @@
   function renderPresentationPage(page) {
     const bgLayers = [];
     const title = String((page && page.title) || "").trim();
+    const showTitle = pageShowsTitle(page);
     const footerText = String((page && page.footer_text) || "").trim();
     if (page && page.bg_image_url) {
       bgLayers.push(`linear-gradient(180deg, rgba(15,23,42,0.08), rgba(15,23,42,0.14)), url("${escHtml(page.bg_image_url)}") center / cover`);
@@ -567,7 +723,7 @@
           <div class="enc-presentation-stage-ratio">
             <div class="enc-presentation-stage-canvas" style="background:${bgLayers.join(", ")};">
               <div class="enc-presentation-layout">
-                ${title ? `<header class="enc-presentation-layout-header"><h1>${escHtml(title)}</h1></header>` : ""}
+                ${showTitle && title ? `<header class="enc-presentation-layout-header"><h1>${escHtml(title)}</h1></header>` : ""}
                 <div class="enc-presentation-layout-body is-sections-${sectionCount}">
                   ${layoutSections.map((section) => renderPresentationLayoutSection(section)).join("")}
                 </div>
@@ -626,22 +782,7 @@
         });
         html += "</div>";
       } else {
-        const maxCount = Math.max(...q.options.map(o => counts[String(o.value)] || 0), 1);
-        html += '<ul class="enc-pres-bar-list">';
-        q.options.forEach(opt => {
-          const count = counts[String(opt.value)] || 0;
-          const pct = Math.round((count / maxCount) * 100);
-          const pctTotal = total > 0 ? Math.round((count / total) * 100) : 0;
-          html += `
-            <li class="enc-pres-bar-item">
-              <span class="enc-pres-bar-label">${escHtml(opt.label || String(opt.value))}</span>
-              <div class="enc-pres-bar-track">
-                <div class="enc-pres-bar-fill" style="width:${pct}%"></div>
-              </div>
-              <span class="enc-pres-bar-count">${count} <small>(${pctTotal}%)</small></span>
-            </li>`;
-        });
-        html += "</ul>";
+        html += renderResultOptions(q, results);
       }
     } else if (texts.length) {
       html += '<ul class="enc-pres-text-list">';
@@ -656,9 +797,8 @@
   }
 
   async function toggleResultsFullscreen() {
-    const presentationTarget = pageStage ? pageStage.querySelector(".enc-presentation-stage") : null;
-    const target = presentationMode && presentationTarget
-      ? presentationTarget
+    const target = presentationMode && activePanel
+      ? activePanel
       : (resultsPanel && resultsPanel.parentElement ? resultsPanel.parentElement : resultsPanel);
     if (!target) return;
     if (document.fullscreenElement) {
@@ -668,6 +808,18 @@
     if (target.requestFullscreen) {
       await target.requestFullscreen();
     }
+  }
+
+  function getPresentationTarget() {
+    return pageStage ? pageStage.querySelector(".enc-presentation-stage") : null;
+  }
+
+  function requestPresentationFullscreen(force) {
+    const target = activePanel;
+    if (!target || document.fullscreenElement || !target.requestFullscreen) return Promise.resolve();
+    if (!force && presentationFullscreenRequested) return Promise.resolve();
+    presentationFullscreenRequested = true;
+    return target.requestFullscreen().catch(() => {});
   }
 
   /* -------------------------------------------------------------------------
@@ -702,18 +854,16 @@
     });
   });
 
-  btnPrev && btnPrev.addEventListener("click", () => {
-    if (currentQIdx > 0 && items[currentQIdx - 1]) {
-      if (presentationMode) setPage(currentQIdx - 1);
-      else setQuestion(items[currentQIdx - 1].id);
-    }
+  btnPrev && btnPrev.addEventListener("click", goPrev);
+
+  btnNext && btnNext.addEventListener("click", goNext);
+
+  presentationPrevButton && presentationPrevButton.addEventListener("click", () => {
+    goPrev();
   });
 
-  btnNext && btnNext.addEventListener("click", () => {
-    if (currentQIdx < items.length - 1 && items[currentQIdx + 1]) {
-      if (presentationMode) setPage(currentQIdx + 1);
-      else setQuestion(items[currentQIdx + 1].id);
-    }
+  presentationNextButton && presentationNextButton.addEventListener("click", () => {
+    goNext();
   });
 
   btnToggleResults && btnToggleResults.addEventListener("click", async () => {
@@ -758,6 +908,7 @@
     accessHelp.textContent = accessModeSelect.value === "internal"
       ? "Solo podrán entrar participantes autenticados."
       : "Comparte el vínculo público de la encuesta para una reunión abierta.";
+    renderPresentationQr();
   }
 
   accessModeSelect && accessModeSelect.addEventListener("change", async () => {
@@ -772,6 +923,25 @@
     }
   });
 
+  btnToggleQr && btnToggleQr.addEventListener("click", function () {
+    qrVisible = !qrVisible;
+    renderPresentationQr();
+  });
+
+  btnCopyPresentationLink && btnCopyPresentationLink.addEventListener("click", async function () {
+    const url = getPresentationScreenUrl();
+    if (!url) return;
+    try {
+      await navigator.clipboard.writeText(url);
+      btnCopyPresentationLink.textContent = "¡Copiado!";
+      setTimeout(() => {
+        if (btnCopyPresentationLink) btnCopyPresentationLink.textContent = "Copiar vínculo";
+      }, 1800);
+    } catch (error) {
+      alert("No se pudo copiar el vínculo: " + error.message);
+    }
+  });
+
   /* -------------------------------------------------------------------------
    * Utilities
    * ---------------------------------------------------------------------- */
@@ -781,6 +951,56 @@
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;");
+  }
+
+  function instanceData() {
+    return bootstrap.instance || {};
+  }
+
+  function isPublicLinkAudience(value) {
+    return String(value || "").trim().toLowerCase() === "public_link";
+  }
+
+  function getPublicSurveyUrl() {
+    const instance = instanceData();
+    const token = String(instance.public_link_token || "").trim();
+    const currentAudienceMode = accessModeSelect ? accessModeSelect.value : instance.audience_mode;
+    const isPublic = Boolean(instance.is_public_link_enabled) || isPublicLinkAudience(currentAudienceMode);
+    if (!token || !isPublic) return "";
+    return `${window.location.origin}/api/public/encuestas/${encodeURIComponent(token)}`;
+  }
+
+  function getPresentationScreenUrl() {
+    const publicUrl = getPublicSurveyUrl();
+    if (!publicUrl) return "";
+    const separator = publicUrl.includes("?") ? "&" : "?";
+    return `${publicUrl}${separator}present=1`;
+  }
+
+  function qrServiceUrl(value) {
+    return `https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=${encodeURIComponent(value)}`;
+  }
+
+  function renderPresentationQr() {
+    if (!btnToggleQr || !qrPanel || !qrImage || !qrEmpty || !qrLink || !btnCopyPresentationLink) return;
+    const url = getPresentationScreenUrl();
+    const hasUrl = Boolean(url);
+    qrPanel.hidden = !qrVisible;
+    btnToggleQr.textContent = qrVisible ? "Ocultar QR pantalla" : "Mostrar QR pantalla";
+    if (!qrVisible) return;
+    qrImage.hidden = !hasUrl;
+    qrLink.hidden = !hasUrl;
+    btnCopyPresentationLink.hidden = !hasUrl;
+    qrEmpty.hidden = hasUrl;
+    if (hasUrl) {
+      qrImage.src = qrServiceUrl(url);
+      qrLink.href = url;
+      qrEmpty.textContent = "";
+    } else {
+      qrImage.removeAttribute("src");
+      qrLink.removeAttribute("href");
+      qrEmpty.textContent = "La pantalla de presentación solo está disponible cuando el acceso es por enlace compartible y existe un token público.";
+    }
   }
 
   /* -------------------------------------------------------------------------
@@ -812,6 +1032,29 @@
       padding: 16px 12px; display: flex; flex-direction: column; gap: 8px;
     }
     .enc-presenter-access { padding: 12px; display: grid; gap: 10px; }
+    .enc-pres-share-actions { display: flex; }
+    .enc-pres-qr-panel {
+      display: grid;
+      gap: 10px;
+      padding: 12px;
+      border: 1px solid var(--enc-line, #e5e7eb);
+      border-radius: 16px;
+      background: color-mix(in srgb, var(--enc-surface, #ffffff) 84%, #f8fafc 16%);
+      justify-items: center;
+      text-align: center;
+    }
+    .enc-pres-qr-image {
+      display: block;
+      width: min(100%, 220px);
+      aspect-ratio: 1;
+      object-fit: contain;
+      padding: 10px;
+      border-radius: 18px;
+      background: #ffffff;
+      border: 1px solid var(--enc-line, #e5e7eb);
+      box-shadow: 0 16px 36px rgba(15, 23, 42, 0.08);
+    }
+    .enc-pres-qr-panel .enc-button { width: 100%; justify-content: center; }
     .enc-presenter-results { border-right: none; border-left: 1px solid var(--enc-line, #e5e7eb); }
     .enc-pres-results-head { display: grid; gap: 8px; }
     .enc-pres-results-controls { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -845,12 +1088,15 @@
     .enc-pres-q-desc { font-size: 14px; color: var(--enc-muted, #6b7280); margin: 0; }
     .enc-pres-nav-buttons { display: flex; align-items: center; gap: 8px; }
     .enc-pres-nav-buttons .enc-button:first-child { margin-right: auto; }
+    #enc-pres-active-panel {
+      position: relative;
+    }
     .enc-pres-page-stage.is-presentation-mode {
       padding: 0;
       border: none;
       background: transparent;
       box-shadow: none;
-      overflow: hidden;
+      overflow: auto;
       min-height: min(70vh, 860px);
     }
     .enc-pres-page-stage.is-presentation-mode .enc-presentation-stage {
@@ -859,6 +1105,40 @@
     .enc-pres-page-stage.is-presentation-mode .enc-presentation-stage-ratio {
       min-height: min(70vh, 860px);
     }
+    .enc-pres-presentation-nav {
+      position: absolute;
+      inset: 0;
+      z-index: 8;
+      display: block;
+      pointer-events: none;
+    }
+    .enc-pres-presentation-arrow {
+      position: absolute;
+      top: 50%;
+      width: 58px;
+      height: 58px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.82);
+      color: #ffffff;
+      font-size: 34px;
+      line-height: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.24);
+      pointer-events: auto;
+      transition: transform 0.18s ease, background 0.18s ease, opacity 0.18s ease;
+      transform: translateY(-50%);
+    }
+    .enc-pres-presentation-arrow:hover {
+      background: rgba(15, 23, 42, 0.94);
+      transform: translateY(-50%) scale(1.04);
+    }
+    .enc-pres-presentation-arrow.is-prev { left: 18px; }
+    .enc-pres-presentation-arrow.is-next { right: 18px; }
+    .enc-pres-presentation-arrow[hidden] { display: none; }
     .enc-pres-results-total { font-size: 14px; margin: 0 0 12px; }
     .enc-pres-bar-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
     .enc-pres-bar-item { display: flex; flex-direction: column; gap: 4px; }
@@ -908,10 +1188,71 @@
       display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px;
     }
     .enc-presentation-results-item.is-chart { display: grid; gap: 6px; }
+    .enc-presentation-results-item.is-list {
+      padding: 10px 12px; border: 1px solid var(--enc-line, #e5e7eb); border-radius: 14px; background: rgba(255,255,255,0.78);
+    }
+    .enc-presentation-results-donut-wrap {
+      display: grid; grid-template-columns: minmax(140px, 180px) minmax(0, 1fr); gap: 14px; align-items: center;
+    }
+    .enc-presentation-results-donut {
+      width: min(180px, 100%); aspect-ratio: 1; margin: 0 auto; border-radius: 999px; display: grid; place-items: center;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.35), 0 18px 40px rgba(15,23,42,0.08);
+    }
+    .enc-presentation-results-donut-core {
+      width: 62%; aspect-ratio: 1; border-radius: 999px; background: rgba(255,255,255,0.96); display: grid; place-items: center; gap: 2px; text-align: center;
+    }
+    .enc-presentation-results-donut-core strong { font-size: 22px; }
+    .enc-presentation-results-donut-core span { font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--enc-muted, #6b7280); }
+    .enc-presentation-results-legend { display: grid; gap: 8px; }
+    .enc-presentation-results-legend-item {
+      display: grid; grid-template-columns: 12px minmax(0, 1fr) auto; gap: 10px; align-items: center;
+      padding: 8px 10px; border-radius: 12px; background: rgba(255,255,255,0.72);
+    }
+    .enc-presentation-results-swatch { width: 12px; height: 12px; border-radius: 999px; }
     .enc-pres-results-waiting { font-size: 13px; }
     :fullscreen .enc-presenter-results,
     :fullscreen #enc-pres-results-panel {
       background: #fff;
+    }
+    #enc-pres-active-panel:fullscreen {
+      width: 100vw;
+      height: 100vh;
+      padding: 0;
+      margin: 0;
+      background: #000;
+      position: relative;
+      overflow: auto;
+    }
+    #enc-pres-active-panel:fullscreen .enc-pres-current-question,
+    #enc-pres-active-panel:fullscreen .enc-pres-nav-buttons {
+      display: none;
+    }
+    #enc-pres-active-panel:fullscreen .enc-pres-page-stage {
+      display: block !important;
+      width: 100vw;
+      height: 100vh;
+      min-height: 100vh;
+      margin: 0;
+      padding: 0;
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      box-shadow: none;
+    }
+    #enc-pres-active-panel:fullscreen .enc-presentation-stage,
+    #enc-pres-active-panel:fullscreen .enc-presentation-stage-ratio,
+    #enc-pres-active-panel:fullscreen .enc-presentation-stage-canvas {
+      width: 100%;
+      height: 100%;
+      min-height: 100vh;
+      max-width: none;
+    }
+    #enc-pres-active-panel:fullscreen .enc-presentation-stage-ratio {
+      padding-top: 0;
+    }
+    #enc-pres-active-panel:fullscreen .enc-presentation-stage-canvas {
+      border-radius: 0;
+      box-shadow: none;
     }
     :fullscreen.enc-presentation-stage {
       width: 100vw;
@@ -946,6 +1287,87 @@
     :fullscreen .enc-pres-data-row,
     :fullscreen .enc-pres-text-item { font-size: 18px; }
     :fullscreen .enc-pres-results-total { font-size: 24px; }
+    @media (max-width: 1080px) {
+      .enc-presenter-body {
+        grid-template-columns: 1fr;
+        overflow: auto;
+      }
+      .enc-presenter-sidebar,
+      .enc-presenter-results {
+        border-left: none;
+        border-right: none;
+        border-bottom: 1px solid var(--enc-line, #e5e7eb);
+      }
+      .enc-presenter-center {
+        order: 1;
+      }
+      .enc-presenter-sidebar {
+        order: 2;
+      }
+      .enc-presenter-results {
+        order: 3;
+        border-bottom: none;
+      }
+      .enc-pres-page-stage.is-presentation-mode {
+        min-height: min(62vh, 760px);
+      }
+      .enc-pres-page-stage.is-presentation-mode .enc-presentation-stage-ratio {
+        min-height: min(62vh, 760px);
+      }
+    }
+    @media (max-width: 720px) {
+      .enc-presenter-header {
+        flex-wrap: wrap;
+        align-items: stretch;
+      }
+      .enc-presenter-header-left,
+      .enc-presenter-header-right {
+        width: 100%;
+        flex-wrap: wrap;
+      }
+      .enc-presenter-header-right .enc-button {
+        flex: 1 1 160px;
+      }
+      .enc-presenter-center,
+      .enc-presenter-sidebar,
+      .enc-presenter-results {
+        padding: 14px 12px;
+      }
+      .enc-pres-current-question {
+        padding: 18px;
+      }
+      .enc-pres-page-stage.is-presentation-mode {
+        min-height: min(72svh, 640px);
+      }
+      .enc-pres-page-stage.is-presentation-mode .enc-presentation-stage-ratio {
+        min-height: min(72svh, 640px);
+      }
+      .enc-pres-page-stage.is-presentation-mode .enc-presentation-stage-canvas {
+        padding: 12px;
+      }
+      .enc-pres-q-titulo {
+        font-size: 18px;
+      }
+      .enc-pres-data-row {
+        grid-template-columns: 1fr auto;
+      }
+      .enc-pres-data-row small {
+        grid-column: 1 / -1;
+      }
+      .enc-presentation-question-tools,
+      .enc-presentation-results-copy,
+      .enc-presentation-results-item {
+        flex-wrap: wrap;
+      }
+      .enc-pres-qr-image { width: min(100%, 180px); }
+      .enc-pres-presentation-arrow {
+        width: 48px;
+        height: 48px;
+        font-size: 28px;
+      }
+      .enc-pres-presentation-arrow.is-prev { left: 10px; }
+      .enc-pres-presentation-arrow.is-next { right: 10px; }
+    }
     .enc-button-danger {
       background: #ef4444; color: #fff; border: none; border-radius: 8px;
       padding: 8px 16px; font-size: 14px; font-weight: 500; cursor: pointer;

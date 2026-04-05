@@ -6,6 +6,8 @@ class UserType(str, enum.Enum):
     superadmin = "superadmin"
     vendor = "vendor"
     customer = "customer"
+    store_employee = "store_employee"
+    financial_analyst = "financial_analyst"
 
 class User(Base):
     __tablename__ = "users"

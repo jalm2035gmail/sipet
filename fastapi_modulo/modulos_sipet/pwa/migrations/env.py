@@ -7,6 +7,9 @@ from app.core.database import Base
 
 # import all models so Alembic detects them
 from app.models import user  # noqa: F401
+import models.sipet          # noqa: F401
+import models.conversation   # noqa: F401
+import models.notification   # noqa: F401
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)

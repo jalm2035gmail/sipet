@@ -1,17 +1,88 @@
 from __future__ import annotations
 
+import enum
 import random
 import string
-from datetime import datetime, date
+from datetime import date, datetime
 from typing import Optional
 
 from sqlalchemy import (
-    Boolean, Column, DateTime, Date, Float, ForeignKey,
-    Integer, Numeric, String, Text, func, inspect, text,
+    Boolean,
+    Column,
+    Date,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    Numeric,
+    String,
+    Text,
+    func,
+    inspect,
+    text,
 )
+from sqlalchemy import Enum as SAEnum
 from sqlalchemy.orm import relationship
 
 from fastapi_modulo.core.db import MAIN, get_current_engine
+
+class BlacklistReferido(MAIN):
+    """Blacklist de referidos y referentes por motivos de exclusión o fraude."""
+    __tablename__ = "ref_blacklist"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    phone = Column(String(50), index=True)
+    email = Column(String(255), index=True)
+    motivo = Column(String(255))
+    created_at = Column(DateTime, default=func.now())
+    created_by = Column(Integer, nullable=True)
+
+class RevisionManual(MAIN):
+    """Cola de revisión manual de referidos sospechosos o excluidos."""
+    __tablename__ = "ref_revision_manual"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    referido_id = Column(Integer, ForeignKey("ref_referido.id"), nullable=False)
+    motivo = Column(String(255))
+    estado = Column(String(20), default="pendiente")  # pendiente, revisado, descartado
+    created_at = Column(DateTime, default=func.now())
+    reviewed_by = Column(Integer, nullable=True)
+class ReferidoState(enum.Enum):
+    draft = "draft"
+    qualified = "qualified"
+    converted = "converted"
+    paid = "paid"
+    rejected = "rejected"
+
+class AmbassadorState(enum.Enum):
+    active = "active"
+    suspended = "suspended"
+    blocked = "blocked"
+    inactive = "inactive"
+
+class AmbassadorRequestState(enum.Enum):
+    pending = "pending"
+    approved = "approved"
+    rejected = "rejected"
+
+# Enum de roles para acceso a negocio
+class BusinessRole(enum.Enum):
+    admin_global = "admin_global"
+    admin_negocio = "admin_negocio"
+    operador = "operador"
+    embajador = "embajador"
+
+
+# Relación muchos-a-muchos usuario-negocio con rol
+class RefUserBusinessAccess(MAIN):
+    __tablename__ = "ref_user_business_access"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, nullable=False, index=True)
+    business_id = Column(Integer, ForeignKey("ref_program_assignment.id"), nullable=False, index=True)
+    role = Column(SAEnum(BusinessRole), nullable=False, index=True)
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+
+    business = relationship("RefProgramAssignment", backref="user_accesses")
 
 
 def _gen_miu_code() -> str:
@@ -89,6 +160,7 @@ class RefReferido(MAIN):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     cvr_code = Column(String(20), unique=True, index=True)  # CVR202500001
+    ambassador_code = Column(String(50), index=True)  # Código embajador
     program_assignment_id = Column(Integer, ForeignKey("ref_program_assignment.id"), nullable=True, index=True)
     referente_id = Column(Integer, ForeignKey("ref_referente.id"), nullable=False)
     referente_miu = Column(String(20), index=True)
@@ -96,7 +168,12 @@ class RefReferido(MAIN):
     email = Column(String(255), index=True)
     phone = Column(String(50), index=True)
     referral_source = Column(String(20), default="web")  # web | app | manual
-    state = Column(String(20), default="draft", index=True)  # draft|qualified|converted|paid|rejected
+    campaign_id = Column(Integer, ForeignKey("ref_campaign.id"), nullable=True)
+    ip_address = Column(String(50))
+    device_info = Column(String(255))
+    channel = Column(String(50))
+    conversion_evidence = Column(String(500))
+    state = Column(SAEnum(ReferidoState), default=ReferidoState.draft, index=True, nullable=False)
     ca_met = Column(Boolean, default=False)
     conversion_date = Column(DateTime)
     product_acquired = Column(String(255))
@@ -104,6 +181,7 @@ class RefReferido(MAIN):
     incentive_amount = Column(Numeric(12, 2), default=0)
     incentive_rule_id = Column(Integer, ForeignKey("ref_incentivo.id"), nullable=True)
     incentive_paid_date = Column(DateTime)
+    approved_by = Column(Integer, nullable=True)  # user_id que aprobó/pagó
     ambassador_id = Column(Integer, ForeignKey("ref_brand_ambassador.id"), nullable=True)
     is_excluded = Column(Boolean, default=False)
     exclusion_reason = Column(Text)
@@ -179,11 +257,16 @@ class RefBrandAmbassador(MAIN):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String(255), nullable=False)
+    code = Column(String(20), unique=True, nullable=False, index=True)
     phone = Column(String(50))
     street = Column(String(500))
     business_id = Column(Integer, ForeignKey("ref_program_assignment.id"), nullable=False)
-    state = Column(String(20), default="active")  # active | suspended | inactive
+    state = Column(SAEnum(AmbassadorState), default=AmbassadorState.active, nullable=False)
     created_at = Column(DateTime, default=func.now())
+    @property
+    def referral_link(self):
+        # Link personalizado para el embajador
+        return f"/referral/amb/{self.code}"
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 
     business = relationship("RefProgramAssignment", back_populates="ambassadors")
@@ -202,7 +285,7 @@ class RefAmbassadorRequest(MAIN):
     business_name = Column(String(255), nullable=False)
     business_slug = Column(String(255))
     business_id = Column(Integer, ForeignKey("ref_program_assignment.id"), nullable=True)
-    state = Column(String(20), default="pending")  # pending | approved | rejected
+    state = Column(SAEnum(AmbassadorRequestState), default=AmbassadorRequestState.pending, nullable=False)
     notes = Column(Text)
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
@@ -221,6 +304,15 @@ def ensure_referidos_schema(bind=None) -> None:
     RefReferido.__table__.create(bind=target, checkfirst=True)
     RefTrackingEvent.__table__.create(bind=target, checkfirst=True)
     RefRegistro.__table__.create(bind=target, checkfirst=True)
+    RefUserBusinessAccess.__table__.create(bind=target, checkfirst=True)
+    # Integración nuevas tablas
+    try:
+        from fastapi_modulo.modulos.referidos.modelos.campaign import RefCampaign
+        from fastapi_modulo.modulos.referidos.modelos.settlement import RefSettlement
+        RefCampaign.__table__.create(bind=target, checkfirst=True)
+        RefSettlement.__table__.create(bind=target, checkfirst=True)
+    except Exception as e:
+        print(f"[referidos] warning al crear tablas campaign/settlement: {e}")
     inspector = inspect(target)
     referido_columns = {column["name"] for column in inspector.get_columns("ref_referido")}
     if "program_assignment_id" not in referido_columns:

@@ -6,6 +6,51 @@ from types import SimpleNamespace
 from fastapi_modulo.modulos_sipet.aplicaciones.servicios import catalog_service
 
 
+def test_get_cached_architecture_report_uses_cached_payload(monkeypatch) -> None:
+    monkeypatch.setattr(
+        catalog_service,
+        "get_cached_payload",
+        lambda namespace, identifier: {
+            "architecture_ok": False,
+            "architecture_errors": [{"code": "cached", "message": "cached", "path": "/tmp/a.py"}],
+            "architecture_warnings": [],
+            "validated_at": "2026-04-02T12:00:00+00:00",
+        },
+    )
+    monkeypatch.setattr(catalog_service, "get_latest_registry_audit", lambda module_key, action: (_ for _ in ()).throw(AssertionError("db should not run")))
+    monkeypatch.setattr(catalog_service, "get_module_architecture_report", lambda module_key, target_root=None: (_ for _ in ()).throw(AssertionError("compute should not run")))
+
+    payload = catalog_service.get_cached_architecture_report("crm", "/tmp/crm")
+
+    assert payload["architecture_ok"] is False
+    assert payload["architecture_errors"][0]["code"] == "cached"
+    assert payload["validated_at"] == "2026-04-02T12:00:00+00:00"
+
+
+def test_get_cached_architecture_report_recomputes_when_refresh_is_true(monkeypatch) -> None:
+    persisted_payloads: list[dict] = []
+    monkeypatch.setattr(catalog_service, "get_cached_payload", lambda namespace, identifier: {"architecture_ok": True, "architecture_errors": [], "architecture_warnings": [], "validated_at": "stale"})
+    monkeypatch.setattr(catalog_service, "get_latest_registry_audit", lambda module_key, action: None)
+    monkeypatch.setattr(
+        catalog_service,
+        "get_module_architecture_report",
+        lambda module_key, target_root=None: {
+            "architecture_ok": False,
+            "architecture_errors": [{"code": "fresh", "message": "fresh", "path": "/tmp/b.py"}],
+            "architecture_warnings": [],
+        },
+    )
+    monkeypatch.setattr(catalog_service, "create_registry_audit", lambda **kwargs: persisted_payloads.append(kwargs["payload"]))
+    monkeypatch.setattr(catalog_service, "set_cached_payload", lambda namespace, identifier, payload, ttl_seconds: None)
+
+    payload = catalog_service.get_cached_architecture_report("crm", "/tmp/crm", refresh=True)
+
+    assert payload["architecture_ok"] is False
+    assert payload["architecture_errors"][0]["code"] == "fresh"
+    assert payload["validated_at"]
+    assert persisted_payloads[0]["architecture_errors"][0]["code"] == "fresh"
+
+
 def test_decorate_modules_payload_marks_upload_root_and_state(monkeypatch) -> None:
     monkeypatch.setattr(
         catalog_service,

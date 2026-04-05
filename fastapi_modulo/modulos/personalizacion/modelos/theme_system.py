@@ -13,6 +13,9 @@ MAIN_THEME_KEYS = (
     "navbar-bg",
     "button-bg",
     "field-color",
+    "screen-bg",
+    "panel-1-bg",
+    "panel-2-bg",
 )
 
 DEFAULT_MAIN_THEME: Dict[str, str] = {
@@ -21,6 +24,9 @@ DEFAULT_MAIN_THEME: Dict[str, str] = {
     "navbar-bg":      "#ffffff",
     "button-bg":      "#0f172a",
     "field-color":    "#ffffff",
+    "screen-bg":      "#f4f6fb",
+    "panel-1-bg":     "#ffffff",
+    "panel-2-bg":     "#f8fafc",
 }
 
 _HEX_COLOR_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
@@ -149,7 +155,7 @@ sanitize_MAIN_theme = sanitize_main_theme
 
 def build_institutional_theme(raw_colors: Dict[str, str] | None = None) -> Dict[str, str]:
     """
-    Construye el tema institucional completo a partir de los 5 colores MAIN.
+    Construye el tema institucional completo a partir de los colores MAIN.
     Si raw_colors está vacío o None, usa data/colores.json como fallback
     antes de caer en DEFAULT_MAIN_THEME.
     """
@@ -159,12 +165,18 @@ def build_institutional_theme(raw_colors: Dict[str, str] | None = None) -> Dict[
     navbar_bg      = MAIN["navbar-bg"]
     button_bg      = MAIN["button-bg"]
     field_color    = MAIN["field-color"]
+    screen_bg      = MAIN["screen-bg"]
+    panel_1_bg     = MAIN["panel-1-bg"]
+    panel_2_bg     = MAIN["panel-2-bg"]
 
     sidebar_top_opposite    = complementary_hex_color(sidebar_top)
     sidebar_bottom_opposite = complementary_hex_color(sidebar_bottom)
     navbar_bg_opposite      = complementary_hex_color(navbar_bg)
     button_bg_opposite      = complementary_hex_color(button_bg)
     field_color_opposite    = complementary_hex_color(field_color)
+    screen_bg_opposite      = complementary_hex_color(screen_bg)
+    panel_1_bg_opposite     = complementary_hex_color(panel_1_bg)
+    panel_2_bg_opposite     = complementary_hex_color(panel_2_bg)
 
     sidebar_text = readable_text_color(mix_hex_colors(sidebar_top, sidebar_bottom, 0.5))
     navbar_text  = readable_text_color(navbar_bg)
@@ -181,11 +193,21 @@ def build_institutional_theme(raw_colors: Dict[str, str] | None = None) -> Dict[
         "field-text":    field_text,
         "field-border":  mix_hex_colors(field_color, field_color_opposite, 0.22),
         "field-focus":   mix_hex_colors(button_bg, button_bg_opposite, 0.22),
-        "page-bg":       mix_hex_colors(navbar_bg, navbar_bg_opposite, 0.08),
+        "screen-text":   readable_text_color(screen_bg),
+        "panel-1-text":  readable_text_color(panel_1_bg),
+        "panel-2-text":  readable_text_color(panel_2_bg),
+        "page-bg":       screen_bg,
         "content-bg":    adjust_lightness(
             field_color,
             0.02 if readable_text_color(field_color) == "#0f172a" else -0.02,
         ),
+        "module-screen-bg": screen_bg,
+        "module-panel-1-bg": panel_1_bg,
+        "module-panel-2-bg": panel_2_bg,
+        "module-panel-1-border": mix_hex_colors(panel_1_bg, panel_1_bg_opposite, 0.14),
+        "module-panel-2-border": mix_hex_colors(panel_2_bg, panel_2_bg_opposite, 0.18),
+        "module-panel-1-shadow": mix_hex_colors(panel_1_bg_opposite, sidebar_bottom, 0.18),
+        "module-panel-2-shadow": mix_hex_colors(panel_2_bg_opposite, sidebar_bottom, 0.24),
         "body-text":       mix_hex_colors(field_text, navbar_text, 0.2),
         "page-title-color": sidebar_bottom,
         "sidebar-top-opposite":    sidebar_top_opposite,
@@ -193,11 +215,15 @@ def build_institutional_theme(raw_colors: Dict[str, str] | None = None) -> Dict[
         "navbar-bg-opposite":      navbar_bg_opposite,
         "button-bg-opposite":      button_bg_opposite,
         "field-color-opposite":    field_color_opposite,
+        "screen-bg-opposite":      screen_bg_opposite,
+        "panel-1-bg-opposite":     panel_1_bg_opposite,
+        "panel-2-bg-opposite":     panel_2_bg_opposite,
         "institutional-accent":          sidebar_bottom,
         "institutional-accent-contrast": sidebar_bottom_opposite,
         "institutional-navbar-accent":   navbar_bg_opposite,
         "institutional-button-hover":    mix_hex_colors(button_bg, button_bg_opposite, 0.14),
         "institutional-button-active":   mix_hex_colors(button_bg, button_bg_opposite, 0.22),
         "institutional-field-soft":      mix_hex_colors(field_color, field_color_opposite, 0.08),
-        "institutional-panel-soft":      mix_hex_colors(navbar_bg, sidebar_bottom_opposite, 0.05),
+        "institutional-panel-soft":      mix_hex_colors(panel_1_bg, sidebar_bottom_opposite, 0.05),
+        "institutional-panel-strong":    mix_hex_colors(panel_2_bg, sidebar_bottom_opposite, 0.08),
     }

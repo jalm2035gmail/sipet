@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from fastapi_modulo.modulos.intelicoop.modelos.store_legacy import (
+    get_aggregate_consumption_summary,
     get_cohortes,
     get_dashboard_resumen,
     get_descriptive_analytics,
@@ -10,6 +11,7 @@ from fastapi_modulo.modulos.intelicoop.modelos.store_legacy import (
 )
 
 __all__ = [
+    "get_aggregate_consumption_summary",
     "get_descriptive_analytics",
     "get_tendencias",
     "get_cohortes",

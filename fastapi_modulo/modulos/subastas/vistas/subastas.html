@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Subastas | SIPET</title>
+  <link rel="stylesheet" href="/subastas/static/css/subastas.css" />
+</head>
+<body>
+<div class="page">
+
+  <!-- ── Header ─────────────────────────────────────────────────────────── -->
+  <header class="app-header">
+    <div>
+      <p class="app-eyebrow">SIPET · Comercial</p>
+      <h1 class="app-title">Módulo de Subastas</h1>
+      <p class="app-subtitle">Administra subastas, lotes, postores, pujas, adjudicaciones y entregas.</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-ghost" id="btnRefresh" title="Actualizar datos">↻ Actualizar</button>
+      <button class="btn btn-primary" id="btnNuevaSubasta">+ Nueva subasta</button>
+    </div>
+  </header>
+
+  <!-- ── KPIs ───────────────────────────────────────────────────────────── -->
+  <section class="kpi-grid" id="kpiGrid">
+    <article class="kpi-card">
+      <span class="kpi-label">Total subastas</span>
+      <strong class="kpi-value" id="kpiTotal">{{ total_auctions }}</strong>
+    </article>
+    <article class="kpi-card kpi-accent">
+      <span class="kpi-label">Activas / En curso</span>
+      <strong class="kpi-value" id="kpiLive">{{ live_auctions }}</strong>
+    </article>
+    <article class="kpi-card kpi-blue">
+      <span class="kpi-label">Adjudicadas</span>
+      <strong class="kpi-value" id="kpiAwarded">{{ awarded_auctions }}</strong>
+      <span class="kpi-sub" id="kpiConversion"></span>
+    </article>
+    <article class="kpi-card kpi-yellow">
+      <span class="kpi-label">Postores</span>
+      <strong class="kpi-value" id="kpiBidders">{{ total_bidders }}</strong>
+    </article>
+    <article class="kpi-card">
+      <span class="kpi-label">Monto adjudicado</span>
+      <strong class="kpi-value text-accent" id="kpiAmount">$<span id="kpiAmountVal">{{ awarded_amount }}</span></strong>
+      <span class="kpi-sub text-yellow" id="kpiPending"></span>
+    </article>
+  </section>
+
+  <!-- ── Tabs ───────────────────────────────────────────────────────────── -->
+  <nav class="tabs" id="mainTabs">
+    <button class="tab-btn active" data-tab="subastas">Subastas</button>
+    <button class="tab-btn" data-tab="postores">Postores</button>
+    <button class="tab-btn" data-tab="adjudicaciones">Adjudicaciones</button>
+  </nav>
+
+  <!-- ═══ TAB: Subastas ═══════════════════════════════════════════════════ -->
+  <section class="tab-panel active" id="tab-subastas">
+    <div class="card">
+      <div class="card-head">
+        <span class="card-title">Subastas</span>
+        <div class="gap-row">
+          <select id="filterState" class="btn btn-ghost btn-sm" style="width:auto">
+            <option value="">Todos los estados</option>
+            <option value="draft">Borrador</option>
+            <option value="scheduled">Programada</option>
+            <option value="published">Publicada</option>
+            <option value="live">En curso</option>
+            <option value="suspended">Suspendida</option>
+            <option value="closed">Cerrada</option>
+            <option value="awarded">Adjudicada</option>
+            <option value="deserted">Desierta</option>
+            <option value="cancelled">Cancelada</option>
+          </select>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Nombre</th>
+              <th>Estado</th>
+              <th>Tipo</th>
+              <th>Inicio</th>
+              <th>Cierre</th>
+              <th>Tiempo restante</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="auctionRows">{{ auctions_rows }}</tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ TAB: Postores ═══════════════════════════════════════════════════ -->
+  <section class="tab-panel" id="tab-postores">
+    <div class="layout-2col">
+
+      <!-- Formulario nuevo postor -->
+      <div class="card">
+        <div class="card-head"><span class="card-title">Registrar postor</span></div>
+        <form class="form-grid" id="bidderForm">
+          <div class="grid-2">
+            <label class="field">Nombre completo<input name="full_name" required placeholder="Juan García" /></label>
+            <label class="field">Email<input name="email" type="email" required placeholder="juan@empresa.com" /></label>
+            <label class="field">Teléfono<input name="phone" placeholder="+52 55 0000 0000" /></label>
+            <label class="field">Identificación<input name="document_id" placeholder="INE / RFC / Pasaporte" /></label>
+          </div>
+          <label class="field">Depósito de garantía
+            <input name="guarantee_amount" type="number" step="0.01" value="0" min="0" />
+          </label>
+          <button class="btn btn-primary" type="submit">Guardar postor</button>
+          <p class="feedback" id="bidderFeedback"></p>
+        </form>
+      </div>
+
+      <!-- Lista de postores -->
+      <div class="card">
+        <div class="card-head">
+          <span class="card-title">Postores registrados</span>
+          <div class="gap-row">
+            <select id="filterBidderState" class="btn btn-ghost btn-sm" style="width:auto">
+              <option value="">Todos</option>
+              <option value="pending">Pendiente</option>
+              <option value="approved">Aprobado</option>
+              <option value="rejected">Rechazado</option>
+              <option value="suspended">Suspendido</option>
+            </select>
+            <button class="btn btn-ghost btn-sm" id="btnLoadBidders">Cargar</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th><th>Nombre</th><th>Email</th><th>Estado</th><th>Acción</th>
+              </tr>
+            </thead>
+            <tbody id="bidderRows">
+              <tr class="empty-row"><td colspan="5">Haz clic en "Cargar" para ver postores.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ═══ TAB: Adjudicaciones ═════════════════════════════════════════════ -->
+  <section class="tab-panel" id="tab-adjudicaciones">
+    <div class="card">
+      <div class="card-head">
+        <span class="card-title">Adjudicaciones</span>
+        <div class="gap-row">
+          <select id="filterAwardState" class="btn btn-ghost btn-sm" style="width:auto">
+            <option value="">Todos</option>
+            <option value="awarded">Adjudicada</option>
+            <option value="payment_pending">Pago pendiente</option>
+            <option value="paid">Pagada</option>
+            <option value="expired">Vencida</option>
+            <option value="cancelled">Cancelada</option>
+            <option value="reassigned">Reasignada</option>
+          </select>
+          <button class="btn btn-ghost btn-sm" id="btnLoadAwards">Cargar</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th><th>Subasta</th><th>Postor ID</th><th>Monto final</th>
+              <th>Estado</th><th>Vence</th><th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="awardRows">
+            <tr class="empty-row"><td colspan="7">Haz clic en "Cargar" para ver adjudicaciones.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Registrar pago (inline) -->
+    <div class="card" id="paymentPanel" style="display:none; margin-top:18px;">
+      <div class="card-head">
+        <span class="card-title">Registrar pago — Adjudicación <span id="payAwardId"></span></span>
+        <button class="btn btn-ghost btn-sm" id="btnClosePayment">✕</button>
+      </div>
+      <form class="form-grid" id="paymentForm">
+        <div class="grid-3">
+          <label class="field">Monto<input name="amount" type="number" step="0.01" min="0.01" required /></label>
+          <label class="field">Método
+            <select name="method">
+              <option value="efectivo">Efectivo</option>
+              <option value="transferencia">Transferencia</option>
+              <option value="cheque">Cheque</option>
+              <option value="tarjeta">Tarjeta</option>
+              <option value="otro">Otro</option>
+            </select>
+          </label>
+          <label class="field">Referencia<input name="reference" placeholder="Núm. operación" /></label>
+        </div>
+        <button class="btn btn-primary" type="submit">Registrar pago</button>
+        <p class="feedback" id="paymentFeedback"></p>
+      </form>
+    </div>
+  </section>
+
+</div><!-- /.page -->
+
+<!-- ══════════════════════════════════════════════════════════════════════════
+     MODAL: Nueva subasta
+     ══════════════════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modalNuevaSubasta">
+  <div class="modal">
+    <div class="modal-head">
+      <span class="modal-title">Nueva subasta</span>
+      <button class="btn btn-ghost btn-sm" id="btnCerrarModal">✕</button>
+    </div>
+    <form class="form-grid" id="auctionForm">
+      <div class="grid-2">
+        <label class="field" style="grid-column:1/-1">
+          Nombre <input name="name" required placeholder="Subasta de activos recuperados" />
+        </label>
+        <label class="field">Tipo
+          <select name="auction_type">
+            <option value="ascending">Ascendente clásica</option>
+            <option value="lot">Por lote</option>
+            <option value="silent">Silenciosa</option>
+            <option value="flash">Relámpago</option>
+          </select>
+        </label>
+        <label class="field">Visibilidad
+          <select name="visibility">
+            <option value="public">Pública</option>
+            <option value="private">Privada</option>
+          </select>
+        </label>
+        <label class="field">Moneda<input name="currency" value="MXN" required /></label>
+        <label class="field">Incremento mínimo
+          <input name="min_increment" type="number" step="0.01" value="10" min="0" required />
+        </label>
+        <label class="field">Precio de reserva
+          <input name="reserve_price" type="number" step="0.01" min="0" placeholder="Opcional" />
+        </label>
+        <label class="field">Ext. automática (seg)
+          <input name="auto_extend_seconds" type="number" value="0" min="0" />
+        </label>
+        <label class="field">Inicio<input name="start_at" type="datetime-local" /></label>
+        <label class="field">Cierre<input name="end_at" type="datetime-local" /></label>
+      </div>
+      <label class="field">Descripción
+        <textarea name="description" placeholder="Condiciones, activos incluidos, observaciones..."></textarea>
+      </label>
+      <label class="field">Términos y condiciones
+        <textarea name="terms" placeholder="Reglamento o políticas de la subasta..."></textarea>
+      </label>
+      <button class="btn btn-primary" type="submit">Crear subasta</button>
+      <p class="feedback" id="auctionFeedback"></p>
+    </form>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════════
+     DRAWER: Detalle de subasta
+     ══════════════════════════════════════════════════════════════════════ -->
+<div class="detail-overlay" id="drawerOverlay">
+  <div class="detail-drawer" id="detailDrawer">
+
+    <div class="drawer-head">
+      <div>
+        <div class="drawer-title" id="drawerTitle">—</div>
+        <div class="gap-row" style="margin-top:8px;">
+          <span id="drawerBadge"></span>
+          <span class="text-muted" style="font-size:.82rem;" id="drawerType"></span>
+        </div>
+      </div>
+      <button class="btn btn-ghost btn-sm drawer-close" id="btnCerrarDrawer">✕</button>
+    </div>
+
+    <!-- Datos generales -->
+    <div class="drawer-section">
+      <div class="drawer-section-title">Datos de la subasta</div>
+      <div class="grid-2" style="font-size:.88rem; gap:10px;" id="drawerMeta"></div>
+    </div>
+
+    <!-- Timer -->
+    <div class="drawer-section" id="drawerTimerSection" style="display:none;">
+      <div class="drawer-section-title">Tiempo restante</div>
+      <div class="timer" id="drawerTimer">—</div>
+    </div>
+
+    <!-- Mejor puja -->
+    <div class="drawer-section">
+      <div class="drawer-section-title">Mejor puja actual</div>
+      <div class="gap-row">
+        <span style="font-size:1.5rem; font-weight:800; color:var(--accent);" id="drawerHighestBid">$0</span>
+        <span class="text-muted" id="drawerBidsCount"></span>
+      </div>
+    </div>
+
+    <!-- Lotes -->
+    <div class="drawer-section">
+      <div class="drawer-section-title">Lotes (<span id="drawerLotsCount">0</span>)</div>
+      <div id="drawerLots" class="text-muted" style="font-size:.88rem;">Sin lotes.</div>
+    </div>
+
+    <!-- Historial de pujas -->
+    <div class="drawer-section">
+      <div class="drawer-section-title">Historial de pujas (últimas 20)</div>
+      <div class="bid-feed" id="drawerBids">
+        <div class="loading">Cargando...</div>
+      </div>
+    </div>
+
+    <!-- Acciones -->
+    <div class="drawer-section">
+      <div class="drawer-section-title">Acciones</div>
+      <div class="gap-row" id="drawerActions"></div>
+      <p class="feedback" id="drawerFeedback" style="margin-top:8px;"></p>
+    </div>
+
+  </div>
+</div>
+
+<script src="/subastas/static/js/subastas.js"></script>
+</body>
+</html>

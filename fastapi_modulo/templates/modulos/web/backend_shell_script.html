@@ -19,6 +19,7 @@
             const usuarioPanel = document.getElementById('usuario-panel');
             const identitySidebarStyleSwitch = document.getElementById('identity-sidebar-style-switch');
             const identitySidebarStyleLabel = document.getElementById('identity-sidebar-style-label');
+            const serverSidebarStyleVariant = {{ (sidebar_style_variant | default('modern', true) | tojson) | safe }};
             const applySidebarStyleVariant = (variant) => {
                 const modern = variant === 'modern';
                 document.documentElement.classList.toggle('ui-sidebar-modern', modern);
@@ -30,9 +31,9 @@
                 }
             };
             try {
-                applySidebarStyleVariant(window.localStorage.getItem('sipet_sidebar_style_variant') || 'modern');
+                applySidebarStyleVariant(window.localStorage.getItem('sipet_sidebar_style_variant') || serverSidebarStyleVariant || 'modern');
             } catch (e) {
-                applySidebarStyleVariant('modern');
+                applySidebarStyleVariant(serverSidebarStyleVariant || 'modern');
             }
             if (identitySidebarStyleSwitch) {
                 identitySidebarStyleSwitch.addEventListener('change', () => {

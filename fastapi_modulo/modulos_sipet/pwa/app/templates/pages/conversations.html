@@ -1,0 +1,75 @@
+{% extends "app_base.html" %}
+
+{% block title %}Conversaciones · {{ app_name }}{% endblock %}
+{% block topbar_title %}Conversaciones{% endblock %}
+{% block nav_conversations %}nav-active{% endblock %}
+
+{% block content %}
+<div class="page-toolbar">
+  <button class="btn btn-primary btn-sm" id="new-conv-btn" type="button">+ Nueva</button>
+</div>
+
+<div id="conv-list" class="conv-list">
+  <p class="loading-text">Cargando conversaciones…</p>
+</div>
+
+<!-- Modal: nueva conversación -->
+<dialog class="modal" id="new-conv-modal">
+  <form class="modal-form" id="new-conv-form" method="dialog">
+    <h2 class="modal-title">Nueva conversación</h2>
+
+    <label class="field">
+      <span>Título</span>
+      <input type="text" name="title" placeholder="P. ej. Seguimiento actividad 12" required />
+    </label>
+    <label class="field">
+      <span>Tipo</span>
+      <select name="type">
+        <option value="group">Grupo</option>
+        <option value="activity">Actividad</option>
+        <option value="delivery">Entrega</option>
+        <option value="direct">Directo</option>
+      </select>
+    </label>
+
+    <div class="modal-actions">
+      <button type="button" class="btn btn-ghost" id="cancel-conv-btn">Cancelar</button>
+      <button type="submit" class="btn btn-primary">Crear</button>
+    </div>
+  </form>
+</dialog>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="/static/js/conversations.js"></script>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    ConvApp.init("conv-list");
+
+    const modal = document.getElementById("new-conv-modal");
+    document.getElementById("new-conv-btn").addEventListener("click", () => modal.showModal());
+    document.getElementById("cancel-conv-btn").addEventListener("click", () => modal.close());
+
+    document.getElementById("new-conv-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const body = { type: fd.get("type"), title: fd.get("title") };
+      try {
+        const res = await apiFetch("/api/v2/pwa/conversations", {
+          method: "POST",
+          body: JSON.stringify(body),
+        });
+        if (!res.ok) throw new Error("Error al crear conversación");
+        const conv = await res.json();
+        modal.close();
+        window.location.href = `/conversations/${conv.id}`;
+      } catch (err) {
+        toast(err.message, "error");
+      }
+    });
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,162 @@
+{% extends "app_base.html" %}
+
+{% block title %}Actividades · {{ app_name }}{% endblock %}
+{% block topbar_title %}Actividades{% endblock %}
+{% block nav_activities %}nav-active{% endblock %}
+
+{% block content %}
+<div class="page-toolbar">
+  <input class="search-input" id="activity-search" type="search" placeholder="Buscar actividad…" />
+</div>
+
+<div class="status-tabs">
+  <button class="status-tab tab-active" data-status="">Todas</button>
+  <button class="status-tab" data-status="pending">Pendientes</button>
+  <button class="status-tab" data-status="in_progress">En curso</button>
+  <button class="status-tab" data-status="completed">Completadas</button>
+</div>
+
+<div id="activity-list" class="activity-list">
+  <p class="loading-text">Cargando actividades…</p>
+</div>
+
+<!-- Evidence upload modal -->
+<dialog class="modal" id="evidence-modal">
+  <form class="modal-form" id="evidence-form" enctype="multipart/form-data">
+    <h2 class="modal-title">Cargar evidencia</h2>
+    <input type="hidden" id="evidence-activity-id" name="activity_id" />
+
+    <label class="field">
+      <span>Título</span>
+      <input type="text" name="title" required placeholder="Descripción breve" />
+    </label>
+    <label class="field">
+      <span>Nota</span>
+      <textarea name="note" rows="2" placeholder="Opcional"></textarea>
+    </label>
+    <label class="field">
+      <span>Archivo</span>
+      <input type="file" name="file" required />
+    </label>
+
+    <div class="modal-actions">
+      <button type="button" class="btn btn-ghost" id="cancel-evidence-btn">Cancelar</button>
+      <button type="submit" class="btn btn-primary">Subir</button>
+    </div>
+  </form>
+</dialog>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="/static/js/sipet_dashboard.js"></script>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  let _allActivities = [];
+  let _activeStatus = "";
+
+  async function loadAllActivities() {
+    // load plans → objectives → activities (paginated by plan/objective strategy)
+    const resPlans = await apiFetch("/api/v2/pwa/sipet/plans");
+    if (!resPlans.ok) return [];
+    const plans = await resPlans.json();
+    const activities = [];
+    for (const plan of plans) {
+      const resObjs = await apiFetch(`/api/v2/pwa/sipet/plans/${plan.id}/objectives`);
+      if (!resObjs.ok) continue;
+      const objs = await resObjs.json();
+      for (const obj of objs) {
+        const list = await SipetDash.loadActivities(obj.id);
+        list.forEach((a) => {
+          a._objective_title = obj.title;
+          a._plan_name = plan.name;
+        });
+        activities.push(...list);
+      }
+    }
+    return activities;
+  }
+
+  function renderActivities(activities) {
+    const container = document.getElementById("activity-list");
+    container.innerHTML = "";
+    if (!activities.length) {
+      container.innerHTML = '<p class="empty-state">No hay actividades en esta categoría.</p>';
+      return;
+    }
+    activities.forEach((a) => {
+      const row = SipetDash.renderActivityRow(a);
+      // add evidence button
+      const evidenceBtn = document.createElement("button");
+      evidenceBtn.className = "btn-link activity-evidence-btn";
+      evidenceBtn.textContent = "📎 Evidencia";
+      evidenceBtn.dataset.actId = a.id;
+      evidenceBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        openEvidenceModal(a.id);
+      });
+      row.querySelector(".activity-right")?.appendChild(evidenceBtn);
+      container.appendChild(row);
+    });
+  }
+
+  function applyFilters() {
+    const search = document.getElementById("activity-search").value.toLowerCase();
+    let filtered = _allActivities;
+    if (_activeStatus) filtered = filtered.filter((a) => a.status === _activeStatus);
+    if (search) filtered = filtered.filter((a) =>
+      a.name.toLowerCase().includes(search) ||
+      (a.area || "").toLowerCase().includes(search)
+    );
+    renderActivities(filtered);
+  }
+
+  function openEvidenceModal(activityId) {
+    document.getElementById("evidence-activity-id").value = activityId;
+    document.getElementById("evidence-modal").showModal();
+  }
+
+  document.addEventListener("DOMContentLoaded", async () => {
+    const container = document.getElementById("activity-list");
+    container.innerHTML = '<p class="loading-text">Cargando…</p>';
+    _allActivities = await loadAllActivities();
+    renderActivities(_allActivities);
+
+    // status tabs
+    document.querySelectorAll(".status-tab").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".status-tab").forEach((b) => b.classList.remove("tab-active"));
+        btn.classList.add("tab-active");
+        _activeStatus = btn.dataset.status;
+        applyFilters();
+      });
+    });
+
+    // search
+    document.getElementById("activity-search").addEventListener("input", applyFilters);
+
+    // evidence modal
+    const modal = document.getElementById("evidence-modal");
+    document.getElementById("cancel-evidence-btn").addEventListener("click", () => modal.close());
+
+    document.getElementById("evidence-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const actId = fd.get("activity_id");
+      try {
+        const res = await apiFetch(`/api/v2/pwa/sipet/activities/${actId}/evidence`, {
+          method: "POST",
+          body: fd,
+        });
+        if (!res.ok) throw new Error("Error al subir evidencia");
+        modal.close();
+        e.target.reset();
+        toast("Evidencia cargada correctamente", "success");
+      } catch (err) {
+        toast(err.message, "error");
+      }
+    });
+  });
+</script>
+{% endblock %}

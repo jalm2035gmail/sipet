@@ -43,6 +43,27 @@
     </div>
   </section>
 
+  <section class="color-group" aria-labelledby="color-group-modules">
+    <h3 id="color-group-modules">Fondos para modulos</h3>
+    <div class="color-grid">
+      <article class="color-option">
+        <label for="screen-bg">Fondo de la pantalla</label>
+        <input type="color" id="screen-bg" name="screen-bg" value="#f4f6fb">
+        <div class="color-preview" id="screen-bg-preview" style="background:#f4f6fb;"></div>
+      </article>
+      <article class="color-option">
+        <label for="panel-1-bg">Fondo del recuadro 1</label>
+        <input type="color" id="panel-1-bg" name="panel-1-bg" value="#ffffff">
+        <div class="color-preview" id="panel-1-bg-preview" style="background:#ffffff;"></div>
+      </article>
+      <article class="color-option">
+        <label for="panel-2-bg">Fondo del recuadro 2</label>
+        <input type="color" id="panel-2-bg" name="panel-2-bg" value="#f8fafc">
+        <div class="color-preview" id="panel-2-bg-preview" style="background:#f8fafc;"></div>
+      </article>
+    </div>
+  </section>
+
   <section class="color-group" aria-labelledby="default-images-group">
     <h3 id="default-images-group">Imagenes por defecto</h3>
     <p class="asset-group-description">El usuario puede subir y reemplazar los archivos MAIN del sistema.</p>
@@ -190,6 +211,9 @@
     'sidebar-bottom',
     'field-color',
     'button-bg',
+    'screen-bg',
+    'panel-1-bg',
+    'panel-2-bg',
   ];
   const rootStyle = document.documentElement.style;
   const colorInputs = colorKeys

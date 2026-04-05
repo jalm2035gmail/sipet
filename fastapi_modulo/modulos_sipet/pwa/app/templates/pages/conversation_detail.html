@@ -1,0 +1,82 @@
+{% extends "app_base.html" %}
+
+{% block title %}Chat · {{ app_name }}{% endblock %}
+{% block topbar_title %}{{ conv_title | default("Conversación") }}{% endblock %}
+{% block nav_conversations %}nav-active{% endblock %}
+
+{% block content %}
+<div class="chat-screen">
+  <div class="chat-messages" id="chat-messages">
+    <p class="loading-text">Cargando mensajes…</p>
+  </div>
+
+  <form class="chat-input-bar" id="chat-form">
+    <button class="chat-attach-btn" type="button" id="attach-btn" title="Adjuntar archivo">📎</button>
+    <textarea
+      class="chat-input"
+      id="chat-input"
+      placeholder="Escribe un mensaje…"
+      rows="1"
+      required
+      autocomplete="off"
+    ></textarea>
+    <button class="chat-send-btn" type="submit" aria-label="Enviar">➤</button>
+  </form>
+
+  <!-- Hidden file input for attachment -->
+  <input type="file" id="attach-file" style="display:none" />
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="/static/js/conversations.js"></script>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const CONV_ID = {{ conv_id }};
+
+  document.addEventListener("DOMContentLoaded", () => {
+    ConvApp.openChat(CONV_ID);
+
+    // auto-resize textarea
+    const input = document.getElementById("chat-input");
+    input.addEventListener("input", () => {
+      input.style.height = "auto";
+      input.style.height = `${Math.min(input.scrollHeight, 120)}px`;
+    });
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        document.getElementById("chat-form").requestSubmit();
+      }
+    });
+
+    // attachment
+    const attachBtn = document.getElementById("attach-btn");
+    const attachFile = document.getElementById("attach-file");
+    attachBtn.addEventListener("click", () => attachFile.click());
+    attachFile.addEventListener("change", async () => {
+      const file = attachFile.files[0];
+      if (!file) return;
+      const msgs = document.querySelectorAll(".msg-wrap");
+      const lastId = [...msgs].pop()?.dataset?.id;
+      if (!lastId) { toast("Envía un mensaje primero", "warning"); return; }
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await apiFetch(`/api/v2/pwa/conversations/messages/${lastId}/attachments`, {
+        method: "POST",
+        body: fd,
+      });
+      if (res.ok) {
+        toast("Archivo adjuntado", "success");
+      } else {
+        toast("Error al subir archivo", "error");
+      }
+      attachFile.value = "";
+    });
+  });
+
+  window.addEventListener("beforeunload", () => ConvApp.destroyChat());
+</script>
+{% endblock %}

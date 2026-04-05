@@ -128,7 +128,8 @@
           loadProspectos(),
           loadScoring(),
           loadSegmentacion(),
-          loadFoundation(),
+          loadConsumoAgregado(),
+          loadFoundations(),
           loadBatch(),
           loadGovernance(),
         ]);
@@ -543,6 +544,72 @@
       </div>
     `;
     setStatus('intelicoop-segmentacion-status', `Segmentacion calculada${data.cut_key ? ` sobre ${data.cut_key}` : ' en vivo'}.`);
+  };
+
+  const loadConsumoAgregado = async () => {
+    setStatus('intelicoop-consumo-status', 'Cargando datasets agregados...');
+    const data = await apiGet('/api/intelicoop/consumo-agregado/resumen');
+    const mount = document.getElementById('intelicoop-consumo-content');
+    if (!mount) return;
+    const indicadores = data.indicadores || {};
+    const scoring = data.scoring_comercial || {};
+    const datasets = data.datasets || {};
+    const segmentacion = datasets.segmentacion || {};
+    const renderSegmentTable = (title, rows) => `
+      <div style="margin-top:16px;">
+        <h3>${title}</h3>
+        <table class="intelicoop-table">
+          <thead><tr><th>Segmento</th><th>Total</th><th>Volumen</th><th>Recurrencia</th><th>Ticket</th><th>Crecimiento</th><th>Financiables</th></tr></thead>
+          <tbody>
+            ${(rows || []).map((row) => `<tr>
+              <td>${row.segmento || ''}</td>
+              <td>${row.total || 0}</td>
+              <td>${Number(row.volumen || 0).toFixed(2)}</td>
+              <td>${Number(row.recurrencia || 0).toFixed(2)}</td>
+              <td>${Number(row.ticket || 0).toFixed(2)}</td>
+              <td>${(Number(row.crecimiento || 0) * 100).toFixed(2)}%</td>
+              <td>${row.financiables || 0}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+    mount.innerHTML = `
+      <div class="intelicoop-grid">
+        <article class="intelicoop-card"><span class="intelicoop-kpi-label">Volumen</span><strong class="intelicoop-kpi-value">${Number(indicadores.volumen || 0).toFixed(2)}</strong></article>
+        <article class="intelicoop-card"><span class="intelicoop-kpi-label">Recurrencia</span><strong class="intelicoop-kpi-value">${Number(indicadores.recurrencia || 0).toFixed(2)}</strong></article>
+        <article class="intelicoop-card"><span class="intelicoop-kpi-label">Ticket</span><strong class="intelicoop-kpi-value">${Number(indicadores.ticket || 0).toFixed(2)}</strong></article>
+        <article class="intelicoop-card"><span class="intelicoop-kpi-label">Crecimiento</span><strong class="intelicoop-kpi-value">${(Number(indicadores.crecimiento || 0) * 100).toFixed(2)}%</strong></article>
+      </div>
+      <div class="intelicoop-grid" style="margin-top:16px;">
+        <article class="intelicoop-card"><span class="intelicoop-kpi-label">Financiables detectados</span><strong class="intelicoop-kpi-value">${scoring.financiables_detectados || 0}</strong></article>
+        <article class="intelicoop-card"><span class="intelicoop-kpi-label">Score comercial promedio</span><strong class="intelicoop-kpi-value">${Number(scoring.score_promedio || 0).toFixed(2)}</strong></article>
+        <article class="intelicoop-card"><span class="intelicoop-kpi-label">Oportunidades</span><strong class="intelicoop-kpi-value">${scoring.oportunidades_comerciales || 0}</strong></article>
+        <article class="intelicoop-card"><span class="intelicoop-kpi-label">Modo de privacidad</span><strong class="intelicoop-kpi-value">${((data.dataset_contract || {}).privacy_mode || '').replaceAll('_', ' ')}</strong></article>
+      </div>
+      <div style="margin-top:16px;">
+        <h3>Datasets agregados</h3>
+        <table class="intelicoop-table">
+          <thead><tr><th>Dataset</th><th>Grano</th><th>Registros</th></tr></thead>
+          <tbody>
+            ${(datasets.consumo_agregado || []).map((row) => `<tr><td>${row.dataset_key || ''}</td><td>${row.grain || ''}</td><td>${row.records || 0}</td></tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+      ${renderSegmentTable('Segmentacion por comercios', segmentacion.comercios || [])}
+      ${renderSegmentTable('Segmentacion por usuarios', segmentacion.usuarios || [])}
+      ${renderSegmentTable('Segmentacion por zonas', segmentacion.zonas || [])}
+      <div style="margin-top:16px;">
+        <h3>Bandas de financiables</h3>
+        <table class="intelicoop-table">
+          <thead><tr><th>Banda</th><th>Total</th></tr></thead>
+          <tbody>
+            ${(scoring.bandas || []).map((row) => `<tr><td>${row.band || ''}</td><td>${row.total || 0}</td></tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+    setStatus('intelicoop-consumo-status', `Consumo agregado disponible${data.cut_key ? ` sobre ${data.cut_key}` : ''}.`);
   };
 
   const loadFoundations = async () => {
@@ -1140,9 +1207,10 @@
         loadCreditos(),
         loadAhorros(),
         loadCampanas(),
-          loadProspectos(),
+        loadProspectos(),
           loadScoring(),
           loadSegmentacion(),
+          loadConsumoAgregado(),
           loadFoundations(),
           loadBatch(),
           loadGovernance(),

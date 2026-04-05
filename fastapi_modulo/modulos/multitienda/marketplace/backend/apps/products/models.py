@@ -1,6 +1,6 @@
 import enum
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, Numeric, Boolean, ForeignKey, DateTime, Enum, Text, JSON
+from sqlalchemy import Column, Integer, String, Numeric, Boolean, ForeignKey, DateTime, Enum, Text, JSON, UniqueConstraint
 from sqlalchemy.orm import relationship
 from fastapi_modulo.modulos.multitienda.marketplace.backend.core.db import Base
 from ..vendors.models import VendorStore
@@ -22,6 +22,7 @@ class Product(Base):
     name = Column(String(200), nullable=False)
     description = Column(Text, default="")
     price = Column(Numeric(10, 2), nullable=False)
+    compare_price = Column(Numeric(10, 2), nullable=True)   # precio original (tachado)
     stock_quantity = Column(Integer, default=0)
     slug = Column(String(200), unique=True, nullable=False)
     is_active = Column(Boolean, default=True)
@@ -64,3 +65,28 @@ class ProductVariant(Base):
     stock_quantity = Column(Integer, default=0)
     attributes = Column(JSON, default={})
     product = relationship("Product", back_populates="variants")
+
+
+BENEFIT_TYPES = ("discount_pct", "discount_fixed", "free_shipping")
+
+
+class ProductRelated(Base):
+    """Cuando se compra `product_id`, el `related_product_id` obtiene un beneficio."""
+    __tablename__ = "product_related"
+    __table_args__ = (
+        UniqueConstraint("product_id", "related_product_id", name="uq_product_related"),
+    )
+
+    id = Column(Integer, primary_key=True)
+    # Producto que activa el beneficio (trigger)
+    product_id = Column(Integer, ForeignKey("products.id", ondelete="CASCADE"), nullable=False, index=True)
+    # Producto que recibe el beneficio
+    related_product_id = Column(Integer, ForeignKey("products.id", ondelete="CASCADE"), nullable=False, index=True)
+    # "discount_pct" | "discount_fixed" | "free_shipping"
+    benefit_type = Column(String(30), nullable=False)
+    # Valor: porcentaje (0-100) para discount_pct, monto fijo para discount_fixed, 0 para free_shipping
+    benefit_value = Column(Numeric(10, 2), default=0)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    product = relationship("Product", foreign_keys=[product_id], backref="related_products")
+    related_product = relationship("Product", foreign_keys=[related_product_id])

@@ -149,8 +149,21 @@ class ColorPayloadSchema(BaseModel):
     sidebar_bottom: Optional[str] = None
     field_color: Optional[str] = None
     button_bg: Optional[str] = None
+    screen_bg: Optional[str] = None
+    panel_1_bg: Optional[str] = None
+    panel_2_bg: Optional[str] = None
 
-    @field_validator("navbar_bg", "sidebar_top", "sidebar_bottom", "field_color", "button_bg", mode="before")
+    @field_validator(
+        "navbar_bg",
+        "sidebar_top",
+        "sidebar_bottom",
+        "field_color",
+        "button_bg",
+        "screen_bg",
+        "panel_1_bg",
+        "panel_2_bg",
+        mode="before",
+    )
     @classmethod
     def validate_hex(cls, v: object) -> Optional[str]:
         if v is None:
@@ -170,6 +183,9 @@ class ColorPayloadSchema(BaseModel):
             "sidebar-bottom": self.sidebar_bottom,
             "field-color":    self.field_color,
             "button-bg":      self.button_bg,
+            "screen-bg":      self.screen_bg,
+            "panel-1-bg":     self.panel_1_bg,
+            "panel-2-bg":     self.panel_2_bg,
         }
         return {k: v for k, v in mapping.items() if v is not None}
 
@@ -425,6 +441,9 @@ async def guardar_colores(request: Request, data: dict):
                 sidebar_bottom=data.get("sidebar-bottom"),
                 field_color=data.get("field-color"),
                 button_bg=data.get("button-bg"),
+                screen_bg=data.get("screen-bg"),
+                panel_1_bg=data.get("panel-1-bg"),
+                panel_2_bg=data.get("panel-2-bg"),
             )
         except Exception as exc:
             return JSONResponse({"success": False, "error": str(exc)}, status_code=422)
@@ -499,6 +518,9 @@ async def guardar_personalizacion(
     sidebar_bottom: Optional[str] = Form(None),
     field_color: Optional[str] = Form(None),
     button_bg: Optional[str] = Form(None),
+    screen_bg: Optional[str] = Form(None),
+    panel_1_bg: Optional[str] = Form(None),
+    panel_2_bg: Optional[str] = Form(None),
     favicon: Optional[UploadFile] = File(None),
     logo_empresa: Optional[UploadFile] = File(None),
     logo_usuario: Optional[UploadFile] = File(None),
@@ -520,6 +542,9 @@ async def guardar_personalizacion(
             sidebar_bottom=sidebar_bottom,
             field_color=field_color,
             button_bg=button_bg,
+            screen_bg=screen_bg,
+            panel_1_bg=panel_1_bg,
+            panel_2_bg=panel_2_bg,
         )
     except Exception as exc:
         return JSONResponse({"ok": False, "error": str(exc)}, status_code=422)

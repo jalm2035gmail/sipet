@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any, Dict, List
 
 from fastapi_modulo.modulos.intelicoop.modelos.store_analytics import (
+    get_aggregate_consumption_summary,
     get_cohortes,
     get_dashboard_resumen,
     get_descriptive_analytics,
@@ -37,6 +38,10 @@ def materialize_foundation_cut_repo(cut_type: str = "daily_close") -> Dict[str, 
 
 def get_descriptive_analytics_repo() -> Dict[str, Any]:
     return get_descriptive_analytics()
+
+
+def get_aggregate_consumption_summary_repo() -> Dict[str, Any]:
+    return get_aggregate_consumption_summary()
 
 
 def get_tendencias_repo(kpi_key: str = "imor_pct", n_cuts: int = 12) -> Dict[str, Any]:
@@ -85,4 +90,3 @@ def run_batch_job_repo(job_key: str, trigger_type: str = "manual") -> Dict[str, 
 
 def run_due_batch_jobs_repo() -> Dict[str, Any]:
     return run_due_batch_jobs()
-

@@ -55,6 +55,19 @@ def test_is_public_backend_path_allows_tiendas_landing() -> None:
     assert backend_middleware.is_public_backend_path(request, "/multitienda/public/tiendas") is True
 
 
+def test_is_public_backend_path_allows_multitienda_slug_landings() -> None:
+    _install_frontend_public_path_stub()
+    request = _request("/duma-s")
+    assert backend_middleware.is_public_backend_path(request, "/duma-s") is True
+    assert backend_middleware.is_public_backend_path(request, "/duma-s/sandwindh-2") is True
+    assert backend_middleware.is_public_backend_path(request, "/multitienda/vendors") is True
+    assert backend_middleware.is_public_backend_path(request, "/multitienda/static/imagenes/logo_vale.png") is True
+    assert backend_middleware.is_public_backend_path(request, "/multitienda/vendors/") is True
+    assert backend_middleware.is_public_backend_path(request, "/multitienda/api/productos-publicos") is True
+    assert backend_middleware.is_public_backend_path(request, "/multitienda") is False
+    assert backend_middleware.is_public_backend_path(request, "/backend/login") is True
+
+
 def test_is_public_backend_path_allows_web_public_pages() -> None:
     request = _request("/web/inicio")
     assert backend_middleware.is_public_backend_path(request, "/web") is True

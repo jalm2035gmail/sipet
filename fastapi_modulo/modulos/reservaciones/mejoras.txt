@@ -1,0 +1,883 @@
+# PLAN DE TRABAJO — Módulo Reservaciones
+# Fecha: 2026-04-01
+# Estado: En desarrollo activo
+
+avance: 100% (Fases 1–6 completadas ✓)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ RESUMEN EJECUTIVO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+El módulo tiene base sólida pero no es aún un sistema de
+reservaciones confiable. Los problemas críticos son:
+
+  [CRÍTICO] Ruta /reservaciones/calendario/{id} rompe en runtime
+  [CRÍTICO] create_cita() no valida disponibilidad ni solapamientos
+  [CRÍTICO] appointment_dynamic.js no implementa nada real
+  [ALTO]    Duración inconsistente entre ResTipoCita y ResEjecutivo
+  [ALTO]    Sin permisos reales por rol en ningún endpoint
+  [MEDIO]   Dashboard muy básico, sin KPIs útiles
+  [MEDIO]   Modelo de horario rígido (columnas por día)
+  [BAJO]    Sin confirmaciones, recordatorios ni comunicación
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ FASE 1 — CORRECCIÓN ESTRUCTURAL  (prioridad: URGENTE)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Objetivo: que el módulo no rompa en runtime y tenga base real.
+
+[x] 1.1  Crear vistas/calendario.html
+         – Vista de agenda semanal del ejecutivo
+         – Palceholders __EJECUTIVO_ID__, __EJECUTIVO_NAME__, __BLOQUE_MIN__
+         – Tabla por hora × día de la semana
+         – Botón "Nueva cita" por slot disponible
+         – Integración con /api/reservaciones/ejecutivos/{id}/slots
+         Archivos: vistas/calendario.html (CREAR)
+
+[x] 1.2  Rehacer static/src/js/appointment_dynamic.js
+         – Renombrar módulo de avan_citas → reservaciones
+         – Implementar: carga de ejecutivos, listado de citas, filtros,
+           slots por fecha, crear cita, cambiar estado, feedback visual
+         – Usar fetch() nativo o axios según lo que ya use el proyecto
+         Archivos: static/src/js/appointment_dynamic.js (REHACER)
+
+[x] 1.3  Alinear __manifest__.py con la realidad
+         – Agregar calendario.html a 'data'
+         – Verificar rutas de assets
+         Archivos: __manifest__.py
+
+[x] 1.4  Cambiar endpoint de cambio de estado a schema Pydantic
+         – Reemplazar body = await request.json() por CitaEstadoUpdate(BaseModel)
+         Archivos: controladores/reservaciones.py, modelos/schemas.py
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ FASE 2 — REGLAS DE NEGOCIO REALES  (prioridad: ALTA)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Objetivo: que las citas respeten la realidad del negocio.
+
+[x] 2.1  Unificar duración en minutos
+         – ResTipoCita.duracion (Float horas) → duracion_minutos (Integer)
+         – Eliminar ambigüedad con tiempo_promedio_cita del ejecutivo
+         – Regla: si tipo_id tiene duracion_minutos, usar ese valor;
+           si no, usar tiempo_promedio_cita del ejecutivo
+         Archivos: modelos/db_models.py, modelos/schemas.py, modelos/store.py
+
+[x] 2.2  Agregar end_datetime a ResCita
+         – Calculado al crear: start_datetime + duracion_minutos
+         – Almacenado en DB para consultas de solapamiento eficientes
+         Archivos: modelos/db_models.py, modelos/store.py
+
+[x] 2.3  Validación completa antes de crear cita (store.create_cita)
+         Validar en orden:
+           a) ejecutivo_id existe y está activo
+           b) tipo_id existe (si se provee)
+           c) start_datetime no es en el pasado
+           d) ese día no es día de descanso del ejecutivo
+           e) start_datetime está dentro del horario del ejecutivo
+           f) no existe solapamiento con otra cita activa
+              → SELECT WHERE ejecutivo_id=? AND state NOT IN ('cancelled')
+                AND start_datetime < nueva_end AND end_datetime > nueva_start
+         Levantar HTTPException 409 con mensaje claro si falla
+         Archivos: modelos/store.py, controladores/reservaciones.py
+
+[x] 2.4  Validación de solapamiento en slots
+         – get_slots_for_day() debe usar rangos (start, end) no solo hora exacta
+         – Marcar como ocupado cualquier slot que cruce con una cita existente
+         Archivos: modelos/store.py
+
+[x] 2.5  Reglas de transición de estado
+         – Implementar VALID_TRANSITIONS: dict[str, set[str]]
+           draft       → {confirmed, cancelled}
+           confirmed   → {in_progress, cancelled}
+           in_progress → {completed, no_show}
+           completed   → {}  (terminal)
+           cancelled   → {}  (terminal)
+           no_show     → {}  (terminal)
+         – update_cita_state() valida transición antes de persistir
+         Archivos: modelos/store.py, controladores/reservaciones.py
+
+[x] 2.6  Agregar campos de trazabilidad a ResCita
+         – confirmed_at   (DateTime, nullable)
+         – cancelled_at   (DateTime, nullable)
+         – cancellation_reason (String 500, nullable)
+         – source         (String 50, default='admin')  # 'admin'|'portal'|'api'
+         – end_datetime   (DateTime, nullable)
+         Archivos: modelos/db_models.py, modelos/schemas.py
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ FASE 3 — ENDPOINTS FALTANTES  (prioridad: ALTA)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Objetivo: que el API sea completo y utilizable desde el frontend.
+
+[x] 3.1  GET /api/reservaciones/citas/{cita_id}
+         – Detalle completo de una cita incluyendo ejecutivo y tipo
+
+[x] 3.2  PUT /api/reservaciones/citas/{cita_id}/reprogramar
+         – Body: { "start_datetime": "..." }
+         – Valida disponibilidad con nueva fecha antes de guardar
+         – Registra la fecha anterior en notes_internal
+
+[x] 3.3  DELETE / POST /api/reservaciones/citas/{cita_id}/cancelar
+         – Body: { "motivo": "..." }
+         – Solo si estado permite cancelación
+         – Guarda cancellation_reason y cancelled_at
+
+[x] 3.4  GET /api/reservaciones/ejecutivos/{id}/agenda?fecha_ini=&fecha_fin=
+         – Devuelve citas entre dos fechas para un ejecutivo
+         – Agrupa por día
+
+[x] 3.5  GET /api/reservaciones/ejecutivos/{id}/disponibilidad?fecha_ini=&fecha_fin=
+         – Para un rango de fechas devuelve qué días tienen slots libres
+         – Útil para deshabilitar fechas en el datepicker del portal
+
+[x] 3.6  GET /api/reservaciones/stats avanzado
+         – Citas por día (últimos 30 días)
+         – Tasa de cancelación y no-show
+         – Ocupación por ejecutivo (% slots usados vs disponibles)
+         – Citas por tipo
+         Archivos: modelos/store.py, controladores/reservaciones.py
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ FASE 4 — VALIDACIONES Y SCHEMAS  (prioridad: MEDIA)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Objetivo: que los datos que entren sean limpios y válidos.
+
+[x] 4.1  Agregar validaciones Pydantic en schemas.py
+         – CitaCreate.nombre_persona: min_length=2
+         – CitaCreate.email_persona: EmailStr (si se provee)
+         – CitaCreate.start_datetime: debe ser futuro (validator)
+         – EjecutivoCreate.email: EmailStr
+         – TipoCitaCreate.duracion_minutos: gt=0, le=480
+         – Horarios lógicos: hora_final > hora_inicial
+
+[x] 4.2  Agregar schema CitaEstadoUpdate
+         – state: Literal['draft','confirmed','in_progress','completed','cancelled','no_show']
+         – motivo: Optional[str]  (para cancelaciones)
+
+[x] 4.3  Agregar schema ReprogramarCita
+         – new_start_datetime: datetime
+         – motivo: Optional[str]
+
+[x] 4.4  Agregar schema CitaReadDetail (hereda CitaRead)
+         – Incluye ejecutivo: EjecutivoRead (nullable)
+         – Incluye tipo: TipoCitaRead (nullable)
+         – Incluye end_datetime
+
+[x] 4.5  Agregar índices en DB
+         – Index(ResCita.ejecutivo_id, ResCita.start_datetime)
+         – Index(ResCita.state)
+         – Index(ResCita.end_datetime)
+         Archivos: modelos/db_models.py
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ FASE 5 — SEGURIDAD Y PERMISOS  (prioridad: MEDIA-ALTA)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Objetivo: que no cualquier usuario pueda hacer cualquier cosa.
+
+[x] 5.1  Mapear niveles declarados en manifest a código real
+         – full_access: todos los endpoints (CRUD ejecutivos, tipos, citas, config)
+         – special_permissions: solo sus citas y su agenda (ejecutivo_id filtrado)
+         – read_only: solo GET
+         – controladores/dependencies.py: RolReservaciones enum + _get_res_role()
+
+[x] 5.2  Endpoints de escritura deben requerir autenticación
+         – POST /ejecutivos, PUT /ejecutivos → full_access
+         – POST /citas → cualquier autenticado o portal público
+         – PUT /citas/estado → full_access o special_permissions (sus citas)
+         – GET /stats → full_access
+         – Depends aplicado en cada endpoint del controlador
+
+[x] 5.3  Ejecutivo no puede ver/modificar citas de otro ejecutivo
+         – Filtrar por ejecutivo_id del usuario en sesión
+         – get_ejecutivo_id_en_sesion(): lookup por email (core repo) + fallback por name
+         – Ownership check en: GET citas, GET cita/{id}, PUT estado, PUT reprogramar, POST cancelar, GET agenda
+
+[x] 5.4  Portal público (si aplica)
+         – Crear ruta /reservar sin autenticación
+         – Solo permite crear cita con source='portal'
+         – No expone ejecutivos desactivados ni internos
+         – POST /api/reservaciones/publico/citas: sin auth, source forzado a 'portal'
+         – store.create_cita() recibe param source='admin' (default) | 'portal'
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ FASE 6 — FUNCIONALIDADES AVANZADAS  (prioridad: BAJA/FUTURA)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Objetivo: hacer el módulo más poderoso operativamente.
+
+[x] 6.1  Bloqueos de agenda
+         – Nueva tabla res_bloqueo_agenda: ejecutivo_id, start, end, motivo, active
+         – Integrado en get_slots_for_day() como rangos ocupados
+         – CRUD: GET/POST /api/reservaciones/bloqueos, DELETE /api/reservaciones/bloqueos/{id}
+
+[x] 6.2  Excepciones por fecha (feriados, vacaciones)
+         – Nueva tabla res_excepcion_fecha: ejecutivo_id nullable (global), fecha (Date), motivo
+         – Integrado en get_slots_for_day() y get_disponibilidad_rango()
+         – CRUD: GET/POST /api/reservaciones/excepciones, DELETE /api/reservaciones/excepciones/{id}
+
+[x] 6.3  Múltiples franjas horarias por día
+         – Nueva tabla res_horario_semanal: ejecutivo_id, dia_semana (0-6), hora_ini, hora_fin
+         – Sobreescribe las columnas clásicas del ejecutivo cuando existen registros activos
+         – get_slots_for_day() itera sobre rangos de franjas
+         – CRUD: GET/POST /api/reservaciones/ejecutivos/{id}/horario, DELETE /api/reservaciones/horario/{id}
+
+[x] 6.4  Confirmación por correo
+         – Al crear la cita (POST /citas): BackgroundTasks → enviar_confirmacion_en_background()
+         – Al pasar a 'confirmed' (PUT /citas/{id}/estado): también envía
+         – enviar_email_cita(): smtplib + starttls usando env vars SMTP_HOST/PORT/USER/PASSWORD/EMAIL_FROM
+         – Si SMTP no está configurado, opera silenciosamente sin error
+
+[x] 6.5  Recordatorios
+         – POST /api/reservaciones/citas/{id}/recordatorio: envía email en demanda (BackgroundTasks)
+         – Reutiliza enviar_confirmacion_en_background()
+         – Nota: recordatorio automático 24h requiere Celery beat (pendiente integración)
+
+[x] 6.6  Enlace de cancelación por cliente
+         – ResCita.cancel_token (String 64, unique, nullable)
+         – POST /api/reservaciones/citas/{id}/token-cancelacion → genera secrets.token_urlsafe(32)
+         – GET /reservaciones/cancelar/{token} → página HTML pública de confirmación
+         – POST /api/reservaciones/cancelar/{token} → procesa cancelación, invalida token
+
+[x] 6.7  Vista Kanban de citas
+         – vistas/kanban.html: 6 columnas (draft→confirmed→in_progress→completed→cancelled→no_show)
+         – Filtro por ejecutivo, conteo por columna, color por estado
+         – GET /reservaciones/kanban (requiere autenticación)
+         – Añadida a __manifest__.py 'data'
+
+[x] 6.8  Reporte CSV de citas
+         – GET /api/reservaciones/citas/exportar?ejecutivo_id=&fecha_ini=&fecha_fin=
+         – StreamingResponse con Content-Type: text/csv
+         – Requiere full_access
+         – Ruta declarada ANTES de /citas/{cita_id} para evitar conflicto de rutas FastAPI
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ DETALLE DE CAMBIOS POR ARCHIVO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+modelos/db_models.py
+  CAMBIAR: ResTipoCita.duracion (Float horas) → duracion_minutos (Integer)
+  AGREGAR en ResCita: end_datetime, confirmed_at, cancelled_at,
+                      cancellation_reason, source
+  AGREGAR: índices compuestos ejecutivo_id+start/end_datetime
+  FUTURO: tablas res_bloqueo_agenda, res_excepcion_fecha
+
+modelos/schemas.py
+  CAMBIAR: TipoCitaCreate.duracion → duracion_minutos: int > 0
+  AGREGAR: CitaEstadoUpdate, ReprogramarCita, CitaReadDetail
+  AGREGAR: validadores (future datetime, email, horario lógico)
+  AGREGAR: enums para state, source
+
+modelos/store.py
+  CAMBIAR: create_cita() → agregar validación completa (6 checks)
+  CAMBIAR: get_slots_for_day() → usar rangos, no hora exacta
+  AGREGAR: validar_transicion_estado()
+  AGREGAR: reprogramar_cita()
+  AGREGAR: cancelar_cita()
+  AGREGAR: get_agenda_ejecutivo(desde, hasta)
+  AGREGAR: get_disponibilidad_rango()
+  AGREGAR: get_dashboard_stats_avanzado()
+
+controladores/reservaciones.py
+  CAMBIAR: endpoint PUT /citas/{id}/estado → usar CitaEstadoUpdate
+  AGREGAR: GET /citas/{id}
+  AGREGAR: PUT /citas/{id}/reprogramar
+  AGREGAR: POST /citas/{id}/cancelar
+  AGREGAR: GET /ejecutivos/{id}/agenda
+  AGREGAR: GET /ejecutivos/{id}/disponibilidad
+  AGREGAR: GET /stats (versión avanzada)
+
+vistas/calendario.html  [CREAR]
+  – Vista de agenda semanal del ejecutivo
+  – Inject de __EJECUTIVO_ID__, __EJECUTIVO_NAME__, __BLOQUE_MIN__
+  – Grid hora × día
+  – Slots clicables, estado visual, modal de nueva cita
+
+static/src/js/appointment_dynamic.js  [REHACER]
+  – Renombrar: reservaciones.main
+  – Carga de ejecutivos y tipos en DOMContentLoaded
+  – Render de lista de citas con filtros
+  – Formulario de crear cita con selección de slots
+  – Cambio de estado con confirmación
+  – Fetch de slots al cambiar ejecutivo/fecha
+  – Manejo de errores y feedback visual (toast / spinner)
+
+__manifest__.py
+  AGREGAR: 'vistas/calendario.html' en 'data'
+  VERIFICAR: rutas de assets
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ ORDEN DE IMPLEMENTACIÓN RECOMENDADO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Iteración 1 (esta semana — corregir lo roto)
+  1. 1.4 Schema CitaEstadoUpdate y fix endpoint estado
+  2. 2.1 Unificar duración en minutos (db + schema + store)
+  3. 2.2 Agregar end_datetime a ResCita
+  4. 2.3 Validación completa en create_cita()
+  5. 2.4 Slots con rangos reales
+  6. 2.5 Reglas de transición de estado
+  7. 1.1 Crear calendario.html
+
+Iteración 2 (siguiente semana — completar el API)
+  8. 3.1 GET /citas/{id}
+  9. 3.2 PUT /citas/{id}/reprogramar
+  10. 3.3 POST /citas/{id}/cancelar
+  11. 3.4 GET /ejecutivos/{id}/agenda
+  12. 3.5 GET /ejecutivos/{id}/disponibilidad
+  13. 4.1–4.4 Validaciones Pydantic y schemas faltantes
+
+Iteración 3 (siguiente — frontend real)
+  14. 1.2 Rehacer appointment_dynamic.js
+  15. Integrar con calendario.html
+
+Iteración 4 (según necesidad — seguridad)
+  16. 5.1–5.4 Control de permisos real
+
+Iteración 5 (roadmap futuro)
+  17. 6.x Funcionalidades avanzadas según prioridad del negocio
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ NOTAS TÉCNICAS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+- Al cambiar duracion → duracion_minutos en ResTipoCita, hacer migración
+  o usar ensure_reservaciones_schema() con alter si la tabla ya existe.
+- end_datetime puede calcularse al vuelo en store.py si no está en DB,
+  pero guardarlo es mejor para queries de solapamiento eficientes.
+- Los índices se crean con Index() de SQLAlchemy o directamente en
+  __table_args__ del modelo.
+- Para el email ya está pydantic[email] disponible como EmailStr.
+- appointment_dynamic.js debe ser vanilla JS o usar las mismas libs
+  del proyecto (revisar qué usa el resto del sistema).
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ DIAGNÓSTICO ORIGINAL (referencia)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Lo que está bien
+La separación por capas existe:
+controladores/reservaciones.py
+modelos/db_models.py
+modelos/schemas.py
+modelos/store.py
+Ya tienes entidades clave:
+ResEjecutivo
+ResTipoCita
+ResCita
+Ya se contempla disponibilidad por día y generación de slots.
+El listado de citas permite filtro por ejecutivo_id y state.
+La vista reservaciones.html ya tiene buena intención visual y funcional.
+Problemas principales del módulo
+1) Hay referencias rotas o incompletas
+
+En controladores/reservaciones.py tienes esta ruta:
+
+@router.get("/reservaciones/calendario/{ejecutivo_id}", response_class=HTMLResponse)
+
+y ahí intentas leer:
+
+content = (VIEWS_DIR / "calendario.html").read_text(encoding="utf-8")
+
+Pero en el zip no existe vistas/calendario.html.
+
+Eso significa que esa pantalla va a fallar en tiempo de ejecución.
+
+Además en __manifest__.py declaras solo:
+
+'data': ['vistas/reservaciones.html']
+
+aunque usas otros recursos y estilos no integrados del todo.
+
+Mejora
+crear calendario.html,
+o eliminar temporalmente esa ruta si todavía no la vas a usar,
+y alinear manifest, vistas y rutas reales.
+2) El JS está prácticamente vacío y además parece heredado de otro módulo
+
+El archivo:
+
+static/src/js/appointment_dynamic.js
+
+solo contiene esto:
+
+odoo.define('avan_citas.appointment_dynamic', function (require) {
+    "use strict";
+
+    var publicWidget = require('web.public.widget');
+    var ajax = require('web.ajax');
+
+    // Eliminada lógica de sucursal_id y filtrado de ejecutivos por sucursal
+});
+
+Problemas:
+
+no implementa nada real,
+el nombre del módulo es avan_citas.appointment_dynamic, no reservaciones,
+parece código reciclado,
+no corresponde con la vista tan grande que tienes en reservaciones.html.
+Mejora
+renombrar el módulo JS con el nombre correcto,
+desarrollar la lógica real de:
+carga de ejecutivos,
+carga de citas,
+filtros,
+creación de cita,
+cambio de estado,
+carga de slots,
+panel de configuración.
+3) No hay validaciones de negocio al crear citas
+
+En store.py, create_cita() hace esto:
+
+obj = ResCita(**data.model_dump())
+db.add(obj)
+db.commit()
+
+Eso significa que hoy se pueden crear citas:
+
+en horarios ocupados,
+fuera del horario del ejecutivo,
+en días de descanso,
+con ejecutivo inexistente,
+con tipo de cita inexistente,
+incluso probablemente con fechas pasadas.
+
+El endpoint de slots sí calcula disponibilidad, pero crear la cita no valida contra esa disponibilidad.
+Eso es uno de los errores más serios del módulo.
+
+Mejora
+
+Antes de guardar una cita debes validar:
+
+que el ejecutivo exista,
+que el ejecutivo esté activo y disponible,
+que la fecha/hora esté dentro de su jornada,
+que no sea día de descanso,
+que el slot siga libre en ese momento,
+que el tipo de cita exista,
+que la cita no esté en el pasado si esa es tu regla.
+4) No existe control de solapamiento real
+
+Hoy la lógica de ocupación en get_slots_for_day() marca como ocupado un slot por coincidencia exacta de hora:
+
+ocupadas = {c.start_datetime.strftime("%H:%M") for c in citas_dia}
+
+Eso es débil.
+
+Si mañana permites:
+
+distintos tipos de cita con duración variable,
+cambios de duración,
+buffers distintos,
+citas reprogramadas,
+
+vas a tener solapamientos no detectados.
+
+Mejora
+
+Debes modelar cada cita con:
+
+start_datetime
+end_datetime
+
+o calcular end_datetime con base en el tipo de cita / duración real.
+
+Entonces validar cruce de intervalos:
+
+una nueva cita no puede cruzarse con otra existente.
+5) El modelo de duración es inconsistente
+
+En ResTipoCita:
+
+duracion = Column(Float, default=1.0)
+
+Eso sugiere horas.
+
+Pero en ResEjecutivo usas:
+
+tiempo_promedio_cita = Column(Integer, default=30)
+tiempo_descanso_sesiones = Column(Integer, default=0)
+
+Eso está en minutos.
+
+Y en slots usas:
+
+bloque_min = (ejecutivo.tiempo_promedio_cita or 30) + (ejecutivo.tiempo_descanso_sesiones or 0)
+
+O sea, el tipo de cita no influye realmente en la duración del slot.
+
+Mejora
+
+Unifica criterios:
+
+o todo en minutos,
+o todo en horas, pero mejor en minutos.
+
+Yo recomiendo:
+
+duracion_minutos
+buffer_minutos
+start_datetime
+end_datetime
+
+Así cada tipo de cita define realmente cuánto dura.
+
+6) Falta seguridad y permisos
+
+En el manifest defines niveles:
+
+'full_access'
+'special_permissions'
+'read_only'
+
+pero en el código no veo que los endpoints los respeten realmente.
+
+Cualquier usuario con acceso al endpoint podría:
+
+crear ejecutivos,
+editar ejecutivos,
+crear tipos de cita,
+cambiar estados,
+ver todas las citas.
+Mejora
+
+Agregar control por permisos:
+
+administrador: todo,
+ejecutivo: solo sus citas y disponibilidad,
+lectura: solo consulta,
+cliente público: solo reservar.
+
+Esto es fundamental si lo vas a usar en producción.
+
+7) Falta separación entre panel interno y portal público
+
+Ahora todo se siente mezclado:
+
+configuración interna,
+gestión administrativa,
+agenda,
+posible flujo público de reservación.
+Mejora
+
+Separar claramente tres capas:
+
+Portal público
+elegir ejecutivo
+elegir fecha/hora
+llenar datos
+confirmar cita
+Panel del ejecutivo
+ver agenda
+confirmar / cancelar / completar
+bloquear horarios
+notas
+Panel administrativo
+ejecutivos
+tipos de cita
+configuración
+reportes
+métricas
+8) El modelo de ejecutivo está demasiado rígido
+
+Hoy tienes muchas columnas por día:
+
+hora_inicial_lunes
+hora_final_lunes
+hora_inicial_martes
+hora_final_martes
+...
+
+Eso funciona al inicio, pero limita mucho cuando quieras agregar:
+
+múltiples bloques por día,
+comida,
+pausas,
+feriados,
+excepciones,
+vacaciones,
+horarios especiales.
+Mejora
+
+A mediano plazo conviene reemplazar eso por tablas:
+
+res_horario_semanal
+res_bloque_horario
+res_excepcion_fecha
+res_bloqueo_agenda
+
+Con eso podrías manejar:
+
+9:00–13:00 y 15:00–18:00
+días festivos
+bloqueos manuales
+vacaciones
+9) No hay recordatorios ni confirmación
+
+El módulo agenda citas, pero no gestiona comunicación.
+
+Y para reservaciones eso es clave.
+
+Mejora
+
+Agregar:
+
+confirmación por correo,
+recordatorio por WhatsApp,
+recordatorio automático 24h antes,
+recordatorio 1h antes,
+enlace para reprogramar o cancelar.
+
+Ya tienes campos como:
+
+codigo_pais
+mensaje_whatsapp
+
+pero todavía no están realmente aprovechados.
+
+10) Faltan estados más completos y reglas de transición
+
+Hoy manejas:
+
+draft, confirmed, in_progress, completed, cancelled
+
+No está mal, pero falta control del flujo.
+
+Por ejemplo:
+
+¿quién confirma?
+¿puede pasar de cancelled a completed?
+¿puede ir de draft a completed directo?
+Mejora
+
+Definir reglas:
+
+draft -> confirmed
+confirmed -> in_progress
+in_progress -> completed
+draft/confirmed -> cancelled
+opcional: no_show
+opcional: rescheduled
+
+También registrar:
+
+fecha de confirmación,
+usuario que confirmó,
+motivo de cancelación,
+origen de la cita.
+11) El dashboard es muy básico
+
+get_dashboard_stats() solo devuelve:
+
+total,
+conteo por estado,
+cantidad de ejecutivos.
+
+Eso se queda corto.
+
+Mejora
+
+Agregar KPIs reales:
+
+citas por día / semana / mes,
+tasa de confirmación,
+tasa de cancelación,
+no show,
+citas por ejecutivo,
+ocupación por franja horaria,
+tiempo promedio de atención,
+conversión por tipo de cita.
+12) Faltan índices, restricciones y limpieza de datos
+
+No veo restricciones como:
+
+email único para ejecutivo,
+índice por ejecutivo_id + start_datetime,
+validaciones de campos,
+normalización de celular.
+Mejora
+
+Agregar:
+
+índices para consultas frecuentes,
+validaciones de email y teléfono,
+sanitización de strings,
+longitud máxima razonable,
+restricciones de negocio.
+Mejoras concretas por archivo
+controladores/reservaciones.py
+Mejorar
+validar parámetros,
+capturar errores de negocio,
+devolver mensajes más claros,
+agregar endpoints para:
+cancelar cita,
+reprogramar,
+detalle de cita,
+agenda del ejecutivo,
+bloquear horario,
+disponibilidad por rango,
+dashboard avanzado.
+
+También conviene que el cambio de estado no lea el body manualmente así:
+
+body = await request.json()
+
+Mejor usar un schema Pydantic.
+
+modelos/db_models.py
+Mejorar
+
+Agregar o rediseñar:
+
+end_datetime
+duration_minutes
+created_by
+confirmed_at
+cancelled_at
+cancellation_reason
+source
+notes_internal
+public_notes
+timezone
+
+Y a futuro:
+
+tabla de bloqueos
+tabla de excepciones
+tabla de historial
+modelos/schemas.py
+Mejorar
+
+Agregar validaciones con Pydantic:
+
+nombre obligatorio con mínimo de caracteres,
+email válido,
+duración positiva,
+horario lógico,
+enums para estados.
+
+También faltan schemas para:
+
+cambio de estado,
+reprogramación,
+filtros,
+bloqueos,
+dashboard.
+modelos/store.py
+Mejorar mucho
+
+Aquí está el núcleo del problema.
+
+Debes meter lógica de negocio real:
+
+validación de disponibilidad,
+prevención de solapamientos,
+validación de horario,
+cálculo correcto de duración,
+reglas de transición de estado,
+filtros por fecha,
+consultas por rango.
+
+También conviene separar:
+
+capa de repositorio,
+capa de servicios de negocio.
+
+Ahorita store.py hace demasiado de forma directa y simple.
+
+vistas/reservaciones.html
+Mejorar
+
+La vista está bien como base, pero le falta:
+
+conexión real con el backend,
+estados vacíos,
+mensajes de error más claros,
+detalle de cita,
+reprogramación,
+acciones rápidas,
+mejor responsive en móviles,
+agenda visual tipo calendario.
+static/src/js/appointment_dynamic.js
+Mejorar urgentemente
+
+Prácticamente hay que rehacerlo.
+
+Debe manejar:
+
+carga inicial,
+render de ejecutivos,
+render de citas,
+filtros,
+búsqueda,
+creación,
+edición,
+cambios de estado,
+slots,
+errores,
+feedback visual.
+Qué haría yo para volverlo un sistema más fuerte
+Nivel 1: Hacerlo confiable
+validar horarios y solapamientos,
+separar lo público de lo interno,
+arreglar vistas rotas,
+rehacer JS,
+definir duración real de citas,
+permisos por rol.
+Nivel 2: Hacerlo útil comercialmente
+recordatorios,
+confirmaciones,
+reprogramación,
+cancelación por cliente,
+dashboard por ejecutivo,
+métricas de ocupación.
+Nivel 3: Hacerlo profesional
+agenda semanal visual,
+bloqueos y excepciones,
+no-show,
+reportes,
+integración con WhatsApp/email,
+trazabilidad completa.
+Plan de trabajo propuesto
+Fase 1. Corrección estructural
+Corregir archivos faltantes (calendario.html).
+Alinear manifest, vistas, assets y rutas.
+Renombrar y reconstruir el JS del módulo.
+Definir estructura clara: público / ejecutivo / admin.
+Fase 2. Reglas de negocio
+Validar disponibilidad real antes de guardar.
+Evitar solapamientos.
+Unificar duración en minutos.
+Calcular end_datetime.
+Validar tipos de cita y ejecutivos activos.
+Fase 3. Seguridad y permisos
+Restringir endpoints por rol.
+Ejecutivo solo ve sus citas.
+Admin configura todo.
+Cliente público solo agenda.
+Fase 4. Agenda avanzada
+Bloqueos manuales.
+Excepciones por fecha.
+Vacaciones / feriados.
+Reprogramación.
+No-show.
+Fase 5. Comunicación y operación
+Confirmaciones automáticas.
+Recordatorios por correo/WhatsApp.
+Cancelación desde enlace.
+KPIs y reportes.
+Prioridad inmediata
+
+Si quieres mejorar rápido este módulo, yo empezaría por esto en este orden:
+
+Arreglar la ruta rota de calendario.html
+Rehacer appointment_dynamic.js
+Validar disponibilidad al crear citas
+Evitar solapamientos
+Usar duración real por tipo de cita
+Agregar permisos por rol
+Separar portal público y panel interno
+Conclusión
+
+El módulo sí tiene base, pero hoy todavía no es un sistema de reservaciones robusto.
+Sus principales debilidades no son visuales: son de lógica de agenda, consistencia de duración, seguridad, permisos y validación real de disponibilidad.
+

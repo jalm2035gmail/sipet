@@ -6,6 +6,7 @@
     bootstrap: parseBootstrapState(),
     campaigns: [],
     campaignView: "kanban",
+    presentationView: "kanban",
     templates: [],
     builder: null,
     results: null,
@@ -16,6 +17,8 @@
     assignableUsers: [],
     chart: null,
     questionModalType: null,
+    pendingPresentationPageIndex: null,
+    pendingQuestionLaunchId: null,
     presentationEditor: null,
     draggingPresentationPageIndex: null,
     draggingPageBlockIndex: null,
@@ -37,6 +40,7 @@
   const campaignsListWrap = document.getElementById("enc-campaigns-list-wrap");
   const campaignsMsg = document.getElementById("enc-campaigns-msg");
   const campaignViewButtons = Array.from(root.querySelectorAll("[data-enc-campaign-view]"));
+  const presentationViewButtons = Array.from(root.querySelectorAll("[data-enc-presentation-view]"));
   const builderMsg = document.getElementById("enc-builder-msg");
   const builderSelect = document.getElementById("enc-builder-instance-select");
   const templateSelect = document.getElementById("enc-template-select");
@@ -94,6 +98,8 @@
   const publicLinkSummary = document.getElementById("enc-public-link-summary");
   const publicLinkAnchor = document.getElementById("enc-public-link-anchor");
   const openPublicLink = document.getElementById("enc-open-public-link");
+  const presentationLinkAnchor = document.getElementById("enc-presentation-link-anchor");
+  const openPresentationLink = document.getElementById("enc-open-presentation-link");
   const presenterLinkAnchor = document.getElementById("enc-presenter-link-anchor");
   const openPresenterLink = document.getElementById("enc-open-presenter-link");
   const surveyInstanceId = document.getElementById("enc-survey-instance-id");
@@ -124,7 +130,10 @@
   const questionModalPreview = document.getElementById("enc-modal-question-preview");
   const questionModalOptions = document.getElementById("enc-modal-question-options");
   const questionModalDescription = document.getElementById("enc-modal-question-description");
+  const questionModalChartWrap = document.getElementById("enc-modal-question-chart-wrap");
+  const questionModalChartType = document.getElementById("enc-modal-question-chart-type");
   const questionModalRequired = document.getElementById("enc-modal-question-required");
+  const questionModalMsg = document.getElementById("enc-modal-question-msg");
   const questionModalSaveClose = document.getElementById("enc-modal-question-save-close");
   const questionModalSaveNew = document.getElementById("enc-modal-question-save-new");
   const questionModalTabs = Array.from(root.querySelectorAll("[data-enc-question-tab]"));
@@ -143,6 +152,8 @@
   const inlineOptionsTa = document.getElementById("enc-modal-inline-options-ta");
   const pageModal = document.getElementById("enc-page-modal");
   const pageTitleInput = document.getElementById("enc-page-title");
+  const pageTitleSizeInput = document.getElementById("enc-page-title-size");
+  const pageShowTitleInput = document.getElementById("enc-page-show-title");
   const pageSectionCountInput = document.getElementById("enc-page-section-count");
   const pageDescriptionInput = document.getElementById("enc-page-description");
   const pageBgColorInput = document.getElementById("enc-page-bg-color");
@@ -151,6 +162,7 @@
   const pageFooterColorInput = document.getElementById("enc-page-footer-color");
   const pageBlocksNode = document.getElementById("enc-page-blocks");
   const pagePreviewNode = document.getElementById("enc-page-preview");
+  const pageModalMsg = document.getElementById("enc-page-modal-msg");
   const pageSaveCloseButton = document.getElementById("enc-page-save-close");
 
   if (inlineOptionsTa) {
@@ -193,6 +205,10 @@
 
   function can(permission) {
     return !!(state.permissions && state.permissions[permission]);
+  }
+
+  function sameId(left, right) {
+    return String(left) === String(right);
   }
 
   async function fetchJSON(url, options) {
@@ -286,6 +302,42 @@
       (state.builder && state.builder.publication_rules_json && state.builder.publication_rules_json.response_mode)
       || "standard"
     ).trim().toLowerCase();
+  }
+
+  function builderIsEditable() {
+    const status = String((state.builder && state.builder.status) || "").trim().toLowerCase();
+    return status === "draft" || status === "archived";
+  }
+
+  function builderSections() {
+    return Array.isArray(state.builder && state.builder.sections) ? state.builder.sections : [];
+  }
+
+  function findBuilderSectionById(sectionId, sectionsOverride) {
+    const sections = Array.isArray(sectionsOverride) ? sectionsOverride : builderSections();
+    return sections.find((section) => sameId(section.id, sectionId)) || null;
+  }
+
+  function findBuilderQuestionById(questionId, sectionsOverride) {
+    const sections = Array.isArray(sectionsOverride) ? sectionsOverride : builderSections();
+    for (const section of sections) {
+      const found = (section.questions || []).find((question) => sameId(question.id, questionId));
+      if (found) return found;
+    }
+    return null;
+  }
+
+  function getPresentationPageSection(page, pageIndex, sectionsOverride) {
+    const sections = Array.isArray(sectionsOverride) ? sectionsOverride : builderSections();
+    const linkedSectionId = page && page.survey_section_id != null ? Number(page.survey_section_id) : null;
+    if (Number.isFinite(linkedSectionId)) {
+      const linkedSection = findBuilderSectionById(linkedSectionId, sections);
+      if (linkedSection) return linkedSection;
+    }
+    if (Number.isInteger(pageIndex) && pageIndex >= 0 && pageIndex < sections.length) {
+      return sections[pageIndex] || null;
+    }
+    return null;
   }
 
   function normalizeSectionCount(value) {
@@ -526,10 +578,13 @@
         : ensureLayoutSections(sectionCount || 1, []);
     return {
       id: String((data && data.id) || `page_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`),
-      title: String((data && data.title) || "Nueva página"),
+      title: String((data && data.title) || "Nueva sección"),
+      title_size: ["sm", "md", "lg"].includes(String((data && data.title_size) || "")) ? String(data.title_size) : "md",
+      show_title: data && data.show_title != null ? data.show_title !== false && String(data.show_title) !== "false" : true,
       description: String((data && data.description) || ""),
       bg_color: String((data && data.bg_color) || "#ffffff"),
       bg_image_url: String((data && data.bg_image_url) || ""),
+      survey_section_id: data && data.survey_section_id != null ? Number(data.survey_section_id) : null,
       section_count: sectionCount || 1,
       layout_sections: layoutSections,
       footer_text: String((data && data.footer_text) || ""),
@@ -672,23 +727,30 @@
   function buildQuestionCheckboxesHtml(selectedIds, sectionIndex) {
     const selected = new Set((Array.isArray(selectedIds) ? selectedIds : []).map((value) => String(value)));
     const items = getAllBuilderQuestions();
+    const createButton = `
+      <div class="enc-form-actions" style="margin:0 0 12px;">
+        <button type="button" class="enc-button enc-button-secondary" data-enc-open-question-library="true">Crear nueva pregunta</button>
+      </div>
+    `;
     if (!items.length) {
       return `
         <div class="enc-placeholder">
+          ${createButton}
           <strong>No hay preguntas disponibles.</strong>
-          <span>Crea primero una pregunta para poder agregarla a esta página.</span>
-          <div class="enc-form-actions" style="margin-top:12px;">
-            <button type="button" class="enc-button enc-button-secondary" data-enc-open-question-library="true">Crear pregunta ahora</button>
-          </div>
+          <span>Las preguntas de la presentación salen de esta misma encuesta.</span>
         </div>
       `;
     }
-    return items.map((item) => `
+    return `
+      ${createButton}
+      <p class="enc-question-meta" style="margin:0 0 12px;">Selecciona una o varias preguntas existentes de esta encuesta para mostrarlas en la sección.</p>
+      ${items.map((item) => `
       <label class="enc-preview-choice">
         <input type="checkbox" data-enc-layout-section-question="${sectionIndex}" value="${item.id}" ${selected.has(String(item.id)) ? "checked" : ""}>
         <span>${escapeHtml(item.label)}</span>
       </label>
-    `).join("");
+      `).join("")}
+    `;
   }
 
   function focusPresentationQuestionPicker(sectionIndex) {
@@ -705,36 +767,56 @@
     });
   }
 
+  function renderPresentationView() {
+    if (!presentationPagesNode) return;
+    const view = ["kanban", "list", "carousel"].includes(state.presentationView) ? state.presentationView : "kanban";
+    presentationPagesNode.dataset.encPresentationView = view;
+    presentationPagesNode.classList.toggle("is-list", view === "list");
+    presentationPagesNode.classList.toggle("is-carousel", view === "carousel");
+    presentationViewButtons.forEach((button) => {
+      const active = String(button.dataset.encPresentationView || "") === view;
+      button.classList.toggle("is-active", active);
+      button.setAttribute("aria-pressed", active ? "true" : "false");
+    });
+  }
+
   function renderPresentationBuilder() {
     if (!presentationPagesNode) return;
     const pages = getPresentationPages();
     if (!pages.length) {
-      presentationPagesNode.innerHTML = '<div class="enc-placeholder">No hay páginas definidas. Agrega la primera.</div>';
+      presentationPagesNode.innerHTML = '<div class="enc-placeholder">No hay secciones definidas. Agrega la primera.</div>';
+      renderPresentationView();
       return;
     }
-    presentationPagesNode.innerHTML = pages.map((page, pageIndex) => `
-      <article class="enc-card enc-presentation-page" data-enc-presentation-page="${pageIndex}" draggable="true">
-        <div class="enc-section-head">
-          <div>
-            <h3>Página ${pageIndex + 1}</h3>
-            <p>${escapeHtml(page.description || "Define el contenido y distribución de esta página.")}</p>
+    const sections = builderSections();
+    presentationPagesNode.innerHTML = pages.map((page, pageIndex) => {
+      const linkedSection = getPresentationPageSection(page, pageIndex, sections);
+      const linkedQuestions = linkedSection && Array.isArray(linkedSection.questions) ? linkedSection.questions.length : 0;
+      const description = escapeHtml(page.description || "Define el contenido y distribución de esta pantalla.");
+      const pageTitle = escapeHtml(page.title || `Pantalla ${pageIndex + 1}`);
+      return `
+        <article class="enc-card enc-presentation-page" data-enc-presentation-page="${pageIndex}" draggable="true">
+          <button type="button" class="enc-presentation-page-thumb" data-enc-open-presentation-page="${pageIndex}" aria-label="Editar pantalla ${pageIndex + 1}">
+            <div class="enc-presentation-page-live-preview">
+              ${renderPresentationPageCanvas(page, true)}
+            </div>
+            <div class="enc-presentation-page-summary">
+              <div class="enc-presentation-page-meta">
+                <span class="enc-pill is-draft">Pantalla ${pageIndex + 1}</span>
+                <strong class="enc-presentation-page-title">${pageTitle}</strong>
+                <span class="enc-question-meta">${page.section_count || 1} bloque(s) · ${linkedQuestions} pregunta(s)</span>
+                <p class="enc-presentation-page-copy">${description}</p>
+              </div>
+              <span class="enc-presentation-page-open">Expandir</span>
+            </div>
+          </button>
+          <div class="enc-presentation-page-actions">
+            <button type="button" class="enc-button enc-button-secondary" data-enc-remove-presentation-page="${pageIndex}">Eliminar pantalla</button>
           </div>
-          <div class="enc-builder-toolbar">
-            <button type="button" class="enc-button enc-button-secondary" data-enc-open-presentation-page="${pageIndex}">Editar página</button>
-            <button type="button" class="enc-button enc-button-secondary" data-enc-remove-presentation-page="${pageIndex}">Eliminar página</button>
-          </div>
-        </div>
-        <div class="enc-presentation-page-summary">
-          <div class="enc-presentation-page-meta">
-            <span class="enc-pill is-draft">${escapeHtml(page.title || `Página ${pageIndex + 1}`)}</span>
-            <span class="enc-question-meta">${page.section_count || 1} sección(es)</span>
-          </div>
-          <div class="enc-presentation-page-live-preview">
-            ${renderPresentationPageCanvas(page, true)}
-          </div>
-        </div>
-      </article>
-    `).join("");
+        </article>
+      `;
+    }).join("");
+    renderPresentationView();
   }
 
   function movePresentationPage(fromIndex, toIndex) {
@@ -745,7 +827,7 @@
     pages[toIndex] = temp;
     setPresentationPages(pages);
     renderPresentationBuilder();
-    setMessage(builderMsg, "Orden de páginas actualizado.", false);
+    setMessage(builderMsg, "Orden de secciones actualizado.", false);
   }
 
   function presentationCanvasStyle(page) {
@@ -792,11 +874,18 @@
       ? `data-enc-layout-section="${sectionIndex}" draggable="true"`
       : "";
     if (type === "question") {
-      const labels = (Array.isArray(section.question_ids) ? section.question_ids : [])
-        .map((questionId) => getAllBuilderQuestions().find((item) => Number(item.id) === Number(questionId)))
-        .filter(Boolean)
-        .map((item) => item.label);
-      return `<article class="enc-presentation-layout-slot ${isSelected ? "is-selected" : ""}" ${attrs}><div class="enc-presentation-mini-item"><strong>Preguntas</strong><span>${escapeHtml(labels.length ? labels.join(" · ") : "Selecciona una o varias preguntas")}</span></div></article>`;
+      const selectedQuestions = (Array.isArray(section.question_ids) ? section.question_ids : [section.question_id])
+        .map((questionId) => findBuilderQuestionById(questionId))
+        .filter(Boolean);
+      if (!selectedQuestions.length) {
+        return `<article class="enc-presentation-layout-slot ${isSelected ? "is-selected" : ""}" ${attrs}><div class="enc-presentation-mini-item"><strong>Preguntas</strong><span>Selecciona una o varias preguntas</span></div></article>`;
+      }
+      return `<article class="enc-presentation-layout-slot ${isSelected ? "is-selected" : ""}" ${attrs}><div class="enc-stack">${selectedQuestions.map((question) => `
+        <article class="enc-card enc-response-card enc-response-question">
+          <h4>${escapeHtml(question.titulo || "Pregunta")}</h4>
+          <p class="enc-question-meta">${escapeHtml(question.descripcion || questionTypeLabel(question.question_type) || "")}</p>
+        </article>
+      `).join("")}</div></article>`;
     }
     if (type === "image") {
       return `<article class="enc-presentation-layout-slot ${isSelected ? "is-selected" : ""}" ${attrs}>${renderImageSection(section)}</article>`;
@@ -808,13 +897,15 @@
   function renderPresentationPageCanvas(page, compact) {
     const sections = ensureLayoutSections(page.section_count, page.layout_sections);
     const title = String((page && page.title) || "").trim();
+    const titleSize = ["sm", "md", "lg"].includes(String((page && page.title_size) || "")) ? String(page.title_size) : "md";
+    const showTitle = page && page.show_title != null ? page.show_title !== false && String(page.show_title) !== "false" : true;
     const footerText = String((page && page.footer_text) || "").trim();
     return `
       <div class="enc-presentation-stage ${compact ? "is-compact" : ""}">
         <div class="enc-presentation-stage-ratio">
           <div class="enc-presentation-stage-canvas" style="${presentationCanvasStyle(page)}">
             <div class="enc-presentation-layout">
-              ${title ? `<header class="enc-presentation-layout-header"><h1>${escapeHtml(title)}</h1></header>` : ""}
+              ${showTitle && title ? `<header class="enc-presentation-layout-header is-${titleSize}"><h1>${escapeHtml(title)}</h1></header>` : ""}
               <div class="enc-presentation-layout-body ${sectionGridClass(page.section_count)}">
                 ${sections.map((section, index) => renderPresentationSectionPreview(section, index, !compact)).join("")}
               </div>
@@ -837,6 +928,8 @@
     const page = createPresentationPage({
       ...(state.presentationEditor.page || {}),
       title: pageTitleInput ? pageTitleInput.value : "",
+      title_size: pageTitleSizeInput ? pageTitleSizeInput.value : "md",
+      show_title: pageShowTitleInput ? pageShowTitleInput.value !== "false" : true,
       section_count: pageSectionCountInput ? normalizeSectionCount(pageSectionCountInput.value) : 1,
       description: pageDescriptionInput ? pageDescriptionInput.value : "",
       bg_color: pageBgColorInput ? pageBgColorInput.value : "#ffffff",
@@ -883,6 +976,9 @@
               <span>URL de imagen</span>
               <input class="enc-input" type="url" data-enc-layout-section-image-url="${sectionIndex}" value="${escapeHtml(section.image_url)}" placeholder="https://ejemplo.com/imagen.jpg">
             </label>
+            <div class="enc-form-actions enc-field-span-2">
+              <button type="button" class="enc-button enc-button-secondary" data-enc-layout-section-upload-image="${sectionIndex}">Subir imagen</button>
+            </div>
             <label class="enc-field">
               <span>Texto alternativo</span>
               <input class="enc-input" type="text" data-enc-layout-section-image-alt="${sectionIndex}" value="${escapeHtml(section.image_alt)}" placeholder="Descripción corta de la imagen">
@@ -1037,6 +1133,8 @@
       selectedSectionIndex: 0,
     };
     if (pageTitleInput) pageTitleInput.value = state.presentationEditor.page.title || "";
+    if (pageTitleSizeInput) pageTitleSizeInput.value = state.presentationEditor.page.title_size || "md";
+    if (pageShowTitleInput) pageShowTitleInput.value = state.presentationEditor.page.show_title === false ? "false" : "true";
     if (pageSectionCountInput) pageSectionCountInput.value = String(state.presentationEditor.page.section_count || 1);
     if (pageDescriptionInput) pageDescriptionInput.value = state.presentationEditor.page.description || "";
     if (pageBgColorInput) pageBgColorInput.value = state.presentationEditor.page.bg_color || "#ffffff";
@@ -1051,9 +1149,50 @@
 
   function closePresentationPageBuilder() {
     if (!pageModal) return;
+    state.pendingQuestionLaunchId = null;
     pageModal.hidden = true;
     state.presentationEditor = null;
     document.body.style.overflow = "";
+    setMessage(pageModalMsg, "", false);
+  }
+
+  async function ensurePresentationSectionForPage(pageIndex) {
+    if (!state.currentInstanceId) return null;
+    const pages = getPresentationPages();
+    const page = pages[pageIndex];
+    if (!page) return null;
+    const currentSection = getPresentationPageSection(page, pageIndex);
+    const titulo = String(page.title || `Sección ${pageIndex + 1}`).trim();
+    const descripcion = String(page.description || "").trim();
+    if (currentSection) {
+      if (String(currentSection.titulo || "") !== titulo || String(currentSection.descripcion || "") !== descripcion) {
+        await fetchJSON(`/api/encuestas/campanas/${state.currentInstanceId}/sections/${currentSection.id}`, {
+          method: "PATCH",
+          body: JSON.stringify({ titulo, descripcion }),
+        });
+      }
+      return currentSection;
+    }
+    const createdSection = await fetchJSON(`/api/encuestas/campanas/${state.currentInstanceId}/sections`, {
+      method: "POST",
+      body: JSON.stringify({ titulo, descripcion }),
+    });
+    const updatedPages = getPresentationPages();
+    if (updatedPages[pageIndex]) {
+      updatedPages[pageIndex] = createPresentationPage({
+        ...updatedPages[pageIndex],
+        survey_section_id: createdSection.id,
+      });
+      state.builder = {
+        ...(state.builder || {}),
+        publication_rules_json: {
+          ...(state.builder && state.builder.publication_rules_json ? state.builder.publication_rules_json : {}),
+          presentation_pages: updatedPages,
+        },
+      };
+      await savePresentationPages(false);
+    }
+    return createdSection;
   }
 
   function persistPresentationEditorPage() {
@@ -1068,7 +1207,9 @@
   function addPresentationPage() {
     const pages = getPresentationPages();
     pages.push(createPresentationPage({
-      title: "Nueva página",
+      title: "Nueva pantalla",
+      title_size: "md",
+      show_title: true,
       section_count: 1,
       layout_sections: [],
       footer_text: "",
@@ -1077,7 +1218,7 @@
     setPresentationPages(pages);
     showSurveyTab("presentation");
     renderPresentationBuilder();
-    setMessage(builderMsg, "Página agregada. Ahora puedes construir su contenido.", false);
+    setMessage(builderMsg, "Pantalla agregada. Ahora puedes construir su contenido.", false);
     openPresentationPageBuilder(pages.length - 1);
   }
 
@@ -1085,17 +1226,21 @@
     return getPresentationPages();
   }
 
-  async function savePresentationPages() {
+  async function savePresentationPages(reloadAfterSave = true) {
     const pages = getPresentationPages();
-    await saveDraft(
-      {
+    await fetchJSON(`/api/encuestas/campanas/${state.currentInstanceId}/draft`, {
+      method: "PATCH",
+      body: JSON.stringify({
         publication_rules_json: {
           ...(state.builder && state.builder.publication_rules_json ? state.builder.publication_rules_json : {}),
           presentation_pages: pages,
         },
-      },
-      "Presentación guardada."
-    );
+      }),
+    });
+    if (!reloadAfterSave) return;
+    await loadCampaigns(false);
+    await loadBuilder(state.currentInstanceId);
+    setMessage(builderMsg, "Presentación guardada.");
   }
 
   function paintMetrics() {
@@ -1183,6 +1328,25 @@
     if (type === "semantic_differential") return "Muy negativo\nNegativo\nNeutral\nPositivo\nMuy positivo";
     if (type === "matrix") return "Fila 1\nFila 2\nFila 3";
     return "";
+  }
+
+  function questionSupportsChartType(type) {
+    return [
+      "single_choice",
+      "live_poll_single_choice",
+      "multiple_choice",
+      "yes_no",
+      "scale_1_5",
+      "live_scale_1_5",
+      "nps_0_10",
+      "quiz_single_choice",
+      "ranking",
+      "likert_scale",
+      "semantic_differential",
+      "dropdown",
+      "image_choice",
+      "true_false",
+    ].includes(type);
   }
 
   function getQuestionTypeKeys() {
@@ -1316,8 +1480,13 @@
     if (editorResponseMode) editorResponseMode.value = publicationRules.response_mode || "standard";
     if (addStructureButton) {
       addStructureButton.textContent = publicationRules.response_mode === "presentation"
-        ? "+ Agregar página"
+        ? "+ Agregar pantalla"
         : "+ Agregar sección";
+    }
+    if (presentationAddPageButton) {
+      presentationAddPageButton.textContent = publicationRules.response_mode === "presentation"
+        ? "Agregar pantalla"
+        : "Agregar sección";
     }
     if (editorDescription) editorDescription.value = builder.descripcion || "";
     if (editorHeaderHtml) editorHeaderHtml.value = publicationRules.header_html || "";
@@ -1391,6 +1560,14 @@
         }
       }
     }
+    if (questionModalChartWrap) {
+      const supportsChart = questionSupportsChartType(state.questionModalType);
+      questionModalChartWrap.hidden = !supportsChart;
+      if (questionModalChartType) {
+        if (!supportsChart) questionModalChartType.value = "bar";
+        else if (!["bar", "donut", "list"].includes(questionModalChartType.value)) questionModalChartType.value = "bar";
+      }
+    }
     if (questionModalPreview) questionModalPreview.hidden = supportsOpts;
     renderQuestionModalPreview();
   }
@@ -1399,9 +1576,11 @@
     state.questionModalType = state.questionTypes[0] ? state.questionTypes[0].key : "short_text";
     if (questionModalTitle) questionModalTitle.value = "";
     if (questionModalDescription) questionModalDescription.value = "";
+    if (questionModalChartType) questionModalChartType.value = "bar";
     if (questionModalRequired) questionModalRequired.value = "false";
     if (questionModalOptions) questionModalOptions.value = defaultOptionsText(state.questionModalType);
     if (inlineOptionsTa) inlineOptionsTa.value = defaultOptionsText(state.questionModalType);
+    setMessage(questionModalMsg, "", false);
     showQuestionModalTab("answers");
     renderQuestionModalTypeList();
   }
@@ -1411,13 +1590,24 @@
     resetQuestionModal();
     questionModal.hidden = false;
     document.body.style.overflow = "hidden";
-    if (questionModalTitle) questionModalTitle.focus();
+    const firstTypeButton = questionModalTypes ? questionModalTypes.querySelector("[data-enc-modal-type]") : null;
+    if (firstTypeButton) {
+      firstTypeButton.focus();
+    } else if (questionModalTitle) {
+      questionModalTitle.focus();
+    }
   }
 
   function closeQuestionModal() {
     if (!questionModal) return;
     questionModal.hidden = true;
     document.body.style.overflow = "";
+    setMessage(questionModalMsg, "", false);
+    if (state.pendingPresentationPageIndex != null) {
+      const returnPageIndex = Number(state.pendingPresentationPageIndex);
+      state.pendingPresentationPageIndex = null;
+      openPresentationPageBuilder(returnPageIndex);
+    }
   }
 
   function openOptionsPopup(type) {
@@ -1631,6 +1821,13 @@
     return `${window.location.origin}/encuestas/presentador/${encodeURIComponent(builder.id)}`;
   }
 
+  function getPresentationScreenUrl(builder) {
+    const publicUrl = getPublicSurveyUrl(builder);
+    if (!publicUrl) return "";
+    const separator = publicUrl.includes("?") ? "&" : "?";
+    return `${publicUrl}${separator}present=1`;
+  }
+
   async function copyText(text) {
     if (!text) return;
     if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -1696,17 +1893,42 @@
     setMessage(builderMsg, "Imagen insertada en el HTML. Guarda el contenido para aplicarla.", false);
   }
 
+  async function promptAndUploadSurveyImage() {
+    if (!state.currentInstanceId) {
+      throw new Error("Selecciona una campaña primero.");
+    }
+    const picker = document.createElement("input");
+    picker.type = "file";
+    picker.accept = "image/jpeg,image/png,image/gif,image/webp,image/svg+xml";
+    const file = await new Promise((resolve) => {
+      picker.addEventListener("change", function () {
+        resolve(picker.files && picker.files[0] ? picker.files[0] : null);
+      }, { once: true });
+      picker.click();
+    });
+    if (!file) return "";
+    setMessage(builderMsg, "Subiendo imagen...", false);
+    const data = await uploadSurveyImageFile(file);
+    return String(data.url || "");
+  }
+
   function renderPublicLinkSummary(builder) {
     if (!publicLinkSummary || !publicLinkAnchor || !surveyInstanceId || !surveyIntegrationToken) return;
     const publicUrl = getPublicSurveyUrl(builder);
+    const presentationUrl = getPresentationScreenUrl(builder);
     const presenterUrl = getPresenterUrl(builder);
     const instanceId = builder && builder.id != null ? String(builder.id) : "";
     const integrationToken = String((builder && builder.settings_json && builder.settings_json.live_integration_token) || "").trim();
-    if (!publicUrl && !presenterUrl && !instanceId && !integrationToken) {
+    if (!publicUrl && !presentationUrl && !presenterUrl && !instanceId && !integrationToken) {
       publicLinkSummary.hidden = true;
       publicLinkAnchor.textContent = "";
       publicLinkAnchor.removeAttribute("href");
       if (openPublicLink) openPublicLink.hidden = true;
+      if (presentationLinkAnchor) {
+        presentationLinkAnchor.textContent = "";
+        presentationLinkAnchor.removeAttribute("href");
+      }
+      if (openPresentationLink) openPresentationLink.hidden = true;
       if (presenterLinkAnchor) {
         presenterLinkAnchor.textContent = "";
         presenterLinkAnchor.removeAttribute("href");
@@ -1730,6 +1952,15 @@
       openPublicLink.href = publicUrl || "#";
       openPublicLink.hidden = !publicUrl;
     }
+    if (presentationLinkAnchor) {
+      presentationLinkAnchor.href = presentationUrl || "#";
+      presentationLinkAnchor.textContent = presentationUrl || "Disponible al publicar la encuesta.";
+      presentationLinkAnchor.title = presentationUrl || "";
+    }
+    if (openPresentationLink) {
+      openPresentationLink.href = presentationUrl || "#";
+      openPresentationLink.hidden = !presentationUrl;
+    }
     if (presenterLinkAnchor) {
       presenterLinkAnchor.href = presenterUrl || "#";
       presenterLinkAnchor.textContent = presenterUrl || "Disponible al guardar la encuesta.";
@@ -1743,7 +1974,7 @@
 
   function getCurrentSection() {
     const sections = (state.builder && state.builder.sections) || [];
-    return sections.find((section) => section.id === state.selectedSectionId) || null;
+    return sections.find((section) => sameId(section.id, state.selectedSectionId)) || null;
   }
 
   function renderCampaigns() {
@@ -2032,12 +2263,12 @@
       questionsEmpty.style.display = "";
       return;
     }
-    if (!state.selectedSectionId || !sections.some((section) => section.id === state.selectedSectionId)) {
+    if (!state.selectedSectionId || !sections.some((section) => sameId(section.id, state.selectedSectionId))) {
       state.selectedSectionId = sections[0].id;
     }
     sectionsList.innerHTML = sections
       .map((section, index) => {
-        const activeClass = section.id === state.selectedSectionId ? "is-active" : "";
+        const activeClass = sameId(section.id, state.selectedSectionId) ? "is-active" : "";
         return `
           <article class="enc-section-card ${activeClass}" data-enc-section-id="${section.id}">
             <strong>${index + 1}. ${section.titulo}</strong>
@@ -2262,7 +2493,7 @@
   }
 
   async function editSection(sectionId) {
-    const section = ((state.builder && state.builder.sections) || []).find((item) => item.id === sectionId);
+    const section = ((state.builder && state.builder.sections) || []).find((item) => sameId(item.id, sectionId));
     if (!section) return;
     const titulo = window.prompt("Editar título de la sección", section.titulo || "");
     if (!titulo) return;
@@ -2277,7 +2508,7 @@
 
   async function reorderSection(sectionId, direction) {
     const sections = (state.builder && state.builder.sections) || [];
-    const index = sections.findIndex((item) => item.id === sectionId);
+    const index = sections.findIndex((item) => sameId(item.id, sectionId));
     const swapIndex = index + direction;
     if (index < 0 || swapIndex < 0 || swapIndex >= sections.length) return;
     const ids = sections.map((item) => item.id);
@@ -2292,11 +2523,42 @@
   }
 
   async function addQuestion() {
-    const section = getCurrentSection();
     if (!state.currentInstanceId) {
       setMessage(boardMsg, "Selecciona una campaña en el desplegable de arriba.", true);
       setMessage(builderMsg, "Selecciona una campaña primero.", true);
       return;
+    }
+    if (responseMode() === "presentation" && state.presentationEditor) {
+      if (!builderIsEditable()) {
+        setMessage(builderMsg, "Para crear preguntas, la encuesta debe estar en borrador o archivada.", true);
+        return;
+      }
+      const requestId = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      state.pendingQuestionLaunchId = requestId;
+      const presentationSection = await ensurePresentationSectionForPage(Number(state.presentationEditor.pageIndex));
+      if (state.pendingQuestionLaunchId !== requestId) {
+        return;
+      }
+      state.pendingQuestionLaunchId = null;
+      if (!presentationSection) {
+        setMessage(builderMsg, "No se pudo vincular la sección de esta presentación.", true);
+        return;
+      }
+      state.selectedSectionId = presentationSection.id;
+      state.pendingPresentationPageIndex = Number(state.presentationEditor.pageIndex);
+      closePresentationPageBuilder();
+      setMessage(boardMsg, "", false);
+      openQuestionModal();
+      return;
+    }
+    let section = getCurrentSection();
+    if (!section) {
+      const sections = (state.builder && state.builder.sections) || [];
+      if (sections.length) {
+        state.selectedSectionId = sections[0].id;
+        renderSections();
+        section = getCurrentSection();
+      }
     }
     if (!section) {
       setMessage(boardMsg, "Primero crea y selecciona una sección.", true);
@@ -2328,6 +2590,9 @@
         descripcion: String((questionModalDescription && questionModalDescription.value) || "").trim(),
         question_type: type,
         is_required: String((questionModalRequired && questionModalRequired.value) || "false") === "true",
+        config_json: questionSupportsChartType(type)
+          ? { result_chart_type: String((questionModalChartType && questionModalChartType.value) || "bar") }
+          : {},
         options: parseQuestionModalOptions(type),
       }),
     });
@@ -2342,7 +2607,7 @@
 
   async function editQuestion(questionId) {
     const section = getCurrentSection();
-    const question = section && (section.questions || []).find((item) => item.id === questionId);
+    const question = section && (section.questions || []).find((item) => sameId(item.id, questionId));
     if (!question) return;
     const titulo = window.prompt("Editar pregunta", question.titulo || "");
     if (!titulo) return;
@@ -2356,8 +2621,20 @@
     const payload = {
       titulo,
       descripcion,
+      config_json: questionSupportsChartType(question.question_type)
+        ? {
+            ...((question.config_json && typeof question.config_json === "object") ? question.config_json : {}),
+            result_chart_type: String(window.prompt(
+              "Tipo de gráfico: bar, donut o list",
+              String(((question.config_json || {}).result_chart_type) || "bar")
+            ) || ((question.config_json || {}).result_chart_type || "bar")).trim().toLowerCase(),
+          }
+        : undefined,
       options: optionsText === null ? undefined : parseOptionsText(optionsText, question.question_type),
     };
+    if (payload.config_json && !["bar", "donut", "list"].includes(payload.config_json.result_chart_type)) {
+      payload.config_json.result_chart_type = "bar";
+    }
     await fetchJSON(`/api/encuestas/campanas/${state.currentInstanceId}/questions/${questionId}`, {
       method: "PATCH",
       body: JSON.stringify(payload),
@@ -2378,7 +2655,7 @@
     const section = getCurrentSection();
     if (!section) return;
     const ids = (section.questions || []).map((item) => item.id);
-    const index = ids.indexOf(questionId);
+    const index = ids.findIndex((item) => sameId(item, questionId));
     const swapIndex = index + direction;
     if (index < 0 || swapIndex < 0 || swapIndex >= ids.length) return;
     const temp = ids[index];
@@ -2419,6 +2696,14 @@
         if (!view || view === "activities" || button.classList.contains("is-disabled")) return;
         state.campaignView = view;
         renderCampaignView();
+      });
+    });
+    presentationViewButtons.forEach((button) => {
+      button.addEventListener("click", function () {
+        const view = String(button.dataset.encPresentationView || "");
+        if (!view) return;
+        state.presentationView = view;
+        renderPresentationView();
       });
     });
     builderTabs.forEach((button) => {
@@ -2496,20 +2781,8 @@
       });
     });
 
-    root.addEventListener("click", async function (event) {
-      const closer = event.target.closest("[data-enc-close-modal]");
-      if (closer) {
-        if (closer.dataset.encCloseModal === "question") {
-          closeQuestionModal();
-          return;
-        }
-        if (closer.dataset.encCloseModal === "page") {
-          closePresentationPageBuilder();
-          return;
-        }
-      }
-      const target = event.target.closest("button");
-      if (!target) return;
+    async function handleDelegatedButton(target) {
+      if (!target) return false;
       try {
         if (target.dataset.encModalType) {
           state.questionModalType = String(target.dataset.encModalType);
@@ -2517,37 +2790,51 @@
             questionModalOptions.value = defaultOptionsText(state.questionModalType);
           }
           renderQuestionModalTypeList();
+          return true;
         } else if (target.dataset.encOpenBuilder) {
           showPanel("constructor");
           await loadBuilder(target.dataset.encOpenBuilder);
           renderBuilderSelect();
+          return true;
         } else if (target.dataset.encOpenResults) {
           showPanel("resultados");
           if (resultsSelect) resultsSelect.value = String(target.dataset.encOpenResults);
           await loadResults(target.dataset.encOpenResults);
+          return true;
         } else if (target.dataset.encSelectSection) {
           state.selectedSectionId = Number(target.dataset.encSelectSection);
           renderSections();
+          return true;
         } else if (target.dataset.encEditSection) {
           await editSection(Number(target.dataset.encEditSection));
+          return true;
         } else if (target.dataset.encSectionUp) {
           await reorderSection(Number(target.dataset.encSectionUp), -1);
+          return true;
         } else if (target.dataset.encSectionDown) {
           await reorderSection(Number(target.dataset.encSectionDown), 1);
+          return true;
         } else if (target.dataset.encEditQuestion) {
           await editQuestion(Number(target.dataset.encEditQuestion));
+          return true;
         } else if (target.dataset.encDuplicateQuestion) {
           await duplicateQuestion(Number(target.dataset.encDuplicateQuestion));
+          return true;
         } else if (target.dataset.encQuestionUp) {
           await reorderQuestion(Number(target.dataset.encQuestionUp), -1);
+          return true;
         } else if (target.dataset.encQuestionDown) {
           await reorderQuestion(Number(target.dataset.encQuestionDown), 1);
+          return true;
         } else if (target.dataset.encOpenPresentationPage !== undefined) {
           openPresentationPageBuilder(Number(target.dataset.encOpenPresentationPage));
+          return true;
         } else if (target.dataset.encPageTemplate) {
-          if (!state.presentationEditor) throw new Error("Abre una página primero.");
+          if (!state.presentationEditor) throw new Error("Abre una sección primero.");
           state.presentationEditor.page = mergePresentationTemplate(String(target.dataset.encPageTemplate));
           if (pageTitleInput) pageTitleInput.value = state.presentationEditor.page.title || "";
+          if (pageTitleSizeInput) pageTitleSizeInput.value = state.presentationEditor.page.title_size || "md";
+          if (pageShowTitleInput) pageShowTitleInput.value = state.presentationEditor.page.show_title === false ? "false" : "true";
           if (pageSectionCountInput) pageSectionCountInput.value = String(state.presentationEditor.page.section_count || 1);
           if (pageDescriptionInput) pageDescriptionInput.value = state.presentationEditor.page.description || "";
           if (pageBgColorInput) pageBgColorInput.value = state.presentationEditor.page.bg_color || "#ffffff";
@@ -2556,6 +2843,7 @@
           if (pageFooterColorInput) pageFooterColorInput.value = state.presentationEditor.page.footer_color || "#0f172a";
           state.presentationEditor.selectedSectionIndex = 0;
           renderPageBlocksEditor();
+          return true;
         } else if (target.dataset.encLayoutSectionInsertImage !== undefined) {
           const index = Number(target.dataset.encLayoutSectionInsertImage);
           const area = pageBlocksNode
@@ -2564,27 +2852,27 @@
           if (!area) throw new Error("No se encontró la sección HTML para insertar la imagen.");
           await promptAndInsertHtmlImage(area);
           updatePresentationEditorPage();
+          return true;
+        } else if (target.dataset.encLayoutSectionUploadImage !== undefined) {
+          const index = Number(target.dataset.encLayoutSectionUploadImage);
+          const imageUrlNode = pageBlocksNode
+            ? pageBlocksNode.querySelector(`[data-enc-layout-section-image-url="${index}"]`)
+            : null;
+          if (!imageUrlNode) throw new Error("No se encontró el campo de imagen de la sección.");
+          const imageUrl = await promptAndUploadSurveyImage();
+          if (!imageUrl) return;
+          imageUrlNode.value = imageUrl;
+          updatePresentationEditorPage();
+          setMessage(builderMsg, "Imagen cargada y vinculada a la sección.", false);
+          return true;
         } else if (target.dataset.encPageBlock) {
-          if (!state.presentationEditor) throw new Error("Abre una página primero.");
+          if (!state.presentationEditor) throw new Error("Abre una sección primero.");
           const type = String(target.dataset.encPageBlock || "html");
           const availableQuestions = getAllBuilderQuestions();
           if (type === "question" && !availableQuestions.length) {
-            closePresentationPageBuilder();
-            showSurveyTab("questions");
-            if (!getCurrentSection()) {
-              const firstSection = ((state.builder && state.builder.sections) || [])[0];
-              if (firstSection) {
-                state.selectedSectionId = Number(firstSection.id);
-                renderSections();
-              }
-            }
-            if (!getCurrentSection()) {
-              setMessage(builderMsg, "Primero crea una sección y luego una pregunta.", true);
-              return;
-            }
             await addQuestion();
-            setMessage(builderMsg, "Crea la pregunta y luego podrás seleccionarla en la página.", false);
-            return;
+            setMessage(builderMsg, "Crea la pregunta y luego podrás seleccionarla en la sección.", false);
+            return true;
           }
           const sectionIndex = Number(state.presentationEditor.selectedSectionIndex || 0);
           updatePresentationEditorPage();
@@ -2599,59 +2887,100 @@
           if (type === "question") {
             focusPresentationQuestionPicker(sectionIndex);
           }
+          return true;
         } else if (target.dataset.encOpenQuestionLibrary !== undefined) {
-          closePresentationPageBuilder();
-          showSurveyTab("questions");
-          if (!getCurrentSection()) {
-            const firstSection = ((state.builder && state.builder.sections) || [])[0];
-            if (firstSection) {
-              state.selectedSectionId = Number(firstSection.id);
-              renderSections();
-            }
-          }
-          if (!getCurrentSection()) {
-            setMessage(builderMsg, "Primero crea una sección y luego una pregunta.", true);
-            return;
-          }
           await addQuestion();
-          setMessage(builderMsg, "Crea la pregunta y luego vuelve a la página para seleccionarla.", false);
+          setMessage(builderMsg, "Crea la pregunta y luego vuelve a la sección para seleccionarla.", false);
+          return true;
         } else if (target.dataset.encRemovePresentationPage !== undefined) {
           const pages = getPresentationPages();
           pages.splice(Number(target.dataset.encRemovePresentationPage), 1);
           setPresentationPages(pages);
           renderPresentationBuilder();
+          return true;
         } else if (target.dataset.encCopyInstanceId !== undefined) {
           const instanceId = state.builder && state.builder.id != null ? String(state.builder.id) : "";
           if (!instanceId) throw new Error("La encuesta no tiene ID disponible.");
           await copyText(instanceId);
           setMessage(builderMsg, "ID de encuesta copiado.");
+          return true;
         } else if (target.dataset.encCopyIntegrationToken !== undefined) {
           const integrationToken = String((state.builder && state.builder.settings_json && state.builder.settings_json.live_integration_token) || "").trim();
           if (!integrationToken) throw new Error("La encuesta no tiene token de integración disponible.");
           await copyText(integrationToken);
           setMessage(builderMsg, "Token de integración copiado.");
+          return true;
         } else if (target.dataset.encCopyPublicLink !== undefined) {
           const publicUrl = getPublicSurveyUrl(state.builder);
           if (!publicUrl) throw new Error("La encuesta no tiene enlace publico disponible.");
           await copyText(publicUrl);
           setMessage(builderMsg, "Enlace publico copiado.");
+          return true;
+        } else if (target.dataset.encCopyPresentationLink !== undefined) {
+          const presentationUrl = getPresentationScreenUrl(state.builder);
+          if (!presentationUrl) throw new Error("La encuesta no tiene pantalla de presentacion disponible.");
+          await copyText(presentationUrl);
+          setMessage(builderMsg, "Pantalla de presentacion copiada.");
+          return true;
         } else if (target.dataset.encCopyPresenterLink !== undefined) {
           const presenterUrl = getPresenterUrl(state.builder);
           if (!presenterUrl) throw new Error("La encuesta no tiene panel en vivo disponible.");
           await copyText(presenterUrl);
           setMessage(builderMsg, "Acceso al panel en vivo copiado.");
+          return true;
         }
       } catch (error) {
         setMessage(builderMsg, error.message, true);
+        if (questionModal && !questionModal.hidden) {
+          setMessage(questionModalMsg, error.message, true);
+        }
+        return true;
       }
+      return false;
+    }
+
+    async function handleModalClick(event) {
+      const closer = event.target.closest("[data-enc-close-modal]");
+      if (closer) {
+        if (closer.dataset.encCloseModal === "question") {
+          closeQuestionModal();
+          return;
+        }
+        if (closer.dataset.encCloseModal === "page") {
+          closePresentationPageBuilder();
+          return;
+        }
+      }
+      const tabButton = event.target.closest("[data-enc-question-tab]");
+      if (tabButton) {
+        showQuestionModalTab(tabButton.dataset.encQuestionTab);
+        return;
+      }
+      const target = event.target.closest("button");
+      if (!target) return;
+      await handleDelegatedButton(target);
+    }
+
+    root.addEventListener("click", async function (event) {
+      await handleModalClick(event);
+    });
+
+    [questionModal, pageModal].forEach((modalNode) => {
+      if (!modalNode) return;
+      modalNode.addEventListener("click", async function (event) {
+        event.stopPropagation();
+        await handleModalClick(event);
+      });
     });
 
     if (questionModalSaveClose) {
       questionModalSaveClose.addEventListener("click", async function () {
         try {
+          setMessage(questionModalMsg, "", false);
           await saveQuestionFromModal(false);
         } catch (error) {
           setMessage(builderMsg, error.message, true);
+          setMessage(questionModalMsg, error.message, true);
         }
       });
     }
@@ -2659,9 +2988,11 @@
     if (questionModalSaveNew) {
       questionModalSaveNew.addEventListener("click", async function () {
         try {
+          setMessage(questionModalMsg, "", false);
           await saveQuestionFromModal(true);
         } catch (error) {
           setMessage(builderMsg, error.message, true);
+          setMessage(questionModalMsg, error.message, true);
         }
       });
     }
@@ -2673,7 +3004,7 @@
       questionModalOptions.addEventListener("input", renderQuestionModalPreview);
     }
 
-    [pageTitleInput, pageSectionCountInput, pageDescriptionInput, pageBgColorInput, pageBgImageInput, pageFooterTextInput, pageFooterColorInput].forEach((node) => {
+    [pageTitleInput, pageTitleSizeInput, pageShowTitleInput, pageSectionCountInput, pageDescriptionInput, pageBgColorInput, pageBgImageInput, pageFooterTextInput, pageFooterColorInput].forEach((node) => {
       if (!node) return;
       node.addEventListener("input", function () {
         if (node === pageSectionCountInput && state.presentationEditor) {
@@ -2739,11 +3070,19 @@
     if (pageSaveCloseButton) {
       pageSaveCloseButton.addEventListener("click", async function () {
         try {
+          const pageIndex = state.presentationEditor ? Number(state.presentationEditor.pageIndex) : null;
+          setMessage(pageModalMsg, "", false);
           persistPresentationEditorPage();
-          await savePresentationPages();
+          await savePresentationPages(false);
+          if (pageIndex != null) {
+            await ensurePresentationSectionForPage(pageIndex);
+          }
+          await loadCampaigns(false);
+          await loadBuilder(state.currentInstanceId);
           closePresentationPageBuilder();
-          setMessage(builderMsg, "Página actualizada en el constructor.", false);
+          setMessage(builderMsg, "Sección actualizada en el constructor.", false);
         } catch (error) {
+          setMessage(pageModalMsg, error.message, true);
           setMessage(builderMsg, error.message, true);
         }
       });

@@ -9,6 +9,7 @@ def test_multitienda_access_roles_define_store_admin_and_seller_profiles() -> No
     assert "administrador_tienda" in roles
     assert "vendedor_tienda" in roles
     assert roles["administrador_tienda"]["screen_access_levels"]["Multitienda"]["full_access"] is True
+    assert roles["administrador_tienda"]["screen_access_levels"]["multitienda.configuracion"]["full_access"] is True
     assert "Reportes" not in roles["administrador_tienda"]["screen_access_levels"]
     assert roles["vendedor_tienda"]["screen_access_levels"]["Multitienda"]["special_permissions"] is True
     assert roles["vendedor_tienda"]["screen_access_levels"]["Reportes"]["read_only"] is True

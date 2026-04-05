@@ -11,277 +11,7 @@ _HTML = """<!doctype html>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Apartados</title>
-  <style>
-    :root {
-      --ap-accent:  #1d4ed8;
-      --ap-accent2: #1e40af;
-      --ap-light:   #dbeafe;
-      --ap-bg:      var(--page-bg, #f5f6f8);
-      --ap-surface: var(--content-bg, #ffffff);
-      --ap-border:  var(--field-border, #d1d5db);
-      --ap-text:    var(--body-text, #1f2937);
-      --ap-muted:   color-mix(in srgb, var(--body-text, #1f2937) 60%, #ffffff 40%);
-      --ap-focus:   #1d4ed8;
-      --ap-danger:  #dc2626;
-      --ap-success: #16a34a;
-      --ap-warn:    #d97706;
-    }
-    *, *::before, *::after { box-sizing: border-box; }
-    html, body { margin: 0; padding: 0; background: var(--ap-bg); font-family: Arial, sans-serif; color: var(--ap-text); }
-
-    .ap-page { padding: 0 0 48px; }
-
-    /* ── Hero ───────────────────────────────────────────────────────────── */
-    .ap-hero {
-      background: linear-gradient(135deg, #0a1628 0%, #0f2557 50%, #0d2340 100%);
-      border-radius: 20px; padding: 32px 32px 28px; margin-bottom: 28px;
-      position: relative; overflow: hidden;
-    }
-    .ap-hero::before {
-      content: ""; position: absolute; inset: 0;
-      background:
-        radial-gradient(ellipse 55% 60% at 82% 18%, rgba(29,78,216,0.38) 0%, transparent 70%),
-        radial-gradient(ellipse 38% 45% at 12% 82%, rgba(30,64,175,0.22) 0%, transparent 70%);
-      pointer-events: none;
-    }
-    .ap-hero__inner { position: relative; z-index: 1; display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
-    .ap-hero__icon {
-      width: 64px; height: 64px; border-radius: 20px; flex-shrink: 0;
-      background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-      display: grid; place-items: center; font-size: 1.6rem; color: #fff;
-      box-shadow: 0 8px 24px rgba(29,78,216,0.45);
-    }
-    .ap-hero__copy { flex: 1; min-width: 200px; }
-    .ap-hero__copy h1 { margin: 0 0 6px; font-size: 1.55rem; font-weight: 800; color: #fff; letter-spacing: -0.02em; }
-    .ap-hero__copy p  { margin: 0; color: rgba(255,255,255,0.72); font-size: 0.92rem; line-height: 1.5; }
-    .ap-hero__badges  { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
-    .ap-hero__badge {
-      padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 700;
-      letter-spacing: 0.04em; text-transform: uppercase;
-    }
-    .ap-hero__badge--enganche { background: rgba(59,130,246,0.32); color: #bfdbfe; border: 1px solid rgba(191,219,254,0.25); }
-    .ap-hero__badge--abonos   { background: rgba(30,64,175,0.32);  color: #a5b4fc; border: 1px solid rgba(165,180,252,0.25); }
-
-    /* ── Stats ──────────────────────────────────────────────────────────── */
-    .ap-stats {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-      gap: 16px; margin-bottom: 28px;
-    }
-    .ap-stat {
-      background: var(--ap-surface); border: 1px solid var(--ap-border);
-      border-radius: 16px; padding: 18px 20px;
-    }
-    .ap-stat__value { font-size: 1.75rem; font-weight: 800; color: var(--ap-accent); line-height: 1; margin-bottom: 4px; }
-    .ap-stat__label { font-size: 0.8rem; color: var(--ap-muted); font-weight: 600; }
-    .ap-stat__sub   { font-size: 0.72rem; color: var(--ap-muted); margin-top: 2px; }
-    .ap-stat--warn .ap-stat__value  { color: var(--ap-warn); }
-    .ap-stat--ok   .ap-stat__value  { color: var(--ap-success); }
-
-    /* ── Tabs ───────────────────────────────────────────────────────────── */
-    .ap-tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
-    .ap-tab {
-      padding: 8px 18px; border-radius: 12px; font-size: 0.88rem; font-weight: 700;
-      cursor: pointer; border: 1.5px solid var(--ap-border);
-      background: var(--ap-surface); color: var(--ap-muted); transition: all 0.16s;
-    }
-    .ap-tab.is-active { background: var(--ap-accent); color: #fff; border-color: var(--ap-accent); }
-    .ap-tab-panel { display: none; }
-    .ap-tab-panel.is-active { display: block; }
-
-    /* ── Toolbar ────────────────────────────────────────────────────────── */
-    .ap-toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 16px; }
-    .ap-search {
-      flex: 1; min-width: 200px; max-width: 320px;
-      padding: 9px 14px; border-radius: 12px; border: 1.5px solid var(--ap-border);
-      font-size: 0.9rem; background: var(--ap-surface); color: var(--ap-text);
-      outline: none; transition: border-color 0.15s;
-    }
-    .ap-search:focus { border-color: var(--ap-focus); }
-    .ap-filter {
-      padding: 9px 14px; border-radius: 12px; border: 1.5px solid var(--ap-border);
-      font-size: 0.88rem; background: var(--ap-surface); color: var(--ap-text);
-      outline: none; cursor: pointer;
-    }
-    .ap-btn-add {
-      margin-left: auto; padding: 9px 18px; border-radius: 12px;
-      background: var(--ap-accent); color: #fff; font-weight: 700; font-size: 0.88rem;
-      border: none; cursor: pointer; display: flex; align-items: center; gap: 7px;
-      transition: opacity 0.15s;
-    }
-    .ap-btn-add:hover { opacity: 0.88; }
-
-    /* ── Table ──────────────────────────────────────────────────────────── */
-    .ap-table-wrap { overflow-x: auto; border-radius: 14px; border: 1px solid var(--ap-border); }
-    .ap-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
-    .ap-table thead tr { background: color-mix(in srgb, var(--ap-surface) 82%, var(--ap-bg) 18%); }
-    .ap-table th { padding: 12px 14px; text-align: left; font-size: 0.72rem; font-weight: 700; color: var(--ap-muted); text-transform: uppercase; letter-spacing: 0.08em; white-space: nowrap; }
-    .ap-table td { padding: 12px 14px; border-top: 1px solid var(--ap-border); vertical-align: middle; }
-    .ap-table tbody tr { cursor: pointer; transition: background 0.12s; }
-    .ap-table tbody tr:hover { background: color-mix(in srgb, var(--ap-accent) 5%, var(--ap-surface) 95%); }
-    .ap-table__empty td { text-align: center; padding: 56px 16px; color: var(--ap-muted); cursor: default; }
-
-    /* ── Progress mini ──────────────────────────────────────────────────── */
-    .ap-prog-wrap { display: flex; align-items: center; gap: 7px; min-width: 120px; }
-    .ap-prog-bar  { flex: 1; height: 7px; border-radius: 4px; background: #e5e7eb; overflow: hidden; }
-    .ap-prog-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, #3b82f6, #1d4ed8); transition: width 0.4s; }
-    .ap-prog-fill--warn { background: linear-gradient(90deg, #f59e0b, #d97706); }
-    .ap-prog-fill--done { background: linear-gradient(90deg, #22c55e, #16a34a); }
-    .ap-prog-pct  { font-size: 0.75rem; font-weight: 700; color: var(--ap-muted); white-space: nowrap; }
-
-    /* ── Badges ─────────────────────────────────────────────────────────── */
-    .ap-badge {
-      display: inline-block; padding: 3px 10px; border-radius: 10px;
-      font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; white-space: nowrap;
-    }
-    .ap-badge--activo     { background: #dbeafe; color: #1e40af; }
-    .ap-badge--completado { background: #dcfce7; color: #166534; }
-    .ap-badge--cancelado  { background: #f3f4f6; color: #6b7280; }
-    .ap-badge--vencido    { background: #fee2e2; color: #991b1b; }
-    .ap-badge--entregado  { background: #d1fae5; color: #065f46; }
-
-    /* ── Money ──────────────────────────────────────────────────────────── */
-    .ap-money { font-variant-numeric: tabular-nums; font-weight: 700; }
-    .ap-money--pend { color: var(--ap-danger); }
-    .ap-money--paid { color: var(--ap-success); }
-    .ap-money--warn { color: var(--ap-warn); }
-
-    /* ── Client cell ────────────────────────────────────────────────────── */
-    .ap-client      { display: grid; gap: 1px; }
-    .ap-client__name { font-weight: 700; font-size: 0.88rem; }
-    .ap-client__tel  { font-size: 0.75rem; color: var(--ap-muted); }
-
-    /* ── Overdue indicator ──────────────────────────────────────────────── */
-    .ap-overdue-dot {
-      display: inline-block; width: 8px; height: 8px; border-radius: 50%;
-      background: var(--ap-danger); margin-right: 5px; vertical-align: middle;
-    }
-
-    /* ── Drawer backdrop ────────────────────────────────────────────────── */
-    .ap-drawer-bg {
-      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.44);
-      z-index: 1040; align-items: flex-end; justify-content: center;
-    }
-    .ap-drawer-bg.is-open { display: flex; }
-
-    /* ── Drawer base ────────────────────────────────────────────────────── */
-    .ap-drawer {
-      background: var(--ap-surface); border-radius: 24px 24px 0 0;
-      width: 100%; max-width: 680px;
-      padding: 28px 28px 32px; max-height: 94vh; overflow-y: auto;
-    }
-    .ap-drawer__title    { font-size: 1.2rem; font-weight: 800; margin: 0 0 2px; }
-    .ap-drawer__subtitle { font-size: 0.82rem; color: var(--ap-muted); margin: 0 0 22px; }
-
-    /* ── Form fields ────────────────────────────────────────────────────── */
-    .ap-field { margin-bottom: 15px; }
-    .ap-field label { display: block; font-size: 0.77rem; font-weight: 700; margin-bottom: 5px; color: var(--ap-muted); text-transform: uppercase; letter-spacing: 0.06em; }
-    .ap-field input, .ap-field select, .ap-field textarea {
-      width: 100%; padding: 10px 12px; border-radius: 10px;
-      border: 1.5px solid var(--ap-border); font-size: 0.95rem;
-      background: var(--ap-surface); color: var(--ap-text); outline: none; transition: border-color 0.15s;
-    }
-    .ap-field input:focus, .ap-field select:focus, .ap-field textarea:focus { border-color: var(--ap-focus); }
-    .ap-field textarea { resize: vertical; min-height: 60px; }
-    .ap-field--row  { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    .ap-field--row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
-    .ap-field--ro input { background: color-mix(in srgb, var(--ap-surface) 82%, var(--ap-bg) 18%); }
-
-    .ap-section-title {
-      font-size: 0.78rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em;
-      color: var(--ap-muted); margin: 20px 0 12px; padding-top: 16px;
-      border-top: 1px solid var(--ap-border);
-    }
-
-    /* ── Progress big (detail drawer) ──────────────────────────────────── */
-    .ap-detail-prog {
-      background: color-mix(in srgb, var(--ap-accent) 7%, var(--ap-surface) 93%);
-      border: 1px solid color-mix(in srgb, var(--ap-accent) 22%, var(--ap-border) 78%);
-      border-radius: 16px; padding: 18px 20px; margin-bottom: 20px;
-    }
-    .ap-detail-prog__header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
-    .ap-detail-prog__title  { font-size: 0.82rem; font-weight: 700; color: var(--ap-muted); text-transform: uppercase; letter-spacing: 0.06em; }
-    .ap-detail-prog__pct    { font-size: 1.4rem; font-weight: 800; color: var(--ap-accent); }
-    .ap-detail-bar { height: 12px; border-radius: 6px; background: #e5e7eb; overflow: hidden; margin-bottom: 10px; }
-    .ap-detail-fill { height: 100%; border-radius: 6px; background: linear-gradient(90deg, #3b82f6, #1d4ed8); transition: width 0.5s; }
-    .ap-detail-fill--done { background: linear-gradient(90deg, #22c55e, #16a34a); }
-    .ap-detail-amounts { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
-    .ap-detail-amount__label { font-size: 0.72rem; font-weight: 700; color: var(--ap-muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 2px; }
-    .ap-detail-amount__value { font-size: 1.1rem; font-weight: 800; }
-
-    /* ── Abonos list ────────────────────────────────────────────────────── */
-    .ap-abonos-list { display: grid; gap: 8px; margin-bottom: 16px; }
-    .ap-abono-row {
-      display: flex; align-items: center; gap: 10px;
-      padding: 10px 14px; border-radius: 12px;
-      background: color-mix(in srgb, var(--ap-accent) 5%, var(--ap-surface) 95%);
-      border: 1px solid color-mix(in srgb, var(--ap-accent) 14%, var(--ap-border) 86%);
-    }
-    .ap-abono-row__icon {
-      width: 34px; height: 34px; border-radius: 10px; flex-shrink: 0;
-      background: linear-gradient(135deg, rgba(59,130,246,0.18) 0%, rgba(29,78,216,0.18) 100%);
-      display: grid; place-items: center; color: var(--ap-accent); font-size: 0.85rem;
-    }
-    .ap-abono-row__info { flex: 1; min-width: 0; }
-    .ap-abono-row__fecha  { font-size: 0.78rem; color: var(--ap-muted); }
-    .ap-abono-row__metodo { font-size: 0.75rem; color: var(--ap-muted); margin-top: 1px; }
-    .ap-abono-row__monto  { font-size: 1rem; font-weight: 800; color: var(--ap-success); white-space: nowrap; }
-    .ap-abono-row__del    { background: none; border: none; cursor: pointer; color: #e5e7eb; font-size: 0.8rem; padding: 4px; transition: color 0.15s; }
-    .ap-abono-row__del:hover { color: var(--ap-danger); }
-    .ap-abonos-empty { text-align: center; padding: 24px; color: var(--ap-muted); font-size: 0.88rem; background: color-mix(in srgb, var(--ap-surface) 85%, var(--ap-bg) 15%); border-radius: 12px; }
-
-    /* ── Nuevo abono inline form ────────────────────────────────────────── */
-    .ap-abono-form {
-      background: color-mix(in srgb, var(--ap-accent) 5%, var(--ap-surface) 95%);
-      border: 1.5px dashed color-mix(in srgb, var(--ap-accent) 30%, var(--ap-border) 70%);
-      border-radius: 14px; padding: 16px 18px; margin-top: 4px;
-    }
-    .ap-abono-form__title { font-size: 0.8rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ap-accent); margin-bottom: 12px; }
-    .ap-abono-form__grid  { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
-    .ap-abono-form input, .ap-abono-form select {
-      width: 100%; padding: 9px 11px; border-radius: 9px;
-      border: 1.5px solid var(--ap-border); font-size: 0.88rem;
-      background: var(--ap-surface); color: var(--ap-text); outline: none;
-      transition: border-color 0.15s;
-    }
-    .ap-abono-form input:focus, .ap-abono-form select:focus { border-color: var(--ap-focus); }
-    .ap-abono-form__actions { display: flex; gap: 8px; justify-content: flex-end; }
-    .ap-abono-save-btn {
-      padding: 8px 18px; border-radius: 10px; background: var(--ap-accent);
-      color: #fff; font-weight: 700; font-size: 0.85rem; border: none; cursor: pointer;
-      transition: opacity 0.15s;
-    }
-    .ap-abono-save-btn:hover { opacity: 0.88; }
-    .ap-abono-cancel-btn {
-      padding: 8px 14px; border-radius: 10px; background: var(--ap-surface);
-      color: var(--ap-muted); font-weight: 700; font-size: 0.85rem;
-      border: 1.5px solid var(--ap-border); cursor: pointer;
-    }
-
-    /* ── Drawer footer ──────────────────────────────────────────────────── */
-    .ap-drawer__footer {
-      display: flex; justify-content: flex-end; gap: 10px;
-      margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--ap-border);
-      flex-wrap: wrap;
-    }
-    .ap-btn {
-      padding: 10px 22px; border-radius: 12px; font-size: 0.9rem; font-weight: 700;
-      cursor: pointer; border: none; transition: opacity 0.15s;
-    }
-    .ap-btn:hover { opacity: 0.88; }
-    .ap-btn--primary   { background: var(--ap-accent);   color: #fff; }
-    .ap-btn--secondary { background: var(--ap-surface);  color: var(--ap-muted); border: 1.5px solid var(--ap-border); }
-    .ap-btn--success   { background: var(--ap-success);  color: #fff; }
-    .ap-btn--danger    { background: #fee2e2; color: var(--ap-danger); }
-    .ap-btn--warn      { background: #fef3c7; color: var(--ap-warn); }
-
-    @media (max-width: 640px) {
-      .ap-hero { padding: 20px 16px 18px; }
-      .ap-hero__copy h1 { font-size: 1.25rem; }
-      .ap-field--row, .ap-field--row3, .ap-abono-form__grid { grid-template-columns: 1fr; }
-      .ap-detail-amounts { grid-template-columns: 1fr 1fr; }
-    }
-  </style>
+  <link rel="stylesheet" href="/multitienda/static/css/apartados.css" />
 </head>
 <body>
 <main class="ap-page">
@@ -582,6 +312,9 @@ _HTML = """<!doctype html>
         <i class="fa-solid fa-pen" style="margin-right:5px"></i>Editar
       </button>
       <button class="ap-btn ap-btn--warn" id="ap-detail-cancel-ap-btn">Cancelar apartado</button>
+      <button class="ap-btn ap-btn--primary" id="ap-detail-reactivar-btn" style="display:none">
+        <i class="fa-solid fa-rotate-right" style="margin-right:5px"></i>Reactivar
+      </button>
       <button class="ap-btn ap-btn--success" id="ap-detail-entregar-btn">
         <i class="fa-solid fa-box-open" style="margin-right:5px"></i>Marcar entregado
       </button>
@@ -592,13 +325,11 @@ _HTML = """<!doctype html>
 
 <script>
 (function () {
-  var LS_KEY = 'multitienda_apartados';
 
-  // ── Storage ──────────────────────────────────────────────────────────────
-  function load()    { try { return JSON.parse(localStorage.getItem(LS_KEY) || '[]'); } catch { return []; } }
-  function save(d)   { localStorage.setItem(LS_KEY, JSON.stringify(d)); }
+  // ── State ─────────────────────────────────────────────────────────────────
+  var allApartados = [];
 
-  // ── Helpers ──────────────────────────────────────────────────────────────
+  // ── Helpers ───────────────────────────────────────────────────────────────
   function fmt(n) { return '$' + parseFloat(n || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
   function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
   function today() { return new Date().toISOString().slice(0,10); }
@@ -617,20 +348,44 @@ _HTML = """<!doctype html>
   }
   function currentMonth() { return new Date().toISOString().slice(0,7); }
   function totalPagado(ap) {
-    return (ap.abonos || []).reduce(function(s,a){ return s + parseFloat(a.monto || 0); }, 0)
-           + parseFloat(ap.enganche || 0);
+    // balance_due is kept current by the API; paid = total - balance_due
+    var total = parseFloat(ap.total_amount || ap.precio || 0);
+    var bal   = parseFloat(ap.balance_due || 0);
+    return Math.max(0, total - bal);
+  }
+  function setText(id, val) { var el = document.getElementById(id); if (el) el.textContent = val; }
+
+  // ── API ───────────────────────────────────────────────────────────────────
+  function apiGet(url)           { return fetch(url).then(function(r){ return r.json(); }); }
+  function apiPost(url, body)    { return fetch(url, { method: 'POST',   headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) }).then(function(r){ return r.json(); }); }
+  function apiPut(url, body)     { return fetch(url, { method: 'PUT',    headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) }).then(function(r){ return r.json(); }); }
+  function apiDelete(url)        { return fetch(url, { method: 'DELETE' }).then(function(r){ return r.json(); }); }
+
+  // ── Load + render all ─────────────────────────────────────────────────────
+  function loadAll() {
+    // First mark overdue, then load list
+    apiPost('/multitienda/api/apartados/vencer', {}).catch(function(){}).finally(function(){
+      apiGet('/multitienda/api/apartados').then(function(j) {
+        allApartados = j.success ? (j.data || []) : [];
+        refreshStats();
+        renderAll();
+      }).catch(function(){ allApartados = []; renderAll(); });
+    });
   }
 
-  // ── Stats ────────────────────────────────────────────────────────────────
+  // ── Stats ─────────────────────────────────────────────────────────────────
   function refreshStats() {
-    var list = load();
-    var activos     = list.filter(function(a){ return a.estado === 'activo'; });
-    var vencer      = activos.filter(function(a){ return inDays(a.fechaLimite, 7); });
+    var list        = allApartados;
+    var activos     = list.filter(function(a){ return a.status === 'active'; });
+    var vencer      = activos.filter(function(a){ return inDays(a.due_date, 7); });
     var mes         = currentMonth();
-    var completados = list.filter(function(a){ return (a.estado === 'completado' || a.estado === 'entregado') && (a.fechaCompletado || '').startsWith(mes); });
-    var pendTotal   = activos.reduce(function(s,a){ var t = parseFloat(a.precio||0); var p = totalPagado(a); return s + Math.max(0, t - p); }, 0);
-    var activosMonto= activos.reduce(function(s,a){ return s + parseFloat(a.precio||0); }, 0);
-    var compMonto   = completados.reduce(function(s,a){ return s + parseFloat(a.precio||0); }, 0);
+    var completados = list.filter(function(a){
+      return (a.status === 'completado' || a.status === 'entregado') &&
+             (a.updated_at || '').slice(0,7) === mes;
+    });
+    var pendTotal    = activos.reduce(function(s,a){ return s + parseFloat(a.balance_due || 0); }, 0);
+    var activosMonto = activos.reduce(function(s,a){ return s + parseFloat(a.total_amount || 0); }, 0);
+    var compMonto    = completados.reduce(function(s,a){ return s + parseFloat(a.total_amount || 0); }, 0);
 
     setText('ap-stat-activos',           activos.length);
     setText('ap-stat-activos-monto',     fmt(activosMonto) + ' en productos');
@@ -640,69 +395,66 @@ _HTML = """<!doctype html>
     setText('ap-stat-pendiente',         fmt(pendTotal));
   }
 
-  function setText(id, val) { var el = document.getElementById(id); if (el) el.textContent = val; }
+  // ── Badge helpers ──────────────────────────────────────────────────────────
+  var BADGE_CSS   = { active:'ap-badge--activo', completado:'ap-badge--completado', entregado:'ap-badge--entregado', cancelado:'ap-badge--cancelado', vencido:'ap-badge--vencido' };
+  var BADGE_LABEL = { active:'Activo', completado:'Liquidado', entregado:'Entregado', cancelado:'Cancelado', vencido:'Vencido' };
+  function badge(status) { return '<span class="ap-badge ' + (BADGE_CSS[status]||'') + '">' + (BADGE_LABEL[status]||status) + '</span>'; }
 
-  // ── Badge helpers ─────────────────────────────────────────────────────────
-  var BADGE_CSS   = { activo:'ap-badge--activo', completado:'ap-badge--completado', entregado:'ap-badge--entregado', cancelado:'ap-badge--cancelado', vencido:'ap-badge--vencido' };
-  var BADGE_LABEL = { activo:'Activo', completado:'Liquidado', entregado:'Entregado', cancelado:'Cancelado', vencido:'Vencido' };
-  function badge(estado) { return '<span class="ap-badge ' + (BADGE_CSS[estado]||'') + '">' + (BADGE_LABEL[estado]||estado) + '</span>'; }
-
-  // ── Render rows ───────────────────────────────────────────────────────────
+  // ── Row renderers ──────────────────────────────────────────────────────────
   function rowActivo(ap) {
-    var precio   = parseFloat(ap.precio || 0);
+    var precio   = parseFloat(ap.total_amount || 0);
     var pagado   = totalPagado(ap);
-    var pend     = Math.max(0, precio - pagado);
+    var pend     = Math.max(0, parseFloat(ap.balance_due || 0));
     var pct      = precio > 0 ? Math.min(100, Math.round(pagado / precio * 100)) : 0;
-    var overdue  = isOverdue(ap.fechaLimite);
+    var overdue  = isOverdue(ap.due_date);
     var fillCls  = pct >= 100 ? ' ap-prog-fill--done' : (overdue ? ' ap-prog-fill--warn' : '');
     var prog     = '<div class="ap-prog-wrap">'
                  + '<div class="ap-prog-bar"><div class="ap-prog-fill' + fillCls + '" style="width:' + pct + '%"></div></div>'
                  + '<span class="ap-prog-pct">' + pct + '%</span>'
                  + '</div>';
-    var fechaLbl = ap.fechaLimite
-      ? (overdue ? '<span class="ap-overdue-dot"></span>' : '') + escHtml(ap.fechaLimite)
+    var fechaLbl = ap.due_date
+      ? (overdue ? '<span class="ap-overdue-dot"></span>' : '') + escHtml(ap.due_date)
       : '—';
     return '<tr data-id="' + ap.id + '" data-drawer="detail">'
-      + '<td><code style="font-size:0.82rem">' + escHtml(ap.folio) + '</code></td>'
-      + '<td><div class="ap-client"><span class="ap-client__name">' + escHtml(ap.nombre) + '</span>'
-      + '<span class="ap-client__tel">' + escHtml(ap.telefono||'') + '</span></div></td>'
-      + '<td>' + escHtml(ap.producto) + '</td>'
+      + '<td><code style="font-size:0.82rem">' + escHtml(ap.folio || ('#' + ap.id)) + '</code></td>'
+      + '<td><div class="ap-client"><span class="ap-client__name">' + escHtml(ap.customer_name || '') + '</span>'
+      + '<span class="ap-client__tel">' + escHtml(ap.customer_phone || '') + '</span></div></td>'
+      + '<td>' + escHtml(ap.product_name || '') + '</td>'
       + '<td class="ap-money">' + fmt(precio) + '</td>'
       + '<td class="ap-money ap-money--paid">' + fmt(pagado) + '</td>'
       + '<td class="ap-money ap-money--pend">' + fmt(pend) + '</td>'
       + '<td>' + prog + '</td>'
       + '<td style="white-space:nowrap">' + fechaLbl + '</td>'
-      + '<td>' + badge(ap.estado) + '</td>'
+      + '<td>' + badge(ap.status) + '</td>'
       + '</tr>';
   }
 
   function rowCompletado(ap) {
-    var precio = parseFloat(ap.precio || 0);
-    var n      = (ap.abonos || []).length + 1;
+    var precio = parseFloat(ap.total_amount || 0);
     return '<tr data-id="' + ap.id + '" data-drawer="detail">'
-      + '<td><code style="font-size:0.82rem">' + escHtml(ap.folio) + '</code></td>'
-      + '<td><div class="ap-client"><span class="ap-client__name">' + escHtml(ap.nombre) + '</span>'
-      + '<span class="ap-client__tel">' + escHtml(ap.telefono||'') + '</span></div></td>'
-      + '<td>' + escHtml(ap.producto) + '</td>'
+      + '<td><code style="font-size:0.82rem">' + escHtml(ap.folio || ('#' + ap.id)) + '</code></td>'
+      + '<td><div class="ap-client"><span class="ap-client__name">' + escHtml(ap.customer_name || '') + '</span>'
+      + '<span class="ap-client__tel">' + escHtml(ap.customer_phone || '') + '</span></div></td>'
+      + '<td>' + escHtml(ap.product_name || '') + '</td>'
       + '<td class="ap-money">' + fmt(precio) + '</td>'
-      + '<td>' + n + ' pagos</td>'
-      + '<td style="white-space:nowrap">' + escHtml(ap.fechaCompletado||'') + '</td>'
-      + '<td>' + badge(ap.estado) + '</td>'
+      + '<td>—</td>'
+      + '<td style="white-space:nowrap">' + escHtml((ap.updated_at || '').slice(0,10)) + '</td>'
+      + '<td>' + badge(ap.status) + '</td>'
       + '</tr>';
   }
 
   function rowCancelado(ap) {
-    var precio  = parseFloat(ap.precio || 0);
+    var precio  = parseFloat(ap.total_amount || 0);
     var pagado  = totalPagado(ap);
     return '<tr data-id="' + ap.id + '" data-drawer="detail">'
-      + '<td><code style="font-size:0.82rem">' + escHtml(ap.folio) + '</code></td>'
-      + '<td><div class="ap-client"><span class="ap-client__name">' + escHtml(ap.nombre) + '</span>'
-      + '<span class="ap-client__tel">' + escHtml(ap.telefono||'') + '</span></div></td>'
-      + '<td>' + escHtml(ap.producto) + '</td>'
+      + '<td><code style="font-size:0.82rem">' + escHtml(ap.folio || ('#' + ap.id)) + '</code></td>'
+      + '<td><div class="ap-client"><span class="ap-client__name">' + escHtml(ap.customer_name || '') + '</span>'
+      + '<span class="ap-client__tel">' + escHtml(ap.customer_phone || '') + '</span></div></td>'
+      + '<td>' + escHtml(ap.product_name || '') + '</td>'
       + '<td class="ap-money">' + fmt(precio) + '</td>'
       + '<td class="ap-money ap-money--warn">' + fmt(pagado) + '</td>'
-      + '<td style="white-space:nowrap">' + escHtml(ap.fechaLimite||'') + '</td>'
-      + '<td>' + badge(ap.estado) + '</td>'
+      + '<td style="white-space:nowrap">' + escHtml(ap.due_date || '') + '</td>'
+      + '<td>' + badge(ap.status) + '</td>'
       + '</tr>';
   }
 
@@ -710,30 +462,22 @@ _HTML = """<!doctype html>
     return '<tr class="ap-table__empty"><td colspan="' + cols + '"><i class="fa-solid ' + icon + '" style="font-size:1.8rem;margin-bottom:10px;display:block;opacity:.3"></i>' + msg + '</td></tr>';
   }
 
-  function renderAll() {
-    var list = load();
-    renderTab('activos',    list, 'ap-search-activos');
-    renderTab('completados',list, 'ap-search-completados');
-    renderTab('cancelados', list, 'ap-search-cancelados');
-    refreshStats();
-  }
-
   function filterList(list, tab, search) {
     return list.filter(function(ap){
-      if (tab === 'activos'    && ap.estado !== 'activo')   return false;
-      if (tab === 'completados'&& ap.estado !== 'completado' && ap.estado !== 'entregado') return false;
-      if (tab === 'cancelados' && ap.estado !== 'cancelado' && ap.estado !== 'vencido')    return false;
+      if (tab === 'activos'    && ap.status !== 'active')     return false;
+      if (tab === 'completados'&& ap.status !== 'completado' && ap.status !== 'entregado') return false;
+      if (tab === 'cancelados' && ap.status !== 'cancelado'  && ap.status !== 'vencido')   return false;
       if (search) {
-        var hay = (ap.folio + ' ' + ap.nombre + ' ' + ap.producto).toLowerCase();
-        if (!hay.includes(search.toLowerCase())) return false;
+        var hay = ((ap.folio||'') + ' ' + (ap.customer_name||'') + ' ' + (ap.product_name||'')).toLowerCase();
+        if (hay.indexOf(search.toLowerCase()) < 0) return false;
       }
       return true;
     });
   }
 
-  function renderTab(tab, list, searchId) {
+  function renderTab(tab, searchId) {
     var search   = (document.getElementById(searchId) && document.getElementById(searchId).value) || '';
-    var filtered = filterList(list, tab, search);
+    var filtered = filterList(allApartados, tab, search);
     var tbody    = document.getElementById('ap-tbody-' + tab);
     if (!tbody) return;
     if (!filtered.length) {
@@ -747,7 +491,13 @@ _HTML = """<!doctype html>
     if (tab === 'cancelados')  tbody.innerHTML = filtered.map(rowCancelado).join('');
   }
 
-  // ── Tab switching ─────────────────────────────────────────────────────────
+  function renderAll() {
+    renderTab('activos',     'ap-search-activos');
+    renderTab('completados', 'ap-search-completados');
+    renderTab('cancelados',  'ap-search-cancelados');
+  }
+
+  // ── Tab switching ──────────────────────────────────────────────────────────
   document.querySelectorAll('.ap-tab').forEach(function(btn){
     btn.addEventListener('click', function(){
       document.querySelectorAll('.ap-tab').forEach(function(b){ b.classList.remove('is-active'); });
@@ -758,46 +508,43 @@ _HTML = """<!doctype html>
     });
   });
 
-  // ── Search ────────────────────────────────────────────────────────────────
+  // ── Search ─────────────────────────────────────────────────────────────────
   ['activos','completados','cancelados'].forEach(function(tab){
     var el = document.getElementById('ap-search-' + tab);
-    if (el) el.addEventListener('input', function(){
-      renderTab(tab, load(), 'ap-search-' + tab);
-    });
+    if (el) el.addEventListener('input', function(){ renderTab(tab, 'ap-search-' + tab); });
   });
 
-  // ── Row click → drawer ────────────────────────────────────────────────────
+  // ── Row click → detail drawer ──────────────────────────────────────────────
   document.addEventListener('click', function(e){
     var tr = e.target.closest('tr[data-id][data-drawer]');
     if (!tr) return;
-    if (tr.dataset.drawer === 'detail') openDetailDrawer(tr.dataset.id);
+    if (tr.dataset.drawer === 'detail') openDetailDrawer(parseInt(tr.dataset.id));
   });
 
-  // ────────────────────────────────────────────────────────────────────────
+  // ──────────────────────────────────────────────────────────────────────────
   // NEW / EDIT DRAWER
-  // ────────────────────────────────────────────────────────────────────────
+  // ──────────────────────────────────────────────────────────────────────────
   var newDrawerBg = document.getElementById('ap-new-drawer-bg');
   var newEditingId = null;
 
   function openNewDrawer(id) {
     newEditingId = id;
-    var list = load();
-    var item = id ? list.find(function(a){ return a.id === id; }) : null;
+    var ap = id ? allApartados.find(function(a){ return a.id === id; }) : null;
     document.getElementById('ap-new-title').textContent = id ? 'Editar apartado' : 'Nuevo apartado';
-    document.getElementById('ap-f-nombre').value       = item ? item.nombre       : '';
-    document.getElementById('ap-f-tel').value          = item ? item.telefono      : '';
-    document.getElementById('ap-f-email').value        = item ? item.email         : '';
-    document.getElementById('ap-f-producto').value     = item ? item.producto      : '';
-    document.getElementById('ap-f-sku').value          = item ? item.sku           : '';
-    document.getElementById('ap-f-precio').value       = item ? item.precio        : '';
-    document.getElementById('ap-f-enganche').value     = item ? item.enganche      : '';
-    document.getElementById('ap-f-saldo').value        = item ? (parseFloat(item.precio||0) - parseFloat(item.enganche||0)).toFixed(2) : '';
-    document.getElementById('ap-f-modalidad').value    = item ? (item.modalidad || 'libre') : 'libre';
-    document.getElementById('ap-f-cuotas').value       = item ? (item.cuotas || '') : '';
-    document.getElementById('ap-f-periodicidad').value = item ? (item.periodicidad || 'mensual') : 'mensual';
-    document.getElementById('ap-f-fecha-inicio').value = item ? item.fechaInicio   : today();
-    document.getElementById('ap-f-fecha-limite').value = item ? item.fechaLimite   : '';
-    document.getElementById('ap-f-notas').value        = item ? item.notas         : '';
+    document.getElementById('ap-f-nombre').value       = ap ? (ap.customer_name  || '') : '';
+    document.getElementById('ap-f-tel').value          = ap ? (ap.customer_phone || '') : '';
+    document.getElementById('ap-f-email').value        = ap ? (ap.customer_email || '') : '';
+    document.getElementById('ap-f-producto').value     = ap ? (ap.product_name   || '') : '';
+    document.getElementById('ap-f-sku').value          = ap ? (ap.product_sku    || '') : '';
+    document.getElementById('ap-f-precio').value       = ap ? (ap.total_amount   || '') : '';
+    document.getElementById('ap-f-enganche').value     = ap ? (ap.downpayment    || '') : '';
+    document.getElementById('ap-f-saldo').value        = ap ? (ap.balance_due    || '') : '';
+    document.getElementById('ap-f-modalidad').value    = ap ? (ap.modalidad || 'libre') : 'libre';
+    document.getElementById('ap-f-cuotas').value       = ap ? (ap.cuotas || '')         : '';
+    document.getElementById('ap-f-periodicidad').value = ap ? (ap.periodicidad || 'mensual') : 'mensual';
+    document.getElementById('ap-f-fecha-inicio').value = ap ? (ap.start_date || '')     : today();
+    document.getElementById('ap-f-fecha-limite').value = ap ? (ap.due_date   || '')     : '';
+    document.getElementById('ap-f-notas').value        = ap ? (ap.notes      || '')     : '';
     document.getElementById('ap-new-delete-btn').style.display = id ? 'inline-flex' : 'none';
     toggleModalidad();
     calcSaldo();
@@ -812,7 +559,6 @@ _HTML = """<!doctype html>
   document.getElementById('ap-new-cancel-btn').addEventListener('click', closeNewDrawer);
   newDrawerBg.addEventListener('click', function(e){ if (e.target === newDrawerBg) closeNewDrawer(); });
 
-  // Auto-calc saldo inicial
   function calcSaldo() {
     var p = parseFloat(document.getElementById('ap-f-precio').value || 0);
     var e = parseFloat(document.getElementById('ap-f-enganche').value || 0);
@@ -834,16 +580,10 @@ _HTML = """<!doctype html>
 
   function toggleModalidad() {
     var val = document.getElementById('ap-f-modalidad').value;
-    document.getElementById('ap-f-cuotas-wrap').style.display       = val === 'cuotas' ? 'block' : 'none';
-    document.getElementById('ap-f-cuota-monto-row').style.display   = val === 'cuotas' ? 'grid'  : 'none';
+    document.getElementById('ap-f-cuotas-wrap').style.display      = val === 'cuotas' ? 'block' : 'none';
+    document.getElementById('ap-f-cuota-monto-row').style.display  = val === 'cuotas' ? 'grid'  : 'none';
   }
   document.getElementById('ap-f-modalidad').addEventListener('change', toggleModalidad);
-
-  // Folio generator
-  function genFolio() {
-    var n = (load().length + 1).toString().padStart(4, '0');
-    return 'AP-' + new Date().getFullYear() + '-' + n;
-  }
 
   document.getElementById('ap-new-save-btn').addEventListener('click', function(){
     var nombre   = document.getElementById('ap-f-nombre').value.trim();
@@ -851,183 +591,181 @@ _HTML = """<!doctype html>
     var precio   = parseFloat(document.getElementById('ap-f-precio').value || 0);
     var enganche = parseFloat(document.getElementById('ap-f-enganche').value || 0);
     var fechaLim = document.getElementById('ap-f-fecha-limite').value;
-    if (!nombre)   { document.getElementById('ap-f-nombre').focus();   return; }
-    if (!producto) { document.getElementById('ap-f-producto').focus(); return; }
-    if (!precio)   { document.getElementById('ap-f-precio').focus();   return; }
-    if (!fechaLim) { document.getElementById('ap-f-fecha-limite').focus(); return; }
+    if (!nombre)   { document.getElementById('ap-f-nombre').focus();        return; }
+    if (!producto) { document.getElementById('ap-f-producto').focus();      return; }
+    if (!precio)   { document.getElementById('ap-f-precio').focus();        return; }
+    if (!fechaLim) { document.getElementById('ap-f-fecha-limite').focus();  return; }
 
-    var list = load();
-    var item = {
-      id:           newEditingId || ('ap-' + Date.now()),
-      folio:        newEditingId ? (list.find(function(a){ return a.id === newEditingId; }) || {}).folio : genFolio(),
-      nombre,
-      telefono:     document.getElementById('ap-f-tel').value.trim(),
-      email:        document.getElementById('ap-f-email').value.trim(),
-      producto,
-      sku:          document.getElementById('ap-f-sku').value.trim(),
-      precio,
-      enganche,
-      modalidad:    document.getElementById('ap-f-modalidad').value,
-      cuotas:       parseInt(document.getElementById('ap-f-cuotas').value || 0),
-      periodicidad: document.getElementById('ap-f-periodicidad').value,
-      fechaInicio:  document.getElementById('ap-f-fecha-inicio').value,
-      fechaLimite:  fechaLim,
-      notas:        document.getElementById('ap-f-notas').value.trim(),
-      estado:       'activo',
-      abonos:       [],
+    var payload = {
+      customer_name:  nombre,
+      customer_phone: document.getElementById('ap-f-tel').value.trim(),
+      customer_email: document.getElementById('ap-f-email').value.trim(),
+      product_name:   producto,
+      product_sku:    document.getElementById('ap-f-sku').value.trim(),
+      total_amount:   precio,
+      downpayment:    enganche,
+      balance_due:    Math.max(0, precio - enganche),
+      modalidad:      document.getElementById('ap-f-modalidad').value,
+      cuotas:         parseInt(document.getElementById('ap-f-cuotas').value || 0),
+      periodicidad:   document.getElementById('ap-f-periodicidad').value,
+      start_date:     document.getElementById('ap-f-fecha-inicio').value,
+      due_date:       fechaLim,
+      notes:          document.getElementById('ap-f-notas').value.trim(),
     };
-    if (newEditingId) {
-      var idx = list.findIndex(function(a){ return a.id === newEditingId; });
-      if (idx >= 0) { item.abonos = list[idx].abonos || []; item.estado = list[idx].estado; list[idx] = item; }
-    } else {
-      list.push(item);
-    }
-    save(list);
-    renderAll();
-    closeNewDrawer();
+
+    var saveBtn = document.getElementById('ap-new-save-btn');
+    saveBtn.disabled = true;
+
+    var req = newEditingId
+      ? apiPut('/multitienda/api/apartados/' + newEditingId + '/editar', payload)
+      : apiPost('/multitienda/api/apartados/crear', payload);
+
+    req.then(function(j){
+      saveBtn.disabled = false;
+      if (j.success) { closeNewDrawer(); loadAll(); }
+      else { alert('Error al guardar: ' + (j.detail || '')); }
+    }).catch(function(){ saveBtn.disabled = false; alert('Error de conexión.'); });
   });
 
   document.getElementById('ap-new-delete-btn').addEventListener('click', function(){
     if (!newEditingId) return;
     if (!confirm('¿Eliminar este apartado permanentemente?')) return;
-    save(load().filter(function(a){ return a.id !== newEditingId; }));
-    renderAll();
-    closeNewDrawer();
+    apiDelete('/multitienda/api/apartados/' + newEditingId)
+      .then(function(j){ if (j.success) { closeNewDrawer(); loadAll(); } });
   });
 
-  // ────────────────────────────────────────────────────────────────────────
+  // ──────────────────────────────────────────────────────────────────────────
   // DETAIL DRAWER (abonos)
-  // ────────────────────────────────────────────────────────────────────────
+  // ──────────────────────────────────────────────────────────────────────────
   var detailDrawerBg = document.getElementById('ap-detail-drawer-bg');
   var detailId = null;
+  var detailAp = null;
+  var detailPayments = [];
 
   function openDetailDrawer(id) {
     detailId = id;
-    renderDetailDrawer(id);
+    detailAp = allApartados.find(function(a){ return a.id === id; }) || null;
     document.getElementById('ap-abono-fecha').value = today();
     document.getElementById('ap-abono-monto').value = '';
     document.getElementById('ap-abono-ref').value   = '';
     detailDrawerBg.classList.add('is-open');
+    loadDetailPayments();
   }
 
-  function renderDetailDrawer(id) {
-    var list = load();
-    var ap   = list.find(function(a){ return a.id === id; });
-    if (!ap) return;
+  function loadDetailPayments() {
+    if (!detailId) return;
+    apiGet('/multitienda/api/apartados/' + detailId + '/pagos').then(function(j){
+      detailPayments = j.success ? (j.data || []) : [];
+      renderDetailDrawer();
+    }).catch(function(){ renderDetailDrawer(); });
+  }
 
-    var precio  = parseFloat(ap.precio || 0);
-    var pagado  = totalPagado(ap);
-    var pend    = Math.max(0, precio - pagado);
-    var pct     = precio > 0 ? Math.min(100, Math.round(pagado / precio * 100)) : 0;
+  function renderDetailDrawer() {
+    if (!detailAp) return;
+    var ap       = detailAp;
+    var precio   = parseFloat(ap.total_amount || 0);
+    var pagado   = totalPagado(ap);
+    var pend     = parseFloat(ap.balance_due || 0);
+    var pct      = precio > 0 ? Math.min(100, Math.round(pagado / precio * 100)) : 0;
 
-    document.getElementById('ap-detail-title').textContent    = ap.folio;
-    document.getElementById('ap-detail-subtitle').textContent = ap.producto + ' · ' + ap.nombre;
-    document.getElementById('ap-dp-pct').textContent = pct + '%';
+    document.getElementById('ap-detail-title').textContent    = ap.folio || ('#' + ap.id);
+    document.getElementById('ap-detail-subtitle').textContent = (ap.product_name || '') + ' · ' + (ap.customer_name || '');
+    document.getElementById('ap-dp-pct').textContent  = pct + '%';
     document.getElementById('ap-dp-total').textContent    = fmt(precio);
     document.getElementById('ap-dp-pagado').textContent   = fmt(pagado);
-    document.getElementById('ap-dp-pendiente').textContent= fmt(pend);
+    document.getElementById('ap-dp-pendiente').textContent = fmt(pend);
 
     var bar = document.getElementById('ap-dp-bar');
     bar.style.width = pct + '%';
     bar.className   = 'ap-detail-fill' + (pct >= 100 ? ' ap-detail-fill--done' : '');
 
-    // Abonos list
-    var abonosList = document.getElementById('ap-abonos-list');
-    var allAbonos  = [{ monto: ap.enganche, fecha: ap.fechaInicio, metodo: 'enganche', ref: 'Enganche inicial', _eng: true }]
-                    .concat(ap.abonos || []);
-    if (!allAbonos.length || (allAbonos.length === 1 && !parseFloat(allAbonos[0].monto))) {
+    // Abonos list (enganche as first row + real payments)
+    var abonosList  = document.getElementById('ap-abonos-list');
+    var engancheRow = { amount: ap.downpayment, paid_at: ap.start_date, method: 'enganche', reference: 'Enganche inicial', _eng: true };
+    var allPayRows  = [engancheRow].concat(detailPayments);
+
+    if (!allPayRows.length || (allPayRows.length === 1 && !parseFloat(allPayRows[0].amount))) {
       abonosList.innerHTML = '<div class="ap-abonos-empty">Sin abonos registrados aún.</div>';
     } else {
-      abonosList.innerHTML = allAbonos.map(function(ab, i){
-        var isEng = ab._eng;
+      abonosList.innerHTML = allPayRows.map(function(ab){
+        var isEng = !!ab._eng;
         return '<div class="ap-abono-row">'
           + '<div class="ap-abono-row__icon"><i class="fa-solid ' + (isEng ? 'fa-handshake' : 'fa-coins') + '"></i></div>'
           + '<div class="ap-abono-row__info">'
-          + '<div class="ap-abono-row__fecha">' + escHtml(ab.fecha || '') + (isEng ? ' — <strong>Enganche</strong>' : '') + '</div>'
-          + '<div class="ap-abono-row__metodo">' + escHtml(ab.metodo || '') + (ab.ref ? ' · ' + escHtml(ab.ref) : '') + '</div>'
+          + '<div class="ap-abono-row__fecha">' + escHtml(ab.paid_at || '') + (isEng ? ' — <strong>Enganche</strong>' : '') + '</div>'
+          + '<div class="ap-abono-row__metodo">' + escHtml(ab.method || '') + (ab.reference ? ' · ' + escHtml(ab.reference) : '') + '</div>'
           + '</div>'
-          + '<span class="ap-abono-row__monto">' + fmt(ab.monto) + '</span>'
-          + (!isEng ? '<button class="ap-abono-row__del" data-abono-idx="' + i + '" title="Eliminar abono"><i class="fa-solid fa-trash"></i></button>' : '')
+          + '<span class="ap-abono-row__monto">' + fmt(ab.amount) + '</span>'
+          + (!isEng ? '<button class="ap-abono-row__del" data-pay-id="' + ab.id + '" title="Eliminar abono"><i class="fa-solid fa-trash"></i></button>' : '')
           + '</div>';
       }).join('');
     }
 
-    // Show/hide form & buttons based on status
-    var isActive  = ap.estado === 'activo';
-    document.getElementById('ap-abono-form').style.display       = isActive ? 'block' : 'none';
-    document.getElementById('ap-detail-entregar-btn').style.display    = (ap.estado === 'completado') ? 'inline-flex' : 'none';
-    document.getElementById('ap-detail-cancel-ap-btn').style.display   = isActive ? 'inline-flex' : 'none';
+    // Buttons visibility
+    var isActive = ap.status === 'active';
+    var isDone   = ap.status === 'completado';
+    document.getElementById('ap-abono-form').style.display            = isActive ? 'block'       : 'none';
+    document.getElementById('ap-detail-entregar-btn').style.display   = isDone   ? 'inline-flex' : 'none';
+    document.getElementById('ap-detail-cancel-ap-btn').style.display  = isActive ? 'inline-flex' : 'none';
+    document.getElementById('ap-detail-reactivar-btn').style.display  = (ap.status === 'cancelado' || ap.status === 'vencido') ? 'inline-flex' : 'none';
   }
 
-  // Delete abono
+  // Delete payment
   document.getElementById('ap-abonos-list').addEventListener('click', function(e){
-    var btn = e.target.closest('[data-abono-idx]');
+    var btn = e.target.closest('[data-pay-id]');
     if (!btn) return;
-    var idx  = parseInt(btn.dataset.abonoIdx);
-    var list = load();
-    var ap   = list.find(function(a){ return a.id === detailId; });
-    if (!ap) return;
-    // idx 0 = enganche row (not deletable), real abonos start at index 1
-    var abonoIdx = idx - 1;
-    if (abonoIdx < 0) return;
+    var payId = parseInt(btn.dataset.payId);
     if (!confirm('¿Eliminar este abono?')) return;
-    ap.abonos.splice(abonoIdx, 1);
-    // Recalculate state
-    var pagado = totalPagado(ap);
-    if (pagado < parseFloat(ap.precio || 0)) ap.estado = 'activo';
-    save(list);
-    renderDetailDrawer(detailId);
-    renderAll();
+    apiDelete('/multitienda/api/apartados/' + detailId + '/pagos/' + payId)
+      .then(function(j){
+        if (j.success) {
+          // refresh the ap in allApartados
+          loadAllAndKeepDrawer();
+        }
+      });
   });
 
   // Save abono
   document.getElementById('ap-abono-save-btn').addEventListener('click', function(){
     var monto = parseFloat(document.getElementById('ap-abono-monto').value || 0);
     if (!monto) { document.getElementById('ap-abono-monto').focus(); return; }
-    var list = load();
-    var ap   = list.find(function(a){ return a.id === detailId; });
-    if (!ap) return;
-    ap.abonos = ap.abonos || [];
-    ap.abonos.push({
-      monto:  monto,
-      fecha:  document.getElementById('ap-abono-fecha').value || today(),
-      metodo: document.getElementById('ap-abono-metodo').value,
-      ref:    document.getElementById('ap-abono-ref').value.trim(),
-    });
-    // Check if fully paid
-    var pagado = totalPagado(ap);
-    var precio = parseFloat(ap.precio || 0);
-    if (pagado >= precio) {
-      ap.estado          = 'completado';
-      ap.fechaCompletado = today();
-    }
-    save(list);
-    renderDetailDrawer(detailId);
-    renderAll();
-    document.getElementById('ap-abono-monto').value = '';
-    document.getElementById('ap-abono-ref').value   = '';
+    var payload = {
+      amount:    monto,
+      paid_at:   document.getElementById('ap-abono-fecha').value || today(),
+      method:    document.getElementById('ap-abono-metodo').value,
+      reference: document.getElementById('ap-abono-ref').value.trim(),
+    };
+    apiPost('/multitienda/api/apartados/' + detailId + '/pagos', payload).then(function(j){
+      if (j.success) {
+        document.getElementById('ap-abono-monto').value = '';
+        document.getElementById('ap-abono-ref').value   = '';
+        loadAllAndKeepDrawer();
+      } else { alert('Error al registrar abono.'); }
+    }).catch(function(){ alert('Error de conexión.'); });
   });
 
   // Marcar entregado
   document.getElementById('ap-detail-entregar-btn').addEventListener('click', function(){
-    var list = load();
-    var ap   = list.find(function(a){ return a.id === detailId; });
-    if (!ap) return;
-    ap.estado = 'entregado';
-    save(list);
-    renderDetailDrawer(detailId);
-    renderAll();
+    apiPost('/multitienda/api/apartados/' + detailId + '/entregar', {}).then(function(j){
+      if (j.success) { loadAllAndKeepDrawer(); }
+    });
   });
 
   // Cancelar apartado
   document.getElementById('ap-detail-cancel-ap-btn').addEventListener('click', function(){
-    if (!confirm('¿Cancelar este apartado? El cliente ha pagado ' + fmt(totalPagado(load().find(function(a){ return a.id===detailId; })||{})) + ' hasta ahora.')) return;
-    var list = load();
-    var ap   = list.find(function(a){ return a.id === detailId; });
-    if (ap) { ap.estado = 'cancelado'; }
-    save(list);
-    renderDetailDrawer(detailId);
-    renderAll();
+    if (!detailAp) return;
+    if (!confirm('¿Cancelar este apartado? El cliente ha pagado ' + fmt(totalPagado(detailAp)) + ' hasta ahora.')) return;
+    apiPost('/multitienda/api/apartados/' + detailId + '/cancelar', {}).then(function(j){
+      if (j.success) { loadAllAndKeepDrawer(); }
+    });
+  });
+
+  // Reactivar apartado (button is dynamically shown for cancelado/vencido)
+  document.getElementById('ap-detail-reactivar-btn').addEventListener('click', function(){
+    if (!confirm('¿Reactivar este apartado?')) return;
+    apiPost('/multitienda/api/apartados/' + detailId + '/reactivar', {}).then(function(j){
+      if (j.success) { loadAllAndKeepDrawer(); }
+    });
   });
 
   // Edit from detail drawer
@@ -1036,12 +774,27 @@ _HTML = """<!doctype html>
     openNewDrawer(detailId);
   });
 
-  function closeDetailDrawer() { detailDrawerBg.classList.remove('is-open'); detailId = null; }
+  function loadAllAndKeepDrawer() {
+    apiPost('/multitienda/api/apartados/vencer', {}).catch(function(){}).finally(function(){
+      apiGet('/multitienda/api/apartados').then(function(j){
+        allApartados = j.success ? (j.data || []) : [];
+        refreshStats();
+        renderAll();
+        // refresh detailAp and payments if drawer still open
+        if (detailId) {
+          detailAp = allApartados.find(function(a){ return a.id === detailId; }) || null;
+          loadDetailPayments();
+        }
+      });
+    });
+  }
+
+  function closeDetailDrawer() { detailDrawerBg.classList.remove('is-open'); detailId = null; detailAp = null; detailPayments = []; }
   document.getElementById('ap-detail-close-btn').addEventListener('click', closeDetailDrawer);
   detailDrawerBg.addEventListener('click', function(e){ if (e.target === detailDrawerBg) closeDetailDrawer(); });
 
   // ── Init ──────────────────────────────────────────────────────────────────
-  renderAll();
+  loadAll();
 })();
 </script>
 </body>

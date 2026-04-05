@@ -11,583 +11,10 @@ _HTML = """
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="icon" type="image/png" href="/static/imagenes/tu-negocio.png" />
+  <link rel="icon" type="image/png" href="/multitienda/static/imagenes/tu-negocio.png" />
+  <link rel="stylesheet" href="/multitienda/static/css/backend-master-detail.css" />
   <title>Administrar tiendas</title>
-  <style>
-    :root {
-      --mt-bg: var(--page-bg, #f5f6f8);
-      --mt-surface: var(--content-bg, #ffffff);
-      --mt-surface-soft: color-mix(in srgb, var(--content-bg, #ffffff) 88%, var(--page-bg, #f5f6f8) 12%);
-      --mt-border: var(--field-border, #d1d5db);
-      --mt-border-soft: color-mix(in srgb, var(--field-border, #d1d5db) 72%, #ffffff 28%);
-      --mt-text: var(--body-text, #1f2937);
-      --mt-muted: color-mix(in srgb, var(--body-text, #1f2937) 68%, #ffffff 32%);
-      --mt-accent: var(--button-bg, #1a6b3c);
-      --mt-accent-contrast: var(--button-text, #ffffff);
-      --mt-focus: var(--field-focus, var(--button-bg, #1a6b3c));
-      --mt-danger-soft: color-mix(in srgb, #dc2626 14%, var(--content-bg, #ffffff) 86%);
-      --mt-danger-text: color-mix(in srgb, #dc2626 78%, var(--body-text, #1f2937) 22%);
-    }
-
-    html, body {
-      margin: 0;
-      padding: 0;
-      background: var(--mt-bg);
-      font-family: Arial, sans-serif;
-      color: var(--mt-text);
-    }
-
-    * {
-      box-sizing: border-box;
-    }
-
-__BACKEND_SHARED_SIDEBAR_CSS__
-
-__BACKEND_SHARED_FORM_BASE_CSS__
-
-    .business-type-tools {
-      margin-top: 8px;
-      display: grid;
-      gap: 6px;
-    }
-
-    .business-type-btn {
-      width: fit-content;
-      border: 1px solid var(--mt-border);
-      border-radius: 8px;
-      background: var(--mt-surface);
-      color: var(--mt-text);
-      font-size: 0.82rem;
-      font-weight: 700;
-      padding: 6px 10px;
-      cursor: pointer;
-    }
-
-    .business-type-description {
-      font-size: 0.83rem;
-      color: var(--mt-muted);
-    }
-
-    .business-type-panel {
-      margin-top: 10px;
-      border: 1px solid var(--mt-border-soft);
-      border-radius: 10px;
-      background: var(--mt-surface-soft);
-      padding: 10px;
-      display: grid;
-      gap: 8px;
-    }
-
-    .business-type-panel[hidden] {
-      display: none;
-    }
-
-    .business-type-grid {
-      display: grid;
-      grid-template-columns: 1fr 160px;
-      gap: 8px;
-    }
-
-    .business-type-textarea {
-      width: 100%;
-      min-height: 76px;
-      border: 1px solid var(--mt-border);
-      border-radius: 10px;
-      padding: 8px 10px;
-      font-size: 0.95rem;
-      outline: none;
-      background: var(--field-color, var(--mt-surface));
-      color: var(--field-text, var(--mt-text));
-      resize: vertical;
-    }
-
-    .business-type-actions {
-      display: flex;
-      gap: 8px;
-    }
-
-    .business-type-message {
-      margin: 0;
-      font-size: 0.8rem;
-      font-weight: 700;
-      min-height: 1.2em;
-    }
-
-    .store-toolbar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      margin-bottom: 16px;
-      flex-wrap: wrap;
-    }
-
-    .store-table-note {
-      margin: 0 0 16px;
-      color: var(--mt-muted);
-      font-size: 0.88rem;
-    }
-
-    .store-error-dialog {
-      position: fixed;
-      inset: 0;
-      z-index: 1200;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
-      background: rgba(15, 23, 42, 0.48);
-    }
-
-    .store-error-dialog[hidden] {
-      display: none;
-    }
-
-    .store-error-card {
-      width: min(760px, 100%);
-      max-height: min(80vh, 760px);
-      overflow: auto;
-      border: 1px solid var(--mt-border-soft);
-      border-radius: 18px;
-      background: var(--mt-surface);
-      box-shadow: 0 28px 70px rgba(15, 23, 42, 0.18);
-      padding: 22px;
-      display: grid;
-      gap: 14px;
-    }
-
-    .store-error-title {
-      margin: 0;
-      font-size: 1.12rem;
-      font-weight: 800;
-      color: var(--mt-danger-text);
-    }
-
-    .store-error-copy {
-      width: 100%;
-      min-height: 240px;
-      border: 1px solid var(--mt-border);
-      border-radius: 12px;
-      padding: 12px 14px;
-      resize: vertical;
-      font: 400 0.95rem/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      color: var(--mt-text);
-      background: var(--mt-surface-soft);
-    }
-
-    .store-error-actions {
-      display: flex;
-      justify-content: flex-end;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-
-    .store-error-copy-status {
-      margin: 0;
-      min-height: 1.2em;
-      font-size: 0.82rem;
-      color: var(--mt-muted);
-      text-align: right;
-    }
-
-    .admin-user-tools {
-      margin-top: 8px;
-      display: grid;
-      gap: 6px;
-    }
-
-    .admin-user-note {
-      margin: 0;
-      font-size: 0.82rem;
-      color: var(--mt-muted);
-    }
-
-    .admin-user-btn {
-      width: fit-content;
-      border: 1px solid var(--mt-border);
-      border-radius: 8px;
-      background: var(--mt-surface);
-      color: var(--mt-text);
-      font-size: 0.82rem;
-      font-weight: 700;
-      padding: 6px 10px;
-      cursor: pointer;
-    }
-
-    .logo-box {
-      border: 1px solid var(--mt-border-soft);
-      border-radius: 10px;
-      min-height: 260px;
-      background: color-mix(in srgb, var(--content-bg, #ffffff) 90%, var(--page-bg, #f5f6f8) 10%);
-      padding: 14px;
-      display: flex;
-      flex-direction: column;
-      justify-content: flex-start;
-      align-items: center;
-      text-align: center;
-      gap: 14px;
-    }
-
-    .logo-preview {
-      width: 146px;
-      height: 146px;
-      border-radius: 2px;
-      border: 1px solid var(--mt-border-soft);
-      background: var(--mt-surface);
-      color: var(--mt-accent-contrast);
-      font-size: 2rem;
-      display: grid;
-      place-items: center;
-      margin-top: 4px;
-      overflow: hidden;
-    }
-
-    .logo-preview-wrap {
-      position: relative;
-      width: 146px;
-      height: 182px;
-      display: flex;
-      align-items: flex-start;
-      justify-content: center;
-    }
-
-    .logo-preview img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: block;
-    }
-
-    .logo-actions {
-      position: absolute;
-      left: 50%;
-      bottom: 0;
-      transform: translateX(-50%);
-      display: flex;
-      gap: 8px;
-      z-index: 3;
-    }
-
-    .logo-action-btn {
-      width: 34px;
-      height: 34px;
-      border: 1px solid var(--mt-border);
-      border-radius: 999px;
-      background: var(--mt-surface);
-      color: var(--mt-muted);
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1rem;
-      line-height: 1;
-    }
-
-    .logo-action-btn:hover {
-      background: color-mix(in srgb, var(--mt-surface-soft) 88%, #ffffff 12%);
-    }
-
-    .logo-input {
-      display: none;
-    }
-
-    .logo-urls {
-      width: 100%;
-      margin-top: 6px;
-      text-align: left;
-      display: grid;
-      gap: 10px;
-    }
-
-    .url-item {
-      display: grid;
-      gap: 4px;
-    }
-
-    .url-label {
-      font-size: 0.86rem;
-      font-weight: 700;
-      color: var(--mt-muted);
-      text-transform: lowercase;
-    }
-
-    .url-value {
-      font-size: 0.9rem;
-      color: var(--mt-accent);
-      text-decoration: none;
-      word-break: break-all;
-    }
-
-    .url-value:hover {
-      text-decoration: underline;
-    }
-
-    .placeholder {
-      color: var(--mt-muted);
-      font-size: 0.92rem;
-      margin: 0;
-    }
-
-    .avan-grid {
-      display: grid;
-      gap: 14px;
-      max-width: 760px;
-    }
-
-    .avan-row {
-      display: grid;
-      grid-template-columns: 320px 1fr;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .avan-label {
-      font-size: 1rem;
-      font-weight: 700;
-      color: var(--mt-text);
-      margin: 0;
-    }
-
-    .avan-label .hint {
-      color: var(--mt-accent);
-      font-size: 1rem;
-      margin-left: 6px;
-    }
-
-    .avan-check {
-      width: 28px;
-      height: 28px;
-      accent-color: var(--mt-accent);
-      cursor: pointer;
-    }
-
-    .avan-input {
-      width: 100%;
-      height: 52px;
-      border: 1px solid var(--mt-border);
-      border-radius: 18px;
-      background: var(--field-color, var(--mt-surface));
-      padding: 0 14px;
-      font-size: 1.05rem;
-      color: var(--field-text, var(--mt-text));
-      outline: none;
-    }
-
-    @media (max-width: 920px) {
-      .section-grid {
-        grid-template-columns: 1fr;
-      }
-
-      .avan-row {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    /* Publicidad */
-    .pub-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 16px;
-      padding: 4px 0;
-    }
-
-    .pub-card {
-      border: 1px solid var(--mt-border-soft);
-      border-radius: 10px;
-      overflow: hidden;
-      background: var(--mt-surface);
-    }
-
-    .pub-card-header {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 12px 16px;
-      background: var(--mt-surface-soft);
-      border-bottom: 1px solid var(--mt-border-soft);
-    }
-
-    .pub-card-icon {
-      font-size: 1.2rem;
-    }
-
-    .pub-card-title {
-      margin: 0;
-      font-size: 0.95rem;
-      font-weight: 600;
-      color: var(--mt-text);
-    }
-
-    .pub-card-body {
-      padding: 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-
-    .pub-dates {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-    }
-
-    @media (max-width: 720px) {
-      .pub-grid {
-        grid-template-columns: 1fr;
-      }
-      .pub-dates {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    /* Categorías */
-    .panel-header-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 16px;
-      flex-wrap: wrap;
-      gap: 10px;
-    }
-    .panel-header-row h2 {
-      margin: 0;
-    }
-    .action-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 8px 16px;
-      background: var(--mt-accent);
-      color: var(--mt-accent-contrast);
-      border: none;
-      border-radius: 7px;
-      font-size: 0.875rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.15s;
-    }
-    .action-btn:hover { background: var(--institutional-button-hover, var(--mt-accent)); }
-    .action-btn--secondary {
-      background: color-mix(in srgb, var(--field-color, #ffffff) 86%, var(--button-bg-opposite, #cbd5e1) 14%);
-      color: var(--mt-text);
-    }
-    .action-btn--secondary:hover { background: color-mix(in srgb, var(--mt-accent) 12%, var(--field-color, #ffffff) 88%); }
-    .action-btn--danger {
-      background: var(--mt-danger-soft);
-      color: var(--mt-danger-text);
-    }
-    .action-btn--danger:hover { background: color-mix(in srgb, #dc2626 22%, var(--content-bg, #ffffff) 78%); }
-    .data-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.875rem;
-    }
-    .data-table th {
-      text-align: left;
-      padding: 10px 12px;
-      background: var(--mt-surface-soft);
-      border-bottom: 2px solid var(--mt-border-soft);
-      font-weight: 600;
-      color: var(--mt-text);
-    }
-    .data-table td {
-      padding: 10px 12px;
-      border-bottom: 1px solid color-mix(in srgb, var(--mt-border-soft) 60%, #ffffff 40%);
-      vertical-align: middle;
-      color: var(--mt-text);
-    }
-    .data-table tbody tr:last-child td { border-bottom: none; }
-    .data-table tbody tr:hover td { background: color-mix(in srgb, var(--mt-surface-soft) 88%, #ffffff 12%); }
-    .empty-row td { border-bottom: none !important; }
-
-    /* Atributos */
-    .attr-form-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 28px;
-      align-items: start;
-    }
-    @media (max-width: 800px) {
-      .attr-form-grid { grid-template-columns: 1fr; }
-    }
-    .attr-values-col {
-      background: var(--mt-surface-soft);
-      border: 1px solid var(--mt-border-soft);
-      border-radius: 10px;
-      padding: 16px;
-    }
-    .attr-values-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 12px;
-    }
-    .attr-values-header label {
-      font-weight: 600;
-      color: var(--mt-text);
-      font-size: 0.875rem;
-    }
-    .attr-values-list {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      max-height: 320px;
-      overflow-y: auto;
-    }
-    .attr-value-row {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      background: var(--mt-surface);
-      border: 1px solid var(--mt-border-soft);
-      border-radius: 7px;
-      padding: 6px 10px;
-    }
-    .attr-value-row .attr-color-swatch {
-      width: 22px;
-      height: 22px;
-      border-radius: 50%;
-      border: 1px solid var(--mt-border);
-      flex-shrink: 0;
-      cursor: pointer;
-    }
-    .attr-value-row .attr-val-name {
-      flex: 1;
-      font-size: 0.875rem;
-      color: var(--mt-text);
-    }
-    .attr-value-row .attr-val-del {
-      background: none;
-      border: none;
-      cursor: pointer;
-      color: color-mix(in srgb, var(--mt-text) 38%, #ffffff 62%);
-      font-size: 1rem;
-      line-height: 1;
-      padding: 2px 4px;
-      border-radius: 4px;
-      transition: color 0.15s;
-    }
-    .attr-value-row .attr-val-del:hover { color: var(--mt-danger-text); }
-    .attr-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      padding: 2px 8px;
-      border-radius: 12px;
-      font-size: 0.78rem;
-      font-weight: 500;
-      background: color-mix(in srgb, var(--mt-accent) 12%, var(--mt-surface) 88%);
-      color: var(--mt-text);
-      margin: 1px 2px;
-    }
-    .attr-badge-color {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      border: 1px solid color-mix(in srgb, var(--mt-text) 15%, transparent);
-      flex-shrink: 0;
-    }
-  </style>
+  <link rel="stylesheet" href="/multitienda/static/css/gestion.css" />
 </head>
 <body>
 __BACKEND_SHARED_SIDEBAR_HTML__
@@ -596,17 +23,39 @@ __BACKEND_SHARED_SIDEBAR_HTML__
     <h1 class="title">Administrar tiendas</h1>
     <p class="subtitle">Dar de alta tiendas con sus permisos y roles</p>
 
-    <div class="notebook">
-      <div class="notebook-tabs" role="tablist">
-        <button class="notebook-tab active" role="tab" aria-selected="true"  aria-controls="tab-panel-1" id="tab-1" type="button">Tiendas</button>
-        <button class="notebook-tab"        role="tab" aria-selected="false" aria-controls="tab-panel-2" id="tab-2" type="button">Acceso a AVAN</button>
-        <button class="notebook-tab"        role="tab" aria-selected="false" aria-controls="tab-panel-3" id="tab-3" type="button">Publicidad</button>
-        <button class="notebook-tab"        role="tab" aria-selected="false" aria-controls="tab-panel-4" id="tab-4" type="button">Institución financiera</button>
-        <button class="notebook-tab"        role="tab" aria-selected="false" aria-controls="tab-panel-5" id="tab-5" type="button">Categorías</button>
-        <button class="notebook-tab"        role="tab" aria-selected="false" aria-controls="tab-panel-6" id="tab-6" type="button">Atributos</button>
-      </div>
+    <div class="notebook config-workspace backend-master-detail js-backend-master-detail">
+      <aside class="config-nav backend-master-detail__nav">
+        <p class="config-nav-title backend-master-detail__nav-title">Configuración</p>
+        <div class="notebook-tabs backend-master-detail__tabs" role="tablist" aria-orientation="vertical">
+          <button class="notebook-tab backend-master-detail__tab active" role="tab" aria-selected="true" aria-controls="tab-panel-1" id="tab-1" type="button">
+            <span class="config-tab-title backend-master-detail__tab-title">Tiendas</span>
+            <span class="config-tab-copy backend-master-detail__tab-copy">Alta, edición y asignación del administrador.</span>
+          </button>
+          <button class="notebook-tab backend-master-detail__tab" role="tab" aria-selected="false" aria-controls="tab-panel-2" id="tab-2" type="button">
+            <span class="config-tab-title backend-master-detail__tab-title">Acceso a AVAN</span>
+            <span class="config-tab-copy backend-master-detail__tab-copy">Permisos y capacidades habilitadas para la tienda.</span>
+          </button>
+          <button class="notebook-tab backend-master-detail__tab" role="tab" aria-selected="false" aria-controls="tab-panel-3" id="tab-3" type="button">
+            <span class="config-tab-title backend-master-detail__tab-title">Publicidad</span>
+            <span class="config-tab-copy backend-master-detail__tab-copy">Campañas visuales, ventanas emergentes y destacados.</span>
+          </button>
+          <button class="notebook-tab backend-master-detail__tab" role="tab" aria-selected="false" aria-controls="tab-panel-4" id="tab-4" type="button">
+            <span class="config-tab-title backend-master-detail__tab-title">Institución financiera</span>
+            <span class="config-tab-copy backend-master-detail__tab-copy">Datos bancarios o cooperativos ligados a la tienda.</span>
+          </button>
+          <button class="notebook-tab backend-master-detail__tab" role="tab" aria-selected="false" aria-controls="tab-panel-5" id="tab-5" type="button">
+            <span class="config-tab-title backend-master-detail__tab-title">Categorías</span>
+            <span class="config-tab-copy backend-master-detail__tab-copy">Estructura del catálogo y su imagen representativa.</span>
+          </button>
+          <button class="notebook-tab backend-master-detail__tab" role="tab" aria-selected="false" aria-controls="tab-panel-6" id="tab-6" type="button">
+            <span class="config-tab-title backend-master-detail__tab-title">Atributos</span>
+            <span class="config-tab-copy backend-master-detail__tab-copy">Variantes como color, talla, material o imagen.</span>
+          </button>
+        </div>
+      </aside>
 
-      <div class="notebook-panel" id="tab-panel-1" role="tabpanel" aria-labelledby="tab-1">
+      <div class="config-content backend-master-detail__content">
+      <div class="notebook-panel backend-master-detail__panel" id="tab-panel-1" role="tabpanel" aria-labelledby="tab-1">
         <div id="store-list-view">
           <div class="store-toolbar">
             <h2 style="margin:0;">Tiendas registradas</h2>
@@ -685,7 +134,7 @@ __BACKEND_SHARED_SIDEBAR_HTML__
                   </select>
                 </div>
                 <div style="display:flex;gap:12px;margin-top:20px;">
-                  <button class="action-btn" id="store-save-btn" type="button">Guardar tienda</button>
+                  <button class="action-btn" id="store-save-btn" data-store-save-trigger="1" type="button">Guardar tienda</button>
                 </div>
               </div>
             </div>
@@ -693,12 +142,12 @@ __BACKEND_SHARED_SIDEBAR_HTML__
         </div>
       </div>
 
-      <div class="notebook-panel" id="tab-panel-2" role="tabpanel" aria-labelledby="tab-2" hidden>
+      <div class="notebook-panel backend-master-detail__panel" id="tab-panel-2" role="tabpanel" aria-labelledby="tab-2" hidden>
         <section class="section">
           <h2>Acceso a AVAN</h2>
           <div class="avan-grid">
             <div class="avan-row">
-              <p class="avan-label">Active</p>
+              <p class="avan-label">Activa Tienda</p>
               <input class="avan-check" id="store-is-active" type="checkbox" checked />
             </div>
             <div class="avan-row">
@@ -715,19 +164,27 @@ __BACKEND_SHARED_SIDEBAR_HTML__
             </div>
             <div class="avan-row">
               <p class="avan-label">Acceso a Referidos</p>
-              <input class="avan-input" id="store-referrals" type="text" placeholder="Ej. habilitado" />
+              <input class="avan-check" id="store-referrals" type="checkbox" />
+            </div>
+            <div class="avan-row">
+              <p class="avan-label">Acceso a Fidelización</p>
+              <input class="avan-check" id="store-fidelizacion" type="checkbox" />
+            </div>
+            <div class="avan-row">
+              <p class="avan-label">Notificaciones PWA</p>
+              <input class="avan-check" id="store-pwa-notifications" type="checkbox" />
             </div>
             <div class="avan-row">
               <p class="avan-label">Sistema de cita</p>
-              <input class="avan-input" id="store-appointments" type="text" placeholder="Configuración de citas" />
+              <input class="avan-check" id="store-appointments" type="checkbox" />
             </div>
             <div class="avan-row">
               <p class="avan-label">Sistema de cupones</p>
-              <input class="avan-input" id="store-coupons" type="text" placeholder="Configuración de cupones" />
+              <input class="avan-check" id="store-coupons" type="checkbox" />
             </div>
             <div class="avan-row">
               <p class="avan-label">WhatsApp</p>
-              <input class="avan-input" id="store-whatsapp" type="text" placeholder="Número o integración" />
+              <input class="avan-check" id="store-whatsapp" type="checkbox" />
             </div>
             <div class="avan-row">
               <p class="avan-label">Usuarios internos</p>
@@ -762,10 +219,13 @@ __BACKEND_SHARED_SIDEBAR_HTML__
               <input class="avan-check" id="store-can-use-auctions" type="checkbox" />
             </div>
           </div>
+          <div style="display:flex;justify-content:flex-end;gap:12px;margin-top:20px;">
+            <button class="action-btn" data-store-save-trigger="1" type="button">Guardar tienda</button>
+          </div>
         </section>
       </div>
 
-      <div class="notebook-panel" id="tab-panel-3" role="tabpanel" aria-labelledby="tab-3" hidden>
+      <div class="notebook-panel backend-master-detail__panel" id="tab-panel-3" role="tabpanel" aria-labelledby="tab-3" hidden>
         <div class="pub-grid">
 
           <div class="pub-card">
@@ -863,7 +323,7 @@ __BACKEND_SHARED_SIDEBAR_HTML__
         </div>
       </div>
 
-      <div class="notebook-panel" id="tab-panel-4" role="tabpanel" aria-labelledby="tab-4" hidden>
+      <div class="notebook-panel backend-master-detail__panel" id="tab-panel-4" role="tabpanel" aria-labelledby="tab-4" hidden>
         <section class="section">
           <h2>Institución financiera</h2>
           <p class="section-description">Datos de la institución financiera asociada a esta tienda.</p>
@@ -887,7 +347,7 @@ __BACKEND_SHARED_SIDEBAR_HTML__
       </div>
 
       <!-- ===================== TAB 5: Categorías ===================== -->
-      <div class="notebook-panel" id="tab-panel-5" role="tabpanel" aria-labelledby="tab-5" hidden>
+      <div class="notebook-panel backend-master-detail__panel" id="tab-panel-5" role="tabpanel" aria-labelledby="tab-5" hidden>
 
         <!-- Vista lista -->
         <div id="cat-list-view">
@@ -941,9 +401,12 @@ __BACKEND_SHARED_SIDEBAR_HTML__
 
           <div class="field">
             <label>Imagen de categoría</label>
-            <div class="photo-box" id="cat-img-box" style="width:140px;height:140px;cursor:pointer;" onclick="document.getElementById('cat-img-input').click()">
-              <img id="cat-img-preview" src="/static/imagenes/banner.png"
-                   style="width:100%;height:100%;object-fit:cover;border-radius:8px;" alt="Imagen categoría" />
+            <div class="cat-image-box" id="cat-img-box" onclick="document.getElementById('cat-img-input').click()">
+              <img id="cat-img-preview" src="" alt="Imagen categoría" />
+              <div class="cat-image-placeholder">
+                <div class="cat-image-icon">+</div>
+                <div>Haz clic para cargar<br>la imagen de la categoría</div>
+              </div>
             </div>
             <input type="file" id="cat-img-input" accept="image/*" style="display:none" />
             <p style="font-size:0.8rem;color:var(--mt-muted);margin-top:4px;">Haz clic en la imagen para cambiarla.</p>
@@ -963,7 +426,7 @@ __BACKEND_SHARED_SIDEBAR_HTML__
       </div>
 
       <!-- ===================== TAB 6: Atributos ===================== -->
-      <div class="notebook-panel" id="tab-panel-6" role="tabpanel" aria-labelledby="tab-6" hidden>
+      <div class="notebook-panel backend-master-detail__panel" id="tab-panel-6" role="tabpanel" aria-labelledby="tab-6" hidden>
 
         <!-- Vista: lista de atributos -->
         <div id="attr-list-view">
@@ -1040,6 +503,7 @@ __BACKEND_SHARED_SIDEBAR_HTML__
         </div>
 
       </div>
+      </div>
     </div>
   </main>
   <div class="store-error-dialog" id="store-error-dialog" hidden>
@@ -1053,7 +517,7 @@ __BACKEND_SHARED_SIDEBAR_HTML__
       </div>
     </div>
   </div>
-  <script src="/static/js/backend-sidebar-core.js"></script>
+  <script src="/multitienda/static/js/backend-sidebar-core.js"></script>
   <script>
     (function () {
       if (window.initBackendSidebarCore) {
@@ -1070,7 +534,7 @@ __BACKEND_SHARED_SIDEBAR_HTML__
         const emptyRow = document.getElementById("store-empty-row");
         const newBtn = document.getElementById("store-new-btn");
         const cancelBtn = document.getElementById("store-cancel-btn");
-        const saveBtn = document.getElementById("store-save-btn");
+        const saveButtons = Array.from(document.querySelectorAll('[data-store-save-trigger="1"]'));
         const formTitle = document.getElementById("store-form-title");
         const nameInput = document.getElementById("store-name");
         const typeSelect = document.getElementById("store-type");
@@ -1080,10 +544,12 @@ __BACKEND_SHARED_SIDEBAR_HTML__
         const featuredCheckbox = document.getElementById("store-is-featured");
         const inventoryCheckbox = document.getElementById("store-inventory-enabled");
         const validityInput = document.getElementById("store-validity");
-        const referralsInput = document.getElementById("store-referrals");
-        const appointmentsInput = document.getElementById("store-appointments");
-        const couponsInput = document.getElementById("store-coupons");
-        const whatsappInput = document.getElementById("store-whatsapp");
+        const referralsCheckbox = document.getElementById("store-referrals");
+        const fidelizacionCheckbox = document.getElementById("store-fidelizacion");
+        const pwaNotificationsCheckbox = document.getElementById("store-pwa-notifications");
+        const appointmentsCheckbox = document.getElementById("store-appointments");
+        const couponsCheckbox = document.getElementById("store-coupons");
+        const whatsappCheckbox = document.getElementById("store-whatsapp");
         const maxInternalUsersInput = document.getElementById("max-internal-users");
         const maxPortalUsersInput = document.getElementById("max-portal-users");
         const canUploadVideosCheckbox = document.getElementById("store-can-upload-videos");
@@ -1099,6 +565,7 @@ __BACKEND_SHARED_SIDEBAR_HTML__
         const errorCopyStatus = document.getElementById("store-error-copy-status");
         let stores = [];
         let editIndex = -1;
+        let currentStoreId = "";
 
       function closeStoreErrorDialog() {
         if (errorDialog) errorDialog.hidden = true;
@@ -1175,6 +642,7 @@ __BACKEND_SHARED_SIDEBAR_HTML__
         if (listView) listView.hidden = false;
         if (formView) formView.hidden = true;
         editIndex = -1;
+        currentStoreId = "";
       }
 
       function showForm(index) {
@@ -1183,6 +651,7 @@ __BACKEND_SHARED_SIDEBAR_HTML__
         if (formView) formView.hidden = false;
         if (editIndex >= 0 && stores[editIndex]) {
           const item = stores[editIndex];
+          currentStoreId = String(item.id || "");
           if (formTitle) formTitle.textContent = "Editar tienda";
           if (nameInput) nameInput.value = item.name || "";
           if (typeSelect) typeSelect.value = item.typeCode || "";
@@ -1193,10 +662,12 @@ __BACKEND_SHARED_SIDEBAR_HTML__
           if (featuredCheckbox) featuredCheckbox.checked = !!item.isFeatured;
           if (inventoryCheckbox) inventoryCheckbox.checked = !!item.inventoryEnabled;
           if (validityInput) validityInput.value = item.validity || "";
-          if (referralsInput) referralsInput.value = item.referrals || "";
-          if (appointmentsInput) appointmentsInput.value = item.appointments || "";
-          if (couponsInput) couponsInput.value = item.coupons || "";
-          if (whatsappInput) whatsappInput.value = item.whatsapp || "";
+          if (referralsCheckbox) referralsCheckbox.checked = !!item.referrals;
+          if (fidelizacionCheckbox) fidelizacionCheckbox.checked = !!item.fidelizacion;
+          if (pwaNotificationsCheckbox) pwaNotificationsCheckbox.checked = !!item.pwaNotifications;
+          if (appointmentsCheckbox) appointmentsCheckbox.checked = !!item.appointments;
+          if (couponsCheckbox) couponsCheckbox.checked = !!item.coupons;
+          if (whatsappCheckbox) whatsappCheckbox.checked = !!item.whatsapp;
           if (maxInternalUsersInput) maxInternalUsersInput.value = item.maxInternalUsers || "";
           if (maxPortalUsersInput) maxPortalUsersInput.value = item.maxPortalUsers || "";
           if (canUploadVideosCheckbox) canUploadVideosCheckbox.checked = !!item.canUploadVideos;
@@ -1206,6 +677,7 @@ __BACKEND_SHARED_SIDEBAR_HTML__
           if (canUseLayawayCheckbox) canUseLayawayCheckbox.checked = !!item.canUseLayaway;
           if (canUseAuctionsCheckbox) canUseAuctionsCheckbox.checked = !!item.canUseAuctions;
         } else {
+          currentStoreId = "";
           if (formTitle) formTitle.textContent = "Nueva tienda";
           if (nameInput) nameInput.value = "";
           if (typeSelect) typeSelect.value = "";
@@ -1216,10 +688,12 @@ __BACKEND_SHARED_SIDEBAR_HTML__
           if (featuredCheckbox) featuredCheckbox.checked = true;
           if (inventoryCheckbox) inventoryCheckbox.checked = false;
           if (validityInput) validityInput.value = "";
-          if (referralsInput) referralsInput.value = "";
-          if (appointmentsInput) appointmentsInput.value = "";
-          if (couponsInput) couponsInput.value = "";
-          if (whatsappInput) whatsappInput.value = "";
+          if (referralsCheckbox) referralsCheckbox.checked = false;
+          if (fidelizacionCheckbox) fidelizacionCheckbox.checked = false;
+          if (pwaNotificationsCheckbox) pwaNotificationsCheckbox.checked = false;
+          if (appointmentsCheckbox) appointmentsCheckbox.checked = false;
+          if (couponsCheckbox) couponsCheckbox.checked = false;
+          if (whatsappCheckbox) whatsappCheckbox.checked = false;
           if (maxInternalUsersInput) maxInternalUsersInput.value = "";
           if (maxPortalUsersInput) maxPortalUsersInput.value = "";
           if (canUploadVideosCheckbox) canUploadVideosCheckbox.checked = false;
@@ -1278,10 +752,12 @@ __BACKEND_SHARED_SIDEBAR_HTML__
             isFeatured: !!(featuredCheckbox && featuredCheckbox.checked),
             inventoryEnabled: !!(inventoryCheckbox && inventoryCheckbox.checked),
             validity: String(validityInput && validityInput.value || "").trim(),
-            referrals: String(referralsInput && referralsInput.value || "").trim(),
-            appointments: String(appointmentsInput && appointmentsInput.value || "").trim(),
-            coupons: String(couponsInput && couponsInput.value || "").trim(),
-            whatsapp: String(whatsappInput && whatsappInput.value || "").trim(),
+            referrals: !!(referralsCheckbox && referralsCheckbox.checked),
+            fidelizacion: !!(fidelizacionCheckbox && fidelizacionCheckbox.checked),
+            pwaNotifications: !!(pwaNotificationsCheckbox && pwaNotificationsCheckbox.checked),
+            appointments: !!(appointmentsCheckbox && appointmentsCheckbox.checked),
+            coupons: !!(couponsCheckbox && couponsCheckbox.checked),
+            whatsapp: !!(whatsappCheckbox && whatsappCheckbox.checked),
             maxInternalUsers: String(maxInternalUsersInput && maxInternalUsersInput.value || "").trim(),
             maxPortalUsers: String(maxPortalUsersInput && maxPortalUsersInput.value || "").trim(),
             canUploadVideos: !!(canUploadVideosCheckbox && canUploadVideosCheckbox.checked),
@@ -1291,6 +767,7 @@ __BACKEND_SHARED_SIDEBAR_HTML__
             canUseLayaway: !!(canUseLayawayCheckbox && canUseLayawayCheckbox.checked),
             canUseAuctions: !!(canUseAuctionsCheckbox && canUseAuctionsCheckbox.checked),
           };
+          const isEditingStore = currentStoreId !== "";
           if (!payload.name) {
             window.alert("Nombre de la tienda es obligatorio.");
             return;
@@ -1306,10 +783,11 @@ __BACKEND_SHARED_SIDEBAR_HTML__
               "Accept": "application/json"
             },
             body: JSON.stringify({
-              is_edit: editIndex >= 0,
-              store_id: editIndex >= 0 && stores[editIndex] ? stores[editIndex].id : "",
+              is_edit: isEditingStore,
+              store_id: currentStoreId,
               store_name: payload.name,
               store_type: payload.typeCode,
+              store_type_name: payload.typeLabel,
               admin_user_id: payload.adminId,
               membership: payload.membership,
               is_active: payload.isActive,
@@ -1317,6 +795,7 @@ __BACKEND_SHARED_SIDEBAR_HTML__
               inventory_enabled: payload.inventoryEnabled,
               validity: payload.validity,
               referrals: payload.referrals,
+              pwa_notifications: payload.pwaNotifications,
               appointments: payload.appointments,
               coupons: payload.coupons,
               whatsapp: payload.whatsapp,
@@ -1345,15 +824,15 @@ __BACKEND_SHARED_SIDEBAR_HTML__
           showList();
       }
 
-      if (saveBtn) {
-        saveBtn.addEventListener("click", async function () {
+      saveButtons.forEach(function (button) {
+        button.addEventListener("click", async function () {
           try {
             await persistStore();
           } catch (error) {
             showStoreErrorDialog(error && error.message ? error.message : "No se pudo guardar la tienda.");
           }
         });
-      }
+      });
 
       if (errorCloseBtn) {
         errorCloseBtn.addEventListener("click", function () {
@@ -1678,47 +1157,41 @@ __BACKEND_SHARED_SIDEBAR_HTML__
     })();
 
   </script>
-  <script src="/static/js/sidebar-theme-editor.js"></script>
-  <script src="/static/js/backend-navbar.js"></script>
+  <script src="/multitienda/static/js/backend-master-detail.js"></script>
+  <script src="/multitienda/static/js/sidebar-theme-editor.js"></script>
+  <script src="/multitienda/static/js/backend-navbar.js"></script>
   <script>
     (function () {
-      document.querySelectorAll(".notebook").forEach(function (notebook) {
-        var tabs = notebook.querySelectorAll(".notebook-tab");
-        var panels = notebook.querySelectorAll(".notebook-panel");
+      var panelToTab = {
+        tiendas: "tab-1",
+        acceso: "tab-2",
+        publicidad: "tab-3",
+        institucion_financiera: "tab-4",
+        categorias: "tab-5",
+        atributos: "tab-6"
+      };
 
-        function openTab(tab) {
-          var panelId = tab.getAttribute("aria-controls");
-          tabs.forEach(function (t) {
-            t.classList.remove("active");
-            t.setAttribute("aria-selected", "false");
-          });
-          panels.forEach(function (p) {
-            p.hidden = true;
-          });
-          tab.classList.add("active");
-          tab.setAttribute("aria-selected", "true");
-          if (panelId) {
-            var targetPanel = notebook.querySelector("#" + panelId);
-            if (targetPanel) {
-              targetPanel.hidden = false;
-            }
-          }
+      function syncGestionPanelFromUrl() {
+        var params = new URLSearchParams(window.location.search || "");
+        var panelKey = String(params.get("panel") || "tiendas").trim().toLowerCase();
+        var tabId = panelToTab[panelKey] || panelToTab.tiendas;
+        var tab = document.getElementById(tabId);
+        if (tab) {
+          tab.click();
         }
-
-        tabs.forEach(function (tab) {
-          tab.addEventListener("click", function (event) {
-            event.preventDefault();
-            openTab(tab);
-          });
+        document.querySelectorAll(".sb-subitem[data-gestion-panel]").forEach(function (link) {
+          link.classList.toggle("is-active", link.getAttribute("data-gestion-panel") === panelKey);
         });
+      }
 
-        var activeTab = notebook.querySelector(".notebook-tab.active") || tabs[0];
-        if (activeTab) {
-          openTab(activeTab);
-        }
-      });
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", syncGestionPanelFromUrl);
+      } else {
+        syncGestionPanelFromUrl();
+      }
     })();
-
+  </script>
+  <script>
     /* ---- Categorías ---- */
     (function () {
       var STORAGE_KEY = "multitienda_categorias";
@@ -1731,9 +1204,16 @@ __BACKEND_SHARED_SIDEBAR_HTML__
       var emptyRow    = document.getElementById("cat-empty-row");
       var formTitle   = document.getElementById("cat-form-title");
       var padreSelect = document.getElementById("cat-padre");
+      var imgBox      = document.getElementById("cat-img-box");
       var imgInput    = document.getElementById("cat-img-input");
       var imgPreview  = document.getElementById("cat-img-preview");
-      var DEFAULT_IMG = "/static/imagenes/banner.png";
+      var DEFAULT_IMG = "";
+
+      function syncCategoryImagePreview(src) {
+        var resolved = String(src || "").trim();
+        imgPreview.src = resolved;
+        imgBox.classList.toggle("has-image", resolved !== "");
+      }
 
       /* ---------- persistencia ---------- */
       function load() {
@@ -1767,10 +1247,13 @@ __BACKEND_SHARED_SIDEBAR_HTML__
           var padreNombre = c.padreIdx !== "" && c.padreIdx !== undefined
             ? (categories[Number(c.padreIdx)] ? categories[Number(c.padreIdx)].nombre : "—") : "—";
           tr.innerHTML =
-            '<td><img src="' + (c.imagen || DEFAULT_IMG) + '" style="width:40px;height:40px;object-fit:cover;border-radius:6px;" /></td>' +
             '<td>' + escHtml(c.nombre) + '</td>' +
             '<td style="color:var(--mt-muted);font-size:0.85rem;">' + escHtml(c.descripcion || "") + '</td>' +
             '<td>' + escHtml(padreNombre) + '</td>' +
+            '<td>' + (c.imagen
+              ? '<img src="' + escHtml(c.imagen) + '" style="width:40px;height:40px;object-fit:cover;border-radius:6px;" alt="Imagen de categoría" />'
+              : '<div style="width:40px;height:40px;border:1px dashed var(--mt-border);border-radius:6px;display:grid;place-items:center;color:var(--mt-muted);font-size:0.8rem;">+</div>')
+            + '</td>' +
             '<td style="display:flex;gap:8px;">' +
               '<button class="action-btn" style="padding:4px 10px;font-size:0.8rem;" data-edit="' + i + '" type="button">Editar</button>' +
               '<button class="action-btn action-btn--danger" style="padding:4px 10px;font-size:0.8rem;" data-del="' + i + '" type="button">Eliminar</button>' +
@@ -1787,7 +1270,7 @@ __BACKEND_SHARED_SIDEBAR_HTML__
         listView.hidden = false;
         formView.hidden = true;
         editIndex = -1;
-        imgPreview.src = DEFAULT_IMG;
+        syncCategoryImagePreview(DEFAULT_IMG);
       }
       function showForm(idx) {
         editIndex = idx;
@@ -1799,14 +1282,14 @@ __BACKEND_SHARED_SIDEBAR_HTML__
           document.getElementById("cat-descripcion").value = c.descripcion || "";
           padreSelect.value = c.padreIdx !== undefined ? String(c.padreIdx) : "";
           document.getElementById("cat-activa").checked    = c.activa !== false;
-          imgPreview.src = c.imagen || DEFAULT_IMG;
+          syncCategoryImagePreview(c.imagen || DEFAULT_IMG);
         } else {
           formTitle.textContent = "Nueva categoría";
           document.getElementById("cat-nombre").value      = "";
           document.getElementById("cat-descripcion").value = "";
           padreSelect.value = "";
           document.getElementById("cat-activa").checked    = true;
-          imgPreview.src = DEFAULT_IMG;
+          syncCategoryImagePreview(DEFAULT_IMG);
         }
         listView.hidden = true;
         formView.hidden = false;
@@ -1821,7 +1304,7 @@ __BACKEND_SHARED_SIDEBAR_HTML__
           descripcion: document.getElementById("cat-descripcion").value.trim(),
           padreIdx:    padreSelect.value,
           activa:      document.getElementById("cat-activa").checked,
-          imagen:      imgPreview.src !== window.location.href ? imgPreview.src : DEFAULT_IMG
+          imagen:      imgPreview.src || DEFAULT_IMG
         };
         if (editIndex >= 0) {
           categories[editIndex] = cat;
@@ -1837,7 +1320,11 @@ __BACKEND_SHARED_SIDEBAR_HTML__
       imgInput.addEventListener("change", function () {
         var file = imgInput.files[0];
         if (!file) return;
-        imgPreview.src = URL.createObjectURL(file);
+        var reader = new FileReader();
+        reader.onload = function (event) {
+          syncCategoryImagePreview(event && event.target ? event.target.result : "");
+        };
+        reader.readAsDataURL(file);
       });
 
       /* ---------- eventos ---------- */
@@ -1863,6 +1350,7 @@ __BACKEND_SHARED_SIDEBAR_HTML__
       /* ---------- init ---------- */
       load();
       renderList();
+      syncCategoryImagePreview(DEFAULT_IMG);
     })();
 
     /* ---- Atributos ---- */

@@ -56,5 +56,3 @@ class DomainRequest(Base):
 
     vendor = relationship('Vendor', back_populates='domain_requests')
     reviewed_by = relationship('User', back_populates='reviewed_domains', foreign_keys=[reviewed_by_id])
-
-    __mapper_args__ = {"order_by": created_at.desc()}

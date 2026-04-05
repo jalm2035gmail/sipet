@@ -505,6 +505,15 @@ MODULE_DEFINITIONS: List[ModuleDefinition] = [
         router_specs=[RouterSpec("fastapi_modulo.modulos.diagnostico.controladores.diagnostico")],
     ),
     ModuleDefinition(
+        key="notificaciones_core",
+        label="Notificaciones",
+        description="API de notificaciones del shell backend.",
+        sidebar_visible=False,
+        manageable=False,
+        always_enabled=True,
+        router_specs=[RouterSpec("fastapi_modulo.modulos_sipet.web.controladores.notificaciones_api")],
+    ),
+    ModuleDefinition(
         key="ajustes_ia_core",
         label="IA",
         description="Configuración e inteligencia artificial del sistema.",

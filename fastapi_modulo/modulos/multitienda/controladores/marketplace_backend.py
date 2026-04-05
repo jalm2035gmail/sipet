@@ -81,14 +81,16 @@ def _serialize_store_theme(theme: dict) -> str:
 
 
 def _deserialize_store_theme(raw_value) -> dict:
-    if isinstance(raw_value, dict):
-        return raw_value
-    if isinstance(raw_value, str):
+    current = raw_value
+    for _ in range(3):
+        if isinstance(current, dict):
+            return current
+        if not isinstance(current, str):
+            return {}
         try:
-            parsed = json.loads(raw_value)
+            current = json.loads(current)
         except Exception:
             return {}
-        return parsed if isinstance(parsed, dict) else {}
     return {}
 
 
@@ -176,10 +178,13 @@ async def save_store_settings(request: Request, payload_override: dict | None = 
         theme.update(
             {
                 "store_type": str(payload.get("store_type") or "").strip(),
+                "store_type_name": str(payload.get("store_type_name") or payload.get("store_type_label") or "").strip(),
                 "membership": str(payload.get("membership") or "").strip(),
                 "inventory_enabled": bool(payload.get("inventory_enabled", False)),
                 "validity": str(payload.get("validity") or "").strip(),
                 "referrals": str(payload.get("referrals") or "").strip(),
+                "fidelizacion": str(payload.get("fidelizacion") or "").strip(),
+                "pwa_notifications": str(payload.get("pwa_notifications") or "").strip(),
                 "appointments": str(payload.get("appointments") or "").strip(),
                 "coupons": str(payload.get("coupons") or "").strip(),
                 "whatsapp": str(payload.get("whatsapp") or "").strip(),
@@ -325,12 +330,39 @@ def health():
 
 
 def build_marketplace_backend_app() -> FastAPI:
+    from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.employees.routes import router as employees_router
+    from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.coupons.routes import router as coupons_router
+    from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.layaways.routes import router as layaways_router
+    from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.followers.routes import router as followers_router
+    from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.videos.routes import router as videos_router
+    from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.suppliers.routes import router as suppliers_router
+    from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.whatsapp_config.routes import router as whatsapp_config_router
+    from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.ai_config.routes import router as ai_config_router
+    from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.messaging.routes import router as messaging_router
+    from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.domains.routes import router as domains_router
+    from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.wishlist.routes import router as wishlist_router
+    from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.cart.routes import router as cart_router
+    from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.payments.routes import router as payments_router
+
     app = FastAPI(title="MultiTiendApp API", root_path=BACKEND_ROOT_PATH)
 
     if STATIC_DIR.is_dir():
         app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
     app.include_router(marketplace_router)
+    app.include_router(employees_router, prefix=BACKEND_ROUTE_PREFIX)
+    app.include_router(coupons_router, prefix=BACKEND_ROUTE_PREFIX)
+    app.include_router(layaways_router, prefix=BACKEND_ROUTE_PREFIX)
+    app.include_router(followers_router, prefix=BACKEND_ROUTE_PREFIX)
+    app.include_router(videos_router, prefix=BACKEND_ROUTE_PREFIX)
+    app.include_router(suppliers_router, prefix=BACKEND_ROUTE_PREFIX)
+    app.include_router(whatsapp_config_router, prefix=BACKEND_ROUTE_PREFIX)
+    app.include_router(ai_config_router, prefix=BACKEND_ROUTE_PREFIX)
+    app.include_router(messaging_router, prefix=BACKEND_ROUTE_PREFIX)
+    app.include_router(domains_router, prefix=BACKEND_ROUTE_PREFIX)
+    app.include_router(wishlist_router, prefix=BACKEND_ROUTE_PREFIX)
+    app.include_router(cart_router, prefix=BACKEND_ROUTE_PREFIX)
+    app.include_router(payments_router, prefix=BACKEND_ROUTE_PREFIX)
 
     return app
 

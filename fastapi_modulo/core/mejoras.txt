@@ -1,0 +1,74 @@
+
+
+
+
+Fase 1: COMPLETADA
+Fase 2: COMPLETADA
+Fase 3: COMPLETADA
+Fase 4: COMPLETADA
+Fase 5: COMPLETADA
+Fase 6: COMPLETADA
+Fase 7: COMPLETADA
+
+Avance = 100%
+
+PLAN DE TRABAJO REFERIDOS
+
+FASE 1. Seguridad y permisos (PRIORIDAD INMEDIATA)
+- ✅ Quitar user_id manual del frontend
+- ✅ Implementar acceso real por usuario autenticado
+- ✅ Crear modelo de roles: admin global, admin negocio, operador, embajador
+- ✅ Crear tabla de acceso usuario-negocio (relación muchos-a-muchos)
+- ✅ Proteger endpoints: validar acceso por negocio, impedir acceso a datos de otros negocios
+- ✅ Corregir portal público: separar vista pública/interna, evitar dashboard/lista global
+- ✅ Corregir filtros y visibilidad por negocio
+- ✅ Crear rol específico de embajador
+
+FASE 2. Rediseño de modelo de datos
+- ✅ Ajustar tablas: negocio/programa, acceso usuario-negocio, campaña, embajador, conversión, liquidación
+- ✅ Agregar campos clave: código embajador, fuente/campaña, IP/dispositivo/canal, evidencia de conversión, usuario que aprobó/pagó
+- ✅ Normalizar estados con enums
+
+FASE 3. Motor de reglas e incentivos
+- ✅ Reglas de elegibilidad: duplicados, exclusiones, topes por periodo, reglas por negocio/producto
+- ✅ Motor de incentivos: porcentaje, monto fijo, bono social, tope mensual, prioridad entre reglas
+- ✅ Flujo de aprobación: pendiente, aprobado, liquidado, rechazado
+
+FASE 4. Embajadores
+- ✅ Alta y aprobación de embajadores
+- ✅ Código único y link personalizado
+- ✅ Dashboard del embajador
+- ✅ Ranking y metas
+- ✅ Estados: activo, suspendido, bloqueado, inactivo
+
+FASE 5. Antifraude y calidad de datos
+- ✅ Reforzar score antifraude
+- ✅ Validar duplicidad inteligente
+- ✅ Reglas por frecuencia y comportamiento
+- ✅ Cola de revisión manual
+- ✅ Blacklist y motivos de exclusión
+
+FASE 6. Frontend y experiencia de uso
+- ✅ Corregir filtros que no funcionan
+- ✅ Separar tabs internos/públicos
+- ✅ Crear panel por negocio y por embajador
+- ✅ Formularios de alta más limpios
+- ✅ Eliminar captura manual de user_id
+
+FASE 7. Reportes y automatización ✅
+- ✅ KPIs por negocio y embajador → GET /api/referidos/reportes/kpis-negocio, /kpis-embajador
+- ✅ Conversión por canal → GET /api/referidos/reportes/conversion-canal
+- ✅ Incentivos pendientes vs pagados → GET /api/referidos/reportes/incentivos
+- ✅ Exportación a CSV → GET /api/referidos/exportar/csv
+- ✅ Exportación a Excel → GET /api/referidos/exportar/excel
+- ✅ Alertas automáticas → GET /api/referidos/alertas (fraude, incentivos vencidos, embajadores inactivos)
+- ✅ API integración CRM/ventas → GET /api/referidos/crm/export
+
+ORDEN DE EJECUCIÓN RECOMENDADO
+1. Seguridad y permisos
+2. Rediseño de datos
+3. Portal público correcto
+4. Motor de incentivos
+5. Embajadores
+6. Antifraude
+7. Reportes y automatización

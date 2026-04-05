@@ -7,23 +7,42 @@ from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.analytics.model
     VendorAnalytics,
 )
 from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.users.models import User
+from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.users.routes import require_any_role, get_current_user
 from fastapi_modulo.modulos.multitienda.marketplace.backend.apps.vendors.models import VendorStore as Vendor
 from fastapi_modulo.modulos.multitienda.marketplace.backend.core.db import get_db
+from fastapi_modulo.modulos.multitienda.marketplace.backend.core.dependencies import assert_store_access, get_vendor_id_for_user
 from typing import Optional
 
 router = APIRouter(prefix="/api/analytics", tags=["analytics"])
 
+
+def _resolve_vendor_id(vendor_id: Optional[int], user, db: Session) -> int:
+    """Superadmin must pass vendor_id; others resolve from their own account."""
+    user_type = user.user_type.value if hasattr(user.user_type, "value") else str(user.user_type)
+    if user_type == "superadmin":
+        if vendor_id is None:
+            raise HTTPException(status_code=400, detail="vendor_id requerido para superadmin")
+        return vendor_id
+    resolved = get_vendor_id_for_user(user, db)
+    if vendor_id is not None and vendor_id != resolved:
+        raise HTTPException(status_code=403, detail="No tienes acceso a esta tienda")
+    return resolved
+
+
 @router.get("/vendor/daily")
 def get_vendor_daily_analytics(
-    vendor_id: int,
+    vendor_id: Optional[int] = None,
     days: int = 30,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    user=Depends(require_any_role("vendor", "superadmin", "store_employee")),
 ):
     """Obtener métricas diarias del vendedor (últimos N días)"""
+    vid = _resolve_vendor_id(vendor_id, user, db)
+    assert_store_access(user, vid, db)
     today = date.today()
-    start_date = today - timedelta(days=days-1)
+    start_date = today - timedelta(days=days - 1)
     analytics = db.query(VendorAnalytics).filter(
-        VendorAnalytics.vendor_id == vendor_id,
+        VendorAnalytics.vendor_id == vid,
         VendorAnalytics.date >= start_date
     ).order_by(VendorAnalytics.date).all()
     return [
@@ -51,12 +70,15 @@ def get_vendor_daily_analytics(
 
 @router.get("/vendor/customer-behavior")
 def get_vendor_customer_behavior(
-    vendor_id: int,
-    db: Session = Depends(get_db)
+    vendor_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    user=Depends(require_any_role("vendor", "superadmin", "store_employee")),
 ):
     """Obtener métricas de comportamiento de clientes para un vendedor"""
+    vid = _resolve_vendor_id(vendor_id, user, db)
+    assert_store_access(user, vid, db)
     behaviors = db.query(CustomerBehavior).filter(
-        CustomerBehavior.vendor_id == vendor_id
+        CustomerBehavior.vendor_id == vid
     ).all()
     return [
         {
@@ -76,12 +98,15 @@ def get_vendor_customer_behavior(
 
 @router.get("/vendor/goals")
 def get_vendor_performance_goals(
-    vendor_id: int,
-    db: Session = Depends(get_db)
+    vendor_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    user=Depends(require_any_role("vendor", "superadmin", "store_employee")),
 ):
     """Obtener metas de desempeño del vendedor"""
+    vid = _resolve_vendor_id(vendor_id, user, db)
+    assert_store_access(user, vid, db)
     goals = db.query(PerformanceGoal).filter(
-        PerformanceGoal.vendor_id == vendor_id
+        PerformanceGoal.vendor_id == vid
     ).order_by(PerformanceGoal.created_at.desc()).all()
     return [
         {
@@ -98,3 +123,6 @@ def get_vendor_performance_goals(
         }
         for g in goals
     ]
+
+
+

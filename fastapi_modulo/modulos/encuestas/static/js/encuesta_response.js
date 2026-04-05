@@ -19,11 +19,15 @@
     currentStep: 0,
     answers: {},
     timerId: null,
+    answeredMessageTimerId: null,
     reviewPayload: null,
     reviewMode: "chart",
     livePageResults: {},
     sectionResultsVisibility: {},
   };
+  const searchParams = new URLSearchParams(window.location.search || "");
+  const presentMode = searchParams.get("present") === "1";
+  let presentationFullscreenRequested = false;
   const apiMAIN = state.session.access_mode === "public" ? "/api/public/encuestas" : "/api/encuestas";
 
   const startScreen = document.getElementById("enc-response-start");
@@ -56,6 +60,8 @@
   const presentationNav = document.getElementById("enc-response-presentation-nav");
   const presentationPrevButton = document.getElementById("enc-response-presentation-prev");
   const presentationNextButton = document.getElementById("enc-response-presentation-next");
+  const presentationFullscreenButton = document.getElementById("enc-response-presentation-fullscreen");
+  const presentationSubmitButton = document.getElementById("enc-response-presentation-submit");
   const formNode = document.getElementById("enc-response-form");
   const closedCopy = document.getElementById("enc-response-closed-copy");
   const closedScore = document.getElementById("enc-response-closed-score");
@@ -77,6 +83,11 @@
   function publicationRules() {
     const instance = state.session.instance || {};
     return instance.publication_rules_json || {};
+  }
+
+  function liveSettings() {
+    const instance = state.session.instance || {};
+    return instance.settings_json || {};
   }
 
   function evaluation360() {
@@ -113,12 +124,25 @@
 
   function presentationPages() {
     const rules = publicationRules();
-    return Array.isArray(rules.presentation_pages) ? rules.presentation_pages : [];
+    if (Array.isArray(rules.presentation_pages) && rules.presentation_pages.length) {
+      return rules.presentation_pages;
+    }
+    const settings = liveSettings();
+    return Array.isArray(settings.live_pages) ? settings.live_pages : [];
   }
 
   function isPresentationMode() {
-    return String(publicationRules().response_mode || "standard").trim().toLowerCase() === "presentation"
+    const rulesMode = String(publicationRules().response_mode || "standard").trim().toLowerCase();
+    const liveMode = String(liveSettings().live_mode || "").trim().toLowerCase();
+    return (rulesMode === "presentation" || liveMode === "presentation")
       && presentationPages().length > 0;
+  }
+
+  function isLivePresentationLocked() {
+    const settings = liveSettings();
+    return isPresentationMode()
+      && String(settings.live_status || "").trim().toLowerCase() === "running"
+      && String(settings.live_mode || "").trim().toLowerCase() === "presentation";
   }
 
   function currentOrientation() {
@@ -135,6 +159,10 @@
 
   function contentItems() {
     return isPresentationMode() ? presentationPages() : sections();
+  }
+
+  function pageShowsTitle(page) {
+    return page && page.show_title != null ? page.show_title !== false && String(page.show_title) !== "false" : true;
   }
 
   function findQuestionById(questionId) {
@@ -171,6 +199,33 @@
     closedScreen.classList.toggle("is-active", mode === "closed");
   }
 
+  function presentationTarget() {
+    return formScreen || formCard || questionsNode || document.documentElement;
+  }
+
+  function requestPresentationFullscreen() {
+    const target = presentationTarget();
+    if (!target || document.fullscreenElement || !target.requestFullscreen) return Promise.resolve();
+    return target.requestFullscreen().catch(() => {});
+  }
+
+  function togglePresentationFullscreen() {
+    if (document.fullscreenElement) {
+      return document.exitFullscreen ? document.exitFullscreen().catch(() => {}) : Promise.resolve();
+    }
+    return requestPresentationFullscreen();
+  }
+
+  function maybeEnterPresentationFullscreen(force) {
+    if (!isPresentationMode()) return;
+    if (!force && !presentMode) return;
+    if (!force && presentationFullscreenRequested) return;
+    presentationFullscreenRequested = true;
+    window.setTimeout(() => {
+      requestPresentationFullscreen();
+    }, 120);
+  }
+
   function formatDate(value) {
     if (!value) return "Sin fecha";
     return String(value).replace("T", " ").slice(0, 16);
@@ -185,9 +240,14 @@
     root.classList.toggle("is-presentation-mode", presentationActive);
     if (document.body) {
       document.body.classList.toggle("enc-response-presentation-page", presentationActive);
+      document.body.classList.toggle("enc-response-presentation-screen", presentationActive && presentMode);
     }
     if (orientationWrap) orientationWrap.hidden = !presentationActive;
     if (presentationNav) presentationNav.hidden = !presentationActive;
+    if (presentationFullscreenButton) {
+      presentationFullscreenButton.hidden = !presentationActive;
+      presentationFullscreenButton.textContent = document.fullscreenElement ? "Salir de pantalla completa" : "Pantalla completa";
+    }
     applyOrientation();
     if (formCard) formCard.classList.toggle("is-presentation-stage", presentationActive);
     if (headerHtmlNode) {
@@ -212,6 +272,30 @@
     } else {
       quizCard.style.display = "none";
     }
+  }
+
+  function syncPresentationRulesFromLive(data) {
+    if (!data || data.presentation_mode !== true) return;
+    const instance = state.session.instance || {};
+    const rules = { ...(instance.publication_rules_json || {}) };
+    const livePages = Array.isArray(data.pages) ? data.pages : [];
+    const currentPages = Array.isArray(rules.presentation_pages) ? rules.presentation_pages : [];
+    let changed = false;
+
+    if (String(rules.response_mode || "").trim().toLowerCase() !== "presentation") {
+      rules.response_mode = "presentation";
+      changed = true;
+    }
+    if (livePages.length && JSON.stringify(currentPages) !== JSON.stringify(livePages)) {
+      rules.presentation_pages = livePages;
+      changed = true;
+    }
+    if (!changed) return;
+
+    instance.publication_rules_json = rules;
+    state.session.instance = instance;
+    updateChrome();
+    renderSteps();
   }
 
   function renderStartScreen() {
@@ -329,6 +413,10 @@
     return value !== null && value !== undefined && String(value).trim() !== "";
   }
 
+  function isQuestionLocked(question) {
+    return isSubmitted();
+  }
+
   function escapeHtml(value) {
     return String(value == null ? "" : value)
       .replaceAll("&", "&amp;")
@@ -358,6 +446,7 @@
     const columns = Array.isArray((question.config_json || {}).columns) ? question.config_json.columns : [];
     const leftLabel = escapeHtml((question.config_json || {}).left_label || "");
     const rightLabel = escapeHtml((question.config_json || {}).right_label || "");
+    const locked = isQuestionLocked(question);
     return `
       <div class="enc-response-matrix">
         ${leftLabel || rightLabel ? `<div class="enc-question-meta">${leftLabel}${leftLabel && rightLabel ? " / " : ""}${rightLabel}</div>` : ""}
@@ -381,6 +470,7 @@
                       data-row="${escapeHtml(row.value)}"
                       value="${escapeHtml(column.value)}"
                       ${matrixValue(question.id, row.value) === String(column.value) ? "checked" : ""}
+                      ${locked ? "disabled" : ""}
                     >
                   </td>
                 `).join("")}
@@ -395,6 +485,7 @@
   function renderRanking(question) {
     const current = rankingValue(question.id);
     const options = Array.isArray(question.options) ? question.options : [];
+    const locked = isQuestionLocked(question);
     const ranked = current.map((value) => options.find((option) => String(option.value) === String(value))).filter(Boolean);
     const available = options.filter((option) => !current.includes(option.value));
     const all = ranked.concat(available);
@@ -406,8 +497,8 @@
             <div class="enc-question-meta" style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
               <span style="min-width:24px;font-weight:700;">${isRanked ? index + 1 : "-"}</span>
               <span style="flex:1;">${escapeHtml(option.label)}</span>
-              <button type="button" class="enc-mini-btn" data-enc-rank-up="${question.id}" data-value="${escapeHtml(option.value)}">↑</button>
-              <button type="button" class="enc-mini-btn" data-enc-rank-down="${question.id}" data-value="${escapeHtml(option.value)}">↓</button>
+              <button type="button" class="enc-mini-btn" data-enc-rank-up="${question.id}" data-value="${escapeHtml(option.value)}" ${locked ? "disabled" : ""}>↑</button>
+              <button type="button" class="enc-mini-btn" data-enc-rank-down="${question.id}" data-value="${escapeHtml(option.value)}" ${locked ? "disabled" : ""}>↓</button>
             </div>
           `;
         }).join("")}
@@ -419,15 +510,18 @@
     const value = state.answers[String(question.id)];
     const required = question.is_required ? '<span class="enc-response-required">*</span>' : "";
     const options = Array.isArray(question.options) ? question.options : [];
+    const locked = isQuestionLocked(question);
+    const disabledAttr = locked ? "disabled" : "";
+    const readonlyAttr = locked ? "readonly" : "";
     let fieldHtml = "";
     if (question.question_type === "long_text") {
-      fieldHtml = `<textarea class="enc-input enc-textarea" data-enc-question="${question.id}" rows="5">${escapeHtml(value || "")}</textarea>`;
+      fieldHtml = `<textarea class="enc-input enc-textarea" data-enc-question="${question.id}" rows="5" ${readonlyAttr}>${escapeHtml(value || "")}</textarea>`;
     } else if (["short_text", "word_cloud"].includes(question.question_type)) {
-      fieldHtml = `<input class="enc-input" data-enc-question="${question.id}" type="text" value="${escapeHtml(value || "")}">`;
+      fieldHtml = `<input class="enc-input" data-enc-question="${question.id}" type="text" value="${escapeHtml(value || "")}" ${readonlyAttr}>`;
     } else if (question.question_type === "multiple_choice") {
       fieldHtml = options.map((option) => {
         const checked = Array.isArray(value) && value.includes(option.value) ? "checked" : "";
-        return `<label class="enc-preview-choice"><input type="checkbox" data-enc-question="${question.id}" value="${escapeHtml(option.value)}" ${checked}> <span>${escapeHtml(option.label)}</span></label>`;
+        return `<label class="enc-preview-choice"><input type="checkbox" data-enc-question="${question.id}" value="${escapeHtml(option.value)}" ${checked} ${disabledAttr}> <span>${escapeHtml(option.label)}</span></label>`;
       }).join("");
     } else if (question.question_type === "ranking") {
       fieldHtml = renderRanking(question);
@@ -436,7 +530,7 @@
     } else if (["single_choice", "live_poll_single_choice", "yes_no", "true_false", "quiz_single_choice", "dropdown", "image_choice"].includes(question.question_type)) {
       if (question.question_type === "dropdown") {
         fieldHtml = `
-          <select class="enc-input enc-select" data-enc-question="${question.id}">
+          <select class="enc-input enc-select" data-enc-question="${question.id}" ${disabledAttr}>
             <option value="">Selecciona una opción</option>
             ${options.map((option) => `<option value="${escapeHtml(option.value)}" ${String(value || "") === String(option.value) ? "selected" : ""}>${escapeHtml(option.label)}</option>`).join("")}
           </select>
@@ -444,48 +538,49 @@
       } else if (question.question_type === "image_choice") {
         fieldHtml = `<div class="enc-response-image-choice">${options.map((option) => {
           const checked = String(value || "") === String(option.value) ? "checked" : "";
-          return `<label class="enc-preview-choice" style="display:flex;align-items:center;gap:12px;padding:12px;border:1px solid rgba(15,23,42,0.1);border-radius:14px;"><input type="radio" name="enc-question-${question.id}" data-enc-question="${question.id}" value="${escapeHtml(option.value)}" ${checked}> <span>${escapeHtml(option.label)}</span></label>`;
+          return `<label class="enc-preview-choice" style="display:flex;align-items:center;gap:12px;padding:12px;border:1px solid rgba(15,23,42,0.1);border-radius:14px;"><input type="radio" name="enc-question-${question.id}" data-enc-question="${question.id}" value="${escapeHtml(option.value)}" ${checked} ${disabledAttr}> <span>${escapeHtml(option.label)}</span></label>`;
         }).join("")}</div>`;
       } else {
       fieldHtml = options.map((option) => {
         const checked = String(value || "") === String(option.value) ? "checked" : "";
-        return `<label class="enc-preview-choice"><input type="radio" name="enc-question-${question.id}" data-enc-question="${question.id}" value="${escapeHtml(option.value)}" ${checked}> <span>${escapeHtml(option.label)}</span></label>`;
+        return `<label class="enc-preview-choice"><input type="radio" name="enc-question-${question.id}" data-enc-question="${question.id}" value="${escapeHtml(option.value)}" ${checked} ${disabledAttr}> <span>${escapeHtml(option.label)}</span></label>`;
       }).join("");
       }
     } else if (["scale_1_5", "live_scale_1_5", "nps_0_10"].includes(question.question_type)) {
       fieldHtml = `<div class="enc-response-scale">${options.map((option) => {
         const active = String(value || "") === String(option.value) ? "is-active" : "";
-        return `<button type="button" class="enc-preview-scale ${active}" data-enc-scale="${question.id}" data-value="${escapeHtml(option.value)}">${escapeHtml(option.label)}</button>`;
+        return `<button type="button" class="enc-preview-scale ${active}" data-enc-scale="${question.id}" data-value="${escapeHtml(option.value)}" ${disabledAttr}>${escapeHtml(option.label)}</button>`;
       }).join("")}</div>`;
     } else if (question.question_type === "slider") {
       const config = question.config_json || {};
       const currentValue = value == null || value === "" ? String(config.min ?? 0) : String(value);
       fieldHtml = `
         <div>
-          <input class="enc-input" data-enc-question="${question.id}" type="range" min="${escapeHtml(config.min ?? 0)}" max="${escapeHtml(config.max ?? 10)}" step="${escapeHtml(config.step ?? 1)}" value="${escapeHtml(currentValue)}">
+          <input class="enc-input" data-enc-question="${question.id}" type="range" min="${escapeHtml(config.min ?? 0)}" max="${escapeHtml(config.max ?? 10)}" step="${escapeHtml(config.step ?? 1)}" value="${escapeHtml(currentValue)}" ${disabledAttr}>
           <div class="enc-question-meta">${escapeHtml(config.min_label || "Mínimo")} · <strong>${escapeHtml(currentValue)}</strong> · ${escapeHtml(config.max_label || "Máximo")}</div>
         </div>
       `;
     } else if (question.question_type === "date") {
-      fieldHtml = `<input class="enc-input" data-enc-question="${question.id}" type="date" value="${escapeHtml(value || "")}">`;
+      fieldHtml = `<input class="enc-input" data-enc-question="${question.id}" type="date" value="${escapeHtml(value || "")}" ${disabledAttr}>`;
     } else if (question.question_type === "time") {
-      fieldHtml = `<input class="enc-input" data-enc-question="${question.id}" type="time" value="${escapeHtml(value || "")}">`;
+      fieldHtml = `<input class="enc-input" data-enc-question="${question.id}" type="time" value="${escapeHtml(value || "")}" ${disabledAttr}>`;
     } else if (question.question_type === "file_upload") {
       const file = fileMeta(question.id);
       fieldHtml = `
         <div>
-          <input class="enc-input" data-enc-file="${question.id}" type="file" accept="${escapeHtml((question.config_json || {}).accept || '*/*')}">
+          <input class="enc-input" data-enc-file="${question.id}" type="file" accept="${escapeHtml((question.config_json || {}).accept || '*/*')}" ${disabledAttr}>
           <div class="enc-question-meta">${file.name ? `Archivo seleccionado: ${escapeHtml(file.name)}` : "Sin archivo seleccionado."}</div>
         </div>
       `;
     } else {
-      fieldHtml = `<input class="enc-input" data-enc-question="${question.id}" type="text" value="${escapeHtml(value || "")}">`;
+      fieldHtml = `<input class="enc-input" data-enc-question="${question.id}" type="text" value="${escapeHtml(value || "")}" ${readonlyAttr}>`;
     }
     return `
       <article class="enc-preview-question enc-response-question">
         <h4>${escapeHtml(question.titulo)} ${required}</h4>
         <p>${escapeHtml(question.descripcion || "")}</p>
         <div class="enc-preview-field">${fieldHtml}</div>
+        ${locked ? '<p class="enc-response-question-answered">Pregunta respondida</p>' : ''}
       </article>
     `;
   }
@@ -500,7 +595,7 @@
       return `<div class="enc-presentation-item ${widthClass}">${renderQuestion(question)}</div>`;
     }
     if (String(block.type || "") === "image") {
-      return `<div class="enc-presentation-item ${widthClass}">${renderImageSection(block, "enc-response-card")}</div>`;
+      return `<div class="enc-presentation-item ${widthClass}">${renderImageSection(block)}</div>`;
     }
     return `<div class="enc-presentation-item ${widthClass}"><article class="enc-card enc-response-card enc-response-richtext">${renderEmbeddedSectionHtml(block)}</article></div>`;
   }
@@ -544,13 +639,12 @@
     return `<div class="enc-embedded-runtime" data-enc-js-input-effect="${inputEffect}" data-enc-js-highlight-effect="${highlightEffect}" data-enc-js-output-effect="${outputEffect}" data-enc-js-input="${inputCode}" data-enc-js-highlight="${highlightCode}" data-enc-js-output="${outputCode}">${normalized.css ? `<style>${normalized.css}</style>` : ""}${normalized.html}</div>`;
   }
 
-  function renderImageSection(section, extraClass) {
+  function renderImageSection(section) {
     const imageUrl = escapeHtml(section.image_url || "");
     const imageFit = escapeHtml(section.image_fit || "cover");
     const imageAlt = escapeHtml(section.image_alt || "");
-    const className = extraClass ? `enc-presentation-image-surface ${extraClass}` : "enc-presentation-image-surface";
     if (!imageUrl) return '<div class="enc-placeholder">Imagen no configurada.</div>';
-    return `<div class="${className}" role="img" aria-label="${imageAlt}" style="background-image:url('${imageUrl}');background-size:${imageFit};background-position:center;background-repeat:no-repeat;"></div>`;
+    return `<div class="enc-presentation-image-surface" style="background-image:url('${imageUrl}');background-size:${imageFit};background-position:center;background-repeat:no-repeat;"><img class="enc-presentation-image ${imageFit === "contain" ? "is-contain" : "is-cover"}" src="${imageUrl}" alt="${imageAlt}"></div>`;
   }
 
   function runEmbeddedEffect(node, effectName) {
@@ -666,7 +760,7 @@
       `;
     }
     if (type === "image") {
-      return `<article class="enc-presentation-layout-slot">${renderImageSection(section, "enc-response-card")}</article>`;
+      return `<article class="enc-presentation-layout-slot">${renderImageSection(section)}</article>`;
     }
     const html = renderEmbeddedSectionHtml(section);
     return `<article class="enc-presentation-layout-slot">${html ? `<article class="enc-card enc-response-card enc-response-richtext">${html}</article>` : `<div class="enc-placeholder">Sección vacía.</div>`}</article>`;
@@ -679,26 +773,87 @@
       const total = Number(result.total_responses || 0);
       let body = `<p class="enc-presentation-results-total"><em><span data-enc-animate-count="${total}" data-enc-count-singular=" respuesta" data-enc-count-plural=" respuestas">0 respuestas</span></em></p>`;
       if (question.options && question.options.length) {
-        const maxCount = Math.max(...question.options.map((option) => Number((result.counts || {})[String(option.value)] || 0)), 1);
-        body += `<div class="enc-presentation-results-list">${question.options.map((option) => {
-          const count = Number((result.counts || {})[String(option.value)] || 0);
-          const width = Math.round((count / maxCount) * 100);
-          return `
-            <div class="enc-presentation-results-item is-chart">
-              <div class="enc-presentation-results-copy">
-                <span>${escapeHtml(option.label || String(option.value))}</span>
-                <strong data-enc-animate-count="${count}">0</strong>
-              </div>
-              <div class="enc-presentation-results-bar"><span data-enc-animate-width="${width}" style="width:0%"></span></div>
-            </div>
-          `;
-        }).join("")}</div>`;
+        body += renderPresentationResultOptions(question, result);
       } else if (result.texts && result.texts.length) {
         body += `<div class="enc-presentation-results-list">${result.texts.slice(0, 5).map((text) => `<div class="enc-presentation-results-item"><span>${escapeHtml(text)}</span></div>`).join("")}</div>`;
       }
       return `<div class="enc-presentation-results-card"><h5>${escapeHtml(question.titulo || "")}</h5>${body}</div>`;
     }).filter(Boolean).join("");
     return blocks ? `<div class="enc-presentation-section-results">${blocks}</div>` : "";
+  }
+
+  function resultChartType(question) {
+    const type = String((((question || {}).config_json || {}).result_chart_type) || "bar").trim().toLowerCase();
+    return ["bar", "donut", "list"].includes(type) ? type : "bar";
+  }
+
+  function resultPalette(index) {
+    const colors = ["#2563eb", "#14b8a6", "#f97316", "#8b5cf6", "#e11d48", "#f59e0b"];
+    return colors[index % colors.length];
+  }
+
+  function renderPresentationResultOptions(question, result) {
+    const options = Array.isArray(question.options) ? question.options : [];
+    const counts = result.counts || {};
+    const total = Number(result.total_responses || 0);
+    const entries = options.map((option, index) => {
+      const count = Number(counts[String(option.value)] || 0);
+      const percent = total > 0 ? Math.round((count / total) * 100) : 0;
+      return {
+        label: option.label || String(option.value),
+        count,
+        percent,
+        color: resultPalette(index),
+      };
+    });
+    const chartType = resultChartType(question);
+    if (chartType === "list") {
+      return `<div class="enc-presentation-results-list is-list">${entries.map((entry) => `
+        <div class="enc-presentation-results-item is-list">
+          <span>${escapeHtml(entry.label)}</span>
+          <strong><span data-enc-animate-count="${entry.count}">0</span> <small>${entry.percent}%</small></strong>
+        </div>
+      `).join("")}</div>`;
+    }
+    if (chartType === "donut") {
+      let offset = 0;
+      const stops = entries.map((entry) => {
+        const start = offset;
+        offset += entry.percent;
+        return `${entry.color} ${start}% ${offset}%`;
+      });
+      const donut = stops.length ? stops.join(", ") : "#e5e7eb 0% 100%";
+      return `
+        <div class="enc-presentation-results-donut-wrap">
+          <div class="enc-presentation-results-donut" style="background:conic-gradient(${donut});">
+            <div class="enc-presentation-results-donut-core">
+              <strong data-enc-animate-count="${total}">0</strong>
+              <span>respuestas</span>
+            </div>
+          </div>
+          <div class="enc-presentation-results-legend">${entries.map((entry) => `
+            <div class="enc-presentation-results-legend-item">
+              <span class="enc-presentation-results-swatch" style="background:${entry.color};"></span>
+              <span>${escapeHtml(entry.label)}</span>
+              <strong><span data-enc-animate-count="${entry.count}">0</span> <small>${entry.percent}%</small></strong>
+            </div>
+          `).join("")}</div>
+        </div>
+      `;
+    }
+    const maxCount = Math.max(...entries.map((entry) => entry.count), 1);
+    return `<div class="enc-presentation-results-list">${entries.map((entry) => {
+      const width = Math.round((entry.count / maxCount) * 100);
+      return `
+        <div class="enc-presentation-results-item is-chart">
+          <div class="enc-presentation-results-copy">
+            <span>${escapeHtml(entry.label)}</span>
+            <strong><span data-enc-animate-count="${entry.count}">0</span> <small>${entry.percent}%</small></strong>
+          </div>
+          <div class="enc-presentation-results-bar"><span data-enc-animate-width="${width}" style="width:0%;background:${entry.color};"></span></div>
+        </div>
+      `;
+    }).join("")}</div>`;
   }
 
   function animatePresentationResultBars(scope) {
@@ -739,6 +894,7 @@
   function renderPresentationPage(page) {
     const bgLayers = [];
     const title = String((page && page.title) || "").trim();
+    const showTitle = pageShowsTitle(page);
     const footerText = String((page && page.footer_text) || "").trim();
     if (page && page.bg_image_url) {
       bgLayers.push(`linear-gradient(180deg, rgba(15,23,42,0.08), rgba(15,23,42,0.14)), url("${escapeHtml(page.bg_image_url)}") center / cover`);
@@ -752,7 +908,7 @@
           <div class="enc-presentation-stage-ratio">
             <div class="enc-presentation-stage-canvas" style="background:${bgLayers.join(", ")};">
               <div class="enc-presentation-layout">
-                ${title ? `<header class="enc-presentation-layout-header"><h1>${escapeHtml(title)}</h1></header>` : ""}
+                ${showTitle && title ? `<header class="enc-presentation-layout-header"><h1>${escapeHtml(title)}</h1></header>` : ""}
                 <div class="enc-presentation-layout-body is-sections-${sectionCount}">
                   ${layoutSections.map((section) => renderPresentationLayoutSection(section, page)).join("")}
                 </div>
@@ -784,20 +940,40 @@
     stepLabelNode.textContent = `Paso ${state.currentStep + 1} de ${items.length}`;
     sectionTitleNode.textContent = current.titulo || current.title || `Página ${state.currentStep + 1}`;
     sectionDescriptionNode.textContent = current.descripcion || current.description || "";
+    if (isPresentationMode()) {
+      sectionTitleNode.hidden = !pageShowsTitle(current);
+      sectionDescriptionNode.hidden = !pageShowsTitle(current) || !(current.descripcion || current.description);
+    } else {
+      sectionTitleNode.hidden = false;
+      sectionDescriptionNode.hidden = !(current.descripcion || current.description);
+    }
     questionsNode.innerHTML = isPresentationMode()
       ? renderPresentationPage(current)
       : (current.questions || []).map(renderQuestion).join("");
     hydrateEmbeddedRuntime(questionsNode);
     animatePresentationResultBars(questionsNode);
+    const liveLocked = isLivePresentationLocked();
     prevButton.style.display = state.currentStep === 0 ? "none" : "";
     nextButton.style.display = state.currentStep >= items.length - 1 ? "none" : "";
     submitButton.style.display = state.currentStep >= items.length - 1 ? "" : "none";
+    prevButton.disabled = liveLocked;
+    nextButton.disabled = liveLocked;
+    submitButton.disabled = false;
     if (presentationPrevButton) {
       presentationPrevButton.hidden = !isPresentationMode() || state.currentStep === 0;
+      presentationPrevButton.disabled = liveLocked;
     }
     if (presentationNextButton) {
       presentationNextButton.hidden = !isPresentationMode() || state.currentStep >= items.length - 1;
+      presentationNextButton.disabled = liveLocked;
     }
+    if (presentationSubmitButton) {
+      presentationSubmitButton.hidden = !isPresentationMode() || state.currentStep < items.length - 1 || isSubmitted();
+      presentationSubmitButton.disabled = false;
+    }
+    stepsNode.querySelectorAll("[data-enc-step]").forEach((button) => {
+      button.disabled = liveLocked;
+    });
   }
 
   function validateCurrentStep() {
@@ -863,7 +1039,8 @@
     setMessage(message || "Borrador guardado.", false);
   }
 
-  async function submitSurvey() {
+  async function submitSurvey(options) {
+    const stayOnPage = Boolean(options && options.stayOnPage);
     collectCurrentInputs();
     const payload = await fetchJSON(`${apiMAIN}/respuestas/${responseData().id}/submit`, {
       method: "POST",
@@ -873,6 +1050,12 @@
     refreshAnswersFromSession();
     updateChrome();
     stopTimer();
+    if (stayOnPage) {
+      renderSteps();
+      renderCurrentStep();
+      setMessage("Respuesta enviada", false);
+      return;
+    }
     renderClosedScreen();
     showScreen("closed");
   }
@@ -904,6 +1087,10 @@
   }
 
   function navigatePrev() {
+    if (isLivePresentationLocked()) {
+      showLiveNavigationLockedMessage();
+      return;
+    }
     collectCurrentInputs();
     if (state.currentStep > 0) {
       state.currentStep -= 1;
@@ -918,7 +1105,32 @@
     return false;
   }
 
+  function showAnsweredFeedback() {
+    setMessage("Pregunta respondida", false);
+    window.clearTimeout(state.answeredMessageTimerId);
+    state.answeredMessageTimerId = window.setTimeout(() => {
+      if (messageNode.textContent === "Pregunta respondida") {
+        setMessage("", false);
+      }
+    }, 1800);
+  }
+
+  function showLiveNavigationLockedMessage() {
+    setMessage("La sesión en vivo está controlada por el presentador.", false);
+  }
+
+  function finalizeQuestionAnswer(questionId) {
+    if (!hasAnswer(questionId)) return;
+    renderSteps();
+    renderCurrentStep();
+    showAnsweredFeedback();
+  }
+
   async function navigateNext() {
+    if (isLivePresentationLocked()) {
+      showLiveNavigationLockedMessage();
+      return;
+    }
     collectCurrentInputs();
     if (!validateCurrentStep()) return;
     await saveDraft("Progreso guardado.");
@@ -1005,6 +1217,7 @@
       }
       showScreen("form");
       renderCurrentStep();
+      maybeEnterPresentationFullscreen(true);
       startTimer();
     });
 
@@ -1032,12 +1245,41 @@
       });
     }
 
+    if (presentationFullscreenButton) {
+      presentationFullscreenButton.addEventListener("click", async () => {
+        await togglePresentationFullscreen();
+        updateChrome();
+      });
+    }
+
+    if (presentationSubmitButton) {
+      presentationSubmitButton.addEventListener("click", async () => {
+        try {
+          if (!validateCurrentStep()) return;
+          await submitSurvey({ stayOnPage: true });
+        } catch (error) {
+          setMessage(error.message, true);
+        }
+      });
+    }
+
+    document.addEventListener("fullscreenchange", function () {
+      updateChrome();
+    });
+
     document.addEventListener("keydown", async (event) => {
       if (!isPresentationMode()) return;
       if (!formScreen.classList.contains("is-active")) return;
       if (isSubmitted()) return;
       if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
       if (isEditableTarget(event.target)) return;
+      if (isLivePresentationLocked()) {
+        if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+          event.preventDefault();
+          showLiveNavigationLockedMessage();
+        }
+        return;
+      }
 
       if (event.key === "ArrowLeft") {
         event.preventDefault();
@@ -1067,7 +1309,7 @@
       event.preventDefault();
       try {
         if (!validateCurrentStep()) return;
-        await submitSurvey();
+        await submitSurvey({ stayOnPage: isPresentationMode() });
       } catch (error) {
         setMessage(error.message, true);
       }
@@ -1121,6 +1363,10 @@
     stepsNode.addEventListener("click", async (event) => {
       const button = event.target.closest("[data-enc-step]");
       if (!button) return;
+      if (isLivePresentationLocked()) {
+        showLiveNavigationLockedMessage();
+        return;
+      }
       collectCurrentInputs();
       state.currentStep = Number(button.dataset.encStep);
       renderSteps();
@@ -1131,8 +1377,9 @@
       const button = event.target.closest("[data-enc-scale]");
       if (!button) return;
       const questionId = String(button.dataset.encScale);
+      if (hasAnswer(questionId)) return;
       state.answers[questionId] = button.dataset.value;
-      renderCurrentStep();
+      finalizeQuestionAnswer(questionId);
     });
 
     questionsNode.addEventListener("click", (event) => {
@@ -1141,6 +1388,7 @@
       if (!upButton && !downButton) return;
       const button = upButton || downButton;
       const questionId = String(button.dataset.encRankUp || button.dataset.encRankDown);
+      if (hasAnswer(questionId)) return;
       const value = String(button.dataset.value || "");
       const current = rankingValue(questionId);
       const ordered = current.slice();
@@ -1155,7 +1403,36 @@
         ordered[nextIndex] = temp;
       }
       state.answers[questionId] = ordered;
-      renderCurrentStep();
+      finalizeQuestionAnswer(questionId);
+    });
+
+    questionsNode.addEventListener("change", (event) => {
+      const input = event.target.closest("[data-enc-question], [data-enc-matrix]");
+      if (!input) return;
+      if (input.dataset.encQuestion) {
+        const questionId = String(input.dataset.encQuestion);
+        if (input.type === "checkbox") {
+          const group = Array.from(questionsNode.querySelectorAll(`[data-enc-question="${questionId}"]`));
+          state.answers[questionId] = group.filter((item) => item.checked).map((item) => item.value);
+        } else if (input.type === "radio") {
+          if (input.checked) state.answers[questionId] = input.value;
+        } else {
+          state.answers[questionId] = input.value;
+        }
+        finalizeQuestionAnswer(questionId);
+        return;
+      }
+      if (input.dataset.encMatrix) {
+        const questionId = String(input.dataset.encMatrix);
+        const row = String(input.dataset.row);
+        if (!state.answers[questionId] || typeof state.answers[questionId] !== "object" || Array.isArray(state.answers[questionId])) {
+          state.answers[questionId] = {};
+        }
+        if (input.checked) {
+          state.answers[questionId][row] = input.value;
+        }
+        finalizeQuestionAnswer(questionId);
+      }
     });
 
     questionsNode.addEventListener("change", async (event) => {
@@ -1171,7 +1448,7 @@
           size: file.size,
           data_url: typeof reader.result === "string" ? reader.result : "",
         };
-        renderCurrentStep();
+        finalizeQuestionAnswer(questionId);
       };
       reader.readAsDataURL(file);
     });
@@ -1204,6 +1481,16 @@
 
   function initialize() {
     state.mobileOrientation = window.localStorage.getItem(ORIENTATION_STORAGE_KEY) || "horizontal";
+    if (window.matchMedia && window.matchMedia("(max-width: 860px)").matches) {
+      state.mobileOrientation = "horizontal";
+      window.localStorage.setItem(ORIENTATION_STORAGE_KEY, state.mobileOrientation);
+    }
+    if (isPresentationMode()) {
+      const livePageIndex = Number(liveSettings().live_current_page_index);
+      if (Number.isInteger(livePageIndex) && livePageIndex >= 0) {
+        state.currentStep = Math.min(livePageIndex, Math.max(0, contentItems().length - 1));
+      }
+    }
     applyImageLayout();
     refreshAnswersFromSession();
     updateChrome();
@@ -1238,13 +1525,17 @@
     const instance = state.session.instance || {};
     const settings = instance.settings_json || {};
     const liveStatus = settings.live_status || "idle";
+    const hasPresentationPages = Array.isArray(presentationPages()) && presentationPages().length > 0;
+    const rulesMode = String(publicationRules().response_mode || "standard").trim().toLowerCase();
 
     // Only activate live mode if the session is already running when the page
     // loads, or if the instance is live-enabled (may start later).
     const liveEnabled =
       liveStatus === "running" ||
+      (rulesMode === "presentation" && hasPresentationPages) ||
       settings.live_enabled === true ||
-      settings.presentation_mode === "mentimeter";
+      settings.presentation_mode === "mentimeter" ||
+      settings.live_session_enabled === true;
 
     if (!liveEnabled) return;
 
@@ -1340,20 +1631,6 @@
       }
     }
 
-    function syncPresentationMode(data) {
-      if (!data || data.presentation_mode !== true) return;
-      const instance = state.session.instance || {};
-      const rules = instance.publication_rules_json || {};
-      if (!Array.isArray(rules.presentation_pages) || !rules.presentation_pages.length) return;
-      if (String(rules.response_mode || "").trim().toLowerCase() !== "presentation") {
-        rules.response_mode = "presentation";
-        instance.publication_rules_json = rules;
-        state.session.instance = instance;
-        updateChrome();
-        renderSteps();
-      }
-    }
-
     function navigateToQuestion(questionId, pageIndex) {
       if (isPresentationMode() && Number.isInteger(pageIndex) && pageIndex >= 0) {
         if (state.currentStep !== pageIndex) {
@@ -1362,6 +1639,7 @@
           renderSteps();
           renderCurrentStep();
         }
+        return;
       }
       if (!questionId) return;
       const items = contentItems();
@@ -1405,7 +1683,7 @@
     async function pollLiveStatus() {
       try {
         const data = await fetchJSON(liveUrl);
-        syncPresentationMode(data);
+        syncPresentationRulesFromLive(data);
         const newStatus = data.live_status || "idle";
         const newQId = data.live_current_question_id || null;
         const newPageIndex = Number.isInteger(data.live_current_page_index) ? data.live_current_page_index : null;
@@ -1420,11 +1698,20 @@
         live.status = newStatus;
         live.currentQuestionId = newQId;
         if (newPageIndex !== null) live.currentPageIndex = newPageIndex;
+        if (state.session.instance) {
+          state.session.instance.settings_json = {
+            ...(state.session.instance.settings_json || {}),
+            live_status: newStatus,
+            live_mode: data.live_mode || (state.session.instance.settings_json || {}).live_mode,
+            live_current_page_index: newPageIndex != null ? newPageIndex : (state.session.instance.settings_json || {}).live_current_page_index,
+            live_current_question_id: newQId,
+          };
+        }
 
         updateBanner(
           newStatus,
           isPresentationMode()
-            ? (currentPage ? `Lámina activa: ${currentPage.title || currentPage.titulo || ""}` : "")
+            ? (currentPage && pageShowsTitle(currentPage) ? `Lámina activa: ${currentPage.title || currentPage.titulo || ""}` : "")
             : (currentQ ? `Pregunta activa: ${currentQ.titulo}` : "")
         );
 
@@ -1433,6 +1720,9 @@
           if (!formScreen.classList.contains("is-active") && !isSubmitted()) {
             showScreen("form");
             renderCurrentStep();
+          }
+          if (isPresentationMode()) {
+            maybeEnterPresentationFullscreen(false);
           }
           if (
             (isPresentationMode() && (statusChanged || pageChanged || questionChanged))

@@ -61,6 +61,12 @@ def test_multitienda_module_is_registered() -> None:
     assert module.router_specs[0].module_path == "fastapi_modulo.modulos.multitienda.controladores.multitienda"
 
 
+def test_backend_module_payload_uses_settings_route() -> None:
+    backend_payload = next(item for item in module_registry.list_modules_payload() if item["key"] == "backend")
+
+    assert backend_payload["route"] == "/ajustes/configuracion"
+
+
 def test_intelicoop_module_is_supported() -> None:
     module = module_registry.MODULES_BY_KEY["intelicoop"]
 

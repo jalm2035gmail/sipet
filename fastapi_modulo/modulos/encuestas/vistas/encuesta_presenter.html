@@ -37,6 +37,18 @@
           </select>
         </label>
         <p class="enc-question-meta" id="enc-pres-access-help">Comparte el vínculo público de la encuesta para una reunión abierta.</p>
+        <div class="enc-pres-share-actions">
+          <button id="enc-pres-btn-toggle-qr" class="enc-button enc-button-secondary" type="button">
+            Mostrar QR pantalla
+          </button>
+        </div>
+        <div id="enc-pres-qr-panel" class="enc-pres-qr-panel" hidden>
+          <p class="enc-question-meta">Escanea este QR para abrir la pantalla de presentación.</p>
+          <img id="enc-pres-qr-image" class="enc-pres-qr-image" alt="QR de la pantalla de presentación" hidden>
+          <p id="enc-pres-qr-empty" class="enc-question-meta" hidden></p>
+          <a id="enc-pres-qr-link" class="enc-button enc-button-secondary" href="#" target="_blank" rel="noopener noreferrer" hidden>Abrir pantalla</a>
+          <button id="enc-pres-btn-copy-presentation-link" class="enc-button enc-button-ghost" type="button" hidden>Copiar vínculo</button>
+        </div>
       </div>
       <ol id="enc-pres-question-list" class="enc-pres-question-list"></ol>
     </aside>
@@ -62,11 +74,13 @@
         </div>
 
         <div id="enc-pres-page-stage" class="enc-pres-page-stage enc-card" hidden></div>
+        <div id="enc-pres-presentation-nav" class="enc-pres-presentation-nav" hidden>
+          <button type="button" id="enc-pres-presentation-prev" class="enc-pres-presentation-arrow is-prev" aria-label="Lámina anterior" title="Lámina anterior">‹</button>
+          <button type="button" id="enc-pres-presentation-next" class="enc-pres-presentation-arrow is-next" aria-label="Lámina siguiente" title="Lámina siguiente">›</button>
+        </div>
 
         <div class="enc-pres-nav-buttons">
-          <button id="enc-pres-btn-prev" class="enc-button enc-button-secondary" type="button">← Anterior</button>
           <button id="enc-pres-btn-toggle-results" class="enc-button enc-button-ghost" type="button">Ocultar resultados</button>
-          <button id="enc-pres-btn-next" class="enc-button enc-button-primary" type="button">Siguiente →</button>
         </div>
       </div>
 

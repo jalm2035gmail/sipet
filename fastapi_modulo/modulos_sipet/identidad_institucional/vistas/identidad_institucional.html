@@ -2,6 +2,7 @@
 <section class="id-page">
     <div class="id-wrap">
         <form id="identity-form" method="post" action="/identidad-institucional" enctype="multipart/form-data">
+            <input type="hidden" id="sidebar_style_variant" name="sidebar_style_variant" value="{{ sidebar_style_variant | default('modern') }}">
             <input type="hidden" id="remove_favicon" name="remove_favicon" value="0">
             <input type="hidden" id="remove_logo" name="remove_logo" value="0">
             <input type="hidden" id="remove_login_logo" name="remove_login_logo" value="0">
@@ -46,13 +47,15 @@
                         var sw = document.getElementById('identity-sidebar-style-switch');
                         if (!sw) return;
                         try {
-                            apply(window.localStorage.getItem('sipet_sidebar_style_variant') || 'original');
+                            apply(window.localStorage.getItem('sipet_sidebar_style_variant') || '{{ sidebar_style_variant | default("modern") }}');
                         } catch (e) {
-                            apply('original');
+                            apply('{{ sidebar_style_variant | default("modern") }}');
                         }
                         sw.addEventListener('change', function () {
                             var variant = sw.checked ? 'modern' : 'original';
                             apply(variant);
+                            var hidden = document.getElementById('sidebar_style_variant');
+                            if (hidden) hidden.value = variant;
                             try { window.localStorage.setItem('sipet_sidebar_style_variant', variant); } catch (e) {}
                         });
                     };

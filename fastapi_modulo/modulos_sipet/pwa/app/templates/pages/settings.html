@@ -1,0 +1,126 @@
+{% extends "app_base.html" %}
+
+{% block title %}Ajustes · {{ app_name }}{% endblock %}
+{% block topbar_title %}Ajustes{% endblock %}
+{% block nav_settings %}nav-active{% endblock %}
+
+{% block content %}
+<section class="settings-section">
+  <h2 class="section-title">Cuenta</h2>
+  <div class="settings-card">
+    <div class="settings-row" id="user-info">
+      <span class="settings-label">Usuario</span>
+      <span class="settings-value" id="user-display">—</span>
+    </div>
+    <div class="settings-row">
+      <span class="settings-label">Sesión</span>
+      <button class="btn btn-ghost btn-sm" id="logout-btn" type="button">Cerrar sesión</button>
+    </div>
+  </div>
+</section>
+
+<section class="settings-section">
+  <h2 class="section-title">Notificaciones</h2>
+  <div class="settings-card">
+    <div class="settings-row">
+      <span class="settings-label">Push</span>
+      <span class="settings-value" id="push-status">Verificando…</span>
+      <button class="btn btn-primary btn-sm" id="push-toggle-btn" type="button" style="display:none">Activar</button>
+    </div>
+  </div>
+</section>
+
+<section class="settings-section">
+  <h2 class="section-title">Instalar aplicación</h2>
+  <div class="settings-card">
+    <div class="settings-row">
+      <span class="settings-label">PWA</span>
+      <button class="btn btn-secondary btn-sm is-hidden" id="install-btn" type="button">Instalar app</button>
+      <span class="settings-value" id="install-status">Ya instalada o no disponible</span>
+    </div>
+  </div>
+</section>
+
+<section class="settings-section">
+  <h2 class="section-title">Información</h2>
+  <div class="settings-card">
+    <div class="settings-row">
+      <span class="settings-label">Versión</span>
+      <span class="settings-value" id="app-version">—</span>
+    </div>
+    <div class="settings-row">
+      <span class="settings-label">Entorno</span>
+      <span class="settings-value" id="app-env">—</span>
+    </div>
+    <div class="settings-row">
+      <span class="settings-label">Conexión</span>
+      <span class="settings-value" id="conn-status">—</span>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.addEventListener("DOMContentLoaded", async () => {
+    // current user
+    const meRes = await apiFetch("/api/v1/auth/me");
+    if (meRes.ok) {
+      const me = await meRes.json();
+      document.getElementById("user-display").textContent =
+        `${me.full_name || me.username} (${me.email})`;
+    }
+
+    // logout
+    document.getElementById("logout-btn").addEventListener("click", async () => {
+      await apiFetch("/api/v1/auth/logout", { method: "POST" });
+      Auth.clear();
+      window.location.href = "/login";
+    });
+
+    // push status
+    if (Push.isSupported()) {
+      const status = await Push.getStatus();
+      const pushStatus = document.getElementById("push-status");
+      const pushBtn = document.getElementById("push-toggle-btn");
+
+      if (status.subscribed) {
+        pushStatus.textContent = "Activadas ✓";
+      } else {
+        pushStatus.textContent = status.permission === "denied" ? "Bloqueadas por el navegador" : "Desactivadas";
+        if (status.permission !== "denied") {
+          pushBtn.style.display = "";
+          pushBtn.addEventListener("click", async () => {
+            try {
+              await Push.subscribe();
+              pushStatus.textContent = "Activadas ✓";
+              pushBtn.style.display = "none";
+              toast("Push activado", "success");
+            } catch (err) {
+              toast(err.message, "error");
+            }
+          });
+        }
+      }
+    } else {
+      document.getElementById("push-status").textContent = "No soportado";
+    }
+
+    // install button visibility
+    window.addEventListener("beforeinstallprompt", () => {
+      document.getElementById("install-btn").classList.remove("is-hidden");
+      document.getElementById("install-status").style.display = "none";
+    });
+
+    // health check → version/env
+    try {
+      const res = await fetch("/health");
+      const data = await res.json();
+      document.getElementById("app-version").textContent = data.version;
+      document.getElementById("app-env").textContent = data.env;
+    } catch (_) {}
+
+    document.getElementById("conn-status").textContent = navigator.onLine ? "En línea ✓" : "Sin conexión";
+  });
+</script>
+{% endblock %}

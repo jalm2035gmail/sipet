@@ -1,0 +1,417 @@
+================================================================================
+MÓDULO REPARTIDORES — FASES DE DESARROLLO
+Última revisión: 2026-04-01
+================================================================================
+
+LEYENDA DE ESTADO
+  [OK] COMPLETADO   — implementado y funcional
+  [~~] EN PROGRESO  — parcialmente implementado
+  [  ] PENDIENTE    — no iniciado
+
+================================================================================
+ESTADO ACTUAL DEL CÓDIGO
+================================================================================
+
+Lo que ya existe y funciona:
+
+  Modelos de base de datos (db_models.py)
+    [OK] RepZona          — zonas de reparto
+    [OK] RepVehiculo      — catálogo de vehículos
+    [OK] RepRepartidor    — catálogo de repartidores
+    [OK] RepEntrega       — operación de entregas con máquina de estados
+    [OK] RepIncidencia    — registro de incidencias por entrega
+    [OK] RepLiquidacion   — liquidaciones por periodo
+    [OK] RepLiquidacionLinea — líneas de liquidación por entrega
+
+  Schemas Pydantic (schemas.py)
+    [OK] ZonaCreate / ZonaRead
+    [OK] VehiculoCreate / VehiculoRead
+    [OK] RepartidorCreate / RepartidorUpdate / RepartidorRead
+    [OK] EntregaCreate / EntregaRead
+    [OK] AsignarEntregaInput
+    [OK] ActualizarEstadoEntregaInput
+    [OK] IncidenciaCreate / IncidenciaRead
+    [OK] GenerarLiquidacionInput / LiquidacionRead
+
+  Lógica de negocio (store.py)
+    [OK] CRUD completo para todas las entidades
+    [OK] Máquina de estados para entregas:
+         draft -> assigned -> picked_up -> in_transit -> delivered
+         cualquier estado -> cancelled / failed
+    [OK] Validación de estados de repartidor (available/busy/offline/suspended)
+    [OK] Generación de folio automático por periodo
+    [OK] Asignación con validación de repartidor activo
+    [OK] Generación de liquidación con cálculo de base, bonos y descuentos
+    [OK] Dashboard stats básico (endpoint /api/repartidores/stats)
+
+  API REST (controladores/repartidores.py)
+    [OK] GET/POST /api/repartidores/repartidores
+    [OK] PUT      /api/repartidores/repartidores/{id}
+    [OK] GET/POST /api/repartidores/zonas
+    [OK] GET/POST /api/repartidores/vehiculos
+    [OK] GET/POST /api/repartidores/entregas
+    [OK] POST     /api/repartidores/entregas/{id}/asignar
+    [OK] POST     /api/repartidores/entregas/{id}/estado
+    [OK] POST     /api/repartidores/incidencias
+    [OK] GET      /api/repartidores/liquidaciones
+    [OK] POST     /api/repartidores/liquidaciones/generar
+    [OK] GET      /api/repartidores/stats
+
+  Manifest (__manifest__.py)
+    [OK] Nombre, version, categoria, autor, ruta, icono
+    [OK] Niveles de acceso: full_access, special_permissions,
+         delivery_access, read_only
+    [OK] Declaracion de assets CSS/JS
+    [OK] sipet_relation con modulos relacionados
+    [OK] installable: True, application: True
+
+  Frontend (vistas/repartidores.html + static/)
+    [~~] Vista HTML principal con tabs
+    [~~] JS basico para consumo de API
+    [~~] CSS del modulo
+
+  Tests (tests/)
+    [OK] test_repartidores_passes_architecture_validation
+    [OK] test_repartidores_manifest_declares_module_js_assets
+    [OK] test_repartidores_router_imports_successfully
+
+================================================================================
+FASES DE DESARROLLO
+================================================================================
+
+--------------------------------------------------------------------------------
+FASE 1 — FUNDAMENTOS DEL MÓDULO  [OK COMPLETADO]
+--------------------------------------------------------------------------------
+
+Objetivo: Estructura base del módulo operativa dentro del ecosistema SIPET.
+
+  [OK] Modelo de datos completo (7 tablas)
+  [OK] Schemas Pydantic tipados
+  [OK] Logica de negocio con reglas de validacion en store.py
+  [OK] API REST con todos los endpoints CRUD
+  [OK] Manifest registrado correctamente en SIPET
+  [OK] Roles y niveles de acceso declarados
+  [OK] Tests de contrato de arquitectura
+  [OK] Vista principal HTML registrada
+
+--------------------------------------------------------------------------------
+FASE 2 — FRONTEND OPERATIVO  [OK COMPLETADO — 2026-04-01]
+--------------------------------------------------------------------------------
+
+Objetivo: Que el modulo sea completamente operable desde el navegador sin
+necesidad de llamar a la API directamente.
+
+  Catalogo de repartidores
+    [OK] Listado con filtros (activo, zona, estado)
+    [OK] Formulario de alta/edicion con validacion cliente
+    [  ] Subida de documentos (INE, licencia, foto)
+    [  ] Vista de perfil individual con historial de entregas
+
+  Catalogo de zonas y vehiculos
+    [OK] Listado de zonas con codigo y descripcion
+    [OK] Listado de vehiculos con tipo y placa
+    [OK] Formularios completos de alta
+
+  Tablero de entregas
+    [OK] Vista lista con filtros por estado, repartidor, prioridad
+    [OK] Vista kanban por estado (7 columnas: draft/assigned/picked_up/
+         in_transit/delivered/failed/cancelled)
+    [  ] Vista calendario por fecha programada
+    [OK] Formulario de nueva entrega con repartidor disponible
+
+  Operacion de entrega
+    [OK] Boton de asignar repartidor (solo muestra disponibles)
+    [OK] Boton de cambio de estado con validacion por transicion
+    [OK] Formulario de evidencia de entrega (URL/descripcion)
+    [OK] Formulario de motivo de cancelacion/falla
+
+  Incidencias
+    [OK] Modal de registro de incidencia con tipo y severidad
+    [OK] Listado de incidencias con filtros (estado, entrega)
+    [OK] Endpoint GET /api/repartidores/incidencias agregado
+
+  Liquidaciones
+    [OK] Listado de liquidaciones con filtros (estado, repartidor)
+    [OK] Formulario de generacion (repartidor, periodo, descuentos)
+    [OK] Vista de detalle con lineas y totales
+
+  Dashboard logistico
+    [OK] 8 KPIs: repartidores activos, disponibles, en ruta, entregas
+         totales, en transito, entregadas, incidencias abiertas, liq. borrador
+    [OK] Graficos de entregas por estado (barras CSS + dona Canvas)
+    [OK] Graficos de entregas por zona (barras CSS dinamicas)
+    [OK] Top repartidores por productividad (tabla con barra visual)
+
+  Infraestructura CSS/JS
+    [OK] Sistema de tabs (6 secciones, Dashboard como primera activa)
+    [OK] Toggle kanban/lista
+    [OK] Sistema de modales con backdrop y animacion
+    [OK] Toast notifications (ok/err/warn)
+    [OK] Tablas con hover y acciones por fila
+    [OK] Badges de color por estado y prioridad
+    [OK] Responsive breakpoints (1200/820/560px)
+    [OK] Sincronizacion de selects entre secciones
+
+--------------------------------------------------------------------------------
+FASE 3 — REGLAS DE NEGOCIO AVANZADAS  [OK COMPLETADO — 2026-04-01]
+--------------------------------------------------------------------------------
+
+Objetivo: Comportamiento inteligente y validaciones operativas completas.
+
+  Control de carga por repartidor
+    [OK] Limite de entregas simultaneas configurable por repartidor
+         (campo max_entregas_simultaneas en RepRepartidor, default 5)
+    [OK] Alerta cuando repartidor supera su meta_entregas_diarias
+    [OK] Bloqueo de asignacion si repartidor esta offline/suspended
+
+  Control de zonas
+    [OK] Advertencia cuando se asigna fuera de zona (registrada en log,
+         no bloquea la operacion)
+
+  Reglas de evidencia
+    [OK] Bloqueo de cambio a "entregada" si evidencia tiene menos de 5 chars
+    [OK] Validacion de motivo obligatorio para cancelled y failed (min 5 chars)
+
+  Liquidaciones
+    [OK] Bloqueo de reliquidacion si ya existe liquidacion approved/paid
+         en el mismo periodo para el mismo repartidor
+    [OK] Exclusion automatica de entregas canceladas/anuladas (solo delivered)
+    [OK] Estado approved/paid con registro de fecha_aprobacion / fecha_pago
+         via PATCH /api/repartidores/liquidaciones/{id}/estado
+
+  Trazabilidad
+    [OK] Log por cada cambio de estado de entrega (tabla rep_entrega_log:
+         tipo, estado_anterior, estado_nuevo, repartidor_id, notas, created_at)
+    [OK] Log de asignaciones y reasignaciones (tipo=asignacion)
+    [OK] Endpoint GET /api/repartidores/entregas/{id}/log
+
+  Nuevos endpoints
+    [OK] PATCH /api/repartidores/repartidores/{id}  (alias de PUT)
+    [OK] PATCH /api/repartidores/entregas/{id}/asignar
+    [OK] PATCH /api/repartidores/entregas/{id}/estado
+    [OK] PATCH /api/repartidores/liquidaciones/{id}/estado
+    [OK] GET   /api/repartidores/liquidaciones/{id}
+    [OK] GET   /api/repartidores/entregas/{id}/log
+
+--------------------------------------------------------------------------------
+FASE 4 — INTEGRACIÓN CON SIPET  [OK COMPLETADO — 2026-04-01]
+--------------------------------------------------------------------------------
+
+Objetivo: Conectar el modulo con el ecosistema real de SIPET.
+
+  Implementado:
+    [OK] sipet_username en RepRepartidor — vincula repartidor a usuario SIPET
+    [OK] controladores/dependencies.py — middleware de auth (require_access,
+         require_write, require_supervisor) leyendo request.state del middleware
+         cookie SIPET (patron igual al modulo capacitacion)
+    [OK] Middleware de autenticacion SIPET aplicado en el controller (todos los
+         endpoints requieren autenticacion; 401 si no hay sesion)
+    [OK] Filtrado de datos por nivel de acceso del usuario autenticado
+    [OK] El rol delivery_access solo ve sus propias entregas (get_linked_repartidor_id)
+    [OK] El rol read_only puede ver todo pero no puede escribir (require_write)
+    [OK] Solo special_permissions/administrador pueden asignar, liquidar y
+         gestionar repartidores (require_supervisor)
+
+  Pendiente (modulos SIPET no existen aun):
+    [  ] Usuarios SIPET FK — sipet_username es string, no FK real (modelo
+         Usuario separado; cuando exista se puede migrar a FK)
+    [  ] Negocios/sucursales FK — campos string en RepRepartidor, sin modelo
+         Negocio con PK; usar tenant_id del middleware como pivot
+    [  ] Pedidos/ventas   — crear entrega automaticamente desde un pedido
+         (modulo pedidos no existe en SIPET aun)
+    [  ] Clientes         — tomar datos de destino del cliente registrado
+         (modulo clientes no existe en SIPET aun)
+    [  ] Caja/pagos       — liquidacion que genera movimiento contable
+         (modulo contabilidad/caja no existe en SIPET aun)
+
+--------------------------------------------------------------------------------
+FASE 5 — AUTOMATIZACIONES Y NOTIFICACIONES  [OK COMPLETADO — 2026-04-01]
+--------------------------------------------------------------------------------
+
+Objetivo: Reducir trabajo manual y mantener al equipo informado en tiempo real.
+
+  Nuevos archivos: servicios/
+    [OK] servicios/__init__.py
+    [OK] servicios/alertas.py      — deteccion de alertas operativas (DB queries)
+    [OK] servicios/notificaciones.py — servicio de notificaciones con log en DB;
+         stubs listos para WhatsApp (WHATSAPP_ENABLED) y email (EMAIL_ENABLED)
+    [OK] servicios/celery_app.py   — Celery app del modulo con beat_schedule
+    [OK] servicios/tareas_celery.py — tareas periodicas registradas en Celery
+
+  Alertas operativas (servicios/alertas.py)
+    [OK] Alerta: entrega en draft cuya fecha_programada ya paso sin asignar
+    [OK] Alerta: entrega asignada lleva mas de N min sin recolectar (default 60)
+    [OK] Alerta: zona activa con entregas pendientes sin repartidor disponible
+
+  Notificaciones al cliente (servicios/notificaciones.py)
+    [OK] notif_entrega_asignada       — hook en assign_entrega (store.py)
+    [OK] notif_repartidor_en_camino   — hook en update_entrega_state (in_transit)
+    [OK] notif_entrega_confirmada     — hook en update_entrega_state (delivered)
+    [~~] Entrega real via WhatsApp/email — stubs implementados, pendiente config
+         Activar: WHATSAPP_ENABLED=true + WHATSAPP_API_TOKEN + WHATSAPP_PHONE_ID
+         Activar: EMAIL_ENABLED=true + SMTP_HOST + SMTP_USER + SMTP_PASSWORD
+
+  Notificaciones al repartidor (servicios/notificaciones.py)
+    [OK] notif_nueva_asignacion_repartidor — hook en assign_entrega (store.py)
+    [OK] notif_recordatorio_pendientes_directo — llamado por tarea Celery diaria
+
+  Log de notificaciones (modelos/db_models.py)
+    [OK] Modelo RepNotificacionLog — persiste toda notificacion enviada o pendiente
+         campos: tipo, canal, destinatario, mensaje, entrega_id, repartidor_id,
+                 estado (pendiente/enviado/registrada/error), error_msg, created_at
+
+  Automatizaciones programadas (servicios/tareas_celery.py + celery_app.py)
+    [OK] repartidores.cerrar_entregas_fallidas — cierra failed > 7 dias; diario 01:00
+    [OK] repartidores.verificar_alertas — detecta alertas y las persiste; c/15 min
+    [OK] repartidores.recordatorio_repartidores — WhatsApp a reps con pendientes; 08:00
+    [OK] repartidores.recalcular_kpis — calcula KPIs y los retorna; diario 00:30
+
+  API nueva
+    [OK] GET /api/repartidores/alertas — retorna alertas operativas activas en tiempo real
+
+  Pendiente (requiere infra externa o config adicional):
+    [  ] Entrega real de WhatsApp — configurar WHATSAPP_ENABLED + credenciales API
+    [  ] Entrega real de email    — configurar EMAIL_ENABLED + credenciales SMTP
+    [  ] Registrar el celery_app de repartidores en el worker principal de SIPET
+         (agregar include en el celery_app global para que el beat lo ejecute)
+
+--------------------------------------------------------------------------------
+FASE 6 — ANALÍTICA E INTELIGENCIA OPERATIVA  [OK COMPLETADO — 2026-04-01]
+--------------------------------------------------------------------------------
+
+Objetivo: Medir, comparar y mejorar la operacion logistica.
+
+  Implementado en store.py
+    [OK] get_kpis_periodo           — KPIs por periodo: total, entregadas,
+         canceladas, fallidas, tasa de éxito/cancelación, tiempo promedio real
+    [OK] get_productividad_repartidores — comparativo entre repartidores:
+         entregas totales, tasa de éxito, tiempo promedio, incidencias
+    [OK] get_entregas_por_zona      — distribución por zona: total, entregadas,
+         canceladas, en curso; filtrable por periodo
+    [OK] get_margen_logistico       — costo (liquidaciones) vs ingreso (costo_envio)
+         por periodo: margen total, margen%, ingreso y costo promedio por entrega
+    [OK] get_tendencia              — tendencia semanal o mensual del volumen
+         de entregas (N periodos hacia atrás, configurable)
+    [OK] get_reporte_incidencias    — reporte por tipo, severidad y repartidor;
+         con conteo abiertos/resueltos
+    [OK] exportar_entregas_csv      — exportacion CSV de entregas con filtros;
+         encoding UTF-8 BOM para Excel
+
+  Nuevos endpoints
+    [OK] GET /api/repartidores/analitica/kpis          — KPIs por periodo
+    [OK] GET /api/repartidores/analitica/productividad — comparativo repartidores
+    [OK] GET /api/repartidores/analitica/zonas         — distribucion por zona
+    [OK] GET /api/repartidores/analitica/margen        — margen logistico (supervisor)
+    [OK] GET /api/repartidores/analitica/tendencia     — tendencia semanal/mensual
+    [OK] GET /api/repartidores/analitica/incidencias   — reporte de incidencias
+    [OK] GET /api/repartidores/analitica/exportar-csv  — descarga CSV (supervisor)
+
+  Parametros comunes
+    fecha_inicio / fecha_fin  — formato YYYY-MM-DD o YYYY-MM (opcional)
+    repartidor_id             — filtrar por repartidor (opcional)
+    agrupacion                — 'semana' | 'mes' (tendencia)
+    periodos                  — cuantos periodos mostrar (default 12)
+
+  Pendiente
+    [  ] Dashboard frontend: graficos de tendencia, ranking de productividad,
+         mapa de calor por zona — actualmente los datos estan listos como API
+
+--------------------------------------------------------------------------------
+FASE 7 — GEOLOCALIZACIÓN Y SEGUIMIENTO  [OK COMPLETADO — 2026-04-01]
+--------------------------------------------------------------------------------
+
+Objetivo: Visibilidad de la operacion sobre un mapa.
+
+  Modelos nuevos / campos nuevos
+    [OK] RepEntrega: lat_origen, lng_origen, lat_destino, lng_destino (Float, nullable)
+    [OK] RepZona: lat_centro, lng_centro (Float, nullable) — centro del polígono/radio
+    [OK] RepRepartidorPosicion — tabla de posición actual del repartidor:
+         repartidor_id (unique FK), lat, lng, precision_m, updated_at
+
+  Schemas nuevos (schemas.py)
+    [OK] PosicionUpdate  — lat/lng + precision_m con validación de rango
+    [OK] PosicionRead    — respuesta de posición del repartidor
+    [OK] EntregaMapaData — proyección ligera para capa de mapa de entregas
+    [OK] RepartidorMapaData — proyección para capa de repartidores con posición
+    [OK] ZonaRead / ZonaCreate actualizados con lat_centro, lng_centro
+    [OK] EntregaCreate / EntregaRead actualizados con lat/lng origen y destino
+
+  Lógica de negocio (store.py)
+    [OK] _haversine(lat1, lng1, lat2, lng2) — distancia km sin dependencias externas
+    [OK] update_repartidor_posicion — upsert de posición; llamado desde app/dispositivo
+    [OK] calcular_distancia_entrega — calcula distancia_km y tiempo_estimado_min
+         a partir de las coords (30 km/h promedio ciudad como estimación base)
+    [OK] get_repartidores_cercanos — filtra repartidores por radio al punto dado;
+         ordena por distancia ascendente
+    [OK] get_mapa_entregas  — proyección de entregas para capa de mapa (con/sin coords)
+    [OK] get_mapa_repartidores — posiciones actuales + entregas activas por repartidor
+    [OK] get_zonas_mapa — zonas con lat_centro/lng_centro/radio_km para dibujar círculos
+
+  Nuevos endpoints
+    [OK] PUT/PATCH /api/repartidores/repartidores/{id}/posicion — actualiza posición GPS
+         (delivery_access solo puede actualizar la propia)
+    [OK] POST /api/repartidores/entregas/{id}/calcular-distancia — calcula y persiste
+         distancia_km y tiempo_estimado_min a partir de lat/lng de la entrega
+    [OK] GET  /api/repartidores/mapa/entregas      — capa de entregas para mapa
+    [OK] GET  /api/repartidores/mapa/repartidores  — posiciones de repartidores activos
+    [OK] GET  /api/repartidores/mapa/zonas         — zonas con radio para mapa
+    [OK] GET  /api/repartidores/repartidores/cercanos — repartidores en radio (lat, lng, radio_km)
+
+  Pendiente (requiere frontend o integración externa)
+    [  ] Vista de mapa en el frontend — integrar Leaflet.js o Google Maps
+         Los endpoints están listos; el HTML aún no tiene tab de mapa
+    [  ] Seguimiento en tiempo real — WebSocket o SSE para push de posición
+         (actualmente es polling: el cliente llama GET /mapa/repartidores cada N seg)
+    [  ] Geocoding automático — convertir dirección texto a lat/lng
+         (requiere Google Maps Geocoding API o Nominatim; actualmente manual)
+
+--------------------------------------------------------------------------------
+FASE 8 — COBERTURA DE TESTS  [OK COMPLETADO — 2026-04-01]
+--------------------------------------------------------------------------------
+
+Objetivo: Garantizar estabilidad del modulo con tests automatizados.
+
+  Actualmente — 63 tests, todos verdes
+    [OK] Tests de contrato de arquitectura
+    [OK] Test de importacion del router
+
+  Nuevos archivos: tests/
+    [OK] conftest.py                   — fixtures SQLite in-memory + StaticPool;
+         engine parcheado en core.db; factories de zona, repartidor, entrega;
+         build_client para TestClient con auth y DB de test inyectados
+    [OK] test_store_crud.py            — 16 tests: CRUD de zonas, repartidores,
+         entregas; unicidad de codigo/folio; get por ID existente e inexistente
+    [OK] test_store_business_rules.py  — 19 tests: maquina de estados completa
+         (draft→assigned→picked_up→in_transit→delivered); transiciones invalidas
+         rechazadas; delivered y cancelled como estados terminales; failed permite
+         reasignacion; repartidor offline/suspended/inactivo bloqueado; limite
+         simultaneo; repartidor pasa a busy/available; evidencia y motivo
+         obligatorios con longitud minima; logs de asignacion y estado
+    [OK] test_store_liquidacion.py     — 6 tests: generacion correcta con tarifa
+         base + bono; exclusion de canceladas; sin entregas liquidables rechazado;
+         reliquidacion bloqueada si approved; descuentos reducen total_pagar;
+         repartidor inexistente rechazado
+    [OK] test_api_endpoints.py         — 19 tests: listar/crear/actualizar
+         repartidores (incluyendo 400 por estado invalido y codigo duplicado);
+         listar/crear zonas (400 por duplicado); listar/crear entregas (400 por
+         prioridad invalida); asignar entrega (400 si repartidor offline);
+         cambiar estado (400 por transicion invalida); delivered sin evidencia 400;
+         log de entrega; stats del dashboard
+
+  Correcciones aplicadas al controller (test-driven):
+    [OK] api_create_repartidor — agrega try/except ValueError → HTTP 400
+         (antes no estaba, igual que api_create_zona; ahora consistente)
+
+================================================================================
+ORDEN DE TRABAJO RECOMENDADO
+================================================================================
+
+  Prioridad 1:  FASE 2  [OK] — completado 2026-04-01
+  Prioridad 2:  FASE 3  [OK] — completado 2026-04-01
+  Prioridad 3:  FASE 4  [OK] — completado 2026-04-01
+  Prioridad 4:  FASE 8  [OK] — completado 2026-04-01
+  Prioridad 5:  FASE 5  [OK] — completado 2026-04-01
+  Prioridad 6:  FASE 6  [OK] — completado 2026-04-01
+  Prioridad 7:  FASE 7  [OK] — completado 2026-04-01
+
+================================================================================

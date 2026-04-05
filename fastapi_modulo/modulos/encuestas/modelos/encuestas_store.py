@@ -1272,6 +1272,10 @@ def _upsert_question_options(
         )
 
 
+def _allows_structure_edit(instance: Optional[SurveyInstance]) -> bool:
+    return bool(instance)
+
+
 def create_section(instance_id: int, tenant_id: str, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     db = get_db()
     try:
@@ -1282,7 +1286,7 @@ def create_section(instance_id: int, tenant_id: str, data: Dict[str, Any]) -> Op
         )
         if not instance:
             return None
-        if instance.status not in {"draft", "archived"}:
+        if not _allows_structure_edit(instance):
             raise ValueError("Solo se pueden agregar secciones en encuestas editables.")
         section = SurveySection(
             tenant_id=tenant_id,
@@ -1322,7 +1326,7 @@ def update_section(instance_id: int, section_id: int, tenant_id: str, data: Dict
         )
         if not section:
             return None
-        if section.instance and section.instance.status not in {"draft", "archived"}:
+        if not _allows_structure_edit(section.instance):
             raise ValueError("Solo se pueden editar secciones en encuestas editables.")
         for key, value in data.items():
             if value is not None:
@@ -1394,7 +1398,7 @@ def create_question(instance_id: int, section_id: int, tenant_id: str, data: Dic
         )
         if not section:
             return None
-        if section.instance and section.instance.status not in {"draft", "archived"}:
+        if not _allows_structure_edit(section.instance):
             raise ValueError("Solo se pueden agregar preguntas en encuestas editables.")
         payload = normalize_question_payload(data)
         question = SurveyQuestion(
@@ -1446,7 +1450,7 @@ def update_question(instance_id: int, question_id: int, tenant_id: str, data: Di
         )
         if not question:
             return None
-        if question.section and question.section.instance and question.section.instance.status not in {"draft", "archived"}:
+        if not _allows_structure_edit(question.section.instance if question.section else None):
             raise ValueError("Solo se pueden editar preguntas en encuestas editables.")
         merged_payload = {
             "question_key": question.question_key,

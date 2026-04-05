@@ -78,12 +78,12 @@ class _FakeDbRedirect:
         return _FakeResult(self.row)
 
 
-def test_resolve_post_login_redirect_uses_multitienda_config_when_store_exists() -> None:
+def test_resolve_post_login_redirect_uses_multitienda_dashboard_when_store_exists() -> None:
     db = _FakeDbRedirect({"id": 9})
 
     target = auth_service.resolve_post_login_redirect(db, "administrador_tienda", 5)
 
-    assert target == "/multitienda/configuracion"
+    assert target == "/multitienda"
 
 
 def test_resolve_post_login_redirect_falls_back_to_web_inicio_when_store_missing() -> None:

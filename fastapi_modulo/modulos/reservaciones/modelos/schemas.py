@@ -1,17 +1,20 @@
 from __future__ import annotations
 from datetime import datetime
-from typing import Optional
-from pydantic import BaseModel
+from typing import Literal, Optional
+from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
+import re
+
+_EMAIL_RE = re.compile(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
 
 
 class EjecutivoCreate(BaseModel):
-    name: str
-    email: str = ""
-    phone: str = ""
-    especialidad: str = ""
+    name: str = Field(..., min_length=2, max_length=255)
+    email: str = Field(default="", max_length=255)
+    phone: str = Field(default="", max_length=50)
+    especialidad: str = Field(default="", max_length=255)
     disponible: bool = True
-    tiempo_promedio_cita: int = 30
-    tiempo_descanso_sesiones: int = 0
+    tiempo_promedio_cita: int = Field(default=30, gt=0, le=480)
+    tiempo_descanso_sesiones: int = Field(default=0, ge=0, le=120)
     hora_inicial_lunes: float = 9.0
     hora_final_lunes: float = 17.0
     hora_inicial_martes: float = 9.0
@@ -32,6 +35,25 @@ class EjecutivoCreate(BaseModel):
     descanso_sabado: bool = True
     descanso_domingo: bool = True
     notas: str = ""
+
+    @field_validator('email')
+    @classmethod
+    def validate_email(cls, v: str) -> str:
+        if v and not _EMAIL_RE.match(v):
+            raise ValueError('Correo electrónico inválido')
+        return v
+
+    @model_validator(mode='after')
+    def validate_horarios(self) -> 'EjecutivoCreate':
+        dias = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo']
+        for dia in dias:
+            descanso = getattr(self, f'descanso_{dia}', True)
+            if not descanso:
+                ini = getattr(self, f'hora_inicial_{dia}', 0.0)
+                fin = getattr(self, f'hora_final_{dia}', 0.0)
+                if fin <= ini:
+                    raise ValueError(f'hora_final_{dia} debe ser mayor que hora_inicial_{dia}')
+        return self
 
 
 class EjecutivoUpdate(BaseModel):
@@ -100,15 +122,15 @@ class EjecutivoRead(BaseModel):
 
 
 class TipoCitaCreate(BaseModel):
-    name: str
-    duracion: float = 1.0
-    color: str = "#1a6b3c"
+    name: str = Field(..., min_length=1, max_length=255)
+    duracion_minutos: int = Field(default=30, gt=0, le=480)
+    color: str = Field(default="#1a6b3c", max_length=20)
 
 
 class TipoCitaRead(BaseModel):
     id: int
     name: str
-    duracion: float
+    duracion_minutos: int
     color: str
     active: bool
 
@@ -117,14 +139,28 @@ class TipoCitaRead(BaseModel):
 
 
 class CitaCreate(BaseModel):
-    name: str = "Nueva Cita"
-    nombre_persona: str
-    celular_persona: str = ""
-    email_persona: str = ""
+    name: str = Field(default="Nueva Cita", max_length=255)
+    nombre_persona: str = Field(..., min_length=2, max_length=255)
+    celular_persona: str = Field(default="", max_length=50)
+    email_persona: str = Field(default="", max_length=255)
     start_datetime: datetime
     ejecutivo_id: Optional[int] = None
     tipo_id: Optional[int] = None
     notes: str = ""
+
+    @field_validator('email_persona')
+    @classmethod
+    def validate_email_persona(cls, v: str) -> str:
+        if v and not _EMAIL_RE.match(v):
+            raise ValueError('Correo electrónico inválido')
+        return v
+
+    @field_validator('start_datetime')
+    @classmethod
+    def validate_start_futuro(cls, v: datetime) -> datetime:
+        if v < datetime.now():
+            raise ValueError('La fecha de la cita no puede ser en el pasado')
+        return v
 
 
 class CitaUpdate(BaseModel):
@@ -141,10 +177,15 @@ class CitaRead(BaseModel):
     celular_persona: str
     email_persona: str
     start_datetime: datetime
+    end_datetime: Optional[datetime] = None
     ejecutivo_id: Optional[int]
     tipo_id: Optional[int]
     state: str
+    source: str
     notes: str
+    confirmed_at: Optional[datetime] = None
+    cancelled_at: Optional[datetime] = None
+    cancellation_reason: Optional[str] = None
     created_at: datetime
 
     class Config:
@@ -155,3 +196,98 @@ class SlotInfo(BaseModel):
     datetime_str: str
     hora: str
     disponible: bool
+
+
+class CitaEstadoUpdate(BaseModel):
+    state: Literal['draft', 'confirmed', 'in_progress', 'completed', 'cancelled', 'no_show']
+    motivo: Optional[str] = None
+
+
+class ReprogramarCita(BaseModel):
+    new_start_datetime: datetime
+    motivo: Optional[str] = None
+
+    @field_validator('new_start_datetime')
+    @classmethod
+    def validate_nueva_fecha(cls, v: datetime) -> datetime:
+        if v < datetime.now():
+            raise ValueError('La nueva fecha no puede ser en el pasado')
+        return v
+
+
+class CitaReadDetail(CitaRead):
+    ejecutivo_name: Optional[str] = None
+    tipo_name: Optional[str] = None
+    tipo_duracion_minutos: Optional[int] = None
+
+
+# ── Bloqueos de agenda ────────────────────────────────────────────────────────
+
+class BloqueoCreate(BaseModel):
+    ejecutivo_id: int
+    start_datetime: datetime
+    end_datetime: datetime
+    motivo: str = ""
+
+    @model_validator(mode='after')
+    def validate_rango(self) -> 'BloqueoCreate':
+        if self.end_datetime <= self.start_datetime:
+            raise ValueError('end_datetime debe ser posterior a start_datetime')
+        return self
+
+
+class BloqueoRead(BaseModel):
+    id: int
+    ejecutivo_id: int
+    start_datetime: datetime
+    end_datetime: datetime
+    motivo: str
+    active: bool
+
+    class Config:
+        from_attributes = True
+
+
+# ── Excepciones por fecha ─────────────────────────────────────────────────────
+
+class ExcepcionCreate(BaseModel):
+    fecha: str = Field(..., pattern=r'^\d{4}-\d{2}-\d{2}$')
+    ejecutivo_id: Optional[int] = None
+    motivo: str = ""
+
+
+class ExcepcionRead(BaseModel):
+    id: int
+    ejecutivo_id: Optional[int]
+    fecha: str
+    motivo: str
+    active: bool
+
+    class Config:
+        from_attributes = True
+
+
+# ── Franjas horarias semanales ────────────────────────────────────────────────
+
+class FranjaCreate(BaseModel):
+    dia_semana: int = Field(..., ge=0, le=6)
+    hora_ini: float = Field(..., ge=0.0, lt=24.0)
+    hora_fin: float = Field(..., ge=0.0, le=24.0)
+
+    @model_validator(mode='after')
+    def validate_rango(self) -> 'FranjaCreate':
+        if self.hora_fin <= self.hora_ini:
+            raise ValueError('hora_fin debe ser posterior a hora_ini')
+        return self
+
+
+class FranjaRead(BaseModel):
+    id: int
+    ejecutivo_id: int
+    dia_semana: int
+    hora_ini: float
+    hora_fin: float
+    active: bool
+
+    class Config:
+        from_attributes = True

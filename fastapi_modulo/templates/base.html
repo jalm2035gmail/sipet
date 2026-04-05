@@ -37,7 +37,8 @@
     <script>
         (function() {
             try {
-                var variant = window.localStorage.getItem('sipet_sidebar_style_variant');
+                var serverVariant = {{ (sidebar_style_variant | default('modern', true) | tojson) | safe }};
+                var variant = window.localStorage.getItem('sipet_sidebar_style_variant') || serverVariant;
                 if (variant !== 'original') {
                     document.documentElement.classList.add('ui-sidebar-modern');
                 }

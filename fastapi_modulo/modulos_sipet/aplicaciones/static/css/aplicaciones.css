@@ -1,28 +1,32 @@
 :root {
-  --gov-bg: #f4f6fb;
-  --gov-surface: #ffffff;
-  --gov-surface-soft: #f8fafc;
+  --gov-bg: #0f172a;
+  --gov-bg-soft: #111827;
+  --gov-surface: rgba(255, 255, 255, 0.05);
+  --gov-surface-strong: rgba(15, 23, 42, 0.78);
+  --gov-surface-soft: rgba(255, 255, 255, 0.08);
 
-  --gov-text: #374151;
-  --gov-text-strong: #4b5563;
-  --gov-text-soft: #6b7280;
-  --gov-text-muted: #9ca3af;
+  --gov-text: #e5e7eb;
+  --gov-text-strong: #f8fafc;
+  --gov-text-soft: #9ca3af;
+  --gov-text-muted: #6b7280;
 
-  --gov-line: #dbe3ee;
-  --gov-line-strong: #cfd8e3;
+  --gov-line: rgba(255, 255, 255, 0.08);
+  --gov-line-strong: rgba(255, 255, 255, 0.14);
 
-  --gov-primary: #1f78b4;
-  --gov-primary-dark: #0f172a;
-  --gov-primary-soft: #e8f3fb;
+  --gov-primary: #2563eb;
+  --gov-primary-dark: #0b1220;
+  --gov-primary-soft: rgba(37, 99, 235, 0.18);
 
-  --gov-pink: #ec4899;
-  --gov-success: #15803d;
-  --gov-warning: #b45309;
-  --gov-danger: #b91c1c;
+  --gov-pink: #f472b6;
+  --gov-success: #22c55e;
+  --gov-warning: #f59e0b;
+  --gov-danger: #ef4444;
 
-  --gov-shadow-xs: 0 2px 8px rgba(15, 23, 42, 0.04);
-  --gov-shadow-sm: 0 6px 18px rgba(15, 23, 42, 0.06);
-  --gov-shadow-md: 0 12px 28px rgba(15, 23, 42, 0.08);
+  --gov-shadow-xs: 0 10px 24px rgba(2, 6, 23, 0.16);
+  --gov-shadow-sm: 0 22px 48px rgba(2, 6, 23, 0.22);
+  --gov-shadow-md: 0 30px 80px rgba(2, 6, 23, 0.30);
+  --gov-glow-primary: 0 0 0 1px rgba(96, 165, 250, 0.16), 0 18px 40px rgba(37, 99, 235, 0.22);
+  --gov-glow-success: 0 0 0 1px rgba(34, 197, 94, 0.2), 0 18px 38px rgba(34, 197, 94, 0.18);
 
   --gov-radius-sm: 10px;
   --gov-radius-md: 16px;
@@ -31,12 +35,128 @@
   --gov-transition: 180ms ease;
 }
 
+body {
+  background: #e5e7eb;
+  color: var(--gov-text);
+}
+
+.card-premium {
+  background: var(--gov-surface);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--gov-line);
+  border-radius: 16px;
+  padding: 20px;
+  transition: all 0.25s ease;
+}
+
+.card-premium:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+}
+
+.kpi-card {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+  border-radius: 14px;
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.kpi-value {
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.kpi-success {
+  color: var(--gov-success);
+  text-shadow: 0 0 10px rgba(34, 197, 94, 0.5);
+}
+
+.kpi-warning {
+  color: var(--gov-warning);
+  text-shadow: 0 0 10px rgba(245, 158, 11, 0.5);
+}
+
+.btn-premium {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  border: none;
+  color: white;
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.btn-premium:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.4);
+}
+
+.btn-soft {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--gov-text);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.search {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 10px 14px;
+  color: white;
+}
+
+.search:focus {
+  outline: none;
+  border-color: var(--gov-primary);
+  box-shadow: 0 0 10px rgba(37, 99, 235, 0.4);
+}
+
+.module-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.module-title {
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.module-sub {
+  color: #f472b6;
+  font-size: 13px;
+}
+
+.module-actions {
+  display: flex;
+  gap: 10px;
+}
+
 /* =========================================================
    CONTEXTO GENERAL
    ========================================================= */
 .gov-apps-page {
   color: var(--gov-text) !important;
-  background: linear-gradient(180deg, #f8fbff 0%, var(--gov-bg) 100%);
+  background:
+    radial-gradient(circle at top left, rgba(37, 99, 235, 0.08), transparent 20%),
+    radial-gradient(circle at top right, rgba(236, 72, 153, 0.06), transparent 18%),
+    linear-gradient(180deg, rgba(229, 231, 235, 0.96) 0%, rgba(226, 232, 240, 0.94) 100%);
+  position: relative;
+  isolation: isolate;
+}
+
+.gov-apps-page::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.04;
+  background-image:
+    linear-gradient(rgba(148, 163, 184, 0.12) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.1) 1px, transparent 1px);
+  background-size: 32px 32px;
+  mask-image: radial-gradient(circle at center, black 40%, transparent 100%);
+  z-index: -1;
 }
 
 .gov-apps-page h1,
@@ -75,8 +195,8 @@
 
 .gov-apps-page .gov-apps-finding-badge {
   color: #f8fafc !important;
-  border-color: rgba(15, 23, 42, 0.16) !important;
-  background: #334155 !important;
+  border-color: rgba(148, 163, 184, 0.24) !important;
+  background: rgba(51, 65, 85, 0.92) !important;
 }
 
 .gov-apps-page .gov-apps-finding-badge--success {
@@ -95,20 +215,58 @@
 .gov-apps-page .rounded-3xl,
 .gov-apps-page .rounded-2xl,
 .gov-apps-page .card {
-  border: 1px solid var(--gov-line);
-  background: rgba(255, 255, 255, 0.94);
-  box-shadow: var(--gov-shadow-sm);
+  border: 1px solid rgba(203, 213, 225, 0.9);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(248, 250, 252, 0.9));
+  box-shadow: 0 16px 36px rgba(148, 163, 184, 0.18);
+  backdrop-filter: blur(18px);
 }
 
 .gov-apps-page .hero {
   border-radius: 1.75rem;
   background:
-    radial-gradient(circle at top left, rgba(37, 99, 235, 0.06), transparent 28%),
-    linear-gradient(135deg, rgba(255,255,255,.96), rgba(246,248,252,.96));
+    radial-gradient(circle at top left, rgba(37, 99, 235, 0.08), transparent 30%),
+    radial-gradient(circle at bottom right, rgba(244, 114, 182, 0.08), transparent 24%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(241, 245, 249, 0.92));
+}
+
+.gov-apps-page .hero .grid.gap-3 > article {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.98), rgba(241, 245, 249, 0.92)) !important;
+  border-radius: 14px !important;
+  padding: 14px !important;
+  border: 1px solid rgba(203, 213, 225, 0.86) !important;
+  box-shadow: 0 8px 22px rgba(148, 163, 184, 0.12);
+}
+
+.gov-apps-page .hero .grid.gap-3 > article > div:first-child {
+  color: #64748b !important;
+}
+
+.gov-apps-page .hero .grid.gap-3 > article > div:last-child {
+  font-size: 1.6rem !important;
+  font-weight: 700 !important;
+  color: #0f172a !important;
+}
+
+.gov-apps-page #apps-ok-count {
+  color: var(--gov-success) !important;
+  text-shadow: 0 0 10px rgba(34, 197, 94, 0.5);
+}
+
+.gov-apps-page #apps-missing-count {
+  color: var(--gov-warning) !important;
+  text-shadow: 0 0 10px rgba(245, 158, 11, 0.5);
+}
+
+.gov-apps-page #apps-selected-count {
+  color: var(--gov-primary) !important;
+  text-shadow: 0 0 12px rgba(37, 99, 235, 0.48);
 }
 
 .gov-apps-page .gov-apps-toolbar {
   border-radius: 1.5rem;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(241, 245, 249, 0.9)),
+    rgba(255, 255, 255, 0.92);
 }
 
 .gov-apps-page .gov-apps-toolbar-badge {
@@ -118,8 +276,8 @@
   height: 3.25rem;
   border-radius: 1rem;
   color: #fff;
-  background: linear-gradient(135deg, #2563eb 0%, #60a5fa 100%);
-  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.18);
+  background: linear-gradient(135deg, #2563eb 0%, #60a5fa 65%, #93c5fd 100%);
+  box-shadow: var(--gov-glow-primary);
 }
 
 /* =========================================================
@@ -135,12 +293,12 @@
   display: inline-flex;
   align-items: center;
   gap: 0.65rem;
-  padding: 0.82rem 1rem;
+  padding: 0.72rem 0.95rem;
   border: 1px solid var(--gov-line);
   border-radius: 1rem;
-  background: #fff;
-  color: var(--gov-text-soft);
-  font-size: 0.94rem;
+  background: rgba(255, 255, 255, 0.76);
+  color: #475569;
+  font-size: 0.88rem;
   font-weight: 700;
   transition:
     transform var(--gov-transition),
@@ -152,16 +310,17 @@
 .gov-apps-page .gov-apps-submenu-link:hover,
 .gov-apps-page .gov-apps-submenu-link:focus-visible {
   transform: translateY(-1px);
-  border-color: #bfd4ea;
-  color: var(--gov-text-strong);
-  box-shadow: var(--gov-shadow-xs);
+  border-color: rgba(147, 197, 253, 0.24);
+  color: #0f172a;
+  box-shadow: 0 8px 20px rgba(148, 163, 184, 0.14);
   outline: none;
 }
 
 .gov-apps-page .gov-apps-submenu-link.is-active {
   color: var(--gov-primary);
-  border-color: #b7d6ef;
-  background: #f7fbff;
+  border-color: rgba(96, 165, 250, 0.34);
+  background: rgba(37, 99, 235, 0.16);
+  box-shadow: inset 0 0 0 1px rgba(96, 165, 250, 0.12);
 }
 
 /* =========================================================
@@ -171,7 +330,7 @@
 .gov-apps-page textarea,
 .gov-apps-page select {
   border: 1px solid var(--gov-line-strong) !important;
-  background: #fff !important;
+  background: rgba(15, 23, 42, 0.5) !important;
   border-radius: 0.95rem !important;
   color: var(--gov-text) !important;
   box-shadow: none !important;
@@ -180,12 +339,38 @@
     box-shadow var(--gov-transition);
 }
 
+.gov-apps-page label.input {
+  background: rgba(255, 255, 255, 0.86) !important;
+  border: 1px solid rgba(203, 213, 225, 0.9) !important;
+  border-radius: 12px !important;
+  padding: 0.72rem 0.95rem !important;
+  box-shadow: none !important;
+}
+
+.gov-apps-page #apps-search-input {
+  color: #0f172a !important;
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+}
+
+.gov-apps-page #apps-search-input::placeholder {
+  color: var(--gov-text-soft) !important;
+}
+
 .gov-apps-page input:focus,
 .gov-apps-page textarea:focus,
 .gov-apps-page select:focus {
-  border-color: #93c5fd !important;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.10) !important;
+  border-color: rgba(96, 165, 250, 0.7) !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.16) !important;
   outline: none;
+}
+
+.gov-apps-page label.input:focus-within {
+  outline: none;
+  border-color: var(--gov-primary) !important;
+  box-shadow: 0 0 10px rgba(37, 99, 235, 0.4) !important;
 }
 
 /* =========================================================
@@ -197,15 +382,22 @@
 }
 
 .gov-apps-page .btn-primary {
-  background: #1f78b4 !important;
-  border: 1px solid #1f78b4 !important;
-  box-shadow: none !important;
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+  border: none !important;
+  box-shadow: var(--gov-glow-primary) !important;
+  padding: 0.7rem 1rem;
+  border-radius: 10px !important;
+  font-weight: 500 !important;
+  font-size: 0.92rem !important;
+  line-height: 1.1 !important;
+  transition: all 0.2s ease !important;
 }
 
 .gov-apps-page .btn-primary:hover,
 .gov-apps-page .btn-primary:focus-visible {
-  background: #17689d !important;
-  border-color: #17689d !important;
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.4) !important;
 }
 
 .gov-apps-page .btn-outline,
@@ -216,15 +408,222 @@
 }
 
 .gov-apps-page .btn-outline {
-  background: #eef2f5 !important;
-  border: 1px solid #d8e0e8 !important;
-  box-shadow: none !important;
+  background: rgba(255, 255, 255, 0.88) !important;
+  border: 1px solid rgba(203, 213, 225, 0.9) !important;
+  box-shadow: 0 8px 20px rgba(148, 163, 184, 0.12) !important;
+  border-radius: 10px !important;
+  padding: 0.7rem 1rem !important;
+  font-size: 0.92rem !important;
+  line-height: 1.1 !important;
+  transition: all 0.2s ease !important;
 }
 
 .gov-apps-page .btn-outline:hover,
 .gov-apps-page .btn-outline:focus-visible {
-  background: #e7edf3 !important;
-  border-color: #cdd6df !important;
+  background: rgba(255, 255, 255, 0.98) !important;
+  border-color: rgba(148, 163, 184, 0.4) !important;
+  transform: translateY(-2px);
+}
+
+.gov-apps-page .btn-ghost {
+  background: rgba(255, 255, 255, 0.78) !important;
+  border: 1px solid rgba(203, 213, 225, 0.7) !important;
+  border-radius: 10px !important;
+  padding: 0.7rem 1rem !important;
+  font-size: 0.92rem !important;
+  line-height: 1.1 !important;
+  transition: all 0.2s ease !important;
+}
+
+.gov-apps-page .btn-sm {
+  min-height: 2.35rem !important;
+  padding: 0.6rem 0.9rem !important;
+  font-size: 0.84rem !important;
+  border-radius: 0.8rem !important;
+}
+
+.gov-apps-page .btn-circle.btn-sm,
+.gov-apps-page .btn-square.btn-sm {
+  width: 2.2rem !important;
+  min-width: 2.2rem !important;
+  height: 2.2rem !important;
+  min-height: 2.2rem !important;
+  padding: 0 !important;
+}
+
+.gov-apps-page .btn-ghost:hover,
+.gov-apps-page .btn-ghost:focus-visible {
+  background: rgba(255, 255, 255, 0.96) !important;
+  border-color: rgba(148, 163, 184, 0.4) !important;
+  transform: translateY(-2px);
+}
+
+/* =========================================================
+   TABS / BADGES / CHECKS
+   ========================================================= */
+.gov-apps-page .tabs-boxed {
+  border: 1px solid rgba(203, 213, 225, 0.9);
+  border-radius: 1.1rem;
+  background: rgba(255, 255, 255, 0.86) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(14px);
+}
+
+.gov-apps-page .tabs {
+  display: flex;
+  gap: 10px;
+}
+
+.gov-apps-page .tab {
+  padding: 0.48rem 0.9rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.72);
+  color: #64748b !important;
+  font-size: 0.84rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    color var(--gov-transition),
+    background var(--gov-transition),
+    box-shadow var(--gov-transition),
+    transform var(--gov-transition);
+}
+
+.gov-apps-page .tab:hover,
+.gov-apps-page .tab:focus-visible {
+  color: #0f172a !important;
+  background: rgba(255, 255, 255, 0.94);
+  outline: none;
+}
+
+.gov-apps-page .tab.tab-active,
+.gov-apps-page .tab.active {
+  color: #ffffff !important;
+  background: var(--gov-primary) !important;
+  box-shadow: 0 0 12px rgba(37, 99, 235, 0.5);
+  transform: translateY(-1px);
+}
+
+.gov-apps-page .checkbox {
+  border: 1px solid rgba(148, 163, 184, 0.45) !important;
+  background: rgba(15, 23, 42, 0.72) !important;
+  border-radius: 0.7rem !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.gov-apps-page .checkbox:checked,
+.gov-apps-page .checkbox[aria-checked="true"] {
+  border-color: rgba(96, 165, 250, 0.56) !important;
+  background-color: var(--gov-primary) !important;
+  color: #ffffff !important;
+  box-shadow: var(--gov-glow-primary);
+}
+
+.gov-apps-page .badge {
+  border-radius: 999px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.gov-apps-page .badge-outline {
+  border-color: rgba(148, 163, 184, 0.34) !important;
+  background: rgba(255, 255, 255, 0.82) !important;
+  color: #475569 !important;
+}
+
+.gov-apps-page .badge-success {
+  border-color: rgba(34, 197, 94, 0.28) !important;
+  background: rgba(34, 197, 94, 0.16) !important;
+  color: #dcfce7 !important;
+}
+
+.gov-apps-page .badge-warning {
+  border-color: rgba(245, 158, 11, 0.28) !important;
+  background: rgba(245, 158, 11, 0.16) !important;
+  color: #fef3c7 !important;
+}
+
+.gov-apps-page .badge-error {
+  border-color: rgba(239, 68, 68, 0.3) !important;
+  background: rgba(239, 68, 68, 0.16) !important;
+  color: #fee2e2 !important;
+}
+
+.gov-apps-page .badge-ghost,
+.gov-apps-page .badge-neutral {
+  border-color: rgba(148, 163, 184, 0.22) !important;
+  background: rgba(148, 163, 184, 0.12) !important;
+  color: #cbd5e1 !important;
+}
+
+/* =========================================================
+   ALERTAS / MODALES / UPLOAD
+   ========================================================= */
+.gov-apps-page .alert {
+  border: 1px solid var(--gov-line) !important;
+  border-radius: 1.2rem !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.04)),
+    rgba(15, 23, 42, 0.82) !important;
+  color: var(--gov-text) !important;
+  box-shadow: var(--gov-shadow-sm);
+}
+
+.gov-apps-page .alert-info {
+  border-color: rgba(96, 165, 250, 0.24) !important;
+  box-shadow: var(--gov-glow-primary);
+}
+
+.gov-apps-page .alert-success {
+  border-color: rgba(34, 197, 94, 0.24) !important;
+  box-shadow: var(--gov-glow-success);
+}
+
+.gov-apps-page .alert-warning {
+  border-color: rgba(245, 158, 11, 0.26) !important;
+}
+
+.gov-apps-page .alert-error {
+  border-color: rgba(239, 68, 68, 0.26) !important;
+}
+
+.gov-apps-page .modal::backdrop {
+  background: rgba(2, 6, 23, 0.74);
+  backdrop-filter: blur(10px);
+}
+
+.gov-apps-page .modal-box {
+  background:
+    radial-gradient(circle at top left, rgba(37, 99, 235, 0.16), transparent 26%),
+    linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(17, 24, 39, 0.9)) !important;
+  box-shadow: var(--gov-shadow-md);
+}
+
+.gov-apps-page .file-input,
+.gov-apps-page .input,
+.gov-apps-page .input-bordered {
+  border-color: var(--gov-line-strong) !important;
+  background: rgba(15, 23, 42, 0.54) !important;
+  color: var(--gov-text) !important;
+}
+
+.gov-apps-page .file-input::file-selector-button {
+  margin-right: 1rem;
+  border: 0;
+  border-radius: 0.85rem;
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  color: #ffffff;
+  font-weight: 800;
+  padding: 0.7rem 1rem;
+}
+
+.gov-apps-page #apps-upload-preview {
+  border-color: var(--gov-line) !important;
+  background: rgba(15, 23, 42, 0.58) !important;
+}
+
+.gov-apps-page #apps-upload-preview li + li {
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 /* =========================================================
@@ -234,10 +633,12 @@
 .gov-apps-page .gov-audit-box,
 .gov-apps-page .apps-audit-box,
 .gov-apps-page .audit-box {
-  border: 1px solid var(--gov-line);
+  border: 1px solid rgba(203, 213, 225, 0.9);
   border-radius: 1.5rem;
-  background: #fff;
-  box-shadow: var(--gov-shadow-sm);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(241, 245, 249, 0.9)),
+    rgba(255, 255, 255, 0.92);
+  box-shadow: 0 16px 36px rgba(148, 163, 184, 0.14);
   padding: 1.4rem;
 }
 
@@ -255,14 +656,17 @@
 .gov-apps-page .gov-audit-stat,
 .gov-apps-page .audit-item,
 .gov-apps-page .apps-audit-item {
-  min-height: 118px;
-  border: 1px solid #e2e8f0;
+  min-height: 96px;
+  border: 1px solid rgba(203, 213, 225, 0.82);
   border-radius: 1.25rem;
-  background: #ffffff;
-  padding: 1.25rem 1.35rem;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(241, 245, 249, 0.92)),
+    rgba(255, 255, 255, 0.94);
+  padding: 1rem 1.05rem;
   display: flex;
   flex-direction: column;
   justify-content: center;
+  box-shadow: 0 8px 18px rgba(148, 163, 184, 0.1);
 }
 
 .gov-apps-page .gov-apps-audit-stat .label,
@@ -273,7 +677,7 @@
   font-weight: 800;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: #64748b !important;
+  color: #94a3b8 !important;
   margin-bottom: 0.8rem;
 }
 
@@ -281,16 +685,17 @@
 .gov-apps-page .gov-audit-stat .value,
 .gov-apps-page .audit-item .value,
 .gov-apps-page .apps-audit-item .value {
-  font-size: 2.8rem;
+  font-size: 2rem;
   line-height: 1;
   font-weight: 900;
-  color: #16233b !important;
+  color: #0f172a !important;
+  text-shadow: none;
 }
 
 .gov-apps-page .gov-apps-audit-note,
 .gov-apps-page .gov-audit-note,
 .gov-apps-page .audit-note {
-  color: #64748b !important;
+  color: #94a3b8 !important;
   font-size: 1rem;
   line-height: 1.5;
   margin-top: 0.5rem;
@@ -308,41 +713,37 @@
    ========================================================= */
 .gov-apps-page .gov-app-card {
   position: relative;
-  border: 1px solid #d9e1ea !important;
-  border-radius: 1rem !important;
-  background: #ffffff !important;
-  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.05) !important;
+  border: 1px solid rgba(203, 213, 225, 0.9) !important;
+  border-radius: 16px !important;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.97), rgba(241, 245, 249, 0.92)) !important;
+  box-shadow: 0 16px 34px rgba(148, 163, 184, 0.16) !important;
+  backdrop-filter: blur(12px);
   overflow: hidden;
-  transition:
-    transform var(--gov-transition),
-    box-shadow var(--gov-transition),
-    border-color var(--gov-transition);
+  transition: all 0.25s ease;
 }
 
 .gov-apps-page .gov-app-card:hover {
-  transform: translateY(-1px);
-  border-color: #c9d7e6 !important;
-  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08) !important;
+  transform: translateY(-4px);
+  border-color: rgba(96, 165, 250, 0.24) !important;
+  box-shadow: 0 18px 38px rgba(148, 163, 184, 0.2) !important;
 }
 
 .gov-apps-page .gov-app-card.is-selected {
-  border-color: #60a5fa !important;
-  box-shadow:
-    0 0 0 1px #60a5fa inset,
-    0 8px 18px rgba(96, 165, 250, 0.16) !important;
+  border-color: rgba(96, 165, 250, 0.44) !important;
+  box-shadow: var(--gov-glow-primary) !important;
 }
 
 .gov-apps-page .gov-app-card .card-body {
-  padding: 1.15rem 1.15rem !important;
+  padding: 1rem !important;
   min-height: auto;
 }
 
 /* layout interno igual al mockup */
 .gov-apps-page .gov-app-body {
   display: grid;
-  grid-template-columns: 6rem minmax(0, 1fr);
-  column-gap: 1rem;
-  row-gap: 0.55rem;
+  grid-template-columns: 5rem minmax(0, 1fr);
+  column-gap: 0.85rem;
+  row-gap: 0.45rem;
   align-items: start;
   min-height: auto;
 }
@@ -350,9 +751,9 @@
 /* icono a la izquierda */
 .gov-apps-page .gov-app-icon {
   grid-row: 1 / span 2;
-  width: 4.2rem;
-  height: 4.2rem;
-  flex: 0 0 4.2rem;
+  width: 3.5rem;
+  height: 3.5rem;
+  flex: 0 0 3.5rem;
   display: grid;
   place-items: center;
   border: 0 !important;
@@ -362,14 +763,15 @@
 }
 
 .gov-apps-page .gov-app-icon img {
-  width: 3.43rem;
-  height: 3.43rem;
+  width: 2.8rem;
+  height: 2.8rem;
   object-fit: contain;
+  filter: brightness(0) saturate(100%);
 }
 
 .gov-apps-page .gov-app-icon i,
 .gov-apps-page .gov-app-icon span {
-  font-size: 3.15rem !important;
+  font-size: 2.5rem !important;
   line-height: 1;
   color: #111827 !important;
 }
@@ -377,13 +779,16 @@
 /* contenedor texto */
 .gov-apps-page .gov-app-main {
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 /* titulo */
 .gov-apps-page .gov-app-title {
-  color: #4b5563 !important;
-  font-size: 1rem;
-  font-weight: 800;
+  color: #111827 !important;
+  font-size: 0.98rem;
+  font-weight: 600;
   line-height: 1.15;
   letter-spacing: -0.01em;
   margin: 0 0 0.25rem 0;
@@ -393,7 +798,7 @@
 .gov-apps-page .gov-app-key {
   color: var(--gov-pink) !important;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace;
-  font-size: 0.92rem;
+  font-size: 0.82rem;
   margin: 0;
 }
 
@@ -404,20 +809,21 @@
   flex-wrap: wrap;
   align-items: center;
   justify-content: flex-start;
-  gap: 0.75rem;
-  margin-top: 0.35rem;
+  gap: 10px;
+  margin-top: 0;
 }
 
 /* botones compactos como la imagen */
 .gov-apps-page .gov-app-action-btn {
-  min-width: 7.6rem;
-  min-height: 2.65rem;
-  padding: 0.58rem 1rem;
-  border-radius: 0.45rem !important;
-  font-size: 0.88rem;
-  font-weight: 800;
+  min-width: 6.6rem;
+  min-height: 2.35rem;
+  padding: 0.62rem 0.95rem;
+  border-radius: 10px !important;
+  font-size: 0.82rem;
+  font-weight: 500;
   letter-spacing: -0.01em;
-  box-shadow: none !important;
+  box-shadow: var(--gov-shadow-xs) !important;
+  transition: all 0.2s ease !important;
 }
 
 /* botón azul activar */
@@ -425,9 +831,10 @@
 .gov-apps-page .gov-app-action-btn.btn-primary:hover,
 .gov-apps-page .gov-app-action-btn.btn-primary:focus-visible,
 .gov-apps-page .gov-app-action-btn.btn-primary:active {
-  background: #2d7fb9 !important;
-  border: 1px solid #2d7fb9 !important;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8) !important;
+  border: none !important;
   color: #ffffff !important;
+  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.4) !important;
 }
 
 .gov-apps-page .gov-app-action-btn.btn-primary *,
@@ -442,21 +849,22 @@
 .gov-apps-page .gov-app-action-btn.btn-outline,
 .gov-apps-page .gov-app-action-btn.btn-outline:hover,
 .gov-apps-page .gov-app-action-btn.btn-outline:focus-visible {
-  background: #e9edf1 !important;
-  border: 1px solid #d7dde4 !important;
-  color: #4b5563 !important;
+  background: rgba(255, 255, 255, 0.9) !important;
+  border: 1px solid rgba(203, 213, 225, 0.9) !important;
+  color: #1f2937 !important;
 }
 
 .gov-apps-page .gov-app-action-btn.btn-outline * {
-  color: #4b5563 !important;
+  color: #1f2937 !important;
 }
 
 /* si el módulo está activo y muestras botón oscuro o badge */
 .gov-apps-page .gov-app-action-btn.is-enabled,
 .gov-apps-page .gov-app-action-btn[data-state="enabled"] {
-  background: #1f2937 !important;
-  border: 1px solid #1f2937 !important;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
   color: #ffffff !important;
+  box-shadow: 0 18px 36px rgba(15, 23, 42, 0.28) !important;
 }
 
 .gov-apps-page .gov-app-action-btn.is-enabled *,
@@ -478,26 +886,26 @@
   border-radius: 0.5rem !important;
   background: transparent !important;
   border: none !important;
-  color: #a3a3a3 !important;
+  color: #334155 !important;
   box-shadow: none !important;
   padding: 0 !important;
 }
 
 .gov-apps-page .gov-app-menu .btn:hover,
 .gov-apps-page .gov-app-menu .btn:focus-visible {
-  color: #6b7280 !important;
-  background: #f3f4f6 !important;
+  color: #0f172a !important;
+  background: rgba(15, 23, 42, 0.08) !important;
 }
 
 .gov-apps-page .gov-app-menu .menu {
   border-radius: 0.9rem;
   border: 1px solid var(--gov-line);
-  background: #ffffff;
+  background: rgba(15, 23, 42, 0.94);
   box-shadow: var(--gov-shadow-md);
 }
 
 .gov-apps-page .gov-app-menu .menu li > * {
-  color: #4b5563 !important;
+  color: #e5e7eb !important;
   font-weight: 700;
 }
 
@@ -516,14 +924,15 @@
 }
 
 .gov-apps-page .gov-app-status.is-enabled {
-  color: #166534;
-  background: rgba(134, 239, 172, 0.25);
-  border-color: rgba(34, 197, 94, 0.18);
+  color: #dcfce7;
+  background: rgba(34, 197, 94, 0.16);
+  border-color: rgba(34, 197, 94, 0.28);
+  box-shadow: var(--gov-glow-success);
 }
 
 .gov-apps-page .gov-app-status.is-disabled {
-  color: #4b5563;
-  background: rgba(226, 232, 240, 0.78);
+  color: #cbd5e1;
+  background: rgba(148, 163, 184, 0.12);
   border-color: rgba(148, 163, 184, 0.18);
 }
 

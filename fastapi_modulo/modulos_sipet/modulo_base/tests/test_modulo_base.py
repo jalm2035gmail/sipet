@@ -10,6 +10,7 @@ from fastapi import HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.testclient import TestClient
 import fastapi_modulo.modulos_sipet.modulo_base.servicios.base_service as base_service_module
+import fastapi_modulo.modulos_sipet.modulo_base.controladores.dependencies as dependencies_module
 import fastapi_modulo.modulos_sipet.modulo_base.core.cache_service as cache_service_module
 import fastapi_modulo.modulos_sipet.modulo_base.core.lock_service as lock_service_module
 import fastapi_modulo.modulos_sipet.modulo_base.core.media_service as media_service_module
@@ -178,8 +179,7 @@ def test_modulo_base_resumen(monkeypatch) -> None:
         def close(self) -> None:
             return None
 
-    monkeypatch.setattr(base_service_module, "ensure_modulo_base_schema", lambda: None)
-    monkeypatch.setattr(base_service_module, "get_db", lambda: FakeSession())
+    monkeypatch.setattr(dependencies_module, "get_db", lambda: FakeSession())
 
     client = _app()
     response = client.get("/api/modulo-base/resumen", headers={"x-role": "admin"})
@@ -244,6 +244,72 @@ def test_permission_registry_rejects_request_without_required_access() -> None:
     assert response.status_code == 403
 
 
+def test_permission_registry_allows_explicit_module_permission() -> None:
+    app = FastAPI()
+
+    @app.middleware("http")
+    async def inject_context(request: Request, call_next):
+        request.state.user_role = "usuario"
+        request.state._effective_access_payload = {
+            "role": "usuario",
+            "screen_access_levels": {"modulo_base": {"full_access": True, "read_only": False, "department_only": False, "user_only": False, "special_permissions": False}},
+            "user_app_access": ["modulo_base"],
+            "backend_roles": [],
+            "conversation_access": {},
+            "permission_flags": {"modulo_base_ver": True},
+        }
+        return await call_next(request)
+
+    module.register_routes(app)
+    response = TestClient(app).get("/api/modulo-base/health")
+
+    assert response.status_code == 200
+
+
+def test_permission_registry_rejects_app_access_without_required_permission() -> None:
+    app = FastAPI()
+
+    @app.middleware("http")
+    async def inject_context(request: Request, call_next):
+        request.state.user_role = "usuario"
+        request.state._effective_access_payload = {
+            "role": "usuario",
+            "screen_access_levels": {"modulo_base": {"full_access": True, "read_only": False, "department_only": False, "user_only": False, "special_permissions": False}},
+            "user_app_access": ["modulo_base"],
+            "backend_roles": [],
+            "conversation_access": {},
+            "permission_flags": {},
+        }
+        return await call_next(request)
+
+    module.register_routes(app)
+    response = TestClient(app).get("/api/modulo-base/health")
+
+    assert response.status_code == 403
+
+
+def test_permission_registry_ignores_client_supplied_permission_headers() -> None:
+    app = FastAPI()
+
+    @app.middleware("http")
+    async def inject_context(request: Request, call_next):
+        request.state.user_role = "usuario"
+        request.state._effective_access_payload = {
+            "role": "usuario",
+            "screen_access_levels": {"modulo_base": {"full_access": True, "read_only": False, "department_only": False, "user_only": False, "special_permissions": False}},
+            "user_app_access": ["modulo_base"],
+            "backend_roles": [],
+            "conversation_access": {},
+            "permission_flags": {},
+        }
+        return await call_next(request)
+
+    module.register_routes(app)
+    response = TestClient(app).get("/api/modulo-base/health", headers={"x-permissions": "modulo_base.ver"})
+
+    assert response.status_code == 403
+
+
 def test_standard_permission_builder_covers_official_actions() -> None:
     permissions = build_standard_permissions("demo", "Demo")
     assert [permission.code for permission in permissions] == [
@@ -277,7 +343,7 @@ def test_base_module_declares_uniform_behavior() -> None:
     assert module.router is router
 
 
-def test_bootstrap_initializes_schema_and_seed_contract(monkeypatch) -> None:
+def test_bootstrap_init_does_not_create_schema_implicitly(monkeypatch) -> None:
     calls: list[str] = []
 
     monkeypatch.setattr("fastapi_modulo.modulos_sipet.modulo_base.bootstrap.ensure_modulo_base_schema", lambda **_: calls.append("schema"))
@@ -286,7 +352,28 @@ def test_bootstrap_initializes_schema_and_seed_contract(monkeypatch) -> None:
 
     module.init()
 
-    assert calls == ["schema", "bootstrap", "seed"]
+    assert calls == []
+
+
+def test_bootstrap_schema_setup_requires_explicit_call(monkeypatch) -> None:
+    calls: list[dict[str, object]] = []
+
+    monkeypatch.setattr(
+        "fastapi_modulo.modulos_sipet.modulo_base.bootstrap.ensure_modulo_base_schema",
+        lambda **kwargs: calls.append(kwargs),
+    )
+
+    from fastapi_modulo.modulos_sipet.modulo_base.bootstrap import prepare_modulo_base_schema_for_dev
+
+    prepare_modulo_base_schema_for_dev(host="tenant-host")
+
+    assert calls == [
+        {
+            "allow_create_all_in_dev": MODULE_CONFIG.allow_create_all_in_dev,
+            "uses_migrations": MODULE_CONFIG.uses_migrations,
+            "host": "tenant-host",
+        }
+    ]
 
 
 def test_module_routers_are_declared_explicitly() -> None:
@@ -362,8 +449,7 @@ def test_resumen_uses_request_tenant_header(monkeypatch, client_factory) -> None
         def close(self) -> None:
             return None
 
-    monkeypatch.setattr(base_service_module, "ensure_modulo_base_schema", lambda: None)
-    monkeypatch.setattr(base_service_module, "get_db", lambda: FakeSession())
+    monkeypatch.setattr(dependencies_module, "get_db", lambda: FakeSession())
 
     response = client_factory(user_role="admin", tenant_id="tenant-x").get("/api/modulo-base/resumen")
 
@@ -747,7 +833,8 @@ def test_security_helper_requires_admin_role() -> None:
 
 
 def test_modulo_base_resumen_returns_uniform_validation_error(monkeypatch) -> None:
-    def _raise_validation(_tenant_id: str) -> dict[str, object]:
+    def _raise_validation(*, db, tenant_id: str) -> dict[str, object]:
+        del db, tenant_id
         raise ValueError("tenant invalido")
 
     monkeypatch.setattr(api_module, "get_modulo_base_resumen", _raise_validation)
@@ -763,7 +850,8 @@ def test_modulo_base_resumen_returns_uniform_validation_error(monkeypatch) -> No
 
 
 def test_modulo_base_resumen_returns_uniform_permission_error(monkeypatch) -> None:
-    def _raise_permission(_tenant_id: str) -> dict[str, object]:
+    def _raise_permission(*, db, tenant_id: str) -> dict[str, object]:
+        del db, tenant_id
         raise PermissionError("sin acceso")
 
     monkeypatch.setattr(api_module, "get_modulo_base_resumen", _raise_permission)

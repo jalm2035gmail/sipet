@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>
+        {% if tienda and tienda.nombre %}
+            {{ tienda.nombre }} | Multitienda
+        {% else %}
+            Tiendas | Multitienda
+        {% endif %}
+    </title>
+    <meta name="description" content="Marketplace premium para descubrir tiendas, ofertas y productos destacados." />
+    <link rel="stylesheet" href="/multitienda/static/css/tienda.css" />
+</head>
+<body class="
+    {% if vista == 'landing_tienda' %}page-landing-tienda{% else %}page-marketplace{% endif %}
+    {% if vista == 'producto' %}page-producto{% endif %}
+">
+<div class="site-shell">
+
+    <!-- =====================================================
+         STICKY MINI HEADER
+         Oculto al inicio, aparece al hacer scroll pasado el hero
+         ===================================================== -->
+    <header class="sticky-mini-header" id="stickyMiniHeader" aria-label="Navegación compacta">
+        <div class="sticky-mini-header__inner">
+
+            <a href="/" class="sticky-mini-header__brand" aria-label="Ir al inicio">
+                <span class="sticky-mini-header__logo-wrap">
+                    {% if tienda and tienda.logo_url %}
+                        <img src="{{ tienda.logo_url }}"
+                             alt="{{ tienda.nombre }}"
+                             class="sticky-mini-header__logo" />
+                    {% else %}
+                        <img src="/multitienda/static/imagenes/logo-placeholder.png"
+                             alt="Logo"
+                             class="sticky-mini-header__logo" />
+                    {% endif %}
+                </span>
+            </a>
+
+            <nav class="sticky-mini-header__nav" aria-label="Secciones principales">
+                <a href="/tiendas"
+                   class="sticky-mini-header__link {% if vista != 'landing_tienda' and vista != 'producto' %}is-active{% endif %}">
+                    Tiendas
+                </a>
+                <a href="/ofertas" class="sticky-mini-header__link">Ofertas</a>
+                <a href="/recomendaciones" class="sticky-mini-header__link">Recomendaciones</a>
+            </nav>
+
+            <div class="sticky-mini-header__actions">
+                <a href="#productos" class="sticky-mini-header__pill">
+                    {% if vista == 'producto' %}
+                        Producto
+                    {% elif tienda and tienda.nombre %}
+                        {{ tienda.nombre }}
+                    {% else %}
+                        Producto
+                    {% endif %}
+                </a>
+            </div>
+
+        </div>
+    </header>
+
+    <!-- =====================================================
+         HERO PRINCIPAL
+         ===================================================== -->
+    <section class="hero-marketplace" id="heroMarketplace" aria-label="Presentación del marketplace">
+
+        <div class="hero-marketplace__bg" aria-hidden="true">
+            <img src="/multitienda/static/imagenes/portadas.jpg"
+                 alt=""
+                 class="hero-marketplace__bg-image" />
+        </div>
+
+        <div class="hero-marketplace__overlay" aria-hidden="true"></div>
+
+        <div class="hero-marketplace__content">
+
+            <!-- Columna izquierda -->
+            <div class="hero-marketplace__left">
+
+                <div class="hero-marketplace__badge" aria-hidden="true">
+                    <span class="hero-marketplace__badge-dot"></span>
+                    <span>CALIDAD Y PRECIO A TU ALCANCE</span>
+                </div>
+
+                <h1 class="hero-marketplace__title">
+                    {% if tienda and tienda.nombre %}
+                        {{ tienda.nombre }}
+                    {% else %}
+                        Las mejores tiendas
+                    {% endif %}
+                </h1>
+
+                <p class="hero-marketplace__subtitle">
+                    {% if tienda and tienda.descripcion_corta %}
+                        {{ tienda.descripcion_corta }}
+                    {% else %}
+                        Descubre productos, ofertas y negocios destacados en una experiencia moderna, elegante y pensada para vender más.
+                    {% endif %}
+                </p>
+
+                <div class="hero-marketplace__stats" role="list" aria-label="Estadísticas">
+                    <article class="hero-stat-card" role="listitem">
+                        <span class="hero-stat-card__label">Productos</span>
+                        <strong class="hero-stat-card__value">
+                            {{ total_productos if total_productos is defined else 0 }}
+                        </strong>
+                    </article>
+
+                    <article class="hero-stat-card" role="listitem">
+                        <span class="hero-stat-card__label">Categorías</span>
+                        <strong class="hero-stat-card__value">
+                            {{ total_categorias if total_categorias is defined else 0 }}
+                        </strong>
+                    </article>
+
+                    <article class="hero-stat-card" role="listitem">
+                        <span class="hero-stat-card__label">
+                            {% if tienda and tienda.nombre %}Ofertas{% else %}Tiendas{% endif %}
+                        </span>
+                        <strong class="hero-stat-card__value">
+                            {% if tienda and tienda.nombre %}
+                                {{ total_ofertas if total_ofertas is defined else 0 }}
+                            {% else %}
+                                {{ total_tiendas if total_tiendas is defined else 0 }}
+                            {% endif %}
+                        </strong>
+                    </article>
+                </div>
+
+                <div class="hero-marketplace__cta">
+                    <a href="#productos" class="btn btn--primary">Explorar tiendas</a>
+                    <a href="/ofertas"   class="btn btn--secondary">Ver ofertas</a>
+                </div>
+
+            </div><!-- /hero left -->
+
+            <!-- Columna derecha: tarjeta tienda destacada -->
+            <aside class="hero-marketplace__right" aria-label="Tienda destacada">
+                <article class="featured-store-card">
+
+                    <div class="featured-store-card__top">
+                        <div class="featured-store-card__logo-wrap">
+                            {% if tienda and tienda.logo_url %}
+                                <img src="{{ tienda.logo_url }}"
+                                     alt="{{ tienda.nombre }}"
+                                     class="featured-store-card__logo" />
+                            {% elif tienda_destacada and tienda_destacada.logo_url %}
+                                <img src="{{ tienda_destacada.logo_url }}"
+                                     alt="{{ tienda_destacada.nombre }}"
+                                     class="featured-store-card__logo" />
+                            {% else %}
+                                <img src="/multitienda/static/imagenes/logo-placeholder.png"
+                                     alt="Tienda destacada"
+                                     class="featured-store-card__logo" />
+                            {% endif %}
+                        </div>
+
+                        <div class="featured-store-card__info">
+                            <h2 class="featured-store-card__title">
+                                {% if tienda and tienda.nombre %}
+                                    {{ tienda.nombre }}
+                                {% elif tienda_destacada and tienda_destacada.nombre %}
+                                    {{ tienda_destacada.nombre }}
+                                {% else %}
+                                    Calidad y precio a tu alcance
+                                {% endif %}
+                            </h2>
+                            <p class="featured-store-card__subtitle">
+                                {% if tienda and tienda.nombre %}
+                                    Tienda destacada
+                                {% else %}
+                                    Tienda destacada de la semana
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="featured-store-card__stats">
+                        <div class="featured-mini-stat">
+                            <span class="featured-mini-stat__label">Ofertas</span>
+                            <strong class="featured-mini-stat__value">
+                                {{ total_ofertas if total_ofertas is defined else 0 }}
+                            </strong>
+                        </div>
+                        <div class="featured-mini-stat">
+                            <span class="featured-mini-stat__label">Cliente destacado</span>
+                            <strong class="featured-mini-stat__value">VIP</strong>
+                        </div>
+                    </div>
+
+                    <div class="featured-store-card__actions">
+                        {% set tienda_slug = tienda.slug if (tienda and tienda.slug) else (tienda_destacada.slug if (tienda_destacada and tienda_destacada.slug) else None) %}
+                        {% if tienda_slug %}
+                            <a href="/{{ tienda_slug }}" class="btn btn--accent">Contactar tienda</a>
+                            <a href="/{{ tienda_slug }}" class="btn btn--ghost-light">Ver perfil</a>
+                        {% else %}
+                            <a href="#productos" class="btn btn--accent">Contactar tienda</a>
+                            <a href="#productos" class="btn btn--ghost-light">Ver perfil</a>
+                        {% endif %}
+                    </div>
+
+                </article>
+            </aside>
+
+        </div><!-- /hero content -->
+    </section>
+
+    <!-- =====================================================
+         CATEGORÍAS DESTACADAS
+         ===================================================== -->
+    <section class="category-strip" aria-label="Categorías destacadas">
+
+        <div class="category-strip__header">
+            <h2 class="section-kicker">CATEGORÍAS DESTACADAS</h2>
+        </div>
+
+        <div class="category-strip__body">
+            <div class="category-strip__chips" id="categoryStripChips" role="group" aria-label="Filtrar por categoría">
+                {% if categorias and categorias|length > 0 %}
+                    {% for categoria in categorias %}
+                        <button
+                            type="button"
+                            class="chip-category {% if loop.first %}is-active{% endif %}"
+                            data-category="{{ categoria.slug if categoria.slug else categoria.nombre|lower }}"
+                            aria-pressed="{{ 'true' if loop.first else 'false' }}"
+                        >
+                            {{ categoria.nombre }}
+                        </button>
+                    {% endfor %}
+                {% else %}
+                    <button type="button" class="chip-category is-active" data-category="moda"       aria-pressed="true">Moda</button>
+                    <button type="button" class="chip-category"           data-category="hogar"       aria-pressed="false">Hogar</button>
+                    <button type="button" class="chip-category"           data-category="tecnologia"  aria-pressed="false">Tecnología</button>
+                    <button type="button" class="chip-category"           data-category="salud"       aria-pressed="false">Salud</button>
+                    <button type="button" class="chip-category"           data-category="artesanias"  aria-pressed="false">Artesanías</button>
+                    <button type="button" class="chip-category"           data-category="alimentos"   aria-pressed="false">Alimentos</button>
+                {% endif %}
+            </div>
+
+            <button type="button" class="category-strip__more" aria-label="Ver más categorías">
+                <span aria-hidden="true">⌄</span>
+            </button>
+        </div>
+
+    </section>
+
+    <!-- =====================================================
+         CONTENIDO PRINCIPAL
+         ===================================================== -->
+    <main class="main-marketplace" id="productos">
+        <div class="main-marketplace__layout">
+
+            <!-- ===========================================
+                 SIDEBAR DE FILTROS
+                 =========================================== -->
+            <aside class="filters-sidebar" aria-label="Filtros de búsqueda">
+
+                <div class="filters-sidebar__header">
+                    <h3 class="filters-sidebar__title">Buscar</h3>
+                    <button type="button" class="filters-sidebar__clear" id="clearFiltersBtn">
+                        Borrar filtros
+                    </button>
+                </div>
+
+                <!-- Filtro: Tiendas -->
+                <div class="filter-card">
+                    <button type="button"
+                            class="filter-card__toggle is-open"
+                            aria-expanded="true"
+                            aria-controls="filter-body-tiendas">
+                        <span class="filter-card__texts">
+                            <strong>Tiendas</strong>
+                            <small>Directorio visible en landing</small>
+                        </span>
+                        <span class="filter-card__icon" aria-hidden="true">⌄</span>
+                    </button>
+                    <div class="filter-card__body is-open" id="filter-body-tiendas">
+                        <label class="check-option">
+                            <input type="checkbox" name="filtro_tienda_destacada" />
+                            <span>Destacadas</span>
+                        </label>
+                        <label class="check-option">
+                            <input type="checkbox" name="filtro_tienda_nueva" />
+                            <span>Nuevas</span>
+                        </label>
+                        <label class="check-option">
+                            <input type="checkbox" name="filtro_tienda_cercana" />
+                            <span>Cercanas</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Filtro: Categorías -->
+                <div class="filter-card">
+                    <button type="button"
+                            class="filter-card__toggle"
+                            aria-expanded="false"
+                            aria-controls="filter-body-categorias">
+                        <span class="filter-card__texts">
+                            <strong>Categorías</strong>
+                            <small>Explora por familia de producto</small>
+                        </span>
+                        <span class="filter-card__icon" aria-hidden="true">⌄</span>
+                    </button>
+                    <div class="filter-card__body" id="filter-body-categorias">
+                        {% if categorias and categorias|length > 0 %}
+                            {% for categoria in categorias %}
+                                <label class="check-option">
+                                    <input type="checkbox"
+                                           name="categoria"
+                                           value="{{ categoria.slug if categoria.slug else categoria.nombre|lower }}" />
+                                    <span>{{ categoria.nombre }}</span>
+                                </label>
+                            {% endfor %}
+                        {% else %}
+                            <label class="check-option">
+                                <input type="checkbox" name="categoria" value="moda" />
+                                <span>Moda</span>
+                            </label>
+                            <label class="check-option">
+                                <input type="checkbox" name="categoria" value="hogar" />
+                                <span>Hogar</span>
+                            </label>
+                            <label class="check-option">
+                                <input type="checkbox" name="categoria" value="tecnologia" />
+                                <span>Tecnología</span>
+                            </label>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Filtro: Ofertas -->
+                <div class="filter-card">
+                    <button type="button"
+                            class="filter-card__toggle"
+                            aria-expanded="false"
+                            aria-controls="filter-body-ofertas">
+                        <span class="filter-card__texts">
+                            <strong>Ofertas</strong>
+                            <small>Atajos para promos y destacados</small>
+                        </span>
+                        <span class="filter-card__icon" aria-hidden="true">⌄</span>
+                    </button>
+                    <div class="filter-card__body" id="filter-body-ofertas">
+                        <label class="check-option">
+                            <input type="checkbox" name="filtro_ofertas" />
+                            <span>Descuentos</span>
+                        </label>
+                        <label class="check-option">
+                            <input type="checkbox" name="filtro_exclusivos" />
+                            <span>Exclusivos</span>
+                        </label>
+                        <label class="check-option">
+                            <input type="checkbox" name="filtro_destacados" />
+                            <span>Destacados</span>
+                        </label>
+                    </div>
+                </div>
+
+            </aside>
+
+            <!-- ===========================================
+                 PANEL DE PRODUCTOS
+                 =========================================== -->
+            <section class="content-panel" aria-label="Listado de productos">
+
+                <!-- Toolbar: vista, búsqueda, orden -->
+                <div class="content-toolbar" role="toolbar" aria-label="Controles de visualización">
+
+                    <div class="content-toolbar__view-switch" role="group" aria-label="Cambiar vista">
+                        <button type="button"
+                                class="view-switch-btn is-active"
+                                data-view="grid"
+                                aria-label="Vista cuadrícula"
+                                aria-pressed="true">
+                            <span aria-hidden="true">▦</span>
+                        </button>
+                        <button type="button"
+                                class="view-switch-btn"
+                                data-view="list"
+                                aria-label="Vista lista"
+                                aria-pressed="false">
+                            <span aria-hidden="true">☰</span>
+                        </button>
+                    </div>
+
+                    <div class="content-toolbar__search">
+                        <span class="content-toolbar__search-icon" aria-hidden="true">⌕</span>
+                        <input
+                            type="search"
+                            id="marketplaceSearchInput"
+                            name="q"
+                            placeholder="Buscar producto, descripción o categoría"
+                            autocomplete="off"
+                            aria-label="Buscar productos"
+                        />
+                    </div>
+
+                    <div class="content-toolbar__results" aria-live="polite" aria-atomic="true">
+                        <span id="resultsCount">
+                            {{ total_resultados if total_resultados is defined else (productos|length if productos else 0) }}
+                        </span>
+                        <span>resultados</span>
+                    </div>
+
+                    <div class="content-toolbar__sort">
+                        <label for="sortSelect" class="sr-only">Ordenar por</label>
+                        <select id="sortSelect" name="orden" aria-label="Ordenar productos">
+                            <option value="destacado">Destacado</option>
+                            <option value="precio_asc">Precio menor</option>
+                            <option value="precio_desc">Precio mayor</option>
+                            <option value="reciente">Más reciente</option>
+                        </select>
+                    </div>
+
+                </div><!-- /content-toolbar -->
+
+                <!-- Encabezado de sección de productos -->
+                <!-- CORRECCIÓN: eliminados los tabs de categoría duplicados.
+                     El filtrado por categoría se maneja desde category-strip. -->
+                <div class="products-section-header">
+                    <h2 class="products-section-header__title">
+                        {% if tienda and tienda.nombre %}
+                            Productos de {{ tienda.nombre }}
+                        {% else %}
+                            Todos los productos
+                        {% endif %}
+                    </h2>
+                    <p class="products-section-header__subtitle">
+                        {% if tienda and tienda.nombre %}
+                            Explora el catálogo visible de esta tienda.
+                        {% else %}
+                            Una selección curada de tiendas y productos destacados.
+                        {% endif %}
+                    </p>
+                </div>
+
+                <!-- Grid de productos -->
+                <div class="products-grid" id="productsGrid" role="list" aria-label="Productos">
+
+                    {% if productos and productos|length > 0 %}
+                        {% for producto in productos %}
+                            <article
+                                class="product-card"
+                                role="listitem"
+                                data-category="{{ producto.categoria_slug if producto.categoria_slug else 'general' }}"
+                                data-title="{{ producto.nombre|lower if producto.nombre else '' }}"
+                            >
+                                <a
+                                    href="{% if producto.slug %}/producto/{{ producto.slug }}{% else %}#{% endif %}"
+                                    class="product-card__image-link"
+                                    aria-label="Ver {{ producto.nombre }}"
+                                    tabindex="-1"
+                                >
+                                    <div class="product-card__image-wrap">
+                                        {% if producto.imagen_url %}
+                                            <img src="{{ producto.imagen_url }}"
+                                                 alt="{{ producto.nombre }}"
+                                                 class="product-card__image"
+                                                 loading="lazy" />
+                                        {% else %}
+                                            <img src="/multitienda/static/imagenes/producto-placeholder.jpg"
+                                                 alt="{{ producto.nombre }}"
+                                                 class="product-card__image"
+                                                 loading="lazy" />
+                                        {% endif %}
+
+                                        <span class="product-card__tag">
+                                            {{ producto.categoria_nombre if producto.categoria_nombre else 'General' }}
+                                        </span>
+                                    </div>
+                                </a>
+
+                                <div class="product-card__body">
+                                    <h3 class="product-card__title">
+                                        <a href="{% if producto.slug %}/producto/{{ producto.slug }}{% else %}#{% endif %}">
+                                            {{ producto.nombre }}
+                                        </a>
+                                    </h3>
+
+                                    <p class="product-card__description">
+                                        {{ producto.descripcion_corta if producto.descripcion_corta else 'Producto disponible en la tienda.' }}
+                                    </p>
+
+                                    <div class="product-card__footer">
+                                        <strong class="product-card__price">
+                                            {% if producto.precio %}
+                                                ${{ "{:,.0f}".format(producto.precio) }}
+                                            {% else %}
+                                                Consultar
+                                            {% endif %}
+                                        </strong>
+
+                                        <a
+                                            href="{% if producto.slug %}/producto/{{ producto.slug }}{% else %}#{% endif %}"
+                                            class="product-card__button"
+                                        >
+                                            Ver más
+                                        </a>
+                                    </div>
+                                </div>
+
+                            </article>
+                        {% endfor %}
+
+                    {% else %}
+                        <article class="empty-state">
+                            <div class="empty-state__icon">🛍</div>
+                            <h3 class="empty-state__title">Aún no hay productos publicados</h3>
+                            <p class="empty-state__text">
+                                Cuando se publiquen productos o tiendas, aparecerán aquí.
+                            </p>
+                        </article>
+                    {% endif %}
+
+                </div><!-- /productsGrid -->
+
+            </section><!-- /content-panel -->
+
+        </div><!-- /main-marketplace__layout -->
+    </main>
+
+</div><!-- /site-shell -->
+
+<!-- Clase utilitaria para lectores de pantalla -->
+<style>.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}</style>
+
+<script src="/multitienda/static/js/tienda.js"></script>
+</body>
+</html>

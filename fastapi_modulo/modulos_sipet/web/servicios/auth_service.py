@@ -472,7 +472,7 @@ def resolve_post_login_redirect(db, role_name: str, user_id: int | None = None) 
     except Exception:
         return "/web/inicio"
     if store_row and store_row.get("id") is not None:
-        return "/multitienda/configuracion"
+        return "/multitienda"
     return "/web/inicio"
 
 

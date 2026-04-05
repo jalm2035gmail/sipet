@@ -4,6 +4,7 @@ from fastapi_modulo.modulos_sipet.aplicaciones.repositorios.app_repository impor
 )
 from fastapi_modulo.modulos_sipet.aplicaciones.repositorios.audit_repository import get_protocol_status_map
 from fastapi_modulo.modulos_sipet.aplicaciones.repositorios.package_repository import (
+    apply_staged_entries,
     apply_module_zip,
     get_module_image_path,
     get_module_upload_root,
@@ -18,6 +19,7 @@ from fastapi_modulo.modulos_sipet.aplicaciones.repositorios.persistence_reposito
 )
 
 __all__ = [
+    "apply_staged_entries",
     "apply_module_zip",
     "create_package_upload",
     "create_registry_audit",

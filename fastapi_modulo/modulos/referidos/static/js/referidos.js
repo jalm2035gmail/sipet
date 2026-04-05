@@ -167,7 +167,7 @@ async function guardarProgramaTienda(e) {
   e.preventDefault();
   const fd = new FormData(e.target);
   const body = Object.fromEntries(fd);
-  body.user_id = parseInt(body.user_id || '0', 10);
+  // user_id eliminado, se obtiene del usuario autenticado en backend
   body.max_referrals = parseInt(body.max_referrals || '0', 10);
   body.commission_rate = parseFloat(body.commission_rate || '0');
   try {

@@ -692,6 +692,24 @@ def _response_asset_urls(public: bool = False) -> Dict[str, str]:
     }
 
 
+def _rewrite_public_image_urls(value: Any) -> Any:
+    public_prefix = "/api/public/encuestas-static/imagenes/"
+    private_prefix = "/modulos/encuestas/imagenes/"
+    if isinstance(value, dict):
+        return {key: _rewrite_public_image_urls(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_rewrite_public_image_urls(item) for item in value]
+    if isinstance(value, str):
+        if value.startswith(private_prefix):
+            return public_prefix + value[len(private_prefix):]
+        value = value.replace(private_prefix, public_prefix)
+        value = value.replace("https://avancoop.org/modulos/encuestas/imagenes/", public_prefix)
+        value = value.replace("http://avancoop.org/modulos/encuestas/imagenes/", public_prefix)
+        value = value.replace("//avancoop.org/modulos/encuestas/imagenes/", public_prefix)
+        return value
+    return value
+
+
 def _render_module_shell(
     request: Request,
     *,
@@ -844,6 +862,8 @@ def _render_preview_html(builder: Dict[str, Any]) -> str:
 
 def _render_response_page(request: Request, session_payload: Dict[str, Any]) -> HTMLResponse:
     is_public = str(session_payload.get("access_mode") or "").strip().lower() == "public"
+    if is_public:
+        session_payload = _rewrite_public_image_urls(session_payload)
     asset_urls = _response_asset_urls(public=is_public)
     content = _load_response_template().replace(
         "__ENCUESTA_RESPONSE_BOOTSTRAP__",
@@ -956,6 +976,11 @@ def encuesta_image(filename: str):
     if file_path.parent != image_root or not file_path.exists():
         raise HTTPException(status_code=404, detail="Recurso no encontrado.")
     return FileResponse(file_path)
+
+
+@router.get("/api/public/encuestas-static/imagenes/{filename}")
+def encuesta_public_image(filename: str):
+    return encuesta_image(filename)
 
 
 _ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/gif", "image/webp", "image/svg+xml"}
@@ -1481,7 +1506,7 @@ def api_get_response_session(response_id: int, request: Request):
 
 @router.get("/api/public/encuestas/respuestas/{response_id}/session")
 def api_get_public_response_session(response_id: int, request: Request):
-    return api_get_response_session(response_id, request)
+    return _rewrite_public_image_urls(api_get_response_session(response_id, request))
 
 
 @router.get("/api/encuestas/respuestas/{response_id}/review")
@@ -1504,7 +1529,7 @@ def api_save_response_draft(response_id: int, payload: ResponseSaveIn, request: 
 
 @router.put("/api/public/encuestas/respuestas/{response_id}/save")
 def api_save_public_response_draft(response_id: int, payload: ResponseSaveIn, request: Request):
-    return api_save_response_draft(response_id, payload, request)
+    return _rewrite_public_image_urls(api_save_response_draft(response_id, payload, request))
 
 
 @router.post("/api/encuestas/respuestas/{response_id}/submit")
@@ -1518,7 +1543,7 @@ def api_submit_response(response_id: int, payload: ResponseSaveIn, request: Requ
 
 @router.post("/api/public/encuestas/respuestas/{response_id}/submit")
 def api_submit_public_response(response_id: int, payload: ResponseSaveIn, request: Request):
-    return api_submit_response(response_id, payload, request)
+    return _rewrite_public_image_urls(api_submit_response(response_id, payload, request))
 
 
 # ---------------------------------------------------------------------------
@@ -1757,7 +1782,7 @@ def api_live_status_audience(public_token: str, request: Request):
         state = get_live_status_audience(instance_id, tenant_id, public_token=public_token)
     except (ValueError, PermissionError) as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-    return state
+    return _rewrite_public_image_urls(state)
 
 
 @router.get("/api/encuestas/campanas/{instance_id}/live/audience")

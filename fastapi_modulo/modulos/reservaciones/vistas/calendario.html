@@ -1,0 +1,495 @@
+<div class="res-container">
+
+  <!-- Header -->
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+      <a href="/reservaciones" class="btn btn-sm btn-outline-secondary">
+        <i class="fa-solid fa-arrow-left me-1"></i> Volver
+      </a>
+      <div>
+        <span class="fw-bold fs-5">
+          <i class="fa-solid fa-user-tie me-1" style="color:#1a6b3c;"></i>
+          __EJECUTIVO_NAME__
+        </span>
+        <span class="text-muted small ms-2">· Bloques de <strong>__BLOQUE_MIN__ min</strong></span>
+      </div>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      <button class="btn btn-sm btn-outline-secondary" id="btn-sem-prev" aria-label="Semana anterior">
+        <i class="fa-solid fa-chevron-left"></i>
+      </button>
+      <span id="cal-range-label" class="small fw-semibold" style="min-width:190px;text-align:center;">–</span>
+      <button class="btn btn-sm btn-outline-secondary" id="btn-sem-next" aria-label="Semana siguiente">
+        <i class="fa-solid fa-chevron-right"></i>
+      </button>
+      <button class="btn btn-sm btn-outline-success ms-1" id="btn-hoy">Hoy</button>
+    </div>
+  </div>
+
+  <!-- Leyenda -->
+  <div class="d-flex align-items-center gap-4 mb-3 flex-wrap">
+    <span class="small d-flex align-items-center gap-1">
+      <span class="cal-dot cal-dot-libre"></span> Disponible
+    </span>
+    <span class="small d-flex align-items-center gap-1">
+      <span class="cal-dot cal-dot-ocupado"></span> Ocupado
+    </span>
+    <span class="small d-flex align-items-center gap-1">
+      <span class="cal-dot cal-dot-descanso"></span> Descanso
+    </span>
+  </div>
+
+  <!-- Grid semanal: 7 columnas -->
+  <div class="row g-2" id="cal-week-grid">
+    <div class="col-12 text-center text-muted py-5">
+      <i class="fa-solid fa-spinner fa-spin me-2"></i> Cargando agenda...
+    </div>
+  </div>
+
+</div><!-- /res-container -->
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     MODAL: Nueva Cita desde Calendario
+════════════════════════════════════════════════════════════ -->
+<div class="modal fade" id="modalCalCita" tabindex="-1" aria-labelledby="modalCalCitaLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header res-modal-header">
+        <h5 class="modal-title" id="modalCalCitaLabel">
+          <i class="fa-solid fa-calendar-plus me-2"></i> Nueva Cita
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-light border d-flex align-items-center gap-2 mb-3 py-2" id="cal-slot-info">
+          <i class="fa-solid fa-clock" style="color:#1a6b3c;"></i>
+          <span class="small fw-semibold" id="cal-slot-info-text">—</span>
+        </div>
+        <div class="row g-3">
+          <div class="col-12">
+            <label class="form-label fw-semibold">Asunto <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="cal-cita-name" placeholder="Ej: Consulta de crédito">
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-semibold">Nombre del cliente <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="cal-cita-persona" placeholder="Juan Pérez">
+          </div>
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-semibold">Teléfono</label>
+            <input type="tel" class="form-control" id="cal-cita-celular" placeholder="+52 999 000 0000">
+          </div>
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-semibold">Correo</label>
+            <input type="email" class="form-control" id="cal-cita-email" placeholder="cliente@correo.com">
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-semibold">Notas</label>
+            <textarea class="form-control" id="cal-cita-notes" rows="2" placeholder="Información adicional..."></textarea>
+          </div>
+        </div>
+        <div id="cal-cita-error" class="alert alert-danger mt-3 d-none small"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn res-btn-primary" id="btn-cal-guardar">
+          <i class="fa-solid fa-floppy-disk me-1"></i> Guardar Cita
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     STYLES
+════════════════════════════════════════════════════════════ -->
+<style>
+  :root {
+    --res-primary: #1a6b3c;
+    --res-primary-dark: #14532d;
+    --res-primary-light: #d1fae5;
+    --res-primary-mid: #166534;
+  }
+
+  .res-container { padding: 1.5rem; }
+
+  .res-btn-primary {
+    background-color: var(--res-primary);
+    border-color: var(--res-primary);
+    color: #fff;
+  }
+  .res-btn-primary:hover {
+    background-color: var(--res-primary-dark);
+    border-color: var(--res-primary-dark);
+    color: #fff;
+  }
+
+  .res-modal-header {
+    background: linear-gradient(135deg, var(--res-primary) 0%, var(--res-primary-mid) 100%);
+    color: #fff;
+  }
+
+  /* Dots de leyenda */
+  .cal-dot {
+    display: inline-block;
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+  }
+  .cal-dot-libre   { background: var(--res-primary); }
+  .cal-dot-ocupado { background: #ef4444; }
+  .cal-dot-descanso { background: #d1d5db; }
+
+  /* Tarjeta día */
+  .cal-day-card { overflow: hidden; }
+
+  .cal-day-header {
+    background: var(--res-primary-light);
+    color: var(--res-primary-dark);
+    font-weight: 700;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 0.45rem 0.75rem;
+    border-bottom: 1px solid #bbf7d0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .cal-day-header.cal-hoy {
+    background: var(--res-primary);
+    color: #fff;
+  }
+  .cal-day-header .cal-fecha-num {
+    font-size: 1.05rem;
+    font-weight: 800;
+  }
+
+  /* Slot disponible */
+  .cal-slot {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0.28rem 0.75rem;
+    font-size: 0.82rem;
+    border-bottom: 1px solid #f0fdf4;
+    transition: background 0.1s;
+  }
+  .cal-slot:last-child { border-bottom: none; }
+
+  .cal-slot.cal-libre {
+    cursor: pointer;
+  }
+  .cal-slot.cal-libre:hover {
+    background: #f0fdf4;
+  }
+  .cal-slot.cal-libre:active {
+    background: var(--res-primary-light);
+  }
+
+  .cal-slot.cal-ocupado {
+    background: #fef2f2;
+    cursor: default;
+  }
+
+  .cal-slot-ind {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .cal-libre  .cal-slot-ind { background: var(--res-primary); }
+  .cal-ocupado .cal-slot-ind { background: #ef4444; }
+
+  .cal-slot-hora {
+    font-weight: 600;
+    min-width: 40px;
+    color: var(--res-primary-dark);
+  }
+  .cal-ocupado .cal-slot-hora { color: #b91c1c; }
+
+  .cal-slot-etiqueta {
+    font-size: 0.72rem;
+    color: #9ca3af;
+  }
+
+  /* Día en descanso */
+  .cal-descanso-body {
+    min-height: 72px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f9fafb;
+    color: #9ca3af;
+    font-size: 0.8rem;
+    gap: 4px;
+  }
+
+  /* Cargando */
+  .cal-loading-body {
+    min-height: 72px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #9ca3af;
+    font-size: 0.8rem;
+  }
+
+  @media (max-width: 576px) {
+    .res-container { padding: 0.75rem; }
+  }
+</style>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     SCRIPT
+════════════════════════════════════════════════════════════ -->
+<script>
+(function () {
+  'use strict';
+
+  // Inyectados desde el controlador Python
+  const EJECUTIVO_ID = __EJECUTIVO_ID__;
+  const BLOQUE_MIN   = __BLOQUE_MIN__;
+
+  const DIAS_CORTO = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+  const MESES      = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+
+  let _weekStart             = getWeekStart(new Date());
+  let _selectedDatetimeStr   = '';
+  let _selectedLabel         = '';
+
+  // ── Utilidades de fecha ────────────────────────────────────
+
+  function getWeekStart(d) {
+    const date = new Date(d);
+    const dow  = date.getDay();            // 0 = domingo
+    const diff = (dow === 0) ? -6 : 1 - dow;
+    date.setDate(date.getDate() + diff);
+    date.setHours(0, 0, 0, 0);
+    return date;
+  }
+
+  function addDays(date, n) {
+    const d = new Date(date);
+    d.setDate(d.getDate() + n);
+    return d;
+  }
+
+  function toYMD(date) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  function isToday(date) {
+    const hoy = new Date();
+    return date.getFullYear() === hoy.getFullYear() &&
+           date.getMonth()    === hoy.getMonth()    &&
+           date.getDate()     === hoy.getDate();
+  }
+
+  // ── Seguridad: escape HTML ─────────────────────────────────
+
+  function escHtml(str) {
+    if (str == null) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  // ── Fetch helper ───────────────────────────────────────────
+
+  async function fetchJSON(url, opts = {}) {
+    const res = await fetch(url, {
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      ...opts,
+    });
+    if (!res.ok) {
+      let detail = `HTTP ${res.status}`;
+      try { const j = await res.json(); detail = j.detail || detail; } catch {}
+      throw new Error(detail);
+    }
+    return res.json();
+  }
+
+  // ── Label de rango semanal ─────────────────────────────────
+
+  function updateRangeLabel() {
+    const fin = addDays(_weekStart, 6);
+    document.getElementById('cal-range-label').textContent =
+      `${_weekStart.getDate()} ${MESES[_weekStart.getMonth()]} – ` +
+      `${fin.getDate()} ${MESES[fin.getMonth()]} ${fin.getFullYear()}`;
+  }
+
+  // ── Carga semana ───────────────────────────────────────────
+
+  async function loadWeek() {
+    const grid = document.getElementById('cal-week-grid');
+    // Skeleton mientras carga
+    grid.innerHTML = Array.from({ length: 7 }, (_, i) => {
+      const fecha = addDays(_weekStart, i);
+      return renderDayCard(fecha, null, true);
+    }).join('');
+
+    updateRangeLabel();
+
+    // Fetch paralelo de los 7 días
+    const requests = Array.from({ length: 7 }, (_, i) => {
+      const fecha = addDays(_weekStart, i);
+      return fetchJSON(`/api/reservaciones/ejecutivos/${EJECUTIVO_ID}/slots?fecha=${toYMD(fecha)}`)
+        .then(r => ({ fecha, slots: r.success ? r.data : [] }))
+        .catch(() => ({ fecha, slots: null }));
+    });
+
+    const results = await Promise.all(requests);
+    grid.innerHTML = results.map(({ fecha, slots }) => renderDayCard(fecha, slots, false)).join('');
+  }
+
+  // ── Render: tarjeta de un día ──────────────────────────────
+
+  function renderDayCard(fecha, slots, loading) {
+    const dow      = fecha.getDay();
+    const diaCorto = DIAS_CORTO[dow];
+    const diaNum   = fecha.getDate();
+    const hoy      = isToday(fecha);
+
+    const headerClass = `cal-day-header${hoy ? ' cal-hoy' : ''}`;
+
+    let body;
+    if (loading) {
+      body = `<div class="cal-loading-body"><i class="fa-solid fa-spinner fa-spin me-1"></i></div>`;
+    } else if (slots === null) {
+      body = `<div class="cal-descanso-body"><i class="fa-solid fa-triangle-exclamation me-1"></i>Error</div>`;
+    } else if (slots.length === 0) {
+      body = `<div class="cal-descanso-body"><i class="fa-solid fa-moon me-1"></i>Descanso</div>`;
+    } else {
+      const fechaYMD  = toYMD(fecha);
+      const diaLabel  = `${diaCorto} ${diaNum} ${MESES[fecha.getMonth()]}`;
+      body = slots.map(s => {
+        const cls  = s.disponible ? 'cal-libre' : 'cal-ocupado';
+        const etiq = s.disponible ? '' : `<span class="cal-slot-etiqueta">Ocupado</span>`;
+        const dtSafe = escHtml(s.datetime_str);
+        const horaSafe = escHtml(s.hora);
+        const labelSafe = escHtml(diaLabel);
+        const click = s.disponible
+          ? `onclick="calApp.seleccionarSlot('${dtSafe}','${horaSafe}','${labelSafe}')"`
+          : '';
+        return `
+          <div class="cal-slot ${cls}" ${click} role="${s.disponible ? 'button' : 'presentation'}"
+               title="${s.disponible ? 'Crear cita a las ' + horaSafe : 'Slot ocupado'}">
+            <span class="cal-slot-ind"></span>
+            <span class="cal-slot-hora">${horaSafe}</span>
+            ${etiq}
+          </div>`;
+      }).join('');
+    }
+
+    return `
+      <div class="col-6 col-md-4 col-lg-3 col-xl-2">
+        <div class="card border-0 shadow-sm h-100 cal-day-card">
+          <div class="${headerClass}">
+            <span>${escHtml(diaCorto)}</span>
+            <span class="cal-fecha-num">${diaNum}</span>
+          </div>
+          <div>${body}</div>
+        </div>
+      </div>`;
+  }
+
+  // ── Selección de slot → abrir modal ───────────────────────
+
+  function seleccionarSlot(datetimeStr, hora, diaLabel) {
+    _selectedDatetimeStr = datetimeStr;
+    _selectedLabel       = `${diaLabel} a las ${hora}`;
+
+    document.getElementById('cal-slot-info-text').textContent = _selectedLabel;
+
+    ['cal-cita-name', 'cal-cita-persona', 'cal-cita-celular', 'cal-cita-email', 'cal-cita-notes']
+      .forEach(id => { document.getElementById(id).value = ''; });
+
+    const errEl = document.getElementById('cal-cita-error');
+    errEl.textContent = '';
+    errEl.classList.add('d-none');
+
+    new bootstrap.Modal(document.getElementById('modalCalCita')).show();
+    document.getElementById('cal-cita-name').focus();
+  }
+
+  // ── Guardar cita ───────────────────────────────────────────
+
+  async function guardarCita() {
+    const name    = document.getElementById('cal-cita-name').value.trim();
+    const persona = document.getElementById('cal-cita-persona').value.trim();
+    const errEl   = document.getElementById('cal-cita-error');
+    errEl.classList.add('d-none');
+
+    if (!name)    { showErr(errEl, 'El asunto es requerido.'); return; }
+    if (!persona) { showErr(errEl, 'El nombre del cliente es requerido.'); return; }
+    if (!_selectedDatetimeStr) { showErr(errEl, 'No hay slot seleccionado.'); return; }
+
+    const btn = document.getElementById('btn-cal-guardar');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Guardando...';
+
+    const payload = {
+      name,
+      nombre_persona:  persona,
+      celular_persona: document.getElementById('cal-cita-celular').value.trim(),
+      email_persona:   document.getElementById('cal-cita-email').value.trim(),
+      start_datetime:  _selectedDatetimeStr,
+      ejecutivo_id:    EJECUTIVO_ID,
+      notes:           document.getElementById('cal-cita-notes').value.trim(),
+    };
+
+    try {
+      const r = await fetchJSON('/api/reservaciones/citas', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+      if (!r.success) throw new Error(r.detail || 'Error al guardar');
+      bootstrap.Modal.getInstance(document.getElementById('modalCalCita')).hide();
+      loadWeek();
+    } catch (e) {
+      showErr(errEl, e.message || 'Error al guardar la cita');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fa-solid fa-floppy-disk me-1"></i> Guardar Cita';
+    }
+  }
+
+  function showErr(el, msg) {
+    el.textContent = msg;
+    el.classList.remove('d-none');
+  }
+
+  // ── Navegación ─────────────────────────────────────────────
+
+  document.addEventListener('DOMContentLoaded', function () {
+    document.getElementById('btn-sem-prev').addEventListener('click', function () {
+      _weekStart = addDays(_weekStart, -7);
+      loadWeek();
+    });
+    document.getElementById('btn-sem-next').addEventListener('click', function () {
+      _weekStart = addDays(_weekStart, 7);
+      loadWeek();
+    });
+    document.getElementById('btn-hoy').addEventListener('click', function () {
+      _weekStart = getWeekStart(new Date());
+      loadWeek();
+    });
+    document.getElementById('btn-cal-guardar').addEventListener('click', guardarCita);
+  });
+
+  // ── API pública ────────────────────────────────────────────
+  window.calApp = { seleccionarSlot, guardarCita };
+
+  // ── Init ───────────────────────────────────────────────────
+  loadWeek();
+
+})();
+</script>

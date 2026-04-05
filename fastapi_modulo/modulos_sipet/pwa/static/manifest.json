@@ -14,14 +14,28 @@
   "categories": ["business", "productivity", "utilities"],
   "shortcuts": [
     {
-      "name": "Entrar",
-      "short_name": "Login",
-      "url": "/login"
+      "name": "Dashboard",
+      "short_name": "Inicio",
+      "url": "/dashboard",
+      "icons": [{ "src": "/static/icons/icon-96x96.png", "sizes": "96x96" }]
     },
     {
-      "name": "Registro",
-      "short_name": "Registro",
-      "url": "/register"
+      "name": "Conversaciones",
+      "short_name": "Mensajes",
+      "url": "/conversations",
+      "icons": [{ "src": "/static/icons/icon-96x96.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Notificaciones",
+      "short_name": "Alertas",
+      "url": "/notifications",
+      "icons": [{ "src": "/static/icons/icon-96x96.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Actividades",
+      "short_name": "Actividades",
+      "url": "/activities",
+      "icons": [{ "src": "/static/icons/icon-96x96.png", "sizes": "96x96" }]
     }
   ],
   "icons": [

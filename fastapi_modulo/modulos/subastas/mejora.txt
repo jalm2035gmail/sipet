@@ -1,0 +1,415 @@
+PLAN DE TRABAJO — MÓDULO SUBASTAS
+Fecha: 2026-04-01
+Estado del módulo: base funcional construida, falta completar ciclo completo
+
+════════════════════════════════════════════════════════════════
+DIAGNÓSTICO DEL ESTADO ACTUAL
+════════════════════════════════════════════════════════════════
+
+Lo que YA EXISTE:
+  modelos/db_models.py     → Auction, Lot, Bidder, AuctionRegistration,
+                             Bid, Award, Payment, AuctionEvent  (completo en estructura)
+  modelos/schemas.py       → Schemas de entrada básicos (Create/Update/Out parcial)
+  modelos/store.py         → Funciones CRUD principales (incompleto)
+  controladores/subastas.py→ Router FastAPI con ~14 endpoints + vista HTML
+  vistas/subastas.html     → Dashboard HTML básico (template plano)
+  static/css, static/js    → Archivos vacíos o mínimos
+  tests/                   → Solo pruebas de estructura (2 tests)
+
+PROBLEMAS CRÍTICOS ENCONTRADOS:
+  [BUG-1] store.py línea 188: `from datetime import timedelta` está DESPUÉS
+          de ser usada en línea 179 dentro de place_bid(). Fallo en runtime.
+  [BUG-2] close_auction() ignora reserve_price: si la mejor puja no alcanza
+          el precio de reserva, debe marcar la subasta como 'deserted', no 'awarded'.
+  [BUG-3] place_bid() no tiene bloqueo concurrente: dos pujas simultáneas
+          pueden pasar ambas la validación de incremento mínimo. Race condition.
+  [BUG-4] Award no tiene ORM relationship a Bidder (solo FK sin relationship).
+  [BUG-5] Payment no tiene ORM relationship a Award (solo FK sin relationship).
+
+BRECHAS FUNCIONALES:
+  - Sin endpoints GET para lotes, postores, registros, pagos, eventos
+  - Sin transiciones explícitas de estado (publicar, cancelar, suspender)
+  - Sin aprobación de postores vía endpoint dedicado
+  - Sin listado de pujas por subasta
+  - Sin bitácora/auditoría vía API
+  - Sin lógica de entrega (Delivery model ausente)
+  - Sin schemas de salida completos (LotOut, BidderOut, AwardOut, etc.)
+  - Sin paginación en ningún listado
+  - Sin frontend funcional (JS vacío, HTML estático)
+  - Sin pruebas funcionales de reglas de negocio
+
+════════════════════════════════════════════════════════════════
+PLAN DE TRABAJO — POR FASES
+════════════════════════════════════════════════════════════════
+
+FASE 1 — CORRECCIONES CRÍTICAS (bugs y consistencia)
+Prioridad: BLOQUEANTE — hacer primero
+────────────────────────────────────────────────────
+
+  Tarea 1.1 — Corregir import de timedelta en store.py
+    Archivo: modelos/store.py
+    Cambio: mover `from datetime import timedelta` al bloque de imports del inicio
+    Riesgo: sin esta corrección, place_bid() falla en producción
+
+  Tarea 1.2 — Aplicar reserve_price en close_auction()
+    Archivo: modelos/store.py → función close_auction()
+    Lógica: si highest.amount < reserve_price de la subasta → estado = deserted
+    Impacto: regla de negocio central, hoy rota silenciosamente
+
+  Tarea 1.3 — Agregar ORM relationships faltantes
+    Archivo: modelos/db_models.py
+    Cambios:
+      Award → agregar relationship a Bidder (back_populates='awards')
+      Bidder → agregar awards: Mapped[list['Award']]
+      Payment → agregar relationship a Award (back_populates='payments')
+      Award  → agregar payments: Mapped[list['Payment']]
+
+  Tarea 1.4 — Corrección de concurrencia en place_bid()
+    Archivo: modelos/store.py → función place_bid()
+    Cambio: usar SELECT ... WITH FOR UPDATE en la consulta de _current_highest_bid
+            cuando la sesión lo soporte, o agregar bloqueo a nivel de fila con
+            db.execute(select(Auction).where(...).with_for_update())
+    Nota: SQLite no soporta FOR UPDATE; documentar que en producción debe ser
+          PostgreSQL y que esta función necesita transacción serializable.
+
+Entregable: store.py, db_models.py corregidos y tests que cubran los 4 bugs.
+
+────────────────────────────────────────────────────
+FASE 2 — SCHEMAS DE SALIDA COMPLETOS
+Prioridad: ALTA — necesaria para las fases siguientes
+────────────────────────────────────────────────────
+
+  Tarea 2.1 — Agregar schemas Out faltantes en schemas.py
+    LotOut: id, auction_id, code, name, category, quantity, base_price,
+            reserve_price, status_note, image_url
+    BidderOut: id, full_name, email, phone, document_id, state,
+               guarantee_amount, is_active, created_at
+    RegistrationOut: id, auction_id, bidder_id, is_authorized,
+                     approved_by, approved_at, created_at
+    AwardOut: id, auction_id, bidder_id, winning_bid_id, final_amount,
+              state, awarded_at, due_at, notes
+    PaymentOut: id, award_id, amount, state, method, reference, paid_at
+    EventOut: id, auction_id, event_type, actor, description, created_at
+    AuctionDetail (extendido): incluir lots, highest_bid, award, bids_count
+
+  Tarea 2.2 — Agregar schemas de actualización faltantes
+    BidderUpdate: full_name, phone, document_id, state, guarantee_amount
+    RegistrationApprove: approved_by (para endpoint de aprobación)
+    LotUpdate: nombre, descripción, categoría, precios, imagen
+
+  Tarea 2.3 — Agregar schema de paginación reutilizable
+    PaginatedResponse[T]: items, total, page, page_size
+
+Entregable: schemas.py completo con todos los modelos de entrada y salida.
+
+────────────────────────────────────────────────────
+FASE 3 — COMPLETAR CAPA STORE (lógica de negocio)
+Prioridad: ALTA
+────────────────────────────────────────────────────
+
+  Tarea 3.1 — Funciones de Lotes
+    get_lot(db, lot_id) → Lot | None
+    list_lots(db, auction_id) → list[Lot]
+    update_lot(db, lot_id, data: LotUpdate) → Lot
+    delete_lot(db, lot_id) → None  [solo si subasta en borrador]
+
+  Tarea 3.2 — Funciones de Postores
+    list_bidders(db, state, limit, offset) → list[Bidder]
+    get_bidder(db, bidder_id) → Bidder | None
+    update_bidder(db, bidder_id, data: BidderUpdate) → Bidder
+    approve_bidder(db, bidder_id, actor) → Bidder
+
+  Tarea 3.3 — Funciones de Registros
+    list_registrations(db, auction_id) → list[AuctionRegistration]
+    approve_registration(db, registration_id, actor) → AuctionRegistration
+    reject_registration(db, registration_id, actor) → AuctionRegistration
+
+  Tarea 3.4 — Funciones de Pujas
+    list_bids(db, auction_id, valid_only=True) → list[Bid]
+    get_bid(db, bid_id) → Bid | None
+
+  Tarea 3.5 — Funciones de Transición de Estado de Subasta
+    publish_auction(db, auction_id, actor) → Auction
+      [draft/scheduled → published, valida fechas]
+    suspend_auction(db, auction_id, actor, reason) → Auction
+    cancel_auction(db, auction_id, actor, reason) → Auction
+    set_live(db, auction_id, actor) → Auction  [published → live]
+
+  Tarea 3.6 — Funciones de Adjudicación y Entrega
+    get_award(db, award_id) → Award | None
+    list_awards(db, state, limit) → list[Award]
+    reassign_award(db, award_id, new_bidder_id, actor) → Award
+      [cuando el ganador no paga, reasignar al siguiente postor]
+    mark_delivery(db, award_id, actor, notes) → Award
+
+  Tarea 3.7 — Funciones de Pagos
+    list_payments(db, award_id) → list[Payment]
+    get_payment(db, payment_id) → Payment | None
+    update_payment_state(db, payment_id, state, actor) → Payment
+
+  Tarea 3.8 — Funciones de Auditoría
+    list_events(db, auction_id, event_type, limit) → list[AuctionEvent]
+
+  Tarea 3.9 — Dashboard Stats mejorado
+    get_dashboard_stats(db) → dict  [agregar: tasa conversión, monto promedio,
+    top postores, subastas desiertas, pagos pendientes, tiempo promedio cierre]
+
+Entregable: store.py completo y autocontenido.
+
+────────────────────────────────────────────────────
+FASE 4 — COMPLETAR ENDPOINTS API
+Prioridad: ALTA
+────────────────────────────────────────────────────
+
+  Tarea 4.1 — Endpoints de Lotes
+    GET  /api/lots?auction_id=X
+    GET  /api/lots/{lot_id}
+    PATCH /api/lots/{lot_id}
+    DELETE /api/lots/{lot_id}
+
+  Tarea 4.2 — Endpoints de Postores
+    GET  /api/bidders
+    GET  /api/bidders/{bidder_id}
+    PATCH /api/bidders/{bidder_id}
+    POST /api/bidders/{bidder_id}/approve
+
+  Tarea 4.3 — Endpoints de Registros
+    GET  /api/registrations?auction_id=X
+    POST /api/registrations/{registration_id}/approve
+    POST /api/registrations/{registration_id}/reject
+
+  Tarea 4.4 — Endpoints de Pujas
+    GET  /api/auctions/{auction_id}/bids
+
+  Tarea 4.5 — Endpoints de Transición de Estado
+    POST /api/auctions/{auction_id}/publish
+    POST /api/auctions/{auction_id}/suspend
+    POST /api/auctions/{auction_id}/cancel
+    POST /api/auctions/{auction_id}/live
+
+  Tarea 4.6 — Endpoints de Adjudicaciones
+    GET  /api/awards
+    GET  /api/awards/{award_id}
+    POST /api/awards/{award_id}/reassign
+    POST /api/awards/{award_id}/deliver
+
+  Tarea 4.7 — Endpoints de Pagos
+    GET  /api/payments?award_id=X
+    GET  /api/payments/{payment_id}
+    PATCH /api/payments/{payment_id}/state
+
+  Tarea 4.8 — Endpoints de Auditoría
+    GET  /api/auctions/{auction_id}/events
+
+  Tarea 4.9 — Endpoint de Dashboard JSON
+    GET  /api/dashboard  (respuesta JSON para consumo por el frontend)
+
+Entregable: controladores/subastas.py con ~35 endpoints documentados.
+
+────────────────────────────────────────────────────
+FASE 5 — MODELO DE ENTREGA (nuevo modelo)
+Prioridad: MEDIA
+────────────────────────────────────────────────────
+
+  Tarea 5.1 — Agregar modelo Delivery en db_models.py
+    Campos: id, award_id (FK), scheduled_at, delivered_at, received_by,
+            delivery_notes, evidence_url, state (pending/scheduled/delivered)
+
+  Tarea 5.2 — Agregar DeliveryCreate, DeliveryOut en schemas.py
+
+  Tarea 5.3 — Agregar funciones en store.py
+    create_delivery(db, data) → Delivery
+    confirm_delivery(db, delivery_id, actor, notes) → Delivery
+
+  Tarea 5.4 — Agregar endpoints
+    POST /api/deliveries
+    GET  /api/deliveries/{delivery_id}
+    POST /api/deliveries/{delivery_id}/confirm
+
+Entregable: ciclo comercial completo: subasta → adjudicación → pago → entrega.
+
+────────────────────────────────────────────────────
+FASE 6 — FRONTEND FUNCIONAL
+Prioridad: MEDIA
+────────────────────────────────────────────────────
+
+  Tarea 6.1 — Dashboard administrativo (subastas.html + subastas.js)
+    - KPIs en tarjetas (total subastas, activas, adjudicadas, monto total)
+    - Tabla de subastas con filtro por estado
+    - Modal para crear subasta
+    - Acción rápida: publicar / cerrar desde la tabla
+    - Actualización de stats vía fetch al endpoint /api/dashboard
+
+  Tarea 6.2 — Vista de detalle de subasta
+    - Información de la subasta (fechas, estado, tipo)
+    - Lista de lotes
+    - Lista de postores registrados con estado
+    - Historial de pujas en tiempo real (polling cada 5s o WebSocket)
+    - Panel de mejor postor y tiempo restante
+    - Botón de cierre manual
+
+  Tarea 6.3 — Vista de postores (admin)
+    - Lista con búsqueda y filtro por estado
+    - Formulario de aprobación/rechazo
+    - Detalle con historial de participación
+
+  Tarea 6.4 — Vista de adjudicaciones y pagos
+    - Lista de adjudicaciones con estado de pago
+    - Registrar pago desde la vista
+    - Indicador de pagos vencidos
+
+  Tarea 6.5 — CSS (subastas.css)
+    - Estilo coherente con el ecosistema SIPET
+    - Estilos para estados de subasta (colores por estado)
+    - Timer visual para subastas activas
+    - Responsivo básico
+
+Entregable: frontend operativo para el ciclo administrativo completo.
+
+────────────────────────────────────────────────────
+FASE 7 — PRUEBAS FUNCIONALES
+Prioridad: ALTA (paralelizable con fases 3-4)
+────────────────────────────────────────────────────
+
+  Tarea 7.1 — tests/test_store_business_rules.py
+    test_bid_below_minimum_rejected()
+    test_bid_before_start_rejected()
+    test_bid_after_end_rejected()
+    test_bid_unapproved_bidder_rejected()
+    test_close_with_reserve_not_met_is_deserted()
+    test_close_with_winning_bid_is_awarded()
+    test_auto_extend_on_late_bid()
+    test_duplicate_lot_code_rejected()
+    test_duplicate_registration_rejected()
+    test_payment_marks_award_paid_when_full()
+    test_payment_marks_award_partial_when_incomplete()
+
+  Tarea 7.2 — tests/test_concurrency.py
+    test_concurrent_bids_only_one_wins_increment()
+      [usar threading o asyncio para simular race condition]
+
+  Tarea 7.3 — tests/test_state_transitions.py
+    test_publish_auction_changes_state()
+    test_cancel_published_auction()
+    test_suspend_live_auction()
+    test_cannot_bid_on_cancelled_auction()
+    test_reassign_award_after_nonpayment()
+
+  Tarea 7.4 — tests/test_api_endpoints.py
+    Cobertura de los endpoints principales con TestClient de FastAPI
+
+Entregable: suite de pruebas con cobertura >80% del store y endpoints críticos.
+
+────────────────────────────────────────────────────
+FASE 8 — AUTOMATIZACIONES Y CONFIGURACIÓN  ✅ COMPLETADA 2026-04-01
+Prioridad: BAJA (segunda iteración)
+────────────────────────────────────────────────────
+
+  Tarea 8.1 — Modelo ConfiguracionSubastas en db_models.py  ✅
+    Tabla: sub_configuracion (singleton id=1)
+    Campos: min_increment_global, extension_seconds, payment_days,
+            auto_award, default_visibility, updated_at
+    + schemas ConfiguracionOut / ConfiguracionUpdate en schemas.py
+    + funciones get_config() / update_config() en store.py
+    + endpoints GET /api/config y PATCH /api/config en controladores
+
+  Tarea 8.2 — Scheduler de cierres automáticos  ✅
+    Archivo: modelos/scheduler.py → tick_close_auctions(db)
+    Busca subastas {live, published} con end_at < ahora → close_auction()
+
+  Tarea 8.3 — Scheduler de publicación automática  ✅
+    Archivo: modelos/scheduler.py → tick_publish_scheduled(db)
+    Busca subastas scheduled con start_at <= ahora → publish_auction()
+    Funciones adicionales:
+      run_all_ticks(db) → ejecuta los tres ticks en secuencia
+      start_scheduler(session_factory, interval_seconds=60) → asyncio.Task
+      stop_scheduler() → cancela el task limpiamente
+    + endpoint POST /api/scheduler/tick para disparo manual
+
+  Tarea 8.4 — Hooks de notificación  ✅
+    Archivo: modelos/notificaciones.py
+    Interface: HookRegistry con on_bid_placed, on_auction_awarded,
+               on_payment_due, on_award_expired
+    Uso como decorador o función; instancia global `registry`
+    Los handlers se ejecutan sincrónicamente; errores capturados y logueados
+
+  Tarea 8.5 — Alertas de vencimiento de pago  ✅
+    Archivo: modelos/store.py → expire_overdue_awards(db)
+    Marca award como AwardState.expired si due_at < ahora y no pagado
+    Integrado en run_all_ticks() del scheduler
+
+Entregable: automatizaciones básicas del ciclo de vida de la subasta.
+  Archivos nuevos:  modelos/scheduler.py, modelos/notificaciones.py
+  Archivos mod.:    modelos/db_models.py, modelos/schemas.py,
+                    modelos/store.py, controladores/subastas.py
+
+════════════════════════════════════════════════════════════════
+ORDEN DE EJECUCIÓN RECOMENDADO
+════════════════════════════════════════════════════════════════
+
+Bloque A (hoy, crítico):
+  Fase 1 completa → arreglar los 5 bugs antes de cualquier otra cosa
+
+Bloque B (esta semana):
+  Fase 2 → schemas completos
+  Fase 3 → store completo
+  En paralelo: Fase 7.1 y 7.3 → pruebas de reglas y transiciones
+
+Bloque C (siguiente semana):
+  Fase 4 → endpoints completos
+  Fase 7.4 → pruebas de API
+  Fase 5 → modelo de entrega
+
+Bloque D (segunda iteración):
+  Fase 6 → frontend funcional
+  Fase 7.2 → pruebas de concurrencia
+  Fase 8 → automatizaciones
+
+════════════════════════════════════════════════════════════════
+DECISIONES ABIERTAS (requieren confirmación antes de implementar)
+════════════════════════════════════════════════════════════════
+
+D1. Motor de base de datos en producción:
+    ¿SQLite (desarrollo) o PostgreSQL (producción)?
+    Impacto directo en solución de concurrencia (Fase 1.4).
+    Recomendación: PostgreSQL con SELECT FOR UPDATE.
+
+D2. Adjudicación automática vs manual:
+    ¿close_auction() adjudica automáticamente al cierre (actual) o
+    genera una adjudicación pendiente que un operador confirma?
+    Recomendación: mantener automático con flag configurable.
+
+D3. Multi-lote:
+    Las pujas hoy son a nivel de Auction, no de Lot individual.
+    ¿Soportar pujas por lote dentro de una subasta multi-lote?
+    Impacto: requiere agregar lot_id a Bid y refactorizar la lógica.
+    Recomendación: Segunda iteración, no MVP.
+
+D4. Portal del participante:
+    ¿Vistas separadas para el postor o solo API?
+    Recomendación: Segunda iteración.
+
+D5. WebSocket para pujas en tiempo real:
+    ¿Polling (simple) o WebSocket (complejo)?
+    Recomendación: polling 5s para MVP, WebSocket en segunda iteración.
+
+════════════════════════════════════════════════════════════════
+RESUMEN DE ARCHIVOS A MODIFICAR/CREAR
+════════════════════════════════════════════════════════════════
+
+MODIFICAR:
+  modelos/db_models.py        → Fase 1.3, 5.1
+  modelos/schemas.py          → Fase 2
+  modelos/store.py            → Fase 1.1, 1.2, 1.4, 3.1–3.9
+  controladores/subastas.py   → Fase 4
+  vistas/subastas.html        → Fase 6.1–6.4
+  static/js/subastas.js       → Fase 6.1–6.4
+  static/css/subastas.css     → Fase 6.5
+
+CREAR:
+  tests/test_store_business_rules.py   → Fase 7.1
+  tests/test_state_transitions.py      → Fase 7.3
+  tests/test_api_endpoints.py          → Fase 7.4
+  tests/test_concurrency.py            → Fase 7.2
+
+════════════════════════════════════════════════════════════════

@@ -1473,6 +1473,12 @@ _mount_static_if_exists(
     "fastapi_modulo/modulos/activo_fijo/static",
     name="activo_fijo_static",
 )
+_mount_static_if_exists(
+    app,
+    "/multitienda/static",
+    "fastapi_modulo/modulos/multitienda/static",
+    name="multitienda_static",
+)
 @app.on_event("startup")
 def _initialize_core_schema() -> None:
     if getattr(app.state, "core_schema_initialized", False):

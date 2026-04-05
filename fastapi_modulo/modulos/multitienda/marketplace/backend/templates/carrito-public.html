@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Carrito de compras</title>
+  <link rel="stylesheet" href="/multitienda/static/css/tienda.css" />
+</head>
+<body class="sl-cart-page">
+  <header class="sl-nav" id="sl-nav">
+    <div class="sl-nav-inner">
+      <a class="sl-nav-brand" href="/multitienda/tiendas">
+        <span class="sl-nav-logo-wrap">
+          <img class="sl-nav-logo" src="/static/imagenes/logo_vale.png" alt="Logo" />
+        </span>
+        <span class="sl-nav-brand-name">Multitienda</span>
+      </a>
+      <nav class="sl-nav-links" aria-label="Navegación principal">
+        <a href="/multitienda/tiendas" class="sl-nav-link">Tiendas</a>
+        <a href="/destacados" class="sl-nav-link">Ofertas</a>
+        <a href="/carrito" class="sl-nav-link is-active">Carrito</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="sl-page sl-cart-shell">
+    <section class="sl-cart-hero">
+      <div>
+        <span class="sl-info-kicker">Compra</span>
+        <h1 class="sl-info-title">Carrito de compras</h1>
+        <p class="sl-info-text">Revisa los productos agregados antes de continuar con tu compra.</p>
+      </div>
+      <a class="sl-store-showcase__cta" href="/multitienda/tiendas">Seguir comprando</a>
+    </section>
+
+    <section class="sl-cart-layout">
+      <div class="sl-cart-items" id="sl-cart-items"></div>
+      <aside class="sl-cart-summary" id="sl-cart-summary">
+        <span class="sl-info-kicker">Resumen</span>
+        <h2 class="sl-info-title">Totales</h2>
+        <div class="sl-cart-summary__rows">
+          <div class="sl-cart-summary__row">
+            <span>Productos</span>
+            <strong id="sl-cart-count">0</strong>
+          </div>
+          <div class="sl-cart-summary__row sl-cart-summary__row--total">
+            <span>Total</span>
+            <strong id="sl-cart-total">$0.00</strong>
+          </div>
+        </div>
+        <button class="sl-store-showcase__cta sl-cart-summary__cta" type="button">Continuar compra</button>
+      </aside>
+    </section>
+  </main>
+
+  <script src="/multitienda/static/js/carrito.js"></script>
+</body>
+</html>

@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import JSON, Boolean, Column, DateTime, Integer, String, Text
+from sqlalchemy import JSON, Boolean, Column, DateTime, Float, Integer, String, Text
 
 from fastapi_modulo.core.db import MAIN
 
@@ -29,7 +29,7 @@ class FrontendPage(MAIN):
     title      = Column(String,  nullable=False, default="")
     slug       = Column(String,  nullable=False, unique=True, index=True, default="")
     status     = Column(String,  nullable=False, default="draft", index=True)
-    is_home    = Column(Boolean, default=False, nullable=False)
+    is_home    = Column(Boolean, default=False, nullable=False, index=True)
     gjs_html   = Column(Text,    default="", nullable=False)
     gjs_css    = Column(Text,    default="", nullable=False)
     blocks     = Column(JSON,    default=list, nullable=False)
@@ -105,4 +105,31 @@ class FrontendTasa(MAIN):
     color    = Column(String,  nullable=False, default="#3b82f6")
     unit     = Column(String,  nullable=False, default="% anual")
     position = Column(Integer, nullable=False, default=0, index=True)  # orden en el listado
+
+
+class FrontendGalleryImage(MAIN):
+    """
+    Registro de estado de cada imagen de la galería.
+
+    Estados del ciclo de vida:
+      'uploaded'   — archivo recibido, pendiente de optimizar.
+      'processing' — tarea Celery en curso (optimize_gallery_image).
+      'optimized'  — procesado correctamente; 'url' y 'filename' al día.
+      'failed'     — la tarea falló tras agotar reintentos; ver 'error'.
+
+    El 'id' es un UUID estable que no cambia aunque el 'filename' cambie
+    (ej. abc.png → abc.webp tras la conversión).
+    """
+
+    __tablename__ = "frontend_gallery_images"
+
+    id         = Column(String,  primary_key=True, index=True)   # uuid
+    filename   = Column(String,  nullable=False, index=True)     # nombre actual en disco
+    orig_name  = Column(String,  nullable=False, default="")     # nombre del archivo subido
+    status     = Column(String,  nullable=False, default="uploaded", index=True)
+    url        = Column(String,  nullable=False, default="")
+    size_kb    = Column(Float,   nullable=False, default=0.0)
+    error      = Column(String,  nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 

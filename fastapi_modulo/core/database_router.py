@@ -21,6 +21,7 @@ APP_ENV_DEFAULT = (os.environ.get("APP_ENV") or os.environ.get("ENVIRONMENT") or
 DOMAIN_CONFIG_DIR = Path(os.environ.get("DOMAIN_CONFIG_DIR") or os.path.join(PROJECT_ROOT, "config", "dominios"))
 SIPET_CONFIG_PATH = Path(os.environ.get("SIPET_CONFIG") or os.path.join(PROJECT_ROOT, "sipet.conf"))
 _REQUEST_HOST: ContextVar[str] = ContextVar("sipet_request_host", default="")
+_LOCAL_HOST_ALIASES = {"localhost", "127.0.0.1", "::1"}
 
 
 def _domain_config_files() -> list[Path]:
@@ -42,6 +43,17 @@ def _resolve_preferred_host(host: Optional[str] = None) -> str:
         if normalized:
             return normalized
     return ""
+
+
+def _host_aliases(host: Optional[str]) -> list[str]:
+    normalized = normalize_host(host)
+    if not normalized:
+        return []
+    if normalized in _LOCAL_HOST_ALIASES:
+        return ["localhost", "127.0.0.1", "::1"]
+    if normalized.startswith("www."):
+        return [normalized, normalized[4:]]
+    return [normalized, f"www.{normalized}"]
 
 
 def normalize_host(value: Optional[str]) -> str:
@@ -186,8 +198,8 @@ def _load_global_conf_options() -> Optional[configparser.SectionProxy]:
 
 def resolve_sipet_config_path(host: Optional[str] = None) -> Path:
     normalized_host = _resolve_preferred_host(host)
-    if normalized_host:
-        domain_path = domain_config_path(normalized_host)
+    for candidate in _host_aliases(normalized_host):
+        domain_path = domain_config_path(candidate)
         if domain_path.exists():
             return domain_path
     if SIPET_CONFIG_PATH.exists():
@@ -803,6 +815,9 @@ def load_domain_database_map() -> Dict[str, str]:
             continue
         host, target = entry
         mapping[host] = target
+        if host in _LOCAL_HOST_ALIASES:
+            for alias in _LOCAL_HOST_ALIASES:
+                mapping[alias] = target
         if host.startswith("www."):
             mapping[host[4:]] = target
         else:
@@ -895,6 +910,8 @@ class DatabaseRouter:
         normalized_host = normalize_host(host)
         if not normalized_host:
             return []
+        if normalized_host in _LOCAL_HOST_ALIASES:
+            return ["localhost", "127.0.0.1", "::1"]
         if normalized_host.startswith("www."):
             return [normalized_host, normalized_host[4:]]
         return [normalized_host, f"www.{normalized_host}"]

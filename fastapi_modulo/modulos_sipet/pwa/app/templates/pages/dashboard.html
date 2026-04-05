@@ -1,0 +1,64 @@
+{% extends "app_base.html" %}
+
+{% block title %}Dashboard · {{ app_name }}{% endblock %}
+{% block topbar_title %}Panel de control{% endblock %}
+{% block nav_dashboard %}nav-active{% endblock %}
+
+{% block content %}
+<section class="dash-section">
+  <div class="dash-kpi-grid" id="dash-summary">
+    <div class="dash-kpi-skeleton"></div>
+    <div class="dash-kpi-skeleton"></div>
+    <div class="dash-kpi-skeleton"></div>
+    <div class="dash-kpi-skeleton"></div>
+  </div>
+</section>
+
+<section class="dash-section">
+  <h2 class="section-title">Avance general</h2>
+  <div id="dash-progress">
+    <div class="dash-progress-skeleton"></div>
+    <div class="dash-progress-skeleton"></div>
+  </div>
+</section>
+
+<section class="dash-section">
+  <h2 class="section-title">Planes estratégicos</h2>
+  <div id="dash-plans">
+    <p class="loading-text">Cargando planes…</p>
+  </div>
+</section>
+
+<section class="dash-section">
+  <div class="dash-shortcuts">
+    <a class="shortcut-card" href="/conversations">
+      <span class="shortcut-icon">💬</span>
+      <span>Conversaciones</span>
+    </a>
+    <a class="shortcut-card" href="/notifications">
+      <span class="shortcut-icon">🔔</span>
+      <span>Notificaciones</span>
+    </a>
+    <a class="shortcut-card" href="/activities">
+      <span class="shortcut-icon">📋</span>
+      <span>Actividades</span>
+    </a>
+    <a class="shortcut-card" href="/settings">
+      <span class="shortcut-icon">⚙️</span>
+      <span>Ajustes</span>
+    </a>
+  </div>
+</section>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="/static/js/sipet_dashboard.js"></script>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    SipetDash.init();
+  });
+</script>
+{% endblock %}

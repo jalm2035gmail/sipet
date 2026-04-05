@@ -25,6 +25,7 @@ from fastapi_modulo.core.db import MAIN
 from fastapi_modulo.modulos_sipet.frontend.modelos.frontend_db_models import (
     FrontendBrand,
     FrontendContact,
+    FrontendGalleryImage,
     FrontendPage,
     FrontendPageVersion,
     FrontendTasa,
@@ -52,6 +53,14 @@ _ready_databases: set[str] = set()
 _ready_lock = threading.Lock()
 
 
+def legacy_migration_enabled() -> bool:
+    app_env = (os.environ.get("APP_ENV") or os.environ.get("ENVIRONMENT") or "development").strip().lower()
+    raw = str(os.environ.get("FRONTEND_LEGACY_MIGRATION_ENABLED") or "").strip().lower()
+    if raw:
+        return raw in {"1", "true", "yes", "on", "si", "sí"}
+    return app_env != "production"
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 # SECCIÓN 1 — SCHEMA Y MIGRACIÓN (startup)
 # ══════════════════════════════════════════════════════════════════════════════
@@ -72,6 +81,7 @@ def ensure_frontend_schema(host: Optional[str] = None) -> None:
             FrontendContact.__table__,
             FrontendBrand.__table__,
             FrontendTasa.__table__,
+            FrontendGalleryImage.__table__,
         ],
         checkfirst=True,
     )
@@ -85,6 +95,9 @@ def run_startup_migration() -> None:
     current_host = core_db.get_request_host()
     if not current_host:
         logger.info("Saltando migración startup de frontend: no hay host resuelto todavía.")
+        return
+    if not legacy_migration_enabled():
+        logger.info("Saltando migración startup de frontend: deshabilitada en este entorno.")
         return
     _ensure_frontend_storage_ready(current_host)
 
@@ -124,7 +137,7 @@ def _ensure_frontend_storage_ready(host: Optional[str] = None) -> None:
             return
 
         ensure_frontend_schema(current_host)
-        if current_host:
+        if current_host and legacy_migration_enabled():
             db = core_db.get_session_factory_for_host(current_host)()
             try:
                 _migrate_all_legacy_files(db)
@@ -668,3 +681,136 @@ def save_tasas(items: List[Dict[str, Any]]) -> List[Dict[str, str]]:
 # El esquema y la migración se resuelven cuando ya existe una BD efectiva
 # para el host actual. Esto evita escribir en una BD por defecto equivocada
 # durante el import o el startup sin contexto de sitio.
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SECCIÓN 9 — GALERÍA (estado de imágenes)
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _gallery_image_dict(row: FrontendGalleryImage) -> Dict[str, Any]:
+    return {
+        "id":        row.id,
+        "filename":  row.filename,
+        "orig_name": row.orig_name or "",
+        "status":    row.status,
+        "url":       row.url,
+        "size_kb":   round(row.size_kb or 0.0, 1),
+        "error":     row.error or None,
+    }
+
+
+def create_gallery_image(
+    image_id: str,
+    filename: str,
+    url: str,
+    orig_name: str = "",
+    size_kb: float = 0.0,
+    status: str = "uploaded",
+) -> Dict[str, Any]:
+    """Registra una imagen recién subida con estado inicial."""
+    db = _db()
+    try:
+        from datetime import datetime as _dt
+        row = FrontendGalleryImage(
+            id=image_id,
+            filename=filename,
+            orig_name=orig_name,
+            status=status,
+            url=url,
+            size_kb=size_kb,
+            created_at=_dt.utcnow(),
+            updated_at=_dt.utcnow(),
+        )
+        db.add(row)
+        db.commit()
+        db.refresh(row)
+        return _gallery_image_dict(row)
+    except SQLAlchemyError:
+        db.rollback()
+        raise
+    finally:
+        db.close()
+
+
+def update_gallery_image(
+    image_id: str,
+    *,
+    filename: Optional[str] = None,
+    url: Optional[str] = None,
+    status: Optional[str] = None,
+    size_kb: Optional[float] = None,
+    error: Optional[str] = None,
+) -> Optional[Dict[str, Any]]:
+    """Actualiza campos de una imagen (llamado desde la tarea Celery)."""
+    db = _db()
+    try:
+        row = db.query(FrontendGalleryImage).filter(FrontendGalleryImage.id == image_id).first()
+        if not row:
+            return None
+        if filename is not None:
+            row.filename = filename
+        if url is not None:
+            row.url = url
+        if status is not None:
+            row.status = status
+        if size_kb is not None:
+            row.size_kb = size_kb
+        if error is not None:
+            row.error = error
+        db.commit()
+        db.refresh(row)
+        return _gallery_image_dict(row)
+    except SQLAlchemyError:
+        db.rollback()
+        raise
+    finally:
+        db.close()
+
+
+def list_gallery_images() -> List[Dict[str, Any]]:
+    """Devuelve todas las imágenes ordenadas por fecha descendente."""
+    db = _db()
+    try:
+        rows = (
+            db.query(FrontendGalleryImage)
+            .order_by(FrontendGalleryImage.created_at.desc())
+            .all()
+        )
+        return [_gallery_image_dict(row) for row in rows]
+    finally:
+        db.close()
+
+
+def delete_gallery_image(image_id: str) -> Optional[str]:
+    """
+    Elimina el registro de BD y devuelve el filename para que el
+    controlador pueda borrar el archivo de disco.
+    """
+    db = _db()
+    try:
+        row = db.query(FrontendGalleryImage).filter(FrontendGalleryImage.id == image_id).first()
+        if not row:
+            return None
+        filename = row.filename
+        db.delete(row)
+        db.commit()
+        return filename
+    except SQLAlchemyError:
+        db.rollback()
+        raise
+    finally:
+        db.close()
+
+
+def get_gallery_image_by_filename(filename: str) -> Optional[Dict[str, Any]]:
+    """Busca un registro por filename (útil en la tarea Celery y en DELETE por nombre)."""
+    db = _db()
+    try:
+        row = (
+            db.query(FrontendGalleryImage)
+            .filter(FrontendGalleryImage.filename == filename)
+            .first()
+        )
+        return _gallery_image_dict(row) if row else None
+    finally:
+        db.close()

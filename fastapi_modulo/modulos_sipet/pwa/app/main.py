@@ -14,6 +14,7 @@ from app.api.v1.routers import auth, ml, reports, sipet, users
 from app.core.config import settings
 from app.core.database import Base, engine
 from app import models  # noqa: F401
+from api import build_router as _build_pwa_router   # noqa: E402
 
 logging.basicConfig(
     level=logging.DEBUG if settings.DEBUG else logging.INFO,
@@ -67,6 +68,7 @@ def create_app() -> FastAPI:
     app.include_router(ml.router, prefix="/api/v1/ml", tags=["ml"])
     app.include_router(reports.router, prefix="/api/v1/reports", tags=["reports"])
     app.include_router(sipet.router, prefix="/api/v1/sipet", tags=["sipet"])
+    app.include_router(_build_pwa_router(), prefix="/api/v2/pwa", tags=["pwa-v2"])
 
     def render(request: Request, template_name: str, **context):
         defaults = {
@@ -93,6 +95,33 @@ def create_app() -> FastAPI:
     @app.get("/offline", include_in_schema=False)
     async def offline_page(request: Request):
         return render(request, "pages/offline.html", description="Sin conexión")
+
+    # ── Authenticated app screens (v2) ────────────────────────────────────────
+
+    @app.get("/dashboard", include_in_schema=False)
+    async def dashboard_page(request: Request):
+        return render(request, "pages/dashboard.html", description="Dashboard")
+
+    @app.get("/conversations", include_in_schema=False)
+    async def conversations_page(request: Request):
+        return render(request, "pages/conversations.html", description="Conversaciones")
+
+    @app.get("/conversations/{conv_id}", include_in_schema=False)
+    async def conversation_detail_page(request: Request, conv_id: int):
+        return render(request, "pages/conversation_detail.html",
+                      description="Chat", conv_id=conv_id, conv_title="Conversación")
+
+    @app.get("/notifications", include_in_schema=False)
+    async def notifications_page(request: Request):
+        return render(request, "pages/notifications.html", description="Notificaciones")
+
+    @app.get("/activities", include_in_schema=False)
+    async def activities_page(request: Request):
+        return render(request, "pages/activities.html", description="Actividades")
+
+    @app.get("/settings", include_in_schema=False)
+    async def settings_page(request: Request):
+        return render(request, "pages/settings.html", description="Ajustes")
 
     @app.get("/manifest.webmanifest", include_in_schema=False)
     async def manifest_alias():

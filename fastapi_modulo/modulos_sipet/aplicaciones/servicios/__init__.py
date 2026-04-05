@@ -1,6 +1,7 @@
 from fastapi_modulo.modulos_sipet.aplicaciones.servicios.audit_service import get_protocol_audit_map, sync_protocol_files
 from fastapi_modulo.modulos_sipet.aplicaciones.servicios.catalog_service import decorate_modules_payload
 from fastapi_modulo.modulos_sipet.aplicaciones.servicios.package_service import (
+    apply_staged_entries,
     apply_module_zip,
     get_module_image_path,
     get_module_upload_root,
@@ -24,6 +25,7 @@ __all__ = [
     "build_manifest_source",
     "decorate_modules_payload",
     "ensure_protocol_files",
+    "apply_staged_entries",
     "apply_module_zip",
     "get_module_image_path",
     "get_module_upload_root",

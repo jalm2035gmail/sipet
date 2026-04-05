@@ -13,7 +13,7 @@ MANIFEST = {
     "icon": "fa-solid fa-gear",
     "fafa": "fa-solid fa-gear",
     "website": "https://avancoop.org",
-    "route": "/web",
+    "route": "/ajustes/configuracion",
     "depends": [],
     "data": [
         "README.md",

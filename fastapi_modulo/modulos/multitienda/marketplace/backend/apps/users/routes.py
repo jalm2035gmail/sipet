@@ -258,9 +258,23 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
 
 def require_role(required_role: str):
     def role_checker(user: models.User = Depends(get_current_user)):
-        if user.user_type != required_role:
+        user_type = user.user_type.value if hasattr(user.user_type, "value") else str(user.user_type)
+        if user_type != required_role:
             raise HTTPException(status_code=403, detail="Insufficient permissions")
         return user
+    return role_checker
+
+
+def require_any_role(*required_roles: str):
+    """Accepts users whose user_type is any of the given roles."""
+    roles_set = set(required_roles)
+
+    def role_checker(user: models.User = Depends(get_current_user)):
+        user_type = user.user_type.value if hasattr(user.user_type, "value") else str(user.user_type)
+        if user_type not in roles_set:
+            raise HTTPException(status_code=403, detail="Insufficient permissions")
+        return user
+
     return role_checker
 
 

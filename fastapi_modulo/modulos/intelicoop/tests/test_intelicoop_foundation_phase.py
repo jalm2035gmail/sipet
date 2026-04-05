@@ -297,3 +297,75 @@ def test_foundation_materialize_builds_credit_savings_and_commercial_feature_fam
         assert "abandono_90_dias" in training_abandono["target_labels"]
     finally:
         db.close()
+
+
+def test_consumo_agregado_contract_exposes_privacy_segments_and_financiables(build_client, auth_headers) -> None:
+    client = build_client()
+    headers = auth_headers("Intelicoop", role="admin", user="intelicoop.aggregate")
+
+    socio = client.post(
+        "/api/intelicoop/socios",
+        headers=headers,
+        json={
+            "nombre": "Socio Comercio",
+            "email": "comercio@example.com",
+            "telefono": "555-0199",
+            "direccion": "Zona 9",
+            "segmento": "gran_ahorrador",
+            "sector_economico": "comercio",
+            "ubicacion_estado": "Guatemala",
+            "ubicacion_municipio": "Guatemala",
+        },
+    )
+    assert socio.status_code == 201
+    socio_id = socio.json()["id"]
+
+    credito = client.post(
+        "/api/intelicoop/creditos",
+        headers=headers,
+        json={
+            "socio_id": socio_id,
+            "monto": 3000,
+            "numero_abonos": 12,
+            "periodicidad": "mensual",
+            "ingreso_mensual": 9000,
+            "deuda_actual": 1200,
+            "antiguedad_meses": 36,
+            "estado": "aprobado",
+        },
+    )
+    assert credito.status_code == 201
+
+    cuenta = client.post(
+        "/api/intelicoop/ahorros/cuentas",
+        headers=headers,
+        json={"socio_id": socio_id, "tipo": "ahorro", "saldo": 2800},
+    )
+    assert cuenta.status_code == 201
+    cuenta_id = cuenta.json()["id"]
+
+    transaccion = client.post(
+        "/api/intelicoop/ahorros/transacciones",
+        headers=headers,
+        json={"cuenta_id": cuenta_id, "tipo": "deposito", "monto": 500, "canal": "app"},
+    )
+    assert transaccion.status_code == 201
+
+    materialize = client.post("/api/intelicoop/fundamentos/materializar", headers=headers, json={"cut_type": "daily_close"})
+    assert materialize.status_code == 201
+
+    response = client.get("/api/intelicoop/consumo-agregado/resumen", headers=headers)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["dataset_contract"]["privacy_mode"] == "sin_datos_individuales"
+    assert body["dataset_contract"]["contains_individual_data"] is False
+    assert body["dataset_contract"]["segments_enabled"] == ["comercios", "usuarios", "zonas"]
+    assert body["datasets"]["consumo_agregado"]
+    assert body["datasets"]["segmentacion"]["comercios"]
+    assert body["datasets"]["segmentacion"]["usuarios"]
+    assert body["datasets"]["segmentacion"]["zonas"]
+    assert "socio_nombre" not in str(body["datasets"]["segmentacion"])
+    assert body["scoring_comercial"]["financiables_detectados"] >= 0
+    assert body["entregables"]["tablero_financiero"]["api"] == "/api/intelicoop/dashboard/resumen"
+    assert body["entregables"]["alertas"]["api"] == "/api/intelicoop/batch/alertas"

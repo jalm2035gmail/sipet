@@ -286,12 +286,14 @@ def _response_summary(instance: SurveyInstance, response: SurveyResponse, access
             "schedule_end_at": _dt(instance.schedule_end_at),
             "anonymity_mode": instance.anonymity_mode,
             "audience_mode": instance.audience_mode,
+            "public_link_token": instance.public_link_token,
             "settings_json": instance.settings_json or {},
             "publication_rules_json": instance.publication_rules_json or {},
         },
         "response": _response_dict(response),
         "assignment": _assignment_dict(response.assignment) if response.assignment else None,
         "access_mode": normalized_access_mode,
+        "public_link_token": instance.public_link_token,
         "draft_exists": response.status == "draft" and bool(response.answers_json),
         "quiz": attempt_context,
         "evaluation_360": evaluation_context,
@@ -1169,6 +1171,9 @@ def start_public_response(public_token: str, tenant_id: str, response_key: str =
             tenant_id=tenant_id,
             respondent_key=respondent_key,
         )
+        if response and response.status == "submitted":
+            respondent_key = f"public:{instance.id}:{uuid4().hex}"
+            response = None
         now = datetime.utcnow()
         if not response:
             response = SurveyResponse(

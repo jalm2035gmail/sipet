@@ -1,0 +1,633 @@
+<section class="rep-page" id="repPage">
+
+  <div class="rep-hero">
+    <div>
+      <span class="rep-kicker">SIPET · Operación logística</span>
+      <h1>Repartidores</h1>
+      <p>Controla repartidores, entregas, zonas, incidencias y liquidaciones desde una sola mesa operativa.</p>
+    </div>
+    <div class="rep-actions">
+      <button class="rep-btn rep-btn-primary" id="btnRefreshAll">
+        <i class="fa-solid fa-rotate-right"></i> Actualizar
+      </button>
+    </div>
+  </div>
+
+  <div class="rep-grid-stats">
+    <article class="rep-stat-card"><span>Repartidores activos</span><strong id="statRepartidores">—</strong></article>
+    <article class="rep-stat-card rep-stat-green"><span>Disponibles</span><strong id="statDisponibles">—</strong></article>
+    <article class="rep-stat-card rep-stat-amber"><span>En ruta</span><strong id="statOcupados">—</strong></article>
+    <article class="rep-stat-card"><span>Entregas totales</span><strong id="statEntregas">—</strong></article>
+    <article class="rep-stat-card rep-stat-blue"><span>En tránsito</span><strong id="statTransito">—</strong></article>
+    <article class="rep-stat-card rep-stat-green"><span>Entregadas</span><strong id="statEntregadas">—</strong></article>
+    <article class="rep-stat-card rep-stat-red"><span>Incidencias abiertas</span><strong id="statIncidencias">—</strong></article>
+    <article class="rep-stat-card rep-stat-amber"><span>Liquidaciones borrador</span><strong id="statLiquidaciones">—</strong></article>
+  </div>
+
+  <nav class="rep-tabs">
+    <button class="rep-tab-btn rep-tab-active" data-tab="tabDashboard">
+      <i class="fa-solid fa-chart-pie"></i> Dashboard
+    </button>
+    <button class="rep-tab-btn" data-tab="tabEntregas">
+      <i class="fa-solid fa-box"></i> Entregas
+    </button>
+    <button class="rep-tab-btn" data-tab="tabRepartidores">
+      <i class="fa-solid fa-person-biking"></i> Repartidores
+    </button>
+    <button class="rep-tab-btn" data-tab="tabCatalogos">
+      <i class="fa-solid fa-layer-group"></i> Zonas y Vehículos
+    </button>
+    <button class="rep-tab-btn" data-tab="tabIncidencias">
+      <i class="fa-solid fa-triangle-exclamation"></i> Incidencias
+    </button>
+    <button class="rep-tab-btn" data-tab="tabLiquidaciones">
+      <i class="fa-solid fa-money-bill-wave"></i> Liquidaciones
+    </button>
+    <button class="rep-tab-btn" data-tab="tabAnalitica">
+      <i class="fa-solid fa-chart-line"></i> Analítica
+    </button>
+    <button class="rep-tab-btn" data-tab="tabMapa">
+      <i class="fa-solid fa-map-location-dot"></i> Mapa
+    </button>
+  </nav>
+
+  <!-- ══ TAB: Dashboard ════════════════════════════════════════════════════ -->
+  <div class="rep-tab-pane rep-tab-pane-active" id="tabDashboard">
+    <div class="rep-dash-grid">
+
+      <div class="rep-panel">
+        <div class="rep-panel-head"><h2>Entregas por estado</h2></div>
+        <div id="dashChartEstados" class="rep-bar-chart"></div>
+        <div id="dashDonut" class="rep-donut-wrap">
+          <canvas id="dashDonutCanvas" width="160" height="160"></canvas>
+          <div id="dashDonutLegend" class="rep-donut-legend"></div>
+        </div>
+      </div>
+
+      <div class="rep-panel">
+        <div class="rep-panel-head"><h2>Entregas por zona</h2></div>
+        <div id="dashChartZonas" class="rep-bar-chart"></div>
+      </div>
+
+      <div class="rep-panel rep-dash-full">
+        <div class="rep-panel-head"><h2>Top repartidores <span class="rep-muted">por entregas completadas</span></h2></div>
+        <div id="dashTopRepartidores"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══ TAB: Entregas ════════════════════════════════════════════════════ -->
+  <div class="rep-tab-pane" id="tabEntregas" style="display:none">
+    <div class="rep-panel-toolbar">
+      <div class="rep-filter-row">
+        <select id="filtEntregaState" class="rep-select">
+          <option value="">Todos los estados</option>
+          <option value="draft">Pendiente</option>
+          <option value="assigned">Asignada</option>
+          <option value="picked_up">Recolectada</option>
+          <option value="in_transit">En tránsito</option>
+          <option value="delivered">Entregada</option>
+          <option value="cancelled">Cancelada</option>
+          <option value="failed">Fallida</option>
+        </select>
+        <select id="filtEntregaPrioridad" class="rep-select">
+          <option value="">Toda prioridad</option>
+          <option value="urgente">Urgente</option>
+          <option value="alta">Alta</option>
+          <option value="normal">Normal</option>
+          <option value="baja">Baja</option>
+        </select>
+        <select id="filtEntregaRepartidor" class="rep-select">
+          <option value="">Todos los repartidores</option>
+        </select>
+      </div>
+      <div class="rep-toolbar-right">
+        <div class="rep-view-toggle">
+          <button class="rep-view-btn rep-view-active" id="btnViewKanban" title="Kanban">
+            <i class="fa-solid fa-table-columns"></i>
+          </button>
+          <button class="rep-view-btn" id="btnViewList" title="Lista">
+            <i class="fa-solid fa-list"></i>
+          </button>
+        </div>
+        <button class="rep-btn rep-btn-primary" id="btnNuevaEntrega">
+          <i class="fa-solid fa-plus"></i> Nueva entrega
+        </button>
+      </div>
+    </div>
+
+    <div id="viewKanban">
+      <div class="rep-kanban">
+        <div class="rep-kanban-col" data-state="draft">
+          <div class="rep-kanban-head"><span>Pendientes</span><span class="rep-kanban-count" id="kcount-draft">0</span></div>
+          <div class="rep-kanban-cards" id="kcards-draft"></div>
+        </div>
+        <div class="rep-kanban-col" data-state="assigned">
+          <div class="rep-kanban-head"><span>Asignadas</span><span class="rep-kanban-count" id="kcount-assigned">0</span></div>
+          <div class="rep-kanban-cards" id="kcards-assigned"></div>
+        </div>
+        <div class="rep-kanban-col" data-state="picked_up">
+          <div class="rep-kanban-head"><span>Recolectadas</span><span class="rep-kanban-count" id="kcount-picked_up">0</span></div>
+          <div class="rep-kanban-cards" id="kcards-picked_up"></div>
+        </div>
+        <div class="rep-kanban-col" data-state="in_transit">
+          <div class="rep-kanban-head"><span>En tránsito</span><span class="rep-kanban-count" id="kcount-in_transit">0</span></div>
+          <div class="rep-kanban-cards" id="kcards-in_transit"></div>
+        </div>
+        <div class="rep-kanban-col rep-col-done" data-state="delivered">
+          <div class="rep-kanban-head"><span>Entregadas</span><span class="rep-kanban-count" id="kcount-delivered">0</span></div>
+          <div class="rep-kanban-cards" id="kcards-delivered"></div>
+        </div>
+        <div class="rep-kanban-col rep-col-fail" data-state="failed">
+          <div class="rep-kanban-head"><span>Fallidas</span><span class="rep-kanban-count" id="kcount-failed">0</span></div>
+          <div class="rep-kanban-cards" id="kcards-failed"></div>
+        </div>
+        <div class="rep-kanban-col rep-col-cancel" data-state="cancelled">
+          <div class="rep-kanban-head"><span>Canceladas</span><span class="rep-kanban-count" id="kcount-cancelled">0</span></div>
+          <div class="rep-kanban-cards" id="kcards-cancelled"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="viewList" style="display:none">
+      <div class="rep-panel">
+        <div id="repEntregasList" class="rep-list-empty">Cargando...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ TAB: Repartidores ════════════════════════════════════════════════ -->
+  <div class="rep-tab-pane" id="tabRepartidores" style="display:none">
+    <div class="rep-panel-toolbar">
+      <div class="rep-filter-row">
+        <select id="filtRepState" class="rep-select">
+          <option value="">Todos los estados</option>
+          <option value="available">Disponible</option>
+          <option value="busy">Ocupado</option>
+          <option value="offline">Desconectado</option>
+          <option value="suspended">Suspendido</option>
+        </select>
+        <select id="filtRepZona" class="rep-select">
+          <option value="">Todas las zonas</option>
+        </select>
+      </div>
+      <button class="rep-btn rep-btn-primary" id="btnNuevoRepartidor">
+        <i class="fa-solid fa-plus"></i> Nuevo repartidor
+      </button>
+    </div>
+    <div class="rep-panel">
+      <div id="repRepartidoresList" class="rep-list-empty">Cargando...</div>
+    </div>
+  </div>
+
+  <!-- ══ TAB: Zonas y Vehículos ══════════════════════════════════════════ -->
+  <div class="rep-tab-pane" id="tabCatalogos" style="display:none">
+    <div class="rep-two-col">
+      <div class="rep-panel">
+        <div class="rep-panel-head">
+          <h2><i class="fa-solid fa-map-location-dot"></i> Zonas</h2>
+          <button class="rep-btn rep-btn-primary rep-btn-sm" id="btnNuevaZona">
+            <i class="fa-solid fa-plus"></i> Nueva
+          </button>
+        </div>
+        <div id="repZonasList" class="rep-list-empty">Cargando...</div>
+      </div>
+      <div class="rep-panel">
+        <div class="rep-panel-head">
+          <h2><i class="fa-solid fa-motorcycle"></i> Vehículos</h2>
+          <button class="rep-btn rep-btn-primary rep-btn-sm" id="btnNuevoVehiculo">
+            <i class="fa-solid fa-plus"></i> Nuevo
+          </button>
+        </div>
+        <div id="repVehiculosList" class="rep-list-empty">Cargando...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ TAB: Incidencias ════════════════════════════════════════════════ -->
+  <div class="rep-tab-pane" id="tabIncidencias" style="display:none">
+    <div class="rep-panel-toolbar">
+      <div class="rep-filter-row">
+        <select id="filtIncState" class="rep-select">
+          <option value="open">Abiertas</option>
+          <option value="">Todas</option>
+          <option value="resolved">Resueltas</option>
+        </select>
+        <select id="filtIncEntrega" class="rep-select">
+          <option value="">Todas las entregas</option>
+        </select>
+      </div>
+      <button class="rep-btn rep-btn-primary" id="btnNuevaIncidencia">
+        <i class="fa-solid fa-plus"></i> Registrar incidencia
+      </button>
+    </div>
+    <div class="rep-panel">
+      <div id="repIncidenciasList" class="rep-list-empty">Cargando...</div>
+    </div>
+  </div>
+
+  <!-- ══ TAB: Liquidaciones ══════════════════════════════════════════════ -->
+  <div class="rep-tab-pane" id="tabLiquidaciones" style="display:none">
+    <div class="rep-panel-toolbar">
+      <div class="rep-filter-row">
+        <select id="filtLiqState" class="rep-select">
+          <option value="">Todas</option>
+          <option value="draft">Borrador</option>
+          <option value="approved">Aprobadas</option>
+          <option value="paid">Pagadas</option>
+        </select>
+        <select id="filtLiqRepartidor" class="rep-select">
+          <option value="">Todos los repartidores</option>
+        </select>
+      </div>
+      <button class="rep-btn rep-btn-primary" id="btnGenerarLiquidacion">
+        <i class="fa-solid fa-file-invoice-dollar"></i> Generar liquidación
+      </button>
+    </div>
+    <div class="rep-panel">
+      <div id="repLiquidacionesList" class="rep-list-empty">Sin liquidaciones.</div>
+    </div>
+  </div>
+
+  <!-- ══ TAB: Analítica ══════════════════════════════════════════════════ -->
+  <div class="rep-tab-pane" id="tabAnalitica" style="display:none">
+    <div class="rep-panel-toolbar">
+      <div class="rep-filter-row">
+        <input type="date" id="anFechaInicio" class="rep-input">
+        <input type="date" id="anFechaFin" class="rep-input">
+        <select id="anRepartidorId" class="rep-select">
+          <option value="">Todos los repartidores</option>
+        </select>
+        <select id="anAgrupacion" class="rep-select">
+          <option value="semana">Semanal</option>
+          <option value="mes">Mensual</option>
+        </select>
+      </div>
+      <div class="rep-toolbar-right">
+        <button class="rep-btn" id="btnAnaliticaCsv">
+          <i class="fa-solid fa-file-csv"></i> Exportar CSV
+        </button>
+        <button class="rep-btn rep-btn-primary" id="btnRefreshAnalitica">
+          <i class="fa-solid fa-chart-simple"></i> Actualizar analítica
+        </button>
+      </div>
+    </div>
+
+    <div class="rep-dash-grid">
+      <div class="rep-panel">
+        <div class="rep-panel-head"><h2>KPIs operativos</h2></div>
+        <div id="anKpisGrid" class="rep-analytics-kpis"></div>
+      </div>
+      <div class="rep-panel">
+        <div class="rep-panel-head"><h2>Tendencia</h2></div>
+        <div id="anTrendChart" class="rep-bar-chart"></div>
+      </div>
+      <div class="rep-panel rep-dash-full">
+        <div class="rep-panel-head"><h2>Productividad de repartidores</h2></div>
+        <div id="anProductividadTable" class="rep-list-empty">Cargando...</div>
+      </div>
+      <div class="rep-panel">
+        <div class="rep-panel-head"><h2>Cobertura por zona</h2></div>
+        <div id="anZonasChart" class="rep-bar-chart"></div>
+      </div>
+      <div class="rep-panel">
+        <div class="rep-panel-head"><h2>Margen logístico</h2></div>
+        <div id="anMargenCard" class="rep-analytics-card-grid"></div>
+      </div>
+      <div class="rep-panel rep-dash-full">
+        <div class="rep-panel-head"><h2>Incidencias operativas</h2></div>
+        <div id="anIncidenciasTable" class="rep-list-empty">Cargando...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ TAB: Mapa ═══════════════════════════════════════════════════════ -->
+  <div class="rep-tab-pane" id="tabMapa" style="display:none">
+    <div class="rep-panel-toolbar">
+      <div class="rep-filter-row">
+        <select id="mapEntregaState" class="rep-select">
+          <option value="">Todas las entregas</option>
+          <option value="draft">Pendientes</option>
+          <option value="assigned">Asignadas</option>
+          <option value="picked_up">Recolectadas</option>
+          <option value="in_transit">En tránsito</option>
+          <option value="delivered">Entregadas</option>
+          <option value="failed">Fallidas</option>
+          <option value="cancelled">Canceladas</option>
+        </select>
+        <label class="rep-check-inline">
+          <input type="checkbox" id="mapSoloCoords" checked>
+          Solo con coordenadas
+        </label>
+      </div>
+      <button class="rep-btn rep-btn-primary" id="btnRefreshMapa">
+        <i class="fa-solid fa-satellite-dish"></i> Actualizar mapa
+      </button>
+    </div>
+
+    <div class="rep-dash-grid">
+      <div class="rep-panel rep-dash-full">
+        <div class="rep-panel-head"><h2>Mapa operativo</h2></div>
+        <div class="rep-map-stage">
+          <svg id="repMapaSvg" viewBox="0 0 1000 520" class="rep-map-svg" aria-label="Mapa operativo"></svg>
+        </div>
+      </div>
+      <div class="rep-panel">
+        <div class="rep-panel-head"><h2>Cobertura y cercanía</h2></div>
+        <div id="mapResumenCard" class="rep-analytics-card-grid"></div>
+      </div>
+      <div class="rep-panel">
+        <div class="rep-panel-head"><h2>Repartidores cercanos a la primera entrega</h2></div>
+        <div id="mapCercanosTable" class="rep-list-empty">Cargando...</div>
+      </div>
+      <div class="rep-panel rep-dash-full">
+        <div class="rep-panel-head"><h2>Entregas georreferenciadas</h2></div>
+        <div id="mapEntregasTable" class="rep-list-empty">Cargando...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════ MODALS ════════════════ -->
+
+  <!-- Modal: Repartidor -->
+  <div class="rep-modal-backdrop" id="modalRepartidor">
+    <div class="rep-modal">
+      <div class="rep-modal-head">
+        <h3 id="modalRepartidorTitle">Nuevo repartidor</h3>
+        <button class="rep-modal-close" data-close="modalRepartidor">✕</button>
+      </div>
+      <form id="formRepartidor" class="rep-form" autocomplete="off">
+        <input type="hidden" id="repId">
+        <div class="rep-form-grid">
+          <div class="rep-field"><label>Nombre *</label><input type="text" id="repNombre" required class="rep-input"></div>
+          <div class="rep-field"><label>Código *</label><input type="text" id="repCodigo" required class="rep-input"></div>
+          <div class="rep-field"><label>Teléfono</label><input type="text" id="repTelefono" class="rep-input"></div>
+          <div class="rep-field"><label>Email</label><input type="email" id="repEmail" class="rep-input"></div>
+          <div class="rep-field"><label>Tipo</label>
+            <select id="repTipo" class="rep-select">
+              <option value="interno">Interno</option>
+              <option value="tercero">Tercero</option>
+              <option value="independiente">Independiente</option>
+            </select>
+          </div>
+          <div class="rep-field"><label>Estado</label>
+            <select id="repState" class="rep-select">
+              <option value="available">Disponible</option>
+              <option value="busy">Ocupado</option>
+              <option value="offline">Desconectado</option>
+              <option value="suspended">Suspendido</option>
+            </select>
+          </div>
+          <div class="rep-field"><label>Zona</label>
+            <select id="repZonaId" class="rep-select"><option value="">Sin zona</option></select>
+          </div>
+          <div class="rep-field"><label>Vehículo</label>
+            <select id="repVehiculoId" class="rep-select"><option value="">Sin vehículo</option></select>
+          </div>
+          <div class="rep-field"><label>Negocio</label><input type="text" id="repNegocio" class="rep-input"></div>
+          <div class="rep-field"><label>Sucursal</label><input type="text" id="repSucursal" class="rep-input"></div>
+          <div class="rep-field"><label>Tarifa base</label><input type="number" id="repTarifa" step="0.01" min="0" value="0" class="rep-input"></div>
+          <div class="rep-field"><label>Bono por entrega</label><input type="number" id="repBono" step="0.01" min="0" value="0" class="rep-input"></div>
+          <div class="rep-field"><label>Meta entregas diarias</label><input type="number" id="repMeta" min="1" value="10" class="rep-input"></div>
+          <div class="rep-field rep-field-full"><label>Notas</label><textarea id="repNotas" class="rep-input" rows="2"></textarea></div>
+        </div>
+        <div class="rep-modal-actions">
+          <button type="button" class="rep-btn" data-close="modalRepartidor">Cancelar</button>
+          <button type="submit" class="rep-btn rep-btn-primary">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Zona -->
+  <div class="rep-modal-backdrop" id="modalZona">
+    <div class="rep-modal rep-modal-sm">
+      <div class="rep-modal-head">
+        <h3>Nueva zona</h3>
+        <button class="rep-modal-close" data-close="modalZona">✕</button>
+      </div>
+      <form id="formZona" class="rep-form" autocomplete="off">
+        <div class="rep-form-grid">
+          <div class="rep-field"><label>Nombre *</label><input type="text" id="zonaName" required class="rep-input"></div>
+          <div class="rep-field"><label>Código *</label><input type="text" id="zonaCode" required class="rep-input"></div>
+          <div class="rep-field"><label>Ciudad</label><input type="text" id="zonaCiudad" class="rep-input"></div>
+          <div class="rep-field"><label>Radio (km)</label><input type="number" id="zonaRadio" step="0.1" min="0.1" value="5" class="rep-input"></div>
+          <div class="rep-field rep-field-full"><label>Descripción</label><textarea id="zonaDesc" class="rep-input" rows="2"></textarea></div>
+        </div>
+        <div class="rep-modal-actions">
+          <button type="button" class="rep-btn" data-close="modalZona">Cancelar</button>
+          <button type="submit" class="rep-btn rep-btn-primary">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Vehículo -->
+  <div class="rep-modal-backdrop" id="modalVehiculo">
+    <div class="rep-modal rep-modal-sm">
+      <div class="rep-modal-head">
+        <h3>Nuevo vehículo</h3>
+        <button class="rep-modal-close" data-close="modalVehiculo">✕</button>
+      </div>
+      <form id="formVehiculo" class="rep-form" autocomplete="off">
+        <div class="rep-form-grid">
+          <div class="rep-field"><label>Nombre *</label><input type="text" id="vehName" required class="rep-input"></div>
+          <div class="rep-field"><label>Tipo</label>
+            <select id="vehTipo" class="rep-select">
+              <option value="moto">Moto</option>
+              <option value="bicicleta">Bicicleta</option>
+              <option value="auto">Auto</option>
+              <option value="camioneta">Camioneta</option>
+              <option value="pie">A pie</option>
+            </select>
+          </div>
+          <div class="rep-field"><label>Placa</label><input type="text" id="vehPlaca" class="rep-input"></div>
+          <div class="rep-field"><label>Capacidad (kg)</label><input type="number" id="vehCapKg" step="0.5" min="0" value="20" class="rep-input"></div>
+          <div class="rep-field"><label>Cap. pedidos</label><input type="number" id="vehCapPed" min="1" value="5" class="rep-input"></div>
+        </div>
+        <div class="rep-modal-actions">
+          <button type="button" class="rep-btn" data-close="modalVehiculo">Cancelar</button>
+          <button type="submit" class="rep-btn rep-btn-primary">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Nueva entrega -->
+  <div class="rep-modal-backdrop" id="modalEntrega">
+    <div class="rep-modal">
+      <div class="rep-modal-head">
+        <h3>Nueva entrega</h3>
+        <button class="rep-modal-close" data-close="modalEntrega">✕</button>
+      </div>
+      <form id="formEntrega" class="rep-form" autocomplete="off">
+        <div class="rep-form-grid">
+          <div class="rep-field"><label>Cliente *</label><input type="text" id="entCliente" required class="rep-input"></div>
+          <div class="rep-field"><label>Teléfono cliente</label><input type="text" id="entClienteTel" class="rep-input"></div>
+          <div class="rep-field"><label>Origen</label><input type="text" id="entOrigen" class="rep-input"></div>
+          <div class="rep-field"><label>Destino *</label><input type="text" id="entDestino" required class="rep-input"></div>
+          <div class="rep-field"><label>Referencia externa</label><input type="text" id="entRef" class="rep-input"></div>
+          <div class="rep-field"><label>Prioridad</label>
+            <select id="entPrioridad" class="rep-select">
+              <option value="normal">Normal</option>
+              <option value="alta">Alta</option>
+              <option value="urgente">Urgente</option>
+              <option value="baja">Baja</option>
+            </select>
+          </div>
+          <div class="rep-field"><label>Zona</label>
+            <select id="entZonaId" class="rep-select"><option value="">Sin zona</option></select>
+          </div>
+          <div class="rep-field"><label>Repartidor</label>
+            <select id="entRepartidorId" class="rep-select"><option value="">Sin asignar</option></select>
+          </div>
+          <div class="rep-field"><label>Costo de envío</label><input type="number" id="entCosto" step="0.01" min="0" value="0" class="rep-input"></div>
+          <div class="rep-field"><label>Distancia (km)</label><input type="number" id="entDistancia" step="0.1" min="0" value="0" class="rep-input"></div>
+          <div class="rep-field"><label>Tiempo estimado (min)</label><input type="number" id="entTiempo" min="0" value="0" class="rep-input"></div>
+          <div class="rep-field"><label>Fecha programada *</label><input type="datetime-local" id="entFecha" required class="rep-input"></div>
+          <div class="rep-field rep-field-full"><label>Descripción</label><textarea id="entDesc" class="rep-input" rows="2"></textarea></div>
+        </div>
+        <div class="rep-modal-actions">
+          <button type="button" class="rep-btn" data-close="modalEntrega">Cancelar</button>
+          <button type="submit" class="rep-btn rep-btn-primary">Crear entrega</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Asignar repartidor -->
+  <div class="rep-modal-backdrop" id="modalAsignar">
+    <div class="rep-modal rep-modal-sm">
+      <div class="rep-modal-head">
+        <h3>Asignar repartidor</h3>
+        <button class="rep-modal-close" data-close="modalAsignar">✕</button>
+      </div>
+      <div class="rep-form">
+        <input type="hidden" id="asignarEntregaId">
+        <p id="asignarEntregaInfo" class="rep-muted" style="margin-bottom:12px"></p>
+        <div class="rep-field">
+          <label>Repartidor disponible *</label>
+          <select id="asignarRepartidorId" class="rep-select"><option value="">Seleccionar...</option></select>
+        </div>
+        <div class="rep-modal-actions">
+          <button type="button" class="rep-btn" data-close="modalAsignar">Cancelar</button>
+          <button type="button" class="rep-btn rep-btn-primary" id="btnConfirmarAsignacion">Asignar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Cambiar estado -->
+  <div class="rep-modal-backdrop" id="modalEstado">
+    <div class="rep-modal rep-modal-sm">
+      <div class="rep-modal-head">
+        <h3 id="modalEstadoTitle">Actualizar entrega</h3>
+        <button class="rep-modal-close" data-close="modalEstado">✕</button>
+      </div>
+      <div class="rep-form">
+        <input type="hidden" id="estadoEntregaId">
+        <input type="hidden" id="estadoNuevo">
+        <p id="estadoInfo" class="rep-muted" style="margin-bottom:12px"></p>
+        <div class="rep-field" id="fieldEvidencia" style="display:none">
+          <label>Evidencia de entrega</label>
+          <input type="text" id="estadoEvidencia" class="rep-input" placeholder="URL de foto, descripción o código">
+        </div>
+        <div class="rep-field" id="fieldMotivo" style="display:none">
+          <label>Motivo *</label>
+          <textarea id="estadoMotivo" class="rep-input" rows="3" placeholder="Describe el motivo..."></textarea>
+        </div>
+        <div class="rep-field" id="fieldTiempoReal" style="display:none">
+          <label>Tiempo real (min)</label>
+          <input type="number" id="estadoTiempoReal" min="0" class="rep-input">
+        </div>
+        <div class="rep-modal-actions">
+          <button type="button" class="rep-btn" data-close="modalEstado">Cancelar</button>
+          <button type="button" class="rep-btn rep-btn-primary" id="btnConfirmarEstado">Confirmar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Incidencia -->
+  <div class="rep-modal-backdrop" id="modalIncidencia">
+    <div class="rep-modal rep-modal-sm">
+      <div class="rep-modal-head">
+        <h3>Registrar incidencia</h3>
+        <button class="rep-modal-close" data-close="modalIncidencia">✕</button>
+      </div>
+      <form id="formIncidencia" class="rep-form" autocomplete="off">
+        <div class="rep-form-grid">
+          <div class="rep-field rep-field-full">
+            <label>Entrega *</label>
+            <select id="incEntregaId" class="rep-select" required><option value="">Seleccionar entrega...</option></select>
+          </div>
+          <div class="rep-field"><label>Tipo</label>
+            <select id="incTipo" class="rep-select">
+              <option value="general">General</option>
+              <option value="retraso">Retraso</option>
+              <option value="accidente">Accidente</option>
+              <option value="robo">Robo</option>
+              <option value="cliente_ausente">Cliente ausente</option>
+              <option value="direccion_incorrecta">Dirección incorrecta</option>
+            </select>
+          </div>
+          <div class="rep-field"><label>Severidad</label>
+            <select id="incSeveridad" class="rep-select">
+              <option value="baja">Baja</option>
+              <option value="media" selected>Media</option>
+              <option value="alta">Alta</option>
+              <option value="critica">Crítica</option>
+            </select>
+          </div>
+          <div class="rep-field rep-field-full">
+            <label>Descripción *</label>
+            <textarea id="incDescripcion" class="rep-input" rows="3" required></textarea>
+          </div>
+        </div>
+        <div class="rep-modal-actions">
+          <button type="button" class="rep-btn" data-close="modalIncidencia">Cancelar</button>
+          <button type="submit" class="rep-btn rep-btn-primary">Registrar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Generar liquidación -->
+  <div class="rep-modal-backdrop" id="modalLiquidacion">
+    <div class="rep-modal rep-modal-sm">
+      <div class="rep-modal-head">
+        <h3>Generar liquidación</h3>
+        <button class="rep-modal-close" data-close="modalLiquidacion">✕</button>
+      </div>
+      <form id="formLiquidacion" class="rep-form" autocomplete="off">
+        <div class="rep-form-grid">
+          <div class="rep-field rep-field-full">
+            <label>Repartidor *</label>
+            <select id="liqRepartidorId" class="rep-select" required><option value="">Seleccionar...</option></select>
+          </div>
+          <div class="rep-field"><label>Fecha inicio *</label><input type="date" id="liqFechaInicio" required class="rep-input"></div>
+          <div class="rep-field"><label>Fecha fin *</label><input type="date" id="liqFechaFin" required class="rep-input"></div>
+          <div class="rep-field"><label>Descuentos ($)</label><input type="number" id="liqDescuentos" step="0.01" min="0" value="0" class="rep-input"></div>
+          <div class="rep-field rep-field-full"><label>Notas</label><textarea id="liqNotas" class="rep-input" rows="2"></textarea></div>
+        </div>
+        <div class="rep-modal-actions">
+          <button type="button" class="rep-btn" data-close="modalLiquidacion">Cancelar</button>
+          <button type="submit" class="rep-btn rep-btn-primary">Generar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Detalle liquidación -->
+  <div class="rep-modal-backdrop" id="modalLiqDetalle">
+    <div class="rep-modal">
+      <div class="rep-modal-head">
+        <h3 id="modalLiqDetalleTitle">Detalle de liquidación</h3>
+        <button class="rep-modal-close" data-close="modalLiqDetalle">✕</button>
+      </div>
+      <div id="liqDetalleContent" class="rep-liq-detalle"></div>
+    </div>
+  </div>
+
+</section>

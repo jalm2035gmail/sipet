@@ -65,6 +65,25 @@ MANIFEST = {'name': 'frontend',
  },
  'installable': True,
  'application': False,
- 'auto_install': False}
+ 'auto_install': False,
+
+ # ── Arquitectura de datos (fuente única de verdad) ─────────────────────────────
+ # Todas las entidades del módulo usan SQLAlchemy (MAIN) como fuente activa.
+ # Los archivos JSON del directorio raíz son exclusivamente datos legacy:
+ #   pages_store.json, versions_store.json, tasas_store.json
+ # Se leen UNA SOLA VEZ durante _migrate_all_legacy_files() (DB vacía → import).
+ # Después de esa migración los JSON no se modifican ni se consultan.
+ # contact_store.json y brand_store.json NUNCA existieron como fuente activa;
+ # esas entidades fueron DB desde el inicio.
+ #
+ # Entidad         Fuente activa   Archivo JSON legacy
+ # ─────────────── ─────────────── ────────────────────────────
+ # páginas         DB              pages_store.json
+ # versiones       DB              versions_store.json
+ # tasas           DB              tasas_store.json
+ # brand           DB              (ninguno)
+ # contactos       DB              (ninguno)
+ 'storage': 'database_primary',
+}
 
 __all__ = ["MANIFEST"]

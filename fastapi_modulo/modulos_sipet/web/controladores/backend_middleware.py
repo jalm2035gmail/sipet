@@ -43,6 +43,23 @@ PUBLIC_PATHS = {
     "/multitienda/tiendas",
     "/multitienda/tiendas/",
     "/multitienda/public/tiendas",
+    "/multitienda/vendors",
+    "/multitienda/vendors/",
+    "/multitienda/api/productos-publicos",
+}
+
+MULTITIENDA_PUBLIC_RESERVED_SEGMENTS = {
+    "tiendas",
+    "destacados",
+    "destaacados",
+    "multitienda",
+    "configuracion",
+    "api",
+    "static",
+    "templates",
+    "icon",
+    "backend",
+    "web",
 }
 
 
@@ -70,6 +87,18 @@ def _is_live_integration_path(request: Request, path: str) -> bool:
     )
 
 
+def _is_public_multitienda_landing_path(path: str) -> bool:
+    cleaned = str(path or "").strip("/")
+    if not cleaned:
+        return False
+    parts = [part.strip().lower() for part in cleaned.split("/") if part.strip()]
+    if not parts or len(parts) > 2:
+        return False
+    if any(part in MULTITIENDA_PUBLIC_RESERVED_SEGMENTS for part in parts):
+        return False
+    return True
+
+
 def is_public_backend_path(request: Request, path: str) -> bool:
     enable_api_docs = (request.app.docs_url is not None) if getattr(request, "app", None) else False
     public_paths = set(PUBLIC_PATHS)
@@ -90,6 +119,7 @@ def is_public_backend_path(request: Request, path: str) -> bool:
     return bool(
         request.method == "OPTIONS"
         or path in public_paths
+        or _is_public_multitienda_landing_path(path)
         or path == "/web"
         or path == "/web/"
         or path.startswith("/web/")
@@ -100,6 +130,7 @@ def is_public_backend_path(request: Request, path: str) -> bool:
         or path.startswith("/identidad-institucional")
         or path.startswith("/templates/")
         or path.startswith("/static/")
+        or path.startswith("/multitienda/static/")
         or path.startswith("/icon/")
         or path.startswith("/imagenes/")
         or path.startswith("/modulos_sipet/")
@@ -109,7 +140,7 @@ def is_public_backend_path(request: Request, path: str) -> bool:
 
 
 def _screen_access_denied(request: Request, path: str) -> bool:
-    if path.startswith("/api/"):
+    if path.startswith("/api/") or "/api/" in path:
         return False
     analytics_context = _path_analytics_context(path)
     access_levels = get_user_screen_access_levels(request)
@@ -233,9 +264,20 @@ async def enforce_backend_login(request: Request, call_next):
     session_data = read_session_cookie(request.cookies.get(AUTH_COOKIE_NAME, ""))
     if session_data and not is_session_bound_to_request(request, session_data):
         session_data = None
+    def _is_api_request() -> bool:
+        if path.startswith("/api/") or path.startswith("/guardar-colores"):
+            return True
+        if "/api/" in path:
+            return True
+        accept = (request.headers.get("accept") or "").lower()
+        content_type = (request.headers.get("content-type") or "").lower()
+        if "application/json" in accept or "application/json" in content_type:
+            return True
+        return False
+
     if not session_data:
         try:
-            if path.startswith("/api/") or path.startswith("/guardar-colores"):
+            if _is_api_request():
                 return JSONResponse({"success": False, "error": "No autenticado"}, status_code=401)
             return RedirectResponse(url="/backend/login", status_code=303)
         finally:
@@ -257,6 +299,8 @@ async def enforce_backend_login(request: Request, call_next):
                     session_data["username"],
                     str(session_data.get("password_fingerprint") or ""),
                 ):
+                    if _is_api_request():
+                        return JSONResponse({"success": False, "error": "Sesión inválida"}, status_code=401)
                     response = RedirectResponse(url="/backend/login", status_code=303)
                     clear_auth_cookies(response)
                     return response
@@ -288,7 +332,7 @@ async def enforce_backend_login(request: Request, call_next):
                 )
 
         if _screen_access_denied(request, path):
-            if path.startswith("/api/"):
+            if path.startswith("/api/") or "/api/" in path:
                 return JSONResponse({"success": False, "error": "Sin permisos para esta pantalla"}, status_code=403)
             from fastapi_modulo.modulos_sipet.web.servicios.template_service import render_no_access_module_page
 

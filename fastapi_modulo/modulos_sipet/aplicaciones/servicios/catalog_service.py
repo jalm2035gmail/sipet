@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import json
 import os
+from datetime import datetime, timezone
 from typing import Any
 
 from fastapi_modulo.modulos_sipet.aplicaciones.repositorios.app_repository import list_catalog_modules
@@ -11,12 +13,14 @@ from fastapi_modulo.modulos_sipet.aplicaciones.repositorios.package_repository i
     get_module_upload_root,
 )
 from fastapi_modulo.modulos_sipet.aplicaciones.repositorios.persistence_repository import (
+    create_registry_audit,
+    get_latest_registry_audit,
     get_latest_package_upload,
     list_registry_state,
 )
 from fastapi_modulo.modulos_sipet.aplicaciones.servicios.audit_service import get_protocol_audit_map
 from fastapi_modulo.modulos_sipet.aplicaciones.servicios.image_branding_service import get_module_catalog_image_url
-from fastapi_modulo.modulos_sipet.aplicaciones.servicios.redis_service import cache_catalog
+from fastapi_modulo.modulos_sipet.aplicaciones.servicios.redis_service import cache_catalog, get_cached_payload, set_cached_payload
 
 CONFIG_ONLY_MODULE_KEYS = {
     "bsc",
@@ -32,6 +36,12 @@ CONFIG_ONLY_MODULE_KEYS = {
     "plantillas_core",
     "diagnostico_core",
 }
+ARCHITECTURE_AUDIT_ACTION = "architecture_report"
+ARCHITECTURE_CACHE_TTL_SECONDS = 300
+
+
+def _utc_now() -> datetime:
+    return datetime.now(timezone.utc)
 
 
 def _is_installed_module(item: dict[str, Any], target_root: str | None) -> bool:
@@ -58,6 +68,79 @@ def _package_management_note(item: dict[str, Any], *, target_root: str | None, i
     if not target_root:
         return "Este módulo no tiene un destino importable por paquetes ZIP."
     return ""
+
+
+def _architecture_cache_key(module_key: str, target_root: str | None) -> str:
+    return f"{str(module_key or '').strip()}:{str(target_root or '').strip()}"
+
+
+def _normalize_architecture_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "architecture_ok": bool(payload.get("architecture_ok", True)),
+        "architecture_errors": list(payload.get("architecture_errors", [])),
+        "architecture_warnings": list(payload.get("architecture_warnings", [])),
+        "validated_at": str(payload.get("validated_at") or ""),
+    }
+
+
+def _load_persisted_architecture(module_key: str, target_root: str | None) -> dict[str, Any] | None:
+    audit_row = get_latest_registry_audit(module_key, ARCHITECTURE_AUDIT_ACTION)
+    if audit_row is None:
+        return None
+    try:
+        raw_payload = json.loads(str(audit_row.payload_json or "{}"))
+    except Exception:
+        return None
+    if not isinstance(raw_payload, dict):
+        return None
+    if str(raw_payload.get("target_root") or "").strip() != str(target_root or "").strip():
+        return None
+    return _normalize_architecture_payload(raw_payload)
+
+
+def _persist_architecture_snapshot(module_key: str, target_root: str | None, payload: dict[str, Any]) -> dict[str, Any]:
+    normalized = _normalize_architecture_payload(payload)
+    if not normalized["validated_at"]:
+        normalized["validated_at"] = _utc_now().isoformat()
+    create_registry_audit(
+        module_key=module_key,
+        action=ARCHITECTURE_AUDIT_ACTION,
+        payload={
+            **normalized,
+            "target_root": str(target_root or "").strip(),
+        },
+        result="success",
+        user_id=None,
+        ip=None,
+    )
+    set_cached_payload(
+        "module_architecture",
+        _architecture_cache_key(module_key, target_root),
+        normalized,
+        ARCHITECTURE_CACHE_TTL_SECONDS,
+    )
+    return normalized
+
+
+def get_cached_architecture_report(
+    module_key: str,
+    target_root: str | None,
+    *,
+    refresh: bool = False,
+) -> dict[str, Any]:
+    cache_key = _architecture_cache_key(module_key, target_root)
+    if not refresh:
+        cached = get_cached_payload("module_architecture", cache_key)
+        if isinstance(cached, dict):
+            return _normalize_architecture_payload(cached)
+        persisted = _load_persisted_architecture(module_key, target_root)
+        if persisted is not None:
+            set_cached_payload("module_architecture", cache_key, persisted, ARCHITECTURE_CACHE_TTL_SECONDS)
+            return persisted
+    computed = _normalize_architecture_payload(get_module_architecture_report(module_key, target_root))
+    if not computed["validated_at"]:
+        computed["validated_at"] = _utc_now().isoformat()
+    return _persist_architecture_snapshot(module_key, target_root, computed)
 
 
 def decorate_modules_payload(
@@ -130,7 +213,7 @@ def decorate_modules_payload(
         item["has_tests_dir"] = bool(status.get("has_tests_dir"))
         item["routers_importable"] = bool(status.get("routers_importable"))
         item["issues"] = list(status.get("issues", []))
-        item.update(get_module_architecture_report(key, target_root))
+        item.update(get_cached_architecture_report(key, target_root, refresh=refresh))
         payload.append(item)
         if route or label:
             seen_fingerprints.add(fingerprint)
@@ -139,4 +222,9 @@ def decorate_modules_payload(
     return payload
 
 
-__all__ = ["decorate_modules_payload", "get_module_image_path", "get_module_upload_root"]
+__all__ = [
+    "decorate_modules_payload",
+    "get_cached_architecture_report",
+    "get_module_image_path",
+    "get_module_upload_root",
+]

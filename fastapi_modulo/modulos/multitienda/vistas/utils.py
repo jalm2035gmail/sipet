@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 
-_ROOT_RELATIVE_URL_PATTERN = re.compile(r'(?P<prefix>(?:href|src|action)=["\']|url\(["\']?)\/(?!\/)')
+_ROOT_RELATIVE_URL_PATTERN = re.compile(r'(?P<prefix>(?:href|src|action)=["\']|url\(["\']?)\/(?!\/|static\/|multitienda\/)')
 
 
 def _prefix_root_relative_urls(content: str, root_path: str) -> str:

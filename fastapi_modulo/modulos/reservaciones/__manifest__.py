@@ -23,7 +23,7 @@ MANIFEST = {
         },
     },
     'depends': ['web'],
-    'data': ['vistas/reservaciones.html'],
+    'data': ['vistas/reservaciones.html', 'vistas/calendario.html', 'vistas/kanban.html'],
     'assets': {
         'css': ['static/css/reservaciones.css'],
         'js': ['static/src/js/appointment_dynamic.js'],

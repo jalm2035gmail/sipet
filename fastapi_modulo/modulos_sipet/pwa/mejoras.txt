@@ -1,0 +1,561 @@
+Avance: 100% ✅
+
+Plan de trabajo detallado reforzado
+Integración del módulo PWA como app real de SIPET, con conversaciones, notificaciones e integración con Multitienda
+1. Objetivo general
+
+Transformar el módulo actual en una app móvil oficial del ecosistema SIPET, integrada al core institucional y fortalecida con:
+
+canal de conversaciones interno para desplazar gradualmente el uso operativo de WhatsApp
+sistema de notificaciones institucionales
+integración con Multitienda, cuando dicho módulo esté instalado
+operación móvil para seguimiento, evidencias, tareas, alertas y colaboración
+2. Nueva visión del módulo
+
+El módulo deja de ser únicamente una PWA técnica y pasa a convertirse en una app con cuatro funciones centrales:
+
+A. Control operativo móvil
+consulta de actividades
+registro de avances
+captura de evidencias
+consulta de KPI
+seguimiento institucional
+B. Comunicación operativa interna
+conversaciones por actividad, proyecto, área o responsable
+reemplazo progresivo de WhatsApp para temas de trabajo
+trazabilidad institucional de acuerdos y mensajes
+C. Sistema de alertas y notificaciones
+avisos de vencimientos
+recordatorios
+novedades relevantes
+mensajes push o internos según reglas del sistema
+D. Integración ecosistémica
+conexión con Multitienda cuando exista
+aprovechamiento de datos y flujos compartidos
+expansión futura hacia otros módulos del ecosistema
+3. Refuerzo estratégico solicitado
+3.1 Canal de conversaciones para desplazar WhatsApp
+Propósito
+
+Crear un espacio institucional de comunicación dentro de la app, de modo que la operación diaria ya no dependa de WhatsApp para coordinar actividades, pedir avances, aclarar pendientes o compartir evidencia.
+
+Por qué es importante
+
+Hoy muchas organizaciones operan en WhatsApp porque es rápido, pero eso genera problemas:
+
+la información queda dispersa
+no existe trazabilidad formal
+se pierden acuerdos
+no hay relación directa con actividades o KPI
+no hay control institucional
+no hay evidencia integrada al sistema
+la salida de un colaborador implica pérdida de contexto
+Enfoque propuesto
+
+El canal de conversaciones debe ser un módulo de conversación contextual, no un chat genérico aislado.
+
+Debe existir conversación asociada a:
+
+actividad
+objetivo
+KPI
+proyecto
+evidencia
+área
+tarea
+ticket o alerta
+tienda, pedido o incidencia de multitienda si aplica
+Casos de uso
+comentar una actividad atrasada
+pedir evidencia a un responsable
+resolver observaciones
+coordinar tareas del área
+dejar instrucciones del supervisor
+discutir un caso vinculado con una sucursal
+dar seguimiento a una alerta
+comentar incidencias de pedidos en Multitienda
+Resultado esperado
+
+Que el usuario diga:
+“ya no necesito mandar esto por WhatsApp, lo resuelvo dentro del sistema”
+
+3.2 Sistema de notificaciones
+Propósito
+
+Construir un sistema centralizado de avisos institucionales para mantener a los usuarios informados, activos y alineados.
+
+Tipos de notificación a incorporar
+actividad próxima a vencer
+actividad vencida
+evidencia pendiente
+evidencia rechazada
+comentario nuevo en conversación
+actividad reasignada
+aprobación pendiente
+KPI sin actualización
+meta en riesgo
+cambio importante de estatus
+evento relevante de Multitienda, si aplica
+mensaje institucional o anuncio interno
+Canales posibles
+notificaciones dentro de la app
+push notifications PWA
+correo electrónico
+alertas en dashboard
+badges visuales
+centro de notificaciones
+Enfoque recomendado
+
+No hacer solo “mensajes sueltos”.
+Debe existir un motor de notificaciones por reglas.
+
+Ejemplo:
+
+si una actividad vence en 2 días y sigue en progreso → notificar responsable
+si una evidencia es rechazada → notificar responsable y supervisor
+si un pedido Multitienda tiene incidencia → notificar encargado correspondiente
+si alguien menciona a otro usuario en conversación → enviar alerta
+3.3 Integración con Multitienda si está instalado
+Propósito
+
+Hacer que la app detecte si existe el módulo Multitienda y, en ese caso, habilite capacidades adicionales.
+
+Lógica deseada
+
+El módulo PWA debe funcionar por sí solo, pero si Multitienda está instalado:
+
+activa menú o vistas adicionales
+muestra notificaciones comerciales
+habilita conversaciones relacionadas con tienda/pedidos/incidencias
+incorpora tareas y seguimiento comercial asociado
+Beneficio
+
+Esto convierte la app en una puerta de entrada unificada al ecosistema, no en una app aislada.
+
+Casos posibles de integración
+seguimiento de pedidos
+conversación sobre entregas o incidencias
+alertas de pedidos pendientes
+comunicación entre tienda, reparto y administración
+monitoreo básico del negocio desde móvil
+evidencia fotográfica vinculada a pedidos o entregas
+notificaciones de nuevos pedidos, cancelaciones o retrasos
+Principio técnico
+
+La integración debe ser condicional y desacoplada:
+
+si Multitienda no existe, la app sigue funcionando normal
+si existe, se monta la extensión correspondiente
+no debe romper el módulo base
+4. Plan de trabajo detallado reforzado por fases
+
+
+✅ FASE 1. Diagnóstico arquitectónico y definición de integración al ecosistema
+Objetivo
+
+Eliminar la arquitectura híbrida actual y definir al módulo como app oficial de SIPET con capacidad de extenderse hacia conversaciones, notificaciones y Multitienda.
+
+Actividades
+✅ revisar la estructura actual del módulo
+✅ clasificar archivos reutilizables, refactorizables y descartables
+✅ definir estructura oficial dentro de SIPET
+✅ eliminar la duplicidad standalone vs módulo interno
+✅ definir punto de montaje oficial
+✅ documentar dependencias con el core
+✅ definir mecanismo de detección de módulos instalados como Multitienda
+Entregables
+✅ mapa de arquitectura objetivo
+✅ lista de refactor técnico
+✅ estructura oficial del módulo
+✅ definición de integración condicional con otros módulos
+
+
+✅ FASE 2. Redefinición funcional del módulo
+Objetivo
+
+Replantear la app como una herramienta de control + conversación + notificación + extensión comercial.
+
+Actividades
+✅ redefinir el propósito funcional del módulo
+✅ separar sus dominios internos:
+✅ control operativo
+✅ conversaciones
+✅ notificaciones
+✅ extensiones por módulo instalado
+✅ definir perfiles de usuario
+✅ definir casos de uso por perfil
+✅ establecer el alcance MVP y las fases de evolución
+Entregables
+✅ documento funcional actualizado
+✅ catálogo de casos de uso
+✅ alcance MVP reforzado
+
+
+✅ FASE 3. Diseño del canal de conversaciones institucional
+Objetivo
+
+Crear un sistema de conversaciones internas que desplace WhatsApp en la operación del sistema.
+
+Actividades
+✅ definir modelo de conversación
+✅ definir tipos de conversación:
+✅ directa
+✅ grupal
+✅ contextual por actividad
+✅ contextual por proyecto
+✅ contextual por incidencia
+✅ contextual por pedido de multitienda
+✅ diseñar reglas de participación
+✅ diseñar mensajes, archivos adjuntos, menciones y estados de lectura
+✅ definir relación entre conversación y evidencia
+✅ definir conversaciones archivadas, activas y cerradas
+✅ definir permisos de acceso por conversación
+✅ diseñar experiencia móvil del canal
+Funciones mínimas
+✅ enviar mensaje
+✅ responder
+✅ mencionar usuarios
+✅ adjuntar archivos
+✅ comentar una actividad desde el chat
+✅ abrir conversación desde actividad o alerta
+✅ ver historial vinculado al objeto de negocio
+Entregables
+✅ diseño funcional del canal de conversaciones
+✅ reglas de negocio
+✅ estructura de datos
+✅ flujo UI/UX conversacional
+
+
+
+✅ FASE 4. Diseño del sistema de notificaciones
+Objetivo
+
+Construir un sistema institucional de alertas y notificaciones.
+
+Actividades
+✅ definir tipos de eventos notificables
+✅ definir severidad:
+✅ informativa
+✅ preventiva
+✅ crítica
+✅ definir destinatarios por tipo de evento
+✅ diseñar centro de notificaciones
+✅ definir badges y alertas visuales
+✅ diseñar motor de reglas
+✅ definir notificaciones derivadas de conversaciones
+✅ definir notificaciones derivadas de Multitienda
+✅ definir preferencias por usuario
+✅ definir lectura, archivo y seguimiento de notificaciones
+Entregables
+✅ catálogo de notificaciones
+✅ reglas de disparo
+✅ diseño del centro de notificaciones
+✅ estructura técnica del motor de avisos
+
+
+✅ FASE 5. Diseño de integración con Multitienda
+Objetivo
+
+Permitir que el módulo se convierta en una app extendida cuando Multitienda esté presente.
+
+Actividades
+✅ definir mecanismo de detección del módulo instalado
+✅ diseñar flags de activación de funciones
+✅ identificar entidades de Multitienda a integrar
+✅ definir menús adicionales en móvil
+✅ definir vistas de pedidos, incidencias o alertas comerciales
+✅ definir conversaciones asociadas a operaciones de tienda
+✅ definir notificaciones comerciales
+✅ definir qué evidencias pueden relacionarse a pedidos o entregas
+✅ diseñar reglas de desacoplamiento técnico
+Entregables
+✅ especificación de integración con Multitienda
+✅ flujos condicionales
+✅ reglas de activación y fallback
+
+
+✅ FASE 6. Fortalecimiento del modelo de datos
+Objetivo
+
+Soportar el nuevo alcance del módulo.
+
+Entidades nuevas o reforzadas
+
+Además de las entidades SIPET, deben incorporarse:
+
+Para conversaciones
+✅ conversación
+✅ participante
+✅ mensaje
+✅ archivo adjunto de mensaje
+✅ referencia contextual
+✅ lectura de mensaje
+✅ mención
+✅ estado de conversación
+Para notificaciones
+✅ notificación
+✅ tipo de evento
+✅ regla de notificación
+✅ estado de lectura
+✅ canal de envío
+✅ preferencia de usuario
+✅ historial de entrega
+Para integración Multitienda
+✅ referencia a pedido
+✅ referencia a tienda
+✅ referencia a incidencia
+✅ referencia a entrega o repartidor
+✅ eventos comerciales sincronizados
+Entregables
+✅ modelo lógico ampliado
+✅ relaciones de datos
+✅ catálogos funcionales
+
+
+✅ FASE 7. Integración al registro oficial de SIPET
+Objetivo
+
+Registrar la app y sus extensiones dentro del ecosistema.
+
+Actividades
+✅ actualizar manifest
+✅ declarar dependencias del core
+✅ declarar dependencia opcional con Multitienda
+✅ registrar vistas, assets y endpoints
+✅ exponer rutas de PWA, conversaciones y notificaciones
+✅ habilitar accesos móviles y launcher institucional
+✅ definir ícono, nombre y metadata oficial
+Entregables
+✅ módulo registrado
+✅ visibilidad institucional correcta
+✅ configuración base del ecosistema
+
+
+✅ FASE 8. Seguridad, permisos y control de acceso
+Objetivo
+
+Asegurar que conversaciones, notificaciones y datos operativos respeten el modelo institucional.
+
+Actividades
+✅ definir roles
+✅ matriz de permisos por acción
+✅ permisos sobre conversaciones
+✅ permisos sobre adjuntos
+✅ permisos sobre notificaciones administrativas
+✅ permisos sobre integración Multitienda
+✅ control de acceso contextual
+✅ auditoría de mensajes, archivos y cambios críticos
+Ejemplos de permisos
+✅ ver conversaciones propias
+✅ ver conversaciones del área
+✅ crear conversación contextual
+✅ comentar actividad
+✅ recibir notificaciones críticas
+✅ administrar reglas de notificación
+✅ acceder a eventos de Multitienda
+✅ responder incidencias comerciales
+Entregables
+✅ matriz de permisos completa
+✅ reglas de acceso implementables
+
+
+✅ FASE 9. Refactor del backend por dominios
+Objetivo
+
+Separar técnicamente el módulo en dominios claros y mantenibles.
+
+Dominios sugeridos
+✅ núcleo PWA
+✅ control operativo SIPET
+✅ conversaciones
+✅ notificaciones
+✅ integración Multitienda
+✅ branding y configuración
+Actividades
+✅ reordenar controladores
+✅ reordenar servicios
+✅ separar schemas
+✅ separar repositorios
+✅ estandarizar respuestas API
+✅ implementar filtros, búsqueda y paginación
+✅ crear servicios desacoplados de eventos internos
+Entregables
+✅ backend modularizado
+✅ contratos API claros
+✅ base sólida para escalabilidad
+
+
+✅ FASE 10. Construcción del núcleo funcional móvil
+Objetivo
+
+Implementar la experiencia principal de la app móvil.
+
+Pantallas mínimas
+✅ inicio
+✅ actividades
+✅ detalle de actividad
+✅ captura de avance
+✅ evidencias
+✅ conversaciones
+✅ notificaciones
+✅ perfil
+✅ accesos extendidos si Multitienda está activo
+Funciones mínimas
+✅ ver pendientes
+✅ registrar avances
+✅ subir evidencia
+✅ abrir conversación contextual
+✅ recibir notificaciones
+✅ navegar entre módulos habilitados
+Entregables
+✅ frontend móvil funcional
+✅ experiencia integrada
+
+
+✅ FASE 11. Offline real y sincronización
+Objetivo
+
+Permitir trabajo sin conexión también en conversaciones y acciones operativas.
+
+Actividades
+✅ definir qué se guarda offline
+✅ crear cola local de acciones
+✅ permitir guardar avances y comentarios offline
+✅ permitir borradores de mensajes offline
+✅ permitir borradores de evidencia
+✅ sincronizar al reconectar
+✅ marcar estados pendientes / sincronizados / error
+✅ manejar conflictos de sincronización
+Consideración clave
+
+En conversaciones, no todo debe prometer envío offline total desde la primera versión.
+Se puede iniciar con:
+
+✅ borradores offline
+✅ cola de mensajes
+✅ envío al reconectar
+Entregables
+✅ sincronización offline mínima viable
+✅ trazabilidad de pendientes
+
+
+✅ FASE 12. Branding, notificaciones push y centro de comunicación
+Objetivo
+
+Cerrar la experiencia institucional de la app.
+
+Actividades
+✅ branding institucional
+✅ manifest dinámico
+✅ service worker versionado
+✅ push notifications
+✅ centro de notificaciones
+✅ indicadores visuales de mensajes no leídos
+✅ badges de pendientes
+✅ accesos rápidos desde notificación a actividad o conversación
+Entregables
+✅ experiencia PWA madura
+✅ notificaciones visibles y útiles
+✅ comunicación interna integrada
+
+
+✅ FASE 13. Integración funcional con Multitienda
+Objetivo
+
+Activar la capa comercial si el módulo está presente.
+
+Actividades
+✅ mostrar secciones adicionales
+✅ conectar eventos de negocio
+✅ agregar notificaciones comerciales
+✅ abrir conversaciones vinculadas a pedidos
+✅ adjuntar evidencias a incidencias o entregas
+✅ mostrar tareas comerciales relevantes
+✅ crear tableros móviles simplificados para tienda
+Entregables
+✅ integración funcional con Multitienda
+✅ app extendida por ecosistema
+
+
+✅ FASE 14. QA, pruebas y estabilización
+Objetivo
+
+Validar la operación completa.
+
+Escenarios de prueba
+✅ actividad con comentario
+✅ actividad con conversación
+✅ actividad con evidencia
+✅ notificación por vencimiento
+✅ mensaje con mención
+✅ mensaje desde offline
+✅ sync posterior
+✅ integración con Multitienda activa
+✅ integración sin Multitienda
+✅ permisos cruzados
+✅ acceso móvil por rol
+Entregables
+✅ matriz de pruebas
+✅ incidencias corregidas
+✅ validación funcional
+
+
+✅ FASE 15. Documentación y despliegue
+Objetivo
+
+Dejar el módulo listo para uso productivo.
+
+Documentos
+✅ arquitectura técnica
+✅ manual de administrador
+✅ manual de usuario
+✅ guía del canal de conversaciones
+✅ guía del sistema de notificaciones
+✅ guía de integración con Multitienda
+✅ hoja de ruta de evolución
+Entregables
+✅ documentación completa
+✅ checklist de despliegue
+✅ plan de evolución
+5. MVP reforzado recomendado
+Debe incluir sí o sí
+integración oficial con SIPET
+una sola arquitectura
+auth del core
+actividades y evidencias
+canal de conversaciones contextual básico
+sistema de notificaciones interno básico
+centro de notificaciones
+PWA instalable
+sincronización mínima
+bitácora básica
+detección de Multitienda
+activación de menú o funciones si Multitienda está instalado
+Puede dejarse para segunda etapa
+push avanzadas
+grupos complejos
+videollamadas o audio
+reglas sofisticadas de automatización
+omnicanalidad completa
+integración con repartidores
+dashboard comercial avanzado de Multitienda
+6. Orden real de ejecución recomendado
+Etapa 1
+✅ Fase 1 Diagnóstico arquitectónico
+✅ Fase 2 Redefinición funcional
+✅ Fase 3 Canal de conversaciones
+✅ Fase 4 Sistema de notificaciones
+✅ Fase 5 Integración con Multitienda
+Etapa 2
+✅ Fase 6 Modelo de datos
+✅ Fase 7 Registro oficial SIPET
+✅ Fase 8 Seguridad y permisos
+✅ Fase 9 Refactor backend
+Etapa 3
+✅ Fase 10 Núcleo móvil funcional
+✅ Fase 11 Offline y sincronización
+✅ Fase 12 Branding y centro de comunicación
+Etapa 4
+✅ Fase 13 Integración funcional con Multitienda
+✅ Fase 14 QA
+✅ Fase 15 Documentación y despliegue

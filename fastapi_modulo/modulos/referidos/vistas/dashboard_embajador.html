@@ -1,0 +1,47 @@
+<!-- Dashboard del Embajador -->
+<div class="dashboard-embajador">
+  <h2>Dashboard Embajador</h2>
+  <div class="metricas">
+    <div class="metrica">
+      <span class="valor" id="referidos-total">{{ total_referidos }}</span>
+      <span class="label">Referidos totales</span>
+    </div>
+    <div class="metrica">
+      <span class="valor" id="referidos-convertidos">{{ convertidos }}</span>
+      <span class="label">Referidos convertidos</span>
+    </div>
+    <div class="metrica">
+      <span class="valor" id="incentivos-pagados">Q{{ incentivos|round(2) }}</span>
+      <span class="label">Incentivos pagados</span>
+    </div>
+    <div class="metrica">
+      <span class="valor" id="ranking">
+        Global: {{ global_rank if global_rank else '-' }}<br>
+        Negocio: {{ business_rank if business_rank else '-' }}
+      </span>
+      <span class="label">Ranking</span>
+    </div>
+    <div class="metrica">
+      <span class="valor" id="meta-cantidad">{{ meta_cantidad if meta_cantidad else '-' }}</span>
+      <span class="label">Meta cantidad</span>
+    </div>
+    <div class="metrica">
+      <span class="valor" id="meta-monto">{{ meta_monto if meta_monto else '-' }}</span>
+      <span class="label">Meta monto</span>
+    </div>
+  </div>
+  <div class="acciones">
+    <a href="#" id="ver-referidos">Ver referidos</a>
+    <a href="#" id="ver-incentivos">Ver incentivos</a>
+    <a href="#" id="ver-ranking">Ver ranking</a>
+  </div>
+</div>
+<style>
+.dashboard-embajador { max-width: 600px; margin: 0 auto; }
+.metricas { display: flex; justify-content: space-between; margin-bottom: 2em; }
+.metrica { text-align: center; }
+.metrica .valor { font-size: 2em; font-weight: bold; display: block; }
+.metrica .label { color: #888; }
+.acciones { display: flex; justify-content: space-around; }
+.acciones a { text-decoration: none; color: #1976d2; font-weight: 500; }
+</style>

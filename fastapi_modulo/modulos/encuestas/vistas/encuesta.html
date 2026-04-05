@@ -200,7 +200,17 @@
                         </div>
                         <div class="enc-public-link-summary-row">
                           <div class="enc-public-link-summary-label">
-                            <strong>Panel en vivo</strong>
+                            <strong>Pantalla de presentación</strong>
+                            <a id="enc-presentation-link-anchor" href="#" target="_blank" rel="noopener noreferrer"></a>
+                          </div>
+                          <div class="enc-public-link-summary-actions">
+                            <button type="button" class="enc-button enc-button-secondary" data-enc-copy-presentation-link>Copiar pantalla</button>
+                            <a id="enc-open-presentation-link" class="enc-button enc-button-secondary" href="#" target="_blank" rel="noopener noreferrer">Abrir pantalla</a>
+                          </div>
+                        </div>
+                        <div class="enc-public-link-summary-row">
+                          <div class="enc-public-link-summary-label">
+                            <strong>Panel de control en vivo</strong>
                             <a id="enc-presenter-link-anchor" href="#" target="_blank" rel="noopener noreferrer"></a>
                           </div>
                           <div class="enc-public-link-summary-actions">
@@ -238,7 +248,7 @@
                     </div>
                     <div id="enc-questions-list" class="enc-stack"></div>
                     <div class="enc-question-board-actions">
-                      <button type="button" class="enc-button enc-button-secondary" data-enc-action="add-section">+ Agregar página</button>
+                      <button type="button" class="enc-button enc-button-secondary" data-enc-action="add-section">+ Agregar sección</button>
                       <button type="button" class="enc-button enc-button-primary" data-enc-action="add-question">+ Agregar pregunta</button>
                       <span id="enc-board-msg" class="enc-board-msg" aria-live="polite"></span>
                     </div>
@@ -297,10 +307,15 @@
                       <div class="enc-presentation-toolbar">
                         <div>
                           <p class="enc-sidebar-label">Modo Presentación</p>
-                          <p class="enc-question-meta">Crea páginas con bloques HTML y preguntas existentes. Usa el modo de respuesta "Presentación" para activarlo.</p>
+                          <p class="enc-question-meta">Cada sección de presentación puede contener bloques HTML, imágenes o preguntas existentes. Usa el modo de respuesta "Presentación" para activarlo.</p>
                         </div>
                         <div class="enc-builder-toolbar">
-                          <button type="button" id="enc-presentation-add-page" class="enc-button enc-button-secondary">Agregar página</button>
+                          <div class="enc-view-switcher" role="tablist" aria-label="Vista de pantallas">
+                            <button type="button" class="enc-view-chip is-active" data-enc-presentation-view="kanban" aria-pressed="true">Kanban</button>
+                            <button type="button" class="enc-view-chip" data-enc-presentation-view="list" aria-pressed="false">Lista</button>
+                            <button type="button" class="enc-view-chip" data-enc-presentation-view="carousel" aria-pressed="false">Carrusel</button>
+                          </div>
+                          <button type="button" id="enc-presentation-add-page" class="enc-button enc-button-secondary">Agregar pantalla</button>
                           <button type="button" id="enc-presentation-save" class="enc-button enc-button-primary">Guardar presentación</button>
                         </div>
                       </div>
@@ -696,6 +711,14 @@
               </label>
             </section>
             <section class="enc-survey-panel" data-enc-question-panel="options">
+              <label class="enc-field" id="enc-modal-question-chart-wrap" hidden>
+                <span>Tipo de gráfico</span>
+                <select id="enc-modal-question-chart-type" class="enc-input enc-select">
+                  <option value="bar">Barras</option>
+                  <option value="donut">Donut</option>
+                  <option value="list">Lista</option>
+                </select>
+              </label>
               <label class="enc-field">
                 <span>Obligatoria</span>
                 <select id="enc-modal-question-required" class="enc-input enc-select">
@@ -705,6 +728,7 @@
               </label>
             </section>
           </div>
+          <div id="enc-modal-question-msg" class="enc-inline-msg" aria-live="polite"></div>
         </div>
         <div class="enc-modal-actions">
           <button type="button" id="enc-modal-question-save-close" class="enc-button enc-button-primary">Guardar y cerrar</button>
@@ -720,7 +744,7 @@
   <div class="enc-modal-backdrop" data-enc-close-modal="page"></div>
   <div class="enc-modal-dialog enc-page-modal-dialog">
     <div class="enc-modal-head">
-      <h3>Editar página</h3>
+      <h3>Editar sección</h3>
       <button type="button" class="enc-modal-close" data-enc-close-modal="page">×</button>
     </div>
     <div class="enc-modal-body">
@@ -761,11 +785,26 @@
                   <input id="enc-page-title" class="enc-input" type="text" placeholder="Opcional">
                 </label>
                 <label class="enc-field">
-                  <span>Secciones</span>
+                  <span>Tamaño del título</span>
+                  <select id="enc-page-title-size" class="enc-input enc-select">
+                    <option value="sm">Pequeño</option>
+                    <option value="md" selected>Mediano</option>
+                    <option value="lg">Grande</option>
+                  </select>
+                </label>
+                <label class="enc-field">
+                  <span>Mostrar título</span>
+                  <select id="enc-page-show-title" class="enc-input enc-select">
+                    <option value="true" selected>Mostrar</option>
+                    <option value="false">Ocultar</option>
+                  </select>
+                </label>
+                <label class="enc-field">
+                  <span>Bloques</span>
                   <select id="enc-page-section-count" class="enc-input enc-select">
-                    <option value="1">1 · Página completa</option>
-                    <option value="2">2 · Dos columnas</option>
-                    <option value="4">4 · Cuatro cuadrantes</option>
+                    <option value="1">1 · Sección completa</option>
+                    <option value="2">2 · Dos bloques</option>
+                    <option value="4">4 · Cuatro bloques</option>
                   </select>
                 </label>
                 <label class="enc-field">
@@ -774,7 +813,7 @@
                 </label>
                 <label class="enc-field enc-field-span-2">
                   <span>Descripción</span>
-                  <textarea id="enc-page-description" class="enc-input enc-textarea" placeholder="Contexto o instrucciones para esta página"></textarea>
+                  <textarea id="enc-page-description" class="enc-input enc-textarea" placeholder="Contexto o instrucciones para esta sección"></textarea>
                 </label>
                 <label class="enc-field enc-field-span-2">
                   <span>Imagen de fondo</span>
@@ -796,8 +835,9 @@
               <div id="enc-page-preview" class="enc-page-builder-preview" tabindex="0"></div>
             </div>
           </div>
+          <div id="enc-page-modal-msg" class="enc-inline-msg" aria-live="polite"></div>
           <div class="enc-modal-actions">
-            <button type="button" id="enc-page-save-close" class="enc-button enc-button-primary">Guardar página</button>
+            <button type="button" id="enc-page-save-close" class="enc-button enc-button-primary">Guardar sección</button>
             <button type="button" class="enc-button enc-button-secondary" data-enc-close-modal="page">Cerrar</button>
           </div>
         </div>

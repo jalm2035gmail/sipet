@@ -31,6 +31,11 @@ rsync -az --delete \
   --exclude '*.pyc' \
   --exclude '.env' \
   --exclude 'fastapi_modulo/modulos/' \
+  --exclude 'fastapi_modulo/modulos_sipet/frontend/pages_store.json' \
+  --exclude 'fastapi_modulo/modulos_sipet/frontend/versions_store.json' \
+  --exclude 'fastapi_modulo/modulos_sipet/frontend/contact_store.json' \
+  --exclude 'fastapi_modulo/modulos_sipet/frontend/brand_store.json' \
+  --exclude 'fastapi_modulo/modulos_sipet/frontend/tasas_store.json' \
   --exclude 'fastapi_modulo/modulos_sipet/web/identidad_login.json' \
   --exclude 'fastapi_modulo/runtime_store/' \
   --exclude 'fastapi_modulo/templates/imagenes/' \

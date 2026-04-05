@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from typing import Any
 
+from sqlalchemy.orm import Session
+
 from fastapi_modulo.modulos_sipet.modulo_base.bootstrap import MODULE_CONFIG
 from fastapi_modulo.modulos_sipet.modulo_base.core.service import BaseModuleService
-from fastapi_modulo.modulos_sipet.modulo_base.repositorios.common import get_db
 from fastapi_modulo.modulos_sipet.modulo_base.repositorios.base_repository import ModuloBaseRepository
 
 
@@ -25,14 +26,10 @@ def get_modulo_base_health() -> dict[str, Any]:
     return service.health_payload()
 
 
-def get_modulo_base_resumen(tenant_id: str | None = None) -> dict[str, Any]:
-    db = get_db()
-    try:
-        normalized_tenant = _normalize_tenant(tenant_id)
-        repository = ModuloBaseRepository(db)
-        return service.resumen_payload(
-            tenant_id=normalized_tenant,
-            total_registros=repository.count_by_tenant(normalized_tenant),
-        )
-    finally:
-        db.close()
+def get_modulo_base_resumen(db: Session, tenant_id: str | None = None) -> dict[str, Any]:
+    normalized_tenant = _normalize_tenant(tenant_id)
+    repository = ModuloBaseRepository(db)
+    return service.resumen_payload(
+        tenant_id=normalized_tenant,
+        total_registros=repository.count_by_tenant(normalized_tenant),
+    )
