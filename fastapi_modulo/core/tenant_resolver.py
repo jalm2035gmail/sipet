@@ -28,6 +28,7 @@ ADMIN_GLOBAL_PREFIXES = (
     "/admin/tenants",
     "/admin/system",
 )
+LOCAL_TENANT_HOST_ALIASES = {"localhost", "127.0.0.1", "0.0.0.0", "::1"}
 
 
 @dataclass(frozen=True)
@@ -65,8 +66,11 @@ def classify_access_mode(path: Optional[str]) -> str:
 def tenant_key_from_host(host: str, strategy: TenantKeyStrategy | None = None) -> str:
     active_strategy = strategy or ARCHITECTURE_SETTINGS.tenant_key_strategy
     normalized_host = normalize_host(host)
+    default_tenant = normalize_tenant_slug(os.environ.get("DEFAULT_TENANT_ID", "default"))
     if not normalized_host:
-        return normalize_tenant_slug(os.environ.get("DEFAULT_TENANT_ID", "default"))
+        return default_tenant
+    if normalized_host in LOCAL_TENANT_HOST_ALIASES:
+        return default_tenant
     if active_strategy == TenantKeyStrategy.SUBDOMAIN:
         subdomain = normalized_host.split(".", 1)[0]
         return normalize_tenant_slug(subdomain)

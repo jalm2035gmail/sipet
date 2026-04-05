@@ -16,6 +16,13 @@ def test_tenant_key_from_host() -> None:
     assert tenant_key_from_host("cliente1.midominio.com") == "cliente1_midominio_com"
 
 
+def test_tenant_key_from_host_uses_default_for_localhost_aliases(monkeypatch) -> None:
+    monkeypatch.setenv("DEFAULT_TENANT_ID", "default")
+    assert tenant_key_from_host("localhost") == "default"
+    assert tenant_key_from_host("127.0.0.1") == "default"
+    assert tenant_key_from_host("0.0.0.0") == "default"
+
+
 def test_resolve_tenant_from_domain() -> None:
     resolver = TenantResolver(default_tenant_id="default")
     assert resolver.resolve_tenant_from_domain("cliente1.midominio.com") == "cliente1_midominio_com"
