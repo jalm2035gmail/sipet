@@ -135,3 +135,6 @@ INFO:     127.0.0.1:60217 - "GET /sw.js HTTP/1.1" 404 Not Found
 INFO:     127.0.0.1:52732 - "GET /sw.js HTTP/1.1" 404 Not Found
 INFO:     127.0.0.1:61683 - "GET /sw.js HTTP/1.1" 404 Not Found
 INFO:     127.0.0.1:54199 - "GET /sw.js HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:63155 - "GET /sw.js HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:55705 - "GET /sw.js HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:64612 - "GET /sw.js HTTP/1.1" 404 Not Found
