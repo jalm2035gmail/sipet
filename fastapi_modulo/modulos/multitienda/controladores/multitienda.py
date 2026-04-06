@@ -96,7 +96,7 @@ _BOOTSTRAP_RAN = False
 
 
 def bootstrap_multitienda() -> None:
-    ensure_store_tables()
+    # El orden importa: vendors → products → store_reservations (que tiene FK a products)
     _ensure_vendor_table()
     db = SessionLocal()
     try:
@@ -104,6 +104,7 @@ def bootstrap_multitienda() -> None:
         layaway_service.bootstrap_layaway_schema(db)
     finally:
         db.close()
+    ensure_store_tables()
     bootstrap_business_types_schema()
     _ensure_membresia_table()
     bootstrap_user_support_tables()
