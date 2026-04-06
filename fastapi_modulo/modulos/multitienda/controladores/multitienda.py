@@ -96,15 +96,23 @@ _BOOTSTRAP_RAN = False
 
 
 def bootstrap_multitienda() -> None:
-    # El orden importa: vendors → products → store_reservations (que tiene FK a products)
+    # Orden requerido por dependencias FK:
+    # 1. vendors (independiente)
+    # 2. products (FK → vendors)
+    # 3. ensure_store_tables (store_reservations FK → products; store_layaways se crea aquí)
+    # 4. bootstrap_layaway_schema (requiere store_layaways ya creada)
     _ensure_vendor_table()
     db = SessionLocal()
     try:
         _ensure_product_tables(db.bind)
-        layaway_service.bootstrap_layaway_schema(db)
     finally:
         db.close()
     ensure_store_tables()
+    db = SessionLocal()
+    try:
+        layaway_service.bootstrap_layaway_schema(db)
+    finally:
+        db.close()
     bootstrap_business_types_schema()
     _ensure_membresia_table()
     bootstrap_user_support_tables()
