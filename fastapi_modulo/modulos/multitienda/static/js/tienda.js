@@ -121,7 +121,9 @@
       showPolicies: showPolicies,
       showRights: showRights,
       showPrivacy: showPrivacy,
-      showContact: showContact || showMap,
+      showContact: showContact,
+      showMap: showMap,
+      mapUrl: mapUrl,
     };
   }
 
@@ -186,6 +188,7 @@
     grid.innerHTML = items.map(function (item) {
       return (
         '<button class="sl-store-action-btn" type="button" data-store-action="' + escapeHtml(item.key) + '">' +
+          '<span class="sl-store-action-btn__icon" aria-hidden="true">' + escapeHtml(item.icon || "•") + '</span>' +
           '<strong>' + escapeHtml(item.label) + '</strong>' +
           '<span>' + escapeHtml(item.description) + '</span>' +
         '</button>'
@@ -196,6 +199,10 @@
       button.addEventListener("click", function () {
         var key = button.getAttribute("data-store-action");
         var selected = items.find(function (item) { return item.key === key; });
+        if (selected && selected.href) {
+          window.open(selected.href, "_blank", "noopener,noreferrer");
+          return;
+        }
         openStoreDrawer(key, selected ? selected.label : "Información");
       });
     });
@@ -252,10 +259,11 @@
 
           renderStoreActions(
             [
-              visibility.showAbout ? { key: "nosotros", label: "Nosotros", description: "Slogan, visión y misión de la tienda." } : null,
-              visibility.showRights ? { key: "rights", label: "Derechos del consumidor", description: "Información pública para clientes y compradores." } : null,
-              visibility.showPrivacy ? { key: "privacy", label: "Privacidad de los datos", description: "Tratamiento y resguardo de información personal." } : null,
-              visibility.showContact ? { key: "contact", label: "Datos de contacto", description: "Correo, teléfono, dirección y ubicación publicada." } : null
+              visibility.showAbout ? { key: "nosotros", label: "Nosotros", icon: "◫", description: "Slogan, visión y misión de la tienda." } : null,
+              visibility.showRights ? { key: "rights", label: "Derechos del consumidor", icon: "§", description: "Información pública para clientes y compradores." } : null,
+              visibility.showPrivacy ? { key: "privacy", label: "Privacidad de los datos", icon: "◌", description: "Tratamiento y resguardo de información personal." } : null,
+              visibility.showContact ? { key: "contact", label: "Datos de contacto", icon: "@", description: "Correo, teléfono, sitio web y dirección publicada." } : null,
+              visibility.showMap ? { key: "location", label: "Ubicación", icon: "⌖", description: "Abrir mapa de la tienda en una nueva pestaña.", href: visibility.mapUrl } : null
             ].filter(Boolean)
           );
         }

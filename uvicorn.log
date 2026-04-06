@@ -1,5 +1,5 @@
 [startup] static mount skipped /modulos/activo_fijo/static: directory 'fastapi_modulo/modulos/activo_fijo/static' does not exist
-INFO:     Started server process [8288]
+INFO:     Started server process [23817]
 INFO:     Waiting for application startup.
 [startup] core_schema begin
 [startup] create_all ok
@@ -106,36 +106,401 @@ INFO:     Waiting for application startup.
 [startup] register startup routers done
 [startup] frontend legacy migration skipped: no request host
 [startup] register late routers begin
+[startup] module late multitienda_public_catchall begin
+[startup] import fastapi_modulo.modulos.multitienda.controladores.multitienda_catchall_late
+[startup] import fastapi_modulo.modulos.multitienda.controladores.multitienda_catchall_late done
+[startup] module late multitienda_public_catchall done
 [startup] register late routers done
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
-INFO:     127.0.0.1:55289 - "GET /manifest.webmanifest HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:56712 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
-INFO:     127.0.0.1:56720 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
-INFO:     127.0.0.1:56712 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 303 See Other
-INFO:     127.0.0.1:56722 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
-INFO:     127.0.0.1:56721 - "GET /sw.js HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:56712 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
-INFO:     127.0.0.1:56721 - "GET /backend/login HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56712 - "GET /backend/login HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56712 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 303 See Other
-INFO:     127.0.0.1:56712 - "GET /backend/login HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56712 - "GET /sw.js HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:56907 - "GET /sw.js HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:56908 - "GET /backend/login HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56908 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 303 See Other
-INFO:     127.0.0.1:56908 - "GET /backend/login HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56908 - "GET /sw.js HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:58041 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
-INFO:     127.0.0.1:58782 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
-INFO:     127.0.0.1:60179 - "GET /sw.js HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:60942 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
-INFO:     127.0.0.1:51597 - "GET /sw.js HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:60217 - "GET /sw.js HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:52732 - "GET /sw.js HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:61683 - "GET /sw.js HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:54199 - "GET /sw.js HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:63155 - "GET /sw.js HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:55705 - "GET /sw.js HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:64612 - "GET /sw.js HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:56976 - "GET /sw.js HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:61011 - "POST /backend/login HTTP/1.1" 303 See Other
+INFO:     127.0.0.1:61011 - "GET /inicio HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:61011 - "GET /aplicaciones HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61013 - "GET /api/aplicaciones/assets/aplicaciones.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61011 - "GET /api/aplicaciones/assets/aplicaciones.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61587 - "GET /manifest.webmanifest HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61013 - "GET /api/colaboradores HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61013 - "GET /api/ia/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61614 - "GET /personalizar/estado HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61614 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61614 - "GET /sw.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61791 - "GET /frontend/builder HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61791 - "GET /api/frontend/pages HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61791 - "GET /guardar-colores HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61791 - "GET /sw.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61791 - "GET /multitienda HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61791 - "GET /multitienda/static/css/inicio.css HTTP/1.1" 200 OK
+Error en _request_db_context para GET /multitienda/api/inicio-stats; se realizara rollback.
+Traceback (most recent call last):
+  File "/Users/jalm/Dropbox/Apps/SIPET/fastapi_modulo/modulos/multitienda/controladores/multitienda.py", line 935, in _request_db_context
+    yield context
+  File "/Users/jalm/Dropbox/Apps/SIPET/fastapi_modulo/modulos/multitienda/controladores/multitienda.py", line 1761, in api_inicio_stats
+    store_id = _resolve_store_id_from_scope(request, scope)
+  File "/Users/jalm/Dropbox/Apps/SIPET/fastapi_modulo/modulos/multitienda/controladores/multitienda.py", line 1740, in _resolve_store_id_from_scope
+    raise HTTPException(status_code=403, detail="No tienes una tienda asignada.")
+fastapi.exceptions.HTTPException: 403: No tienes una tienda asignada.
+INFO:     127.0.0.1:61791 - "GET /multitienda/api/inicio-stats HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:62081 - "GET /manifest.webmanifest HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62123 - "GET /multitienda/api/stores HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61011 - "GET /api/aplicaciones/modulos?refresh=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61791 - "GET /multitienda/api/stores HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62176 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:61791 - "GET /api/colaboradores HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61011 - "GET /personalizar/estado HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61791 - "GET /api/ia/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61791 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61011 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61791 - "GET /sw.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62465 - "GET /web/inicio HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62468 - "GET /personalizar/uploads/logo_empresa.png?v=1772065958 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62465 - "GET /static/frontend/css/page_render.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62469 - "GET /static/frontend/js/public_page.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62469 - "GET /api/backend/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62469 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:62469 - "GET /sw.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63578 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:63696 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64973 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:65106 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49990 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:50151 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51386 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:51569 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52791 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:53002 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54159 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:54389 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55567 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:55820 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56988 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:57578 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58370 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:59764 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:61149 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:62537 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:63948 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:65355 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:50332 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:51721 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:53114 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:54522 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:55921 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:57337 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:58741 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:58967 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+cache_service: REDIS_URL no configurado — caché de páginas desactivado.
+INFO:     127.0.0.1:59761 - "GET /web/duma-s HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:59761 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:59761 - "GET /sw.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59761 - "GET /duma-s HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59762 - "GET /multitienda/static/js/tienda.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:59761 - "GET /multitienda/static/css/tienda.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:59925 - "GET /static/imagenes/logo_vale.png HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:59761 - "GET /multitienda/vendors/ HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:59925 - "GET /multitienda/api/store-info?store_slug=duma-s HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59761 - "GET /multitienda/vendors HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:59762 - "GET /multitienda/api/productos-publicos?store_slug=duma-s HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/orm/clsregistry.py", line 516, in _resolve_name
+    rval = d[token]
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/util/_collections.py", line 345, in __missing__
+    self[key] = val = self.creator(key)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/orm/clsregistry.py", line 484, in _access_cls
+    return self.fallback[key]
+KeyError: 'VendorCommission'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/uvicorn/protocols/http/httptools_impl.py", line 416, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/uvicorn/middleware/proxy_headers.py", line 60, in __call__
+    return await self.app(scope, receive, send)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/fastapi/applications.py", line 1138, in __call__
+    await super().__call__(scope, receive, send)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/applications.py", line 107, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    raise exc
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/base.py", line 193, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "/Users/jalm/Dropbox/Apps/SIPET/fastapi_modulo/core/tenant_middleware.py", line 14, in apply_tenant_context_middleware
+    return await call_next(request)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/base.py", line 168, in call_next
+    raise app_exc from app_exc.__cause__ or app_exc.__context__
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/base.py", line 144, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/base.py", line 193, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "/Users/jalm/Dropbox/Apps/SIPET/fastapi_modulo/modulos_sipet/web/controladores/backend_middleware.py", line 250, in enforce_backend_login
+    return await call_next(request)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/base.py", line 168, in call_next
+    raise app_exc from app_exc.__cause__ or app_exc.__context__
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/base.py", line 144, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/middleware/exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/fastapi/middleware/asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/routing.py", line 716, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/routing.py", line 736, in app
+    await route.handle(scope, receive, send)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/routing.py", line 290, in handle
+    await self.app(scope, receive, send)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/fastapi/routing.py", line 121, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/fastapi/routing.py", line 107, in app
+    response = await f(request)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/fastapi/routing.py", line 426, in app
+    raw_response = await run_endpoint_function(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/fastapi/routing.py", line 316, in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/starlette/concurrency.py", line 32, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/anyio/to_thread.py", line 33, in run_sync
+    return await get_asynclib().run_sync_in_worker_thread(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/anyio/_backends/_asyncio.py", line 877, in run_sync_in_worker_thread
+    return await future
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/anyio/_backends/_asyncio.py", line 807, in run
+    result = context.run(func, *args)
+  File "/Users/jalm/Dropbox/Apps/SIPET/fastapi_modulo/modulos/multitienda/controladores/routers/public.py", line 94, in api_public_products
+    "data": load_public_products(request, mode, str(store_id or "")),
+  File "/Users/jalm/Dropbox/Apps/SIPET/fastapi_modulo/modulos/multitienda/controladores/multitienda.py", line 888, in _load_public_products
+    return product_service.list_public_catalog(
+  File "/Users/jalm/Dropbox/Apps/SIPET/fastapi_modulo/modulos/multitienda/marketplace/backend/apps/products/service.py", line 190, in list_public_catalog
+    vendor_rows = _filtered_vendor_rows(db, store_id, featured_only)
+  File "/Users/jalm/Dropbox/Apps/SIPET/fastapi_modulo/modulos/multitienda/marketplace/backend/apps/products/service.py", line 17, in _filtered_vendor_rows
+    vendor_query = db.query(VendorStore).filter_by(is_active=True)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/orm/session.py", line 2941, in query
+    return self._query_cls(entities, self, **kwargs)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/orm/query.py", line 276, in __init__
+    self._set_entities(entities)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/orm/query.py", line 288, in _set_entities
+    self._raw_columns = [
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/orm/query.py", line 289, in <listcomp>
+    coercions.expect(
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/sql/coercions.py", line 389, in expect
+    insp._post_inspect
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/util/langhelpers.py", line 1338, in __get__
+    obj.__dict__[self.__name__] = result = self.fget(obj)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/orm/mapper.py", line 2733, in _post_inspect
+    self._check_configure()
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/orm/mapper.py", line 2410, in _check_configure
+    _configure_registries({self.registry}, cascade=True)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/orm/mapper.py", line 4227, in _configure_registries
+    _do_configure_registries(registries, cascade)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/orm/mapper.py", line 4268, in _do_configure_registries
+    mapper._post_configure_properties()
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/orm/mapper.py", line 2427, in _post_configure_properties
+    prop.init()
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/orm/interfaces.py", line 595, in init
+    self.do_init()
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/orm/relationships.py", line 1655, in do_init
+    self._setup_entity()
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/orm/relationships.py", line 1865, in _setup_entity
+    self._clsregistry_resolve_name(argument)(),
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/orm/clsregistry.py", line 520, in _resolve_name
+    self._raise_for_name(name, err)
+  File "/Users/jalm/Dropbox/Apps/SIPET/.venv/lib/python3.10/site-packages/sqlalchemy/orm/clsregistry.py", line 501, in _raise_for_name
+    raise exc.InvalidRequestError(
+sqlalchemy.exc.InvalidRequestError: When initializing mapper Mapper[VendorStore(vendors)], expression 'VendorCommission' failed to locate a name ('VendorCommission'). If this is a class name, consider adding this relationship() to the <class 'fastapi_modulo.modulos.multitienda.marketplace.backend.apps.vendors.models.VendorStore'> class after both dependent classes have been defined.
+INFO:     127.0.0.1:59761 - "GET /multitienda/multitienda/static/imagenes/logo_vale.png HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:59761 - "GET /multitienda/multitienda/static/imagenes/logo_vale.png HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:59761 - "GET /sw.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60107 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:60322 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61455 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:61709 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62852 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:63511 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64239 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:49209 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:50610 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:51951 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:53330 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:54714 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:56131 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:57543 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:58929 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:59298 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60324 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:60696 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61704 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:62097 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63104 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:63522 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64505 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:64947 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49512 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:49968 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50766 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:51716 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51835 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:52949 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:53983 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:54709 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:55135 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55599 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:56488 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:56892 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57581 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57744 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:59129 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59136 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:60427 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60554 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:61804 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61951 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:63211 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63345 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:64604 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64754 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:49620 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49781 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:51012 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51158 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:52393 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52527 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:53753 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53899 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:55121 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55253 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:56489 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56635 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:57842 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58010 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:59241 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59388 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:60621 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60788 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:62044 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62193 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:63437 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63609 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:64863 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65005 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:49848 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50014 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:51144 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51290 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:52607 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52655 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:53776 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53894 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:55036 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55201 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:56292 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56473 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:57597 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57692 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:58707 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58854 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:60052 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:60351 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61205 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:62210 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:63226 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:64172 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:65142 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:49845 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:50818 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:51830 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:52062 - "GET /api/notificaciones/resumen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53211 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:54604 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:55689 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:56649 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:57605 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:58584 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:59589 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:60560 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:61506 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:62455 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:63400 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:64326 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:65139 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:49697 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:50652 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:51589 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:52543 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:54151 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:54905 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:55828 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:56933 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:57768 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:58874 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:59793 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:59810 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:61146 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:62290 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:63284 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:64234 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:65271 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:49833 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:50961 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:51986 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:52987 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:53963 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:54977 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:56065 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:56988 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:58003 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:59024 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:60220 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:61553 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:62836 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:63894 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:65011 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:65508 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:49861 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:50518 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:51256 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:51954 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:52668 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:53396 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:54084 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:54836 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:55493 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:55560 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:56887 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:57106 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:57941 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:58215 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:59300 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:59554 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:60650 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:60930 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:61947 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:62291 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:63123 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:63432 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:64441 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:64822 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:49504 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:49880 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:50935 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:51312 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:52386 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:52756 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:53646 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:54124 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:54907 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:55420 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:56328 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:56869 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:57645 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:58147 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:58760 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:59288 - "GET /api/notificaciones/resumen HTTP/1.1" 401 Unauthorized
