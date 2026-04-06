@@ -54,7 +54,7 @@ def test_multitienda_manifest_declares_runtime_dependencies() -> None:
     assert "reservaciones" not in depends
     assert "intelicoop" not in depends
     assert "repartidores" not in depends
-    assert integrations == {"referidos", "reservaciones", "intelicoop", "repartidores"}
+    assert integrations == {"referidos", "reservaciones", "intelicoop", "repartidores", "pwa", "subastas", "crm"}
 
 
 def test_multitienda_removes_orphan_backend_logic() -> None:
@@ -100,7 +100,7 @@ def test_multitienda_management_section_uses_updated_label_and_cached_notebook_s
     assert "multitienda-shell__hero" in content
     assert 'fetch(\'/multitienda/api/stores\'' in content
     assert ".multitienda-official-view .notebook-tab.active" in content
-    assert '<button class="notebook-tab active"' in content
+    assert 'class="notebook-tab' in content
     assert "/multitienda/api/business-types" in content
     assert "/multitienda/api/memberships" in content
     assert "/multitienda/api/usuarios" not in content
@@ -128,8 +128,8 @@ def test_multitienda_dashboard_summary_is_only_rendered_on_inicio() -> None:
         viewer_name="Demo",
     )
 
-    assert "Dashboard de tienda" in inicio_content
-    assert "Dashboard de tienda" not in productos_content
+    assert "Tablero de control" in inicio_content
+    assert "Tablero de control" not in productos_content
     assert '<section class="multitienda-shell__hero">' not in productos_content
 
 

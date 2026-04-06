@@ -137,8 +137,8 @@ _MODULE_SECTIONS = [
     {"id": "crm", "label": "CRM", "icon": "fa-solid fa-users-rectangle", "route": "/multitienda/crm"},
     {"id": "subastas", "label": "Subastas", "icon": "fa-solid fa-gavel", "route": "/multitienda/subastas"},
     {"id": "configuracion", "label": "Configuración", "icon": "fa-solid fa-gear", "route": "/multitienda/configuracion"},
-    {"id": "gestion", "label": "Administración de tiendas", "icon": "fa-solid fa-store", "route": "/multitienda/administracion_tiendas"},
     {"id": "repartidores", "label": "Repartidores", "icon": "fa-solid fa-motorcycle", "route": "/multitienda/repartidores"},
+    {"id": "gestion", "label": "Administración de tiendas", "icon": "fa-solid fa-store", "route": "/multitienda/administracion_tiendas"},
 ]
 
 _PUBLIC_LANDING_RESERVED = {

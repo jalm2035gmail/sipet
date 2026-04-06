@@ -784,7 +784,7 @@ __BACKEND_SHARED_SIDEBAR_HTML__
             },
             body: JSON.stringify({
               is_edit: isEditingStore,
-              store_id: currentStoreId,
+              store_id: editIndex >= 0 && stores[editIndex] ? stores[editIndex].id : "",
               store_name: payload.name,
               store_type: payload.typeCode,
               store_type_name: payload.typeLabel,

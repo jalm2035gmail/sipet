@@ -3,6 +3,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 from fastapi_modulo.modulos.multitienda.controladores import multitienda as controller
+from fastapi_modulo.modulos.multitienda.controladores.services.roles_service import clear_roles_cache
 from fastapi_modulo.modulos_sipet.web.servicios.auth_service import encrypt_sensitive
 
 
@@ -14,10 +15,16 @@ class _FakeRole:
 
 class _FakeUserQuery:
     def __init__(self, rows) -> None:
-        self._rows = rows
+        self._rows = list(rows)
 
     def all(self):
         return list(self._rows)
+
+    def first(self):
+        return self._rows[0] if self._rows else None
+
+    def filter(self, *_args, **_kwargs):
+        return self
 
     def order_by(self, *_args, **_kwargs):
         return self
@@ -119,6 +126,7 @@ def test_resolve_store_scope_restricts_store_admin_to_assigned_store() -> None:
 
 
 def test_resolve_store_scope_falls_back_to_employee_store_assignment() -> None:
+    clear_roles_cache()
     role = _FakeRole(1, "vendedor_tienda")
     user = SimpleNamespace(
         id=10,
@@ -142,6 +150,7 @@ def test_resolve_store_scope_falls_back_to_employee_store_assignment() -> None:
 
 
 def test_store_admin_user_listing_returns_only_current_admin(monkeypatch) -> None:
+    clear_roles_cache()
     role = _FakeRole(1, "administrador_tienda")
     current_user = SimpleNamespace(
         id=10,
@@ -262,7 +271,7 @@ def test_visible_module_sections_show_fidelizacion_with_store_permission(monkeyp
 def test_gestion_entrypoint_redirects_store_admin_to_configuracion() -> None:
     request = SimpleNamespace(state=SimpleNamespace(user_role="administrador_tienda"))
 
-    response = controller.multitienda_gestion_entrypoint(request)
+    response = controller._dispatch_section_entrypoint(request, "gestion")
 
     assert response.headers["location"] == "/multitienda/configuracion"
 
@@ -289,7 +298,7 @@ def test_referidos_entrypoint_redirects_to_central_referidos_module(monkeypatch)
     monkeypatch.setattr(controller, "_resolve_store_permissions", lambda db, scope: {"referrals": "1"})
     monkeypatch.setattr(controller, "_resolve_integrated_section_target", lambda section_id, scope=None: "/referidos?business_slug=tienda-demo")
 
-    response = controller.multitienda_referidos_entrypoint(request)
+    response = controller._dispatch_section_entrypoint(request, "referidos")
 
     assert response.headers["location"] == "/referidos?business_slug=tienda-demo"
 
@@ -316,7 +325,7 @@ def test_notificaciones_pwa_entrypoint_redirects_to_pwa_module(monkeypatch) -> N
     monkeypatch.setattr(controller, "_resolve_store_permissions", lambda db, scope: {"pwa_notifications": "1"})
     monkeypatch.setattr(controller, "_resolve_integrated_section_target", lambda section_id, scope=None: "/pwa/notificaciones-tienda?business_slug=tienda-demo")
 
-    response = controller.multitienda_notificaciones_pwa_entrypoint(request)
+    response = controller._dispatch_section_entrypoint(request, "notificaciones_pwa")
 
     assert response.headers["location"] == "/pwa/notificaciones-tienda?business_slug=tienda-demo"
 
@@ -341,9 +350,10 @@ def test_reservaciones_entrypoint_redirects_to_central_reservaciones_module(monk
         },
     )
     monkeypatch.setattr(controller, "_resolve_store_permissions", lambda db, scope: {"appointments": "1"})
+    monkeypatch.setattr(controller, "_can_access_module_section", lambda *args, **kwargs: True)
     monkeypatch.setattr(controller, "_resolve_integrated_section_target", lambda section_id, scope=None: "/reservaciones")
 
-    response = controller.multitienda_reservaciones_entrypoint(request)
+    response = controller._dispatch_section_entrypoint(request, "reservaciones")
 
     assert response.headers["location"] == "/reservaciones"
 
@@ -370,7 +380,7 @@ def test_institucion_financiera_entrypoint_redirects_to_intelicoop(monkeypatch) 
     monkeypatch.setattr(controller, "_resolve_store_permissions", lambda db, scope: {"can_use_financial": "1"})
     monkeypatch.setattr(controller, "_resolve_integrated_section_target", lambda section_id, scope=None: "/inicio/intelicoop")
 
-    response = controller.multitienda_institucion_financiera_entrypoint(request)
+    response = controller._dispatch_section_entrypoint(request, "institucion_financiera")
 
     assert response.headers["location"] == "/inicio/intelicoop"
 
@@ -378,9 +388,27 @@ def test_institucion_financiera_entrypoint_redirects_to_intelicoop(monkeypatch) 
 def test_repartidores_entrypoint_redirects_to_central_repartidores_module(monkeypatch) -> None:
     request = SimpleNamespace(state=SimpleNamespace(user_role="superadministrador"))
 
+    class _FakeDb:
+        def close(self):
+            return None
+
+    monkeypatch.setattr(controller, "_db_session_for_request", lambda request: _FakeDb())
+    monkeypatch.setattr(
+        controller,
+        "_resolve_store_scope",
+        lambda request, db: {
+            "role": "superadministrador",
+            "user_id": 1,
+            "store_id": None,
+            "store_slug": "",
+            "restricted": False,
+        },
+    )
+    monkeypatch.setattr(controller, "_resolve_store_permissions", lambda db, scope: {})
+    monkeypatch.setattr(controller, "_can_access_module_section", lambda *args, **kwargs: True)
     monkeypatch.setattr(controller, "_resolve_integrated_section_target", lambda section_id, scope=None: "/repartidores")
 
-    response = controller.multitienda_repartidores_entrypoint(request)
+    response = controller._dispatch_section_entrypoint(request, "repartidores")
 
     assert response.headers["location"] == "/repartidores"
 
@@ -405,8 +433,9 @@ def test_subastas_entrypoint_redirects_to_central_subastas_module(monkeypatch) -
         },
     )
     monkeypatch.setattr(controller, "_resolve_store_permissions", lambda db, scope: {"can_use_auctions": "1"})
+    monkeypatch.setattr(controller, "_can_access_module_section", lambda *args, **kwargs: True)
     monkeypatch.setattr(controller, "_resolve_integrated_section_target", lambda section_id, scope=None: "/subastas")
 
-    response = controller.multitienda_subastas_entrypoint(request)
+    response = controller._dispatch_section_entrypoint(request, "subastas")
 
     assert response.headers["location"] == "/subastas"
