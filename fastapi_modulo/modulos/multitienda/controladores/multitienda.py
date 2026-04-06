@@ -1020,13 +1020,16 @@ def _serialize_store_summary_with_types(row: dict, business_type_names: dict[str
     theme = _decode_store_theme(row.get("store_theme"))
     type_code = str(theme.get("store_type") or "").strip()
     stored_type_name = str(theme.get("store_type_name") or "").strip()
+    decrypted_full_name = str(decrypt_sensitive(row.get("full_name")) or "").strip()
+    fallback_full_name = str(row.get("full_name") or "").strip()
     return {
         "id": row.get("id"),
         "name": row.get("store_name") or "",
         "slug": row.get("store_slug") or "",
         "adminId": str(row.get("vendor_id") or ""),
         "adminLabel": (
-            str(row.get("full_name") or "").strip()
+            decrypted_full_name
+            or fallback_full_name
             or str(decrypt_sensitive(row.get("encrypted_username")) or "").strip()
         ),
         "typeCode": type_code,
@@ -1596,7 +1599,10 @@ def multitienda_store_admin_users(request: Request):
                 {
                     "id": user.id,
                     "usuario": (decrypt_sensitive(user.usuario) or "").strip(),
-                    "nombre": (user.full_name or "").strip(),
+                    "nombre": (
+                        str(decrypt_sensitive(user.full_name) or "").strip()
+                        or (user.full_name or "").strip()
+                    ),
                     "rol": role_name,
                 }
             )

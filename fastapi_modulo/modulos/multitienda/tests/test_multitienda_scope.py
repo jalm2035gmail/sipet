@@ -223,6 +223,29 @@ def test_list_stores_falls_back_to_current_username_match(monkeypatch) -> None:
     assert payload["data"][0]["name"] == "Dumas"
 
 
+def test_list_stores_decrypts_admin_full_name(monkeypatch) -> None:
+    store_row = {
+        "id": 2,
+        "vendor_id": 5,
+        "store_name": "Ferreteria Carlos",
+        "store_slug": "ferreteria-carlos",
+        "store_theme": "{}",
+        "is_featured": True,
+        "is_active": True,
+        "full_name": encrypt_sensitive("Carlos Lopez"),
+        "encrypted_username": encrypt_sensitive("carlos"),
+    }
+    monkeypatch.setattr(
+        controller,
+        "decrypt_sensitive",
+        lambda value: "Carlos Lopez" if value == store_row["full_name"] else "carlos",
+    )
+
+    payload = controller._serialize_store_summary_with_types(store_row, {})
+
+    assert payload["adminLabel"] == "Carlos Lopez"
+
+
 def test_visible_module_sections_hide_gestion_for_non_superadmin(monkeypatch) -> None:
     monkeypatch.setattr(controller, "_optional_section_available", lambda section_id: True)
     sections = controller._visible_module_sections("administrador_tienda")
