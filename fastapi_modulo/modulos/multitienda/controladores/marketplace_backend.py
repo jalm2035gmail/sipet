@@ -150,23 +150,25 @@ async def save_store_settings(request: Request, payload_override: dict | None = 
             ).mappings().first()
             if not store:
                 raise HTTPException(status_code=404, detail="No se encontró la tienda a editar.")
-            conflicting_store = db.execute(
-                text(
-                    """
-                    SELECT id, store_name
-                    FROM vendors
-                    WHERE vendor_id = :admin_user_id
-                      AND id <> :store_id
-                    LIMIT 1
-                    """
-                ),
-                {"admin_user_id": admin_user_id, "store_id": store_id},
-            ).mappings().first()
-            if conflicting_store:
-                raise HTTPException(
-                    status_code=409,
-                    detail=f"El administrador seleccionado ya tiene una tienda asignada: {conflicting_store['store_name'] or 'Sin nombre'}. Usa otro usuario o edita esa tienda.",
-                )
+            current_admin_user_id = int(store["vendor_id"] or 0)
+            if admin_user_id != current_admin_user_id:
+                conflicting_store = db.execute(
+                    text(
+                        """
+                        SELECT id, store_name
+                        FROM vendors
+                        WHERE vendor_id = :admin_user_id
+                          AND id <> :store_id
+                        LIMIT 1
+                        """
+                    ),
+                    {"admin_user_id": admin_user_id, "store_id": store_id},
+                ).mappings().first()
+                if conflicting_store:
+                    raise HTTPException(
+                        status_code=409,
+                        detail=f"El administrador seleccionado ya tiene una tienda asignada: {conflicting_store['store_name'] or 'Sin nombre'}. Usa otro usuario o edita esa tienda.",
+                    )
         else:
             store = db.execute(
                 text(

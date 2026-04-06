@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import contextmanager
 from types import SimpleNamespace
 
 from fastapi_modulo.modulos.multitienda.controladores import multitienda as controller
@@ -95,10 +96,13 @@ class _FakeStoreListDb(_FakeDb):
         return super().execute(_statement, params)
 
 
-def _request(username: str = "dumas") -> SimpleNamespace:
+def _request(username: str = "dumas", query_params: dict | None = None) -> SimpleNamespace:
     return SimpleNamespace(
         state=SimpleNamespace(user_name=username, username=username),
         cookies={},
+        query_params=query_params or {},
+        method="GET",
+        url=SimpleNamespace(path="/multitienda/api/store-admin-users"),
     )
 
 
@@ -179,6 +183,99 @@ def test_store_admin_user_listing_returns_only_current_admin(monkeypatch) -> Non
             "id": 10,
             "usuario": "dumas",
             "nombre": "dumas",
+            "rol": "administrador_tienda",
+        }
+    ]
+
+
+def test_store_admin_user_listing_hides_assigned_admins_for_new_store(monkeypatch) -> None:
+    role = _FakeRole(1, "administrador_tienda")
+    available_user = SimpleNamespace(
+        id=10,
+        usuario=encrypt_sensitive("dumas"),
+        correo=encrypt_sensitive("dumas@dumas.com"),
+        rol_id=1,
+        role="administrador_tienda",
+        full_name="Dumas",
+    )
+    assigned_user = SimpleNamespace(
+        id=11,
+        usuario=encrypt_sensitive("carlos"),
+        correo=encrypt_sensitive("carlos@dumas.com"),
+        rol_id=1,
+        role="administrador_tienda",
+        full_name="Carlos",
+    )
+    db = _FakeStoreListDb(
+        [role],
+        [available_user, assigned_user],
+        None,
+        [
+            [{"vendor_id": 11}],
+        ],
+    )
+
+    @contextmanager
+    def fake_request_db_context(_request, include_permissions=False):
+        yield {"db": db, "scope": {"restricted": False, "user_id": None}, "role_name": "superadministrador"}
+
+    monkeypatch.setattr(controller, "_request_db_context", fake_request_db_context)
+
+    payload = controller.multitienda_store_admin_users(SimpleNamespace(query_params={}))
+
+    assert payload["success"] is True
+    assert payload["data"] == [
+        {
+            "id": 10,
+            "usuario": "dumas",
+            "nombre": "Dumas",
+            "rol": "administrador_tienda",
+        }
+    ]
+
+
+def test_store_admin_user_listing_keeps_current_admin_for_edit(monkeypatch) -> None:
+    role = _FakeRole(1, "administrador_tienda")
+    current_user = SimpleNamespace(
+        id=10,
+        usuario=encrypt_sensitive("dumas"),
+        correo=encrypt_sensitive("dumas@dumas.com"),
+        rol_id=1,
+        role="administrador_tienda",
+        full_name="Dumas",
+    )
+    assigned_elsewhere = SimpleNamespace(
+        id=11,
+        usuario=encrypt_sensitive("carlos"),
+        correo=encrypt_sensitive("carlos@dumas.com"),
+        rol_id=1,
+        role="administrador_tienda",
+        full_name="Carlos",
+    )
+    db = _FakeStoreListDb(
+        [role],
+        [current_user, assigned_elsewhere],
+        None,
+        [
+            {"vendor_id": 10},
+            [{"vendor_id": 10}, {"vendor_id": 11}],
+        ],
+    )
+
+    @contextmanager
+    def fake_request_db_context(_request, include_permissions=False):
+        yield {"db": db, "scope": {"restricted": False, "user_id": None}, "role_name": "superadministrador"}
+
+    monkeypatch.setattr(controller, "_request_db_context", fake_request_db_context)
+
+    payload = controller.multitienda_store_admin_users(SimpleNamespace(query_params={"store_id": "7"}))
+
+    assert payload["success"] is True
+    assert payload["data"] == [
+        {
+            "id": 10,
+            "usuario": "dumas",
+            "nombre": "Dumas",
             "rol": "administrador_tienda",
         }
     ]

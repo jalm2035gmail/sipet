@@ -1588,12 +1588,43 @@ def multitienda_store_admin_users(request: Request):
         db = ctx["db"]
         scope = ctx["scope"]
         roles_by_id = get_roles_map(db)
+        current_store_id_raw = str(request.query_params.get("store_id") or "").strip()
+        current_store_id = int(current_store_id_raw) if current_store_id_raw.isdigit() else 0
+        current_store_admin_id = 0
+        if current_store_id > 0:
+            current_store = db.execute(
+                text(
+                    """
+                    SELECT vendor_id
+                    FROM vendors
+                    WHERE id = :store_id
+                    LIMIT 1
+                    """
+                ),
+                {"store_id": current_store_id},
+            ).mappings().first()
+            current_store_admin_id = int((current_store or {}).get("vendor_id") or 0)
+        assigned_admin_ids = {
+            int(row.get("vendor_id") or 0)
+            for row in db.execute(
+                text(
+                    """
+                    SELECT vendor_id
+                    FROM vendors
+                    WHERE vendor_id IS NOT NULL
+                    """
+                )
+            ).mappings().all()
+            if int(row.get("vendor_id") or 0) > 0
+        }
         rows = []
         for user in db.query(Usuario).order_by(Usuario.full_name.asc()).all():
             role_name = roles_by_id.get(user.rol_id) or normalize_role_name(getattr(user, "role", "") or "usuario")
             if role_name != "administrador_tienda":
                 continue
             if scope["restricted"] and int(user.id) != int(scope["user_id"] or 0):
+                continue
+            if not scope["restricted"] and int(user.id) in assigned_admin_ids and int(user.id) != current_store_admin_id:
                 continue
             rows.append(
                 {

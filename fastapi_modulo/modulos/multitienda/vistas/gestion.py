@@ -62,24 +62,26 @@ __BACKEND_SHARED_SIDEBAR_HTML__
             <button class="action-btn" id="store-new-btn" type="button" onclick="if(window.multitiendaShowStoreForm){window.multitiendaShowStoreForm(-1);}else{var list=document.getElementById('store-list-view');var form=document.getElementById('store-form-view');var title=document.getElementById('store-form-title');if(list){list.hidden=true;}if(form){form.hidden=false;}if(title){title.textContent='Nueva tienda';}}">+ Nueva tienda</button>
           </div>
           <p class="store-table-note">Consulta todas las tiendas registradas y abre cualquiera para editarla.</p>
-          <table class="data-table" id="store-table">
-            <thead>
-              <tr>
-                <th>Tienda</th>
-                <th>Giro</th>
-                <th>Administrador</th>
-                <th>Membresía</th>
-                <th>Estado</th>
-              </tr>
-            </thead>
-            <tbody id="store-tbody">
-              <tr id="store-empty-row" class="empty-row">
-                <td colspan="5" style="text-align:center;color:var(--mt-muted);padding:32px;">
-                  No hay tiendas registradas. Haz clic en <strong>+ Nueva tienda</strong> para agregar la primera.
-                </td>
-              </tr>
-            </tbody>
-          </table>
+          <div class="data-table-scroll">
+            <table class="data-table" id="store-table">
+              <thead>
+                <tr>
+                  <th>Tienda</th>
+                  <th>Giro</th>
+                  <th>Administrador</th>
+                  <th>Membresía</th>
+                  <th>Estado</th>
+                </tr>
+              </thead>
+              <tbody id="store-tbody">
+                <tr id="store-empty-row" class="empty-row">
+                  <td colspan="5" style="text-align:center;color:var(--mt-muted);padding:32px;">
+                    No hay tiendas registradas. Haz clic en <strong>+ Nueva tienda</strong> para agregar la primera.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
 
         <div id="store-form-view" hidden>
@@ -706,6 +708,7 @@ __BACKEND_SHARED_SIDEBAR_HTML__
         if (typeSelect && typeof typeSelect.dispatchEvent === "function") {
           typeSelect.dispatchEvent(new Event("change"));
         }
+        loadUsers();
       }
 
       function renderStores() {
@@ -784,7 +787,7 @@ __BACKEND_SHARED_SIDEBAR_HTML__
             },
             body: JSON.stringify({
               is_edit: isEditingStore,
-              store_id: editIndex >= 0 && stores[editIndex] ? stores[editIndex].id : "",
+              store_id: currentStoreId,
               store_name: payload.name,
               store_type: payload.typeCode,
               store_type_name: payload.typeLabel,
@@ -1062,12 +1065,14 @@ __BACKEND_SHARED_SIDEBAR_HTML__
 
         async function loadUsers() {
           try {
-            const response = await fetch("/api/usuarios", { headers: { "Accept": "application/json" } });
+            const selectedAdminId = String(adminSelect.value || "");
+            const query = currentStoreId ? ("?store_id=" + encodeURIComponent(currentStoreId)) : "";
+            const response = await fetch("/multitienda/api/store-admin-users" + query, { headers: { "Accept": "application/json" } });
           if (!response.ok) {
             throw new Error("No se pudieron cargar usuarios");
           }
           const payload = await response.json();
-          const rawUsers = Array.isArray(payload) ? payload : (Array.isArray(payload && payload.data) ? payload.data : []);
+          const rawUsers = Array.isArray(payload && payload.data) ? payload.data : (Array.isArray(payload) ? payload : []);
           const users = rawUsers.filter(function (user) {
             return normalizeRole(user && user.rol) === "administrador_tienda";
           });
@@ -1081,10 +1086,10 @@ __BACKEND_SHARED_SIDEBAR_HTML__
           if (!users.length) {
             const emptyOption = document.createElement("option");
             emptyOption.value = "";
-            emptyOption.textContent = "Sin administradores de tienda";
+            emptyOption.textContent = "Sin administradores disponibles";
             adminSelect.appendChild(emptyOption);
             if (adminNote) {
-              adminNote.textContent = "Primero crea un usuario con rol Administrador de tienda en Usuarios.";
+              adminNote.textContent = "Crea un usuario con rol Administrador de tienda o libera uno ya asignado.";
             }
             if (createUserBtn) {
               createUserBtn.hidden = false;
@@ -1095,12 +1100,18 @@ __BACKEND_SHARED_SIDEBAR_HTML__
           users.forEach(function (user) {
             const option = document.createElement("option");
             option.value = String(user.id || "");
-            option.textContent = (user.usuario || user.username || "Usuario") + " (Administrador de tienda)";
+            option.textContent = (user.nombre || user.usuario || user.username || "Usuario") + " (Administrador de tienda)";
             adminSelect.appendChild(option);
           });
 
+          if (selectedAdminId) {
+            adminSelect.value = selectedAdminId;
+          }
+
           if (adminNote) {
-            adminNote.textContent = "Solo se muestran usuarios con rol Administrador de tienda.";
+            adminNote.textContent = currentStoreId
+              ? "Se muestran administradores disponibles y el asignado a esta tienda."
+              : "Solo se muestran administradores disponibles para una tienda nueva.";
           }
           if (createUserBtn) {
             createUserBtn.hidden = true;
@@ -1121,8 +1132,6 @@ __BACKEND_SHARED_SIDEBAR_HTML__
             window.location.href = "/empresa/usuarios";
           });
         }
-
-        loadUsers();
       } catch (error) {
         console.error("multitienda admin users init failed", error);
       }
