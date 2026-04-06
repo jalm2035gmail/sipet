@@ -237,6 +237,46 @@ def test_decorate_modules_payload_dedupes_by_route_and_hides_non_application_ent
     assert payload[1]["package_upload_enabled"] is True
 
 
+def test_decorate_modules_payload_hides_internal_runtime_helpers(monkeypatch) -> None:
+    monkeypatch.setattr(
+        catalog_service,
+        "list_catalog_modules",
+        lambda tenant_key=None, refresh=False, include_legacy=False: [
+            {
+                "key": "multitienda_public_catchall",
+                "label": "Multitienda (rutas públicas catch-all)",
+                "enabled": True,
+                "description": "helper",
+                "manageable": False,
+                "always_enabled": True,
+                "sidebar_visible": False,
+                "route": "",
+            },
+            {
+                "key": "multitienda",
+                "label": "Multitienda",
+                "enabled": True,
+                "description": "demo",
+                "manageable": True,
+                "sidebar_visible": True,
+                "route": "/multitienda",
+            },
+        ],
+    )
+    monkeypatch.setattr(catalog_service, "cache_catalog", lambda payload: None)
+    monkeypatch.setattr(catalog_service, "list_registry_state", lambda tenant_id=None: {})
+    monkeypatch.setattr(catalog_service, "get_protocol_audit_map", lambda: {})
+    monkeypatch.setattr(catalog_service, "get_module_architecture_report", lambda key, target_root=None: {"architecture_ok": True, "architecture_errors": [], "architecture_warnings": []})
+    monkeypatch.setattr(catalog_service, "get_module_upload_root", lambda key: "/tmp/project/fastapi_modulo/modulos/multitienda" if key == "multitienda" else None)
+    monkeypatch.setattr(catalog_service, "get_module_image_path", lambda key: "")
+    monkeypatch.setattr(catalog_service, "get_module_catalog_image_url", lambda key: None)
+    monkeypatch.setattr(catalog_service, "get_latest_package_upload", lambda key: None)
+
+    payload = catalog_service.decorate_modules_payload()
+
+    assert [item["key"] for item in payload] == ["multitienda"]
+
+
 def test_decorate_modules_payload_enables_package_actions_for_empresa_alias(monkeypatch) -> None:
     monkeypatch.setattr(
         catalog_service,

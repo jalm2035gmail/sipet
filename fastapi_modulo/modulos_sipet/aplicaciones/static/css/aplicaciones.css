@@ -891,10 +891,20 @@ body {
   padding: 0 !important;
 }
 
+.gov-apps-page .gov-app-menu .btn i {
+  color: #0f172a !important;
+  opacity: 1 !important;
+}
+
 .gov-apps-page .gov-app-menu .btn:hover,
 .gov-apps-page .gov-app-menu .btn:focus-visible {
   color: #0f172a !important;
   background: rgba(15, 23, 42, 0.08) !important;
+}
+
+.gov-apps-page .gov-app-menu .btn:hover i,
+.gov-apps-page .gov-app-menu .btn:focus-visible i {
+  color: #020617 !important;
 }
 
 .gov-apps-page .gov-app-menu .menu {

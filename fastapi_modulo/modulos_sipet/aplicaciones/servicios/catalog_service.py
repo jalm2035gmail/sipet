@@ -60,6 +60,14 @@ def _is_core_module_payload(item: dict[str, Any]) -> bool:
     return "fastapi_modulo/modulos_sipet/" in manifest_file or "fastapi_modulo/modulos_sipet/" in module_dir
 
 
+def _is_internal_runtime_helper(item: dict[str, Any]) -> bool:
+    return (
+        not bool(item.get("manageable", True))
+        and not bool(item.get("sidebar_visible", False))
+        and not str(item.get("route") or "").strip()
+    )
+
+
 def _package_management_note(item: dict[str, Any], *, target_root: str | None, is_core_module: bool) -> str:
     if is_core_module:
         return "Módulo núcleo de SIPET. Se actualiza con el deploy del core y no admite importación por ZIP."
@@ -162,6 +170,8 @@ def decorate_modules_payload(
     for item in source_payload:
         key = str(item.get("key") or "").strip()
         if key in CONFIG_ONLY_MODULE_KEYS:
+            continue
+        if _is_internal_runtime_helper(item):
             continue
         application_flag = item.get("application")
         if application_flag is False:
