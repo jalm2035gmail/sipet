@@ -118,9 +118,6 @@ def _bootstrap_multitienda_once() -> None:
     bootstrap_multitienda()
     _BOOTSTRAP_RAN = True
 
-
-_bootstrap_multitienda_once()
-
 _STYLE_RE = re.compile(r"<style>(.*?)</style>", re.IGNORECASE | re.DOTALL)
 _LINK_CSS_RE = re.compile(r'<link\b[^>]*rel=["\']stylesheet["\'][^>]*/?>', re.IGNORECASE)
 _MAIN_RE = re.compile(r"<main\b[^>]*>(.*?)</main>", re.IGNORECASE | re.DOTALL)
@@ -2163,5 +2160,7 @@ router.include_router(
     )
 )
 
+
+_bootstrap_multitienda_once()
 
 __all__ = ["bootstrap_multitienda", "router"]
