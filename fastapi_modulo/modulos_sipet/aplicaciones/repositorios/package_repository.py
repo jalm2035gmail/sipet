@@ -64,7 +64,7 @@ def _resolve_module_root_from_manifest(module_key: str) -> str | None:
 
 def _is_importable_module_root(target_root: str | None) -> bool:
     normalized_root = os.path.realpath(str(target_root or "").strip())
-    if not normalized_root or not os.path.isdir(normalized_root):
+    if not normalized_root:
         return False
     try:
         return os.path.commonpath([IMPORTABLE_MODULES_ROOT, normalized_root]) == IMPORTABLE_MODULES_ROOT
@@ -100,9 +100,7 @@ def _resolve_module_root_from_key(module_key: str) -> str | None:
     if not normalized_key:
         return None
     candidate = os.path.abspath(os.path.join(PROJECT_ROOT, "fastapi_modulo", "modulos", normalized_key))
-    if os.path.isdir(candidate):
-        return candidate
-    return None
+    return candidate
 
 
 def get_module_upload_root(module_key: str) -> str | None:

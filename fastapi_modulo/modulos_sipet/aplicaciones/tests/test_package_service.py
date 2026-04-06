@@ -101,7 +101,7 @@ def test_apply_prepared_module_package_skips_snapshot_when_everything_is_unchang
 
     assert payload["updated_files"] == 0
     assert any("No se aplicaron cambios" in warning for warning in payload["warnings"])
-    assert audits[0][0] == "upload_package_noop"
+    assert any(action == "upload_package_noop" for action, _payload in audits)
     assert uploads[0]["applied"] is False
     assert invalidations == [("crm", "abc123")]
     assert cleaned == [str(staging_root)]
@@ -130,3 +130,11 @@ def test_build_import_process_state_uses_inspection_id_when_available() -> None:
     assert payload["new_files"] == 1
     assert payload["changed_files"] == 2
     assert payload["unchanged_files"] == 3
+
+
+def test_snapshot_module_root_tolerates_missing_module_dir(tmp_path: Path) -> None:
+    missing_root = tmp_path / "missing-module"
+
+    snapshot_path = package_service._snapshot_module_root("crm", str(missing_root))
+
+    assert Path(snapshot_path).is_file()

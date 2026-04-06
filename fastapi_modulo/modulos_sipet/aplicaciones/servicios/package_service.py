@@ -246,7 +246,8 @@ def _log_import_metrics(
 def _snapshot_module_root(module_key: str, target_root: str) -> str:
     snapshot_dir = tempfile.mkdtemp(prefix=f"apps-snapshot-{str(module_key or '').strip()}-")
     archive_base = os.path.join(snapshot_dir, "module_backup")
-    archive_path = shutil.make_archive(archive_base, "zip", root_dir=target_root)
+    source_root = target_root if target_root and os.path.isdir(target_root) else snapshot_dir
+    archive_path = shutil.make_archive(archive_base, "zip", root_dir=source_root)
     return archive_path
 
 

@@ -168,6 +168,52 @@ def test_inspect_module_zip_accepts_wrapper_directory_around_module_root(monkeyp
     package_repository.cleanup_staging_dir(str(inspection["staging_root"]))
 
 
+def test_inspect_module_zip_allows_installing_into_missing_module_root(monkeypatch, tmp_path: Path) -> None:
+    module_root = tmp_path / "multitienda"
+    zip_path = tmp_path / "package.zip"
+    _build_zip(
+        zip_path,
+        {
+            "multitienda/__init__.py": b"",
+            "multitienda/__manifest__.py": b"MANIFEST = {'name': 'multitienda'}",
+            "multitienda/controladores/__init__.py": b"",
+            "multitienda/controladores/multitienda.py": b"router = object()",
+        },
+    )
+    monkeypatch.setattr(package_repository, "get_module_upload_root", lambda module_key: str(module_root))
+    monkeypatch.setattr(
+        package_repository,
+        "_validate_staged_module_architecture",
+        lambda module_key, target_root, staging_root, entries: {
+            "architecture_mode": "full",
+            "architecture_ok": True,
+            "architecture_errors": [],
+            "architecture_warnings": [],
+        },
+    )
+
+    inspection = package_repository.inspect_module_zip("multitienda", str(zip_path))
+    package_repository.apply_staged_entries(inspection)
+
+    assert (module_root / "__init__.py").exists()
+    assert (module_root / "controladores" / "__init__.py").exists()
+    assert (module_root / "controladores" / "multitienda.py").exists()
+    package_repository.cleanup_staging_dir(str(inspection["staging_root"]))
+
+
+def test_get_module_upload_root_allows_missing_importable_module_dir(monkeypatch, tmp_path: Path) -> None:
+    modulos_root = tmp_path / "fastapi_modulo" / "modulos"
+    modulos_root.mkdir(parents=True)
+    monkeypatch.setattr(package_repository, "PROJECT_ROOT", str(tmp_path))
+    monkeypatch.setattr(package_repository, "IMPORTABLE_MODULES_ROOT", str(modulos_root))
+    monkeypatch.setattr(package_repository, "_resolve_module_root_from_manifest", lambda module_key: None)
+    monkeypatch.setattr(package_repository, "_resolve_module_root_from_router", lambda module_key: None)
+
+    resolved = package_repository.get_module_upload_root("multitienda")
+
+    assert resolved == str(modulos_root / "multitienda")
+
+
 def test_validate_staged_module_architecture_uses_light_mode_for_non_critical_paths(tmp_path: Path) -> None:
     module_root = tmp_path / "modulo"
     staging_root = tmp_path / "stage"
