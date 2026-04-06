@@ -1066,6 +1066,16 @@ __BACKEND_SHARED_SIDEBAR_HTML__
         async function loadUsers() {
           try {
             const selectedAdminId = String(adminSelect.value || "");
+            const currentStore = editIndex >= 0 && stores[editIndex] ? stores[editIndex] : null;
+            const preferredAdminId = String(
+              selectedAdminId
+              || (currentStore && currentStore.adminId)
+              || ""
+            );
+            const preferredAdminLabel = String(
+              (currentStore && currentStore.adminLabel)
+              || ""
+            );
             const query = currentStoreId ? ("?store_id=" + encodeURIComponent(currentStoreId)) : "";
             const response = await fetch("/multitienda/api/store-admin-users" + query, { headers: { "Accept": "application/json" } });
           if (!response.ok) {
@@ -1083,29 +1093,42 @@ __BACKEND_SHARED_SIDEBAR_HTML__
           placeholder.textContent = "Selecciona un administrador de tienda";
           adminSelect.appendChild(placeholder);
 
-          if (!users.length) {
-            const emptyOption = document.createElement("option");
-            emptyOption.value = "";
-            emptyOption.textContent = "Sin administradores disponibles";
-            adminSelect.appendChild(emptyOption);
-            if (adminNote) {
-              adminNote.textContent = "Crea un usuario con rol Administrador de tienda o libera uno ya asignado.";
-            }
-            if (createUserBtn) {
-              createUserBtn.hidden = false;
-            }
-            return;
+          const needsFallbackOption = (
+            preferredAdminId &&
+            !users.some(function (user) { return String(user && user.id || "") === preferredAdminId; })
+          );
+          if (needsFallbackOption) {
+            const fallbackOption = document.createElement("option");
+            fallbackOption.value = preferredAdminId;
+            fallbackOption.textContent = (preferredAdminLabel || "Administrador actual") + " (Administrador de tienda)";
+            adminSelect.appendChild(fallbackOption);
           }
 
-          users.forEach(function (user) {
-            const option = document.createElement("option");
-            option.value = String(user.id || "");
-            option.textContent = (user.nombre || user.usuario || user.username || "Usuario") + " (Administrador de tienda)";
-            adminSelect.appendChild(option);
-          });
+          if (!users.length) {
+            if (!needsFallbackOption) {
+              const emptyOption = document.createElement("option");
+              emptyOption.value = "";
+              emptyOption.textContent = "Sin administradores disponibles";
+              adminSelect.appendChild(emptyOption);
+              if (createUserBtn) {
+                createUserBtn.hidden = false;
+              }
+              if (adminNote) {
+                adminNote.textContent = "Crea un usuario con rol Administrador de tienda o libera uno ya asignado.";
+              }
+              return;
+            }
+          } else {
+            users.forEach(function (user) {
+              const option = document.createElement("option");
+              option.value = String(user.id || "");
+              option.textContent = (user.nombre || user.usuario || user.username || "Usuario") + " (Administrador de tienda)";
+              adminSelect.appendChild(option);
+            });
+          }
 
-          if (selectedAdminId) {
-            adminSelect.value = selectedAdminId;
+          if (preferredAdminId) {
+            adminSelect.value = preferredAdminId;
           }
 
           if (adminNote) {
@@ -1132,6 +1155,8 @@ __BACKEND_SHARED_SIDEBAR_HTML__
             window.location.href = "/empresa/usuarios";
           });
         }
+
+        loadUsers();
       } catch (error) {
         console.error("multitienda admin users init failed", error);
       }

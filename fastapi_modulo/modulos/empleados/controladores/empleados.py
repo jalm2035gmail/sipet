@@ -18,12 +18,15 @@ from fastapi_modulo.modulos_sipet.modulo_base.runtime_app import POAActivity
 from fastapi_modulo.modulos_sipet.web.controladores.backend_shell import render_backend_page
 from fastapi_modulo.modulos_sipet.web.modelos.core_models import Rol, Usuario
 from fastapi_modulo.modulos_sipet.web.servicios.access_service import (
+    get_current_role,
+    is_admin_or_superadmin,
     is_superadmin,
     normalize_role_name,
     require_admin_or_superadmin,
     sensitive_lookup_hash,
 )
 from fastapi_modulo.modulos_sipet.web.servicios.auth_service import (
+    is_global_superadmin_username,
     decrypt_sensitive,
     encrypt_sensitive,
     hash_password,
@@ -1580,8 +1583,43 @@ def _render_empresa_usuarios_page(
     title: str = "Usuarios",
     description: str = "Administración de accesos de usuarios",
 ) -> HTMLResponse:
-    viewer_role = normalize_role_name((getattr(request.state, "user_role", None) or "").strip().lower())
-    if not _is_admin_role(viewer_role):
+    viewer_role = get_current_role(request)
+    session_username = (
+        getattr(request.state, "user_name", None)
+        or request.cookies.get("user_name")
+        or request.cookies.get("username")
+        or request.cookies.get("usuario")
+        or ""
+    ).strip()
+    if session_username and is_global_superadmin_username(session_username):
+        viewer_role = "superadministrador"
+    try:
+        db = _db_session()
+        try:
+            roles = {role.id: normalize_role_name(role.nombre) for role in db.query(Rol).all()}
+            session_lookup_hash = sensitive_lookup_hash(session_username) if session_username else ""
+            session_user = None
+            if session_username:
+                session_user = (
+                    db.query(Usuario)
+                    .filter(
+                        (Usuario.usuario_hash == session_lookup_hash)
+                        | (Usuario.usuario.ilike(session_username))
+                    )
+                    .first()
+                )
+            if session_user:
+                db_role = ""
+                if getattr(session_user, "rol_id", None):
+                    db_role = roles.get(session_user.rol_id, "")
+                if not db_role:
+                    db_role = normalize_role_name(getattr(session_user, "role", "") or "")
+                viewer_role = db_role or viewer_role
+        finally:
+            db.close()
+    except Exception:
+        pass
+    if not (is_admin_or_superadmin(request) or _is_admin_role(viewer_role)):
         return render_backend_page(
             request,
             title=title,

@@ -115,6 +115,7 @@ __BACKEND_SHARED_FORM_BASE_CSS__
   min-width: 0;
   display: grid;
   gap: 18px;
+  overflow-x: auto;
 }
 
 .backend-master-detail__panel,
@@ -124,6 +125,7 @@ __BACKEND_SHARED_FORM_BASE_CSS__
   background: var(--mt-surface);
   box-shadow: 0 22px 56px rgba(15, 23, 42, 0.08);
   padding: 26px;
+  min-width: 0;
 }
 
 .backend-master-detail__panel[hidden],
@@ -224,6 +226,17 @@ __BACKEND_SHARED_FORM_BASE_CSS__
   margin: 0 0 16px;
   color: var(--mt-muted);
   font-size: 0.88rem;
+}
+
+.notebook.config-workspace.backend-master-detail {
+  overflow: visible;
+}
+
+.data-table-scroll {
+  width: 100%;
+  max-width: 100%;
+  overflow: auto;
+  padding-bottom: 4px;
 }
 
 .store-error-dialog {
@@ -634,6 +647,7 @@ __BACKEND_SHARED_FORM_BASE_CSS__
 .action-btn--danger:hover { background: color-mix(in srgb, #dc2626 22%, var(--content-bg, #ffffff) 78%); }
 .data-table {
   width: 100%;
+  min-width: 760px;
   border-collapse: collapse;
   font-size: 0.875rem;
 }
@@ -654,6 +668,12 @@ __BACKEND_SHARED_FORM_BASE_CSS__
 .data-table tbody tr:last-child td { border-bottom: none; }
 .data-table tbody tr:hover td { background: color-mix(in srgb, var(--mt-surface-soft) 88%, #ffffff 12%); }
 .empty-row td { border-bottom: none !important; }
+
+@media (max-width: 920px) {
+  .data-table {
+    min-width: 680px;
+  }
+}
 
 /* Atributos */
 .attr-form-grid {
