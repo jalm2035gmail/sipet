@@ -92,6 +92,7 @@ from fastapi_modulo.modulos_sipet.web.servicios.template_service import (
 
 router = APIRouter()
 marketplace_app = build_marketplace_backend_app()
+_BOOTSTRAP_RAN = False
 
 
 def bootstrap_multitienda() -> None:
@@ -107,6 +108,17 @@ def bootstrap_multitienda() -> None:
     _ensure_membresia_table()
     bootstrap_user_support_tables()
     ensure_multitienda_access_roles()
+
+
+def _bootstrap_multitienda_once() -> None:
+    global _BOOTSTRAP_RAN
+    if _BOOTSTRAP_RAN:
+        return
+    bootstrap_multitienda()
+    _BOOTSTRAP_RAN = True
+
+
+_bootstrap_multitienda_once()
 
 _STYLE_RE = re.compile(r"<style>(.*?)</style>", re.IGNORECASE | re.DOTALL)
 _LINK_CSS_RE = re.compile(r'<link\b[^>]*rel=["\']stylesheet["\'][^>]*/?>', re.IGNORECASE)
@@ -1016,21 +1028,31 @@ def _serialize_store_summary(row: dict) -> dict[str, object]:
     return _serialize_store_summary_with_types(row, {})
 
 
+def _safe_decrypted_display(value: object) -> str:
+    decrypted = str(decrypt_sensitive(value) or "").strip()
+    if decrypted:
+        return decrypted
+    raw = str(value or "").strip()
+    if not raw or raw.startswith("enc$"):
+        return ""
+    return raw
+
+
 def _serialize_store_summary_with_types(row: dict, business_type_names: dict[str, str]) -> dict[str, object]:
     theme = _decode_store_theme(row.get("store_theme"))
     type_code = str(theme.get("store_type") or "").strip()
     stored_type_name = str(theme.get("store_type_name") or "").strip()
-    decrypted_full_name = str(decrypt_sensitive(row.get("full_name")) or "").strip()
-    fallback_full_name = str(row.get("full_name") or "").strip()
+    admin_full_name = _safe_decrypted_display(row.get("full_name"))
+    admin_username = _safe_decrypted_display(row.get("encrypted_username"))
     return {
         "id": row.get("id"),
         "name": row.get("store_name") or "",
         "slug": row.get("store_slug") or "",
         "adminId": str(row.get("vendor_id") or ""),
         "adminLabel": (
-            decrypted_full_name
-            or fallback_full_name
-            or str(decrypt_sensitive(row.get("encrypted_username")) or "").strip()
+            admin_full_name
+            or admin_username
+            or "Administrador"
         ),
         "typeCode": type_code,
         "typeLabel": stored_type_name or business_type_names.get(type_code) or type_code,
@@ -1039,6 +1061,11 @@ def _serialize_store_summary_with_types(row: dict, business_type_names: dict[str
         "isFeatured": bool(row.get("is_featured")),
         "inventoryEnabled": bool(theme.get("inventory_enabled", False)),
         "canUploadVideos": _coerce_theme_bool(theme.get("can_upload_videos", False)),
+        "canUseProviders": _coerce_theme_bool(theme.get("can_use_providers", False)),
+        "canUseAi": _coerce_theme_bool(theme.get("can_use_ai", False)),
+        "canUseFinancial": _coerce_theme_bool(theme.get("can_use_financial", False)),
+        "canUseLayaway": _coerce_theme_bool(theme.get("can_use_layaway", False)),
+        "canUseAuctions": _coerce_theme_bool(theme.get("can_use_auctions", False)),
         "validity": str(theme.get("validity") or ""),
         "referrals": _coerce_theme_bool(theme.get("referrals")),
         "fidelizacion": _coerce_theme_bool(theme.get("fidelizacion")),
@@ -1048,6 +1075,8 @@ def _serialize_store_summary_with_types(row: dict, business_type_names: dict[str
         "whatsapp": _coerce_theme_bool(theme.get("whatsapp")),
         "maxInternalUsers": int(theme.get("max_internal_users") or 0),
         "maxPortalUsers": int(theme.get("max_portal_users") or 0),
+        "financialType": str(theme.get("financial_type") or ""),
+        "financialName": str(theme.get("financial_name") or ""),
     }
 
 

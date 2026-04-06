@@ -87,9 +87,13 @@ __BACKEND_SHARED_SIDEBAR_HTML__
         <div id="store-form-view" hidden>
           <div class="panel-header-row">
             <h2 id="store-form-title">Nueva tienda</h2>
-            <button class="action-btn action-btn--secondary" id="store-cancel-btn" type="button" onclick="if(window.multitiendaShowStoreList){window.multitiendaShowStoreList();}else{var list=document.getElementById('store-list-view');var form=document.getElementById('store-form-view');if(list){list.hidden=false;}if(form){form.hidden=true;}}">← Volver a lista</button>
+            <div class="store-form-header-actions">
+              <p class="store-inline-status" id="store-inline-status" hidden></p>
+              <button class="action-btn" data-store-save-trigger="1" type="button">Guardar tienda</button>
+              <button class="action-btn action-btn--secondary" id="store-cancel-btn" type="button" onclick="if(window.multitiendaShowStoreList){window.multitiendaShowStoreList();}else{var list=document.getElementById('store-list-view');var form=document.getElementById('store-form-view');if(list){list.hidden=false;}if(form){form.hidden=true;}}">← Volver a lista</button>
+            </div>
           </div>
-          <section class="section">
+          <section class="section" id="store-general-section">
             <h2>Datos generales</h2>
             <div class="section-grid">
               <div>
@@ -345,6 +349,9 @@ __BACKEND_SHARED_SIDEBAR_HTML__
             <label for="fi-nombre">Nombre</label>
             <input class="field-input" id="fi-nombre" type="text" placeholder="Nombre de la institución financiera" />
           </div>
+          <div style="display:flex;justify-content:flex-end;gap:12px;margin-top:20px;">
+            <button class="action-btn" data-store-save-trigger="1" type="button">Guardar tienda</button>
+          </div>
         </section>
       </div>
 
@@ -508,6 +515,7 @@ __BACKEND_SHARED_SIDEBAR_HTML__
       </div>
     </div>
   </main>
+  <div class="store-status-toast" id="store-status-toast" hidden></div>
   <div class="store-error-dialog" id="store-error-dialog" hidden>
     <div class="store-error-card" role="dialog" aria-modal="true" aria-labelledby="store-error-title">
       <h3 class="store-error-title" id="store-error-title">Error al guardar la tienda</h3>
@@ -560,18 +568,197 @@ __BACKEND_SHARED_SIDEBAR_HTML__
         const canUseFinancialCheckbox = document.getElementById("store-can-use-financial");
         const canUseLayawayCheckbox = document.getElementById("store-can-use-layaway");
         const canUseAuctionsCheckbox = document.getElementById("store-can-use-auctions");
+        const financialTypeInput = document.getElementById("fi-tipo");
+        const financialNameInput = document.getElementById("fi-nombre");
         const errorDialog = document.getElementById("store-error-dialog");
         const errorText = document.getElementById("store-error-text");
         const errorCopyBtn = document.getElementById("store-error-copy-btn");
         const errorCloseBtn = document.getElementById("store-error-close-btn");
         const errorCopyStatus = document.getElementById("store-error-copy-status");
+        const statusToast = document.getElementById("store-status-toast");
+        const inlineStatus = document.getElementById("store-inline-status");
+        const workspace = document.querySelector(".js-backend-master-detail");
+        const outerNav = workspace ? workspace.querySelector(".backend-master-detail__nav") : null;
+        const generalSection = document.getElementById("store-general-section");
         let stores = [];
         let editIndex = -1;
         let currentStoreId = "";
+        let saveInFlight = false;
+        let statusToastTimer = 0;
+        let activeStoreNotebookTab = "general";
+
+      window.multitiendaGetStoreAdminContext = function () {
+        return {
+          stores: stores,
+          editIndex: editIndex,
+          currentStoreId: currentStoreId,
+        };
+      };
 
       function closeStoreErrorDialog() {
         if (errorDialog) errorDialog.hidden = true;
         if (errorCopyStatus) errorCopyStatus.textContent = "";
+      }
+
+      function showStoreStatus(message, type) {
+        if (inlineStatus) {
+          inlineStatus.textContent = String(message || "");
+          inlineStatus.className = "store-inline-status store-inline-status--" + (type || "info");
+          inlineStatus.hidden = false;
+        }
+        if (!statusToast) return;
+        if (statusToastTimer) {
+          window.clearTimeout(statusToastTimer);
+          statusToastTimer = 0;
+        }
+        statusToast.textContent = String(message || "");
+        statusToast.className = "store-status-toast store-status-toast--" + (type || "info");
+        statusToast.hidden = false;
+        statusToastTimer = window.setTimeout(function () {
+          statusToast.hidden = true;
+        }, 3200);
+      }
+
+      function setSaveButtonsDisabled(disabled) {
+        saveButtons.forEach(function (button) {
+          button.disabled = !!disabled;
+          button.setAttribute("aria-busy", disabled ? "true" : "false");
+        });
+      }
+
+      function setupStoreNotebook() {
+        if (!formView || !generalSection || formView.querySelector(".store-form-notebook")) {
+          return;
+        }
+        if (workspace) {
+          workspace.classList.add("config-workspace--store-notebook");
+        }
+        if (outerNav) {
+          outerNav.hidden = true;
+        }
+
+        function extractPanelContents(node) {
+          if (!node) return null;
+          if (node.id === "tab-panel-3" || node.id === "tab-panel-5" || node.id === "tab-panel-6") {
+            const wrapper = document.createElement("div");
+            while (node.firstChild) {
+              wrapper.appendChild(node.firstChild);
+            }
+            return wrapper;
+          }
+          return node;
+        }
+
+        const defs = [
+          {
+            id: "general",
+            title: "Tienda",
+            copy: "Datos generales, giro, administrador y membresia.",
+            source: generalSection,
+          },
+          {
+            id: "access",
+            title: "Acceso a AVAN",
+            copy: "Permisos y capacidades habilitadas para la tienda.",
+            source: document.querySelector("#tab-panel-2 > section"),
+          },
+          {
+            id: "marketing",
+            title: "Publicidad",
+            copy: "Campanas visuales, ventanas emergentes y destacados.",
+            source: extractPanelContents(document.getElementById("tab-panel-3")),
+          },
+          {
+            id: "finance",
+            title: "Institucion financiera",
+            copy: "Datos bancarios o cooperativos ligados a la tienda.",
+            source: document.querySelector("#tab-panel-4 > section"),
+          },
+          {
+            id: "categories",
+            title: "Categorias",
+            copy: "Estructura del catalogo y su imagen representativa.",
+            source: extractPanelContents(document.getElementById("tab-panel-5")),
+          },
+          {
+            id: "attributes",
+            title: "Atributos",
+            copy: "Variantes como color, talla, material o imagen.",
+            source: extractPanelContents(document.getElementById("tab-panel-6")),
+          }
+        ];
+
+        const shell = document.createElement("div");
+        shell.className = "store-form-notebook";
+        shell.innerHTML =
+          '<div class="store-form-tabs" role="tablist" aria-orientation="vertical"></div>' +
+          '<div class="store-form-tab-panels"></div>';
+        formView.appendChild(shell);
+        const tabsHost = shell.querySelector(".store-form-tabs");
+        const panelsHost = shell.querySelector(".store-form-tab-panels");
+
+        defs.forEach(function (def, index) {
+          if (!def.source) return;
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "store-form-tab-button" + (index === 0 ? " is-active" : "");
+          button.setAttribute("data-store-tab", def.id);
+          button.setAttribute("role", "tab");
+          button.setAttribute("aria-selected", index === 0 ? "true" : "false");
+          button.innerHTML =
+            '<span class="store-form-tab-title">' + def.title + '</span>' +
+            '<span class="store-form-tab-copy">' + def.copy + '</span>';
+          tabsHost.appendChild(button);
+
+          const panel = document.createElement("section");
+          panel.className = "store-form-tab-panel";
+          panel.setAttribute("data-store-tab-panel", def.id);
+          panel.hidden = index !== 0;
+          panel.appendChild(def.source);
+          panelsHost.appendChild(panel);
+
+          button.addEventListener("click", function () {
+            window.multitiendaSelectStoreNotebookTab(def.id);
+          });
+        });
+
+        ["tab-panel-2", "tab-panel-3", "tab-panel-4", "tab-panel-5", "tab-panel-6"].forEach(function (panelId) {
+          const panel = document.getElementById(panelId);
+          if (panel) {
+            panel.hidden = true;
+          }
+        });
+
+        window.multitiendaSelectStoreNotebookTab = function (tabId) {
+          activeStoreNotebookTab = String(tabId || "general");
+          shell.querySelectorAll("[data-store-tab]").forEach(function (button) {
+            const active = button.getAttribute("data-store-tab") === activeStoreNotebookTab;
+            button.classList.toggle("is-active", active);
+            button.setAttribute("aria-selected", active ? "true" : "false");
+          });
+          shell.querySelectorAll("[data-store-tab-panel]").forEach(function (panel) {
+            panel.hidden = panel.getAttribute("data-store-tab-panel") !== activeStoreNotebookTab;
+          });
+        };
+      }
+
+      function resolveRequestedStoreTab() {
+        const params = new URLSearchParams(window.location.search || "");
+        const panelKey = String(params.get("panel") || "").trim().toLowerCase();
+        const panelToStoreTab = {
+          tiendas: "general",
+          acceso: "access",
+          publicidad: "marketing",
+          institucion_financiera: "finance",
+          categorias: "categories",
+          atributos: "attributes"
+        };
+        return panelToStoreTab[panelKey] || activeStoreNotebookTab || "general";
+      }
+
+      setupStoreNotebook();
+      if (typeof window.multitiendaSelectStoreNotebookTab === "function") {
+        window.multitiendaSelectStoreNotebookTab(resolveRequestedStoreTab());
       }
 
       function showStoreErrorDialog(message) {
@@ -643,11 +830,13 @@ __BACKEND_SHARED_SIDEBAR_HTML__
       function showList() {
         if (listView) listView.hidden = false;
         if (formView) formView.hidden = true;
+        if (inlineStatus) inlineStatus.hidden = true;
         editIndex = -1;
         currentStoreId = "";
       }
 
       function showForm(index) {
+        setupStoreNotebook();
         editIndex = typeof index === "number" ? index : -1;
         if (listView) listView.hidden = true;
         if (formView) formView.hidden = false;
@@ -678,6 +867,8 @@ __BACKEND_SHARED_SIDEBAR_HTML__
           if (canUseFinancialCheckbox) canUseFinancialCheckbox.checked = !!item.canUseFinancial;
           if (canUseLayawayCheckbox) canUseLayawayCheckbox.checked = !!item.canUseLayaway;
           if (canUseAuctionsCheckbox) canUseAuctionsCheckbox.checked = !!item.canUseAuctions;
+          if (financialTypeInput) financialTypeInput.value = item.financialType || "";
+          if (financialNameInput) financialNameInput.value = item.financialName || "";
         } else {
           currentStoreId = "";
           if (formTitle) formTitle.textContent = "Nueva tienda";
@@ -704,11 +895,19 @@ __BACKEND_SHARED_SIDEBAR_HTML__
           if (canUseFinancialCheckbox) canUseFinancialCheckbox.checked = false;
           if (canUseLayawayCheckbox) canUseLayawayCheckbox.checked = false;
           if (canUseAuctionsCheckbox) canUseAuctionsCheckbox.checked = false;
+          if (financialTypeInput) financialTypeInput.value = "";
+          if (financialNameInput) financialNameInput.value = "";
         }
+        if (inlineStatus) inlineStatus.hidden = true;
         if (typeSelect && typeof typeSelect.dispatchEvent === "function") {
           typeSelect.dispatchEvent(new Event("change"));
         }
-        loadUsers();
+        if (typeof window.multitiendaLoadStoreAdminUsers === "function") {
+          window.multitiendaLoadStoreAdminUsers();
+        }
+        if (typeof window.multitiendaSelectStoreNotebookTab === "function") {
+          window.multitiendaSelectStoreNotebookTab(resolveRequestedStoreTab());
+        }
       }
 
       function renderStores() {
@@ -732,6 +931,18 @@ __BACKEND_SHARED_SIDEBAR_HTML__
         });
       }
 
+      function syncCurrentStoreAfterSave(savedStoreId) {
+        const normalizedId = String(savedStoreId || "").trim();
+        if (!normalizedId) return;
+        currentStoreId = normalizedId;
+        editIndex = stores.findIndex(function (item) {
+          return String(item && item.id || "") === normalizedId;
+        });
+        if (editIndex >= 0) {
+          if (formTitle) formTitle.textContent = "Editar tienda";
+        }
+      }
+
       window.multitiendaShowStoreForm = function (index) {
         showForm(Number(index));
       };
@@ -744,6 +955,9 @@ __BACKEND_SHARED_SIDEBAR_HTML__
       if (newBtn) newBtn.addEventListener("click", function () { showForm(-1); });
       if (cancelBtn) cancelBtn.addEventListener("click", function () { showList(); renderStores(); });
       async function persistStore() {
+          if (saveInFlight) {
+            return;
+          }
           const payload = {
             name: String(nameInput && nameInput.value || "").trim(),
             typeCode: String(typeSelect && typeSelect.value || "").trim(),
@@ -769,6 +983,8 @@ __BACKEND_SHARED_SIDEBAR_HTML__
             canUseFinancial: !!(canUseFinancialCheckbox && canUseFinancialCheckbox.checked),
             canUseLayaway: !!(canUseLayawayCheckbox && canUseLayawayCheckbox.checked),
             canUseAuctions: !!(canUseAuctionsCheckbox && canUseAuctionsCheckbox.checked),
+            financialType: String(financialTypeInput && financialTypeInput.value || "").trim(),
+            financialName: String(financialNameInput && financialNameInput.value || "").trim(),
           };
           const isEditingStore = currentStoreId !== "";
           if (!payload.name) {
@@ -779,52 +995,63 @@ __BACKEND_SHARED_SIDEBAR_HTML__
             window.alert("Selecciona un administrador de tienda.");
             return;
           }
-          const response = await fetch("/multitienda/api/stores", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "Accept": "application/json"
-            },
-            body: JSON.stringify({
-              is_edit: isEditingStore,
-              store_id: currentStoreId,
-              store_name: payload.name,
-              store_type: payload.typeCode,
-              store_type_name: payload.typeLabel,
-              admin_user_id: payload.adminId,
-              membership: payload.membership,
-              is_active: payload.isActive,
-              is_featured: payload.isFeatured,
-              inventory_enabled: payload.inventoryEnabled,
-              validity: payload.validity,
-              referrals: payload.referrals,
-              pwa_notifications: payload.pwaNotifications,
-              appointments: payload.appointments,
-              coupons: payload.coupons,
-              whatsapp: payload.whatsapp,
-              max_internal_users: payload.maxInternalUsers,
-              max_portal_users: payload.maxPortalUsers,
-              can_upload_videos: payload.canUploadVideos,
-              can_use_providers: payload.canUseProviders,
-              can_use_ai: payload.canUseAi,
-              can_use_financial: payload.canUseFinancial,
-              can_use_layaway: payload.canUseLayaway,
-              can_use_auctions: payload.canUseAuctions,
-            })
-          });
-          const responseText = await response.text().catch(function () { return ""; });
-          let responsePayload = {};
+          saveInFlight = true;
+          setSaveButtonsDisabled(true);
           try {
-            responsePayload = responseText ? JSON.parse(responseText) : {};
-          } catch (error) {
-            responsePayload = { detail: responseText };
+            const response = await fetch("/multitienda/api/stores", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+              },
+              body: JSON.stringify({
+                is_edit: isEditingStore,
+                store_id: currentStoreId,
+                store_name: payload.name,
+                store_type: payload.typeCode,
+                store_type_name: payload.typeLabel,
+                admin_user_id: payload.adminId,
+                membership: payload.membership,
+                is_active: payload.isActive,
+                is_featured: payload.isFeatured,
+                inventory_enabled: payload.inventoryEnabled,
+                validity: payload.validity,
+                referrals: payload.referrals,
+                fidelizacion: payload.fidelizacion,
+                pwa_notifications: payload.pwaNotifications,
+                appointments: payload.appointments,
+                coupons: payload.coupons,
+                whatsapp: payload.whatsapp,
+                max_internal_users: payload.maxInternalUsers,
+                max_portal_users: payload.maxPortalUsers,
+                can_upload_videos: payload.canUploadVideos,
+                can_use_providers: payload.canUseProviders,
+                can_use_ai: payload.canUseAi,
+                can_use_financial: payload.canUseFinancial,
+                can_use_layaway: payload.canUseLayaway,
+                can_use_auctions: payload.canUseAuctions,
+                financial_type: payload.financialType,
+                financial_name: payload.financialName,
+              })
+            });
+            const responseText = await response.text().catch(function () { return ""; });
+            let responsePayload = {};
+            try {
+              responsePayload = responseText ? JSON.parse(responseText) : {};
+            } catch (error) {
+              responsePayload = { detail: responseText };
+            }
+            if (!response.ok) {
+              throw new Error(responsePayload.detail || "No se pudo guardar la tienda.");
+            }
+            await loadStores();
+            renderStores();
+            syncCurrentStoreAfterSave(responsePayload && responsePayload.id);
+            showStoreStatus("Tienda guardada correctamente.", "success");
+          } finally {
+            saveInFlight = false;
+            setSaveButtonsDisabled(false);
           }
-          if (!response.ok) {
-            throw new Error(responsePayload.detail || "No se pudo guardar la tienda.");
-          }
-          await loadStores();
-          renderStores();
-          showList();
       }
 
       saveButtons.forEach(function (button) {
@@ -832,6 +1059,7 @@ __BACKEND_SHARED_SIDEBAR_HTML__
           try {
             await persistStore();
           } catch (error) {
+            showStoreStatus(error && error.message ? error.message : "No se pudo guardar la tienda.", "error");
             showStoreErrorDialog(error && error.message ? error.message : "No se pudo guardar la tienda.");
           }
         });
@@ -1065,6 +1293,12 @@ __BACKEND_SHARED_SIDEBAR_HTML__
 
         async function loadUsers() {
           try {
+            const state = typeof window.multitiendaGetStoreAdminContext === "function"
+              ? window.multitiendaGetStoreAdminContext()
+              : {};
+            const stores = Array.isArray(state && state.stores) ? state.stores : [];
+            const editIndex = Number(state && state.editIndex);
+            const currentStoreId = String((state && state.currentStoreId) || "");
             const selectedAdminId = String(adminSelect.value || "");
             const currentStore = editIndex >= 0 && stores[editIndex] ? stores[editIndex] : null;
             const preferredAdminId = String(
@@ -1150,6 +1384,8 @@ __BACKEND_SHARED_SIDEBAR_HTML__
         }
       }
 
+        window.multitiendaLoadStoreAdminUsers = loadUsers;
+
         if (createUserBtn) {
           createUserBtn.addEventListener("click", function () {
             window.location.href = "/empresa/usuarios";
@@ -1196,22 +1432,19 @@ __BACKEND_SHARED_SIDEBAR_HTML__
   <script src="/multitienda/static/js/backend-navbar.js"></script>
   <script>
     (function () {
-      var panelToTab = {
-        tiendas: "tab-1",
-        acceso: "tab-2",
-        publicidad: "tab-3",
-        institucion_financiera: "tab-4",
-        categorias: "tab-5",
-        atributos: "tab-6"
-      };
-
       function syncGestionPanelFromUrl() {
         var params = new URLSearchParams(window.location.search || "");
         var panelKey = String(params.get("panel") || "tiendas").trim().toLowerCase();
-        var tabId = panelToTab[panelKey] || panelToTab.tiendas;
-        var tab = document.getElementById(tabId);
-        if (tab) {
-          tab.click();
+        var panelMap = {
+          tiendas: "general",
+          acceso: "access",
+          publicidad: "marketing",
+          institucion_financiera: "finance",
+          categorias: "categories",
+          atributos: "attributes"
+        };
+        if (typeof window.multitiendaSelectStoreNotebookTab === "function") {
+          window.multitiendaSelectStoreNotebookTab(panelMap[panelKey] || "general");
         }
         document.querySelectorAll(".sb-subitem[data-gestion-panel]").forEach(function (link) {
           link.classList.toggle("is-active", link.getAttribute("data-gestion-panel") === panelKey);

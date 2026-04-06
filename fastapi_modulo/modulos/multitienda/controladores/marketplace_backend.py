@@ -208,6 +208,8 @@ async def save_store_settings(request: Request, payload_override: dict | None = 
                 "can_use_financial": bool(payload.get("can_use_financial", False)),
                 "can_use_layaway": bool(payload.get("can_use_layaway", False)),
                 "can_use_auctions": bool(payload.get("can_use_auctions", False)),
+                "financial_type": str(payload.get("financial_type") or "").strip(),
+                "financial_name": str(payload.get("financial_name") or "").strip(),
             }
         )
 

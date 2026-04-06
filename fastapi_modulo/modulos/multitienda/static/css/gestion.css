@@ -133,6 +133,16 @@ __BACKEND_SHARED_FORM_BASE_CSS__
   display: none;
 }
 
+.config-workspace--store-notebook,
+.config-workspace--store-notebook.backend-master-detail {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.config-workspace--store-notebook .backend-master-detail__nav,
+.config-workspace--store-notebook .config-nav {
+  display: none;
+}
+
 @media (max-width: 920px) {
   .backend-master-detail,
   .notebook.config-workspace {
@@ -141,6 +151,14 @@ __BACKEND_SHARED_FORM_BASE_CSS__
 
   .backend-master-detail__nav,
   .config-nav {
+    position: static;
+  }
+
+  .store-form-notebook {
+    grid-template-columns: 1fr;
+  }
+
+  .store-form-tabs {
     position: static;
   }
 }
@@ -228,6 +246,116 @@ __BACKEND_SHARED_FORM_BASE_CSS__
   font-size: 0.88rem;
 }
 
+.store-form-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.store-inline-status {
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  border: 1px solid var(--mt-border-soft);
+  background: var(--mt-surface-soft);
+  color: var(--mt-text);
+}
+
+.store-inline-status[hidden] {
+  display: none;
+}
+
+.store-inline-status--success {
+  background: color-mix(in srgb, #0c7143 12%, #ffffff 88%);
+  color: #0c7143;
+  border-color: color-mix(in srgb, #0c7143 28%, var(--mt-border-soft) 72%);
+}
+
+.store-inline-status--error {
+  background: color-mix(in srgb, #9c1f1f 10%, #ffffff 90%);
+  color: #9c1f1f;
+  border-color: color-mix(in srgb, #9c1f1f 24%, var(--mt-border-soft) 76%);
+}
+
+.store-form-notebook {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: 24px;
+  margin-top: 18px;
+}
+
+.store-form-tabs {
+  position: sticky;
+  top: 24px;
+  align-self: start;
+  display: grid;
+  gap: 10px;
+  padding: 18px;
+  border: 1px solid var(--mt-border-soft);
+  border-radius: 22px;
+  background: color-mix(in srgb, var(--mt-surface) 92%, var(--mt-bg) 8%);
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.06);
+}
+
+.store-form-tab-button {
+  width: 100%;
+  border: 1px solid transparent;
+  border-radius: 18px;
+  background: transparent;
+  color: var(--mt-text);
+  padding: 14px 16px;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.16s ease, border-color 0.16s ease, transform 0.16s ease;
+}
+
+.store-form-tab-button:hover {
+  background: color-mix(in srgb, var(--mt-surface-soft) 86%, #ffffff 14%);
+  border-color: var(--mt-border-soft);
+  transform: translateX(2px);
+}
+
+.store-form-tab-button.is-active {
+  background: color-mix(in srgb, var(--mt-accent) 10%, var(--mt-surface) 90%);
+  border-color: color-mix(in srgb, var(--mt-accent) 24%, var(--mt-border-soft) 76%);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+}
+
+.store-form-tab-title {
+  display: block;
+  font-size: 0.98rem;
+  font-weight: 800;
+  color: inherit;
+  margin-bottom: 4px;
+}
+
+.store-form-tab-copy {
+  display: block;
+  font-size: 0.84rem;
+  line-height: 1.4;
+  color: var(--mt-muted);
+}
+
+.store-form-tab-panels {
+  min-width: 0;
+}
+
+.store-form-tab-panel[hidden] {
+  display: none;
+}
+
+.store-form-tab-panel > .section,
+.store-form-tab-panel > div {
+  border: 1px solid var(--mt-border-soft);
+  border-radius: 24px;
+  background: var(--mt-surface);
+  box-shadow: 0 22px 56px rgba(15, 23, 42, 0.08);
+  padding: 26px;
+}
+
 .notebook.config-workspace.backend-master-detail {
   overflow: visible;
 }
@@ -237,6 +365,34 @@ __BACKEND_SHARED_FORM_BASE_CSS__
   max-width: 100%;
   overflow: auto;
   padding-bottom: 4px;
+}
+
+.store-status-toast {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 1190;
+  max-width: min(420px, calc(100vw - 32px));
+  padding: 14px 18px;
+  border-radius: 14px;
+  border: 1px solid var(--mt-border-soft);
+  background: rgba(15, 23, 42, 0.94);
+  color: #fff;
+  box-shadow: 0 18px 44px rgba(15, 23, 42, 0.24);
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.store-status-toast[hidden] {
+  display: none;
+}
+
+.store-status-toast--success {
+  background: rgba(12, 113, 67, 0.96);
+}
+
+.store-status-toast--error {
+  background: rgba(156, 31, 31, 0.97);
 }
 
 .store-error-dialog {
