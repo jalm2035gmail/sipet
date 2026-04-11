@@ -69,12 +69,42 @@ if (window.grapesjs) {
       return false;
     }
 
+    function hasOnlyInlineChildren(el) {
+      if (!el || !el.children) return true;
+      var inlineTags = {
+        A: true,
+        B: true,
+        BR: true,
+        EM: true,
+        I: true,
+        SMALL: true,
+        SPAN: true,
+        STRONG: true,
+        U: true,
+      };
+      for (var i = 0; i < el.children.length; i++) {
+        var child = el.children[i];
+        var tag = child && child.tagName ? String(child.tagName).toUpperCase() : '';
+        if (!inlineTags[tag]) return false;
+      }
+      return true;
+    }
+
+    function isEditableTextLeaf(el) {
+      if (!el || el.nodeType !== 1) return false;
+      var tag = el.tagName ? String(el.tagName).toUpperCase() : '';
+      if (SKIP_TAGS[tag]) return false;
+      if (!(el.classList && el.classList.contains('sipet-editable-text')) && !TEXT_TAGS[tag]) return false;
+      if (!hasDirectText(el) && !(el.textContent && el.textContent.trim())) return false;
+      if (tag === 'DIV') return hasOnlyInlineChildren(el);
+      return true;
+    }
+
     function markEditableText(component) {
       if (!component) return;
       var el = component.getEl ? component.getEl() : null;
       if (el && el.nodeType === 1) {
-        var tag = el.tagName ? String(el.tagName).toUpperCase() : '';
-        if (!SKIP_TAGS[tag] && ((el.classList && el.classList.contains('sipet-editable-text')) || (TEXT_TAGS[tag] && hasDirectText(el)))) {
+        if (isEditableTextLeaf(el)) {
           if (el.classList && !el.classList.contains('sipet-editable-text')) {
             el.classList.add('sipet-editable-text');
           }

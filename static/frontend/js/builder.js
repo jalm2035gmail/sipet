@@ -2624,17 +2624,38 @@
     return false;
   }
 
+  function _hasEditableLeafStructure(el){
+    if(!el || el.nodeType !== 1) return false;
+    var tag = el.tagName ? String(el.tagName).toUpperCase() : '';
+    var inlineTags = {
+      A:true, B:true, BR:true, EM:true, I:true, SMALL:true, SPAN:true, STRONG:true, U:true
+    };
+    if(['A', 'BUTTON', 'P', 'SPAN', 'LABEL', 'LI', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'SMALL', 'STRONG', 'EM', 'B', 'I'].indexOf(tag) >= 0){
+      return true;
+    }
+    if(tag !== 'DIV') return false;
+    var children = el.children || [];
+    if(!children.length) return true;
+    for(var i = 0; i < children.length; i++){
+      var childTag = children[i].tagName ? String(children[i].tagName).toUpperCase() : '';
+      if(!inlineTags[childTag]) return false;
+    }
+    return true;
+  }
+
   function _canEditText(comp){
     if(!comp) return false;
     var el = comp.getEl();
     var tag = el && el.tagName ? String(el.tagName).toUpperCase() : '';
     var typeName = String(comp.get('type') || '').toLowerCase();
     if(['IMG', 'VIDEO', 'IFRAME', 'SVG', 'PATH'].indexOf(tag) >= 0) return false;
-    if(comp.get && (comp.get('editable') === true || comp.get('textable') === true)) return true;
-    if(el && el.classList && el.classList.contains('sipet-editable-text')) return true;
     if(['text', 'textnode', 'link'].indexOf(typeName) >= 0) return true;
+    if(el && el.classList && el.classList.contains('sipet-editable-text') && _hasEditableLeafStructure(el)) return true;
+    if(comp.components && comp.components().length){
+      if(!(el && _hasEditableLeafStructure(el))) return false;
+    }
+    if(comp.get && (comp.get('editable') === true || comp.get('textable') === true) && el && _hasEditableLeafStructure(el)) return true;
     if(tag && ['A', 'BUTTON', 'P', 'SPAN', 'LABEL', 'LI', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'SMALL', 'STRONG', 'EM', 'B', 'I'].indexOf(tag) >= 0) return true;
-    if(comp.components && comp.components().length) return false;
     var content = String(comp.get('content') || '').trim();
     if(content) return true;
     var text = el && typeof el.textContent === 'string' ? el.textContent.trim() : '';
@@ -2648,17 +2669,19 @@
     for(var i = 0; i < children.length; i++){
       var child = children.at ? children.at(i) : children[i];
       if(!child) continue;
-      if(_canEditText(child)) return child;
       var nested = _findEditableTextDescendant(child);
       if(nested) return nested;
+      if(_canEditText(child)) return child;
     }
     return null;
   }
 
   function _getEditableTextTarget(comp){
     if(!comp) return null;
+    var nested = _findEditableTextDescendant(comp);
+    if(nested) return nested;
     if(_canEditText(comp)) return comp;
-    return _findEditableTextDescendant(comp);
+    return null;
   }
 
   function _openTextEditor(comp){
@@ -2674,6 +2697,10 @@
       toast('No se pudo activar la edición de texto', false);
       return;
     }
+    try {
+      el.setAttribute('contenteditable', 'true');
+      el.contentEditable = 'true';
+    } catch(err) {}
     if(!el.__sipetRichTextBound){
       el.addEventListener('input', function(){
         _setDirty(true);
