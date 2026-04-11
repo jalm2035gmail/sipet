@@ -1,7 +1,7 @@
   (function(){
   'use strict';
 
-  var _pages = [], _currentPageId = null, _slugEdited = false, _editor = null, _saving = false, _htmlRawTarget = null, _htmlRawMode = 'code';
+  var _pages = [], _currentPageId = null, _slugEdited = false, _statusEdited = false, _editor = null, _saving = false, _htmlRawTarget = null, _htmlRawMode = 'code';
 
   function uid(){ return '_' + Math.random().toString(36).slice(2,10); }
   function toast(msg, ok){
@@ -1041,7 +1041,7 @@
   function loadPageIntoEditor(id){
     var page = _pages.find(function(p){ return p.id===id; });
     if(!page) return;
-    _currentPageId = id; _slugEdited = false;
+    _currentPageId = id; _slugEdited = false; _statusEdited = false;
     _setDirty(false);
     document.getElementById('wb-page-title').value = page.title||'';
     document.getElementById('wb-page-slug').value  = page.slug||'';
@@ -1125,7 +1125,8 @@
     try {
       page.title  = (document.getElementById('wb-page-title').value || '').trim() || page.title;
       page.slug   = slugify((document.getElementById('wb-page-slug').value || '').trim() || page.slug);
-      page.status = document.getElementById('wb-status-sel').value;
+      var selectedStatus = document.getElementById('wb-status-sel').value || 'draft';
+      page.status = (!_statusEdited && page.status === 'published') ? 'published' : selectedStatus;
       if(_editor){
         page.gjs_html = _editor.getHtml();
         page.gjs_css = _editor.getCss();
@@ -1152,6 +1153,7 @@
         document.getElementById('wb-page-title').value = j.page.title || '';
         document.getElementById('wb-page-slug').value = j.page.slug || '';
         document.getElementById('wb-status-sel').value = j.page.status || 'draft';
+        _statusEdited = false;
       }
       renderPageSelect();
       renderPagesModal();
@@ -1227,6 +1229,7 @@
   });
   document.getElementById('wb-status-sel').addEventListener('change', function(){
     var page = currentPage(); if(page) page.status = this.value;
+    _statusEdited = true;
     _setDirty(true);
   });
   document.addEventListener('keydown', function(e){
@@ -2412,6 +2415,19 @@
     return !!attrs['data-sipet-bg-image'];
   }
 
+  function _isHtmlRawComp(comp){
+    return !!(comp && String(comp.get && comp.get('type') || '').toLowerCase() === 'sipet-html-raw');
+  }
+
+  function _findHtmlRawOwner(comp){
+    var current = comp;
+    while(current){
+      if(_isHtmlRawComp(current)) return current;
+      current = current.parent ? current.parent() : null;
+    }
+    return null;
+  }
+
   function _openGalleryForComp(comp){
     _galleryTargetComp = _findBgHostComp(comp);
     if(_isBgImageComp(comp)) _galleryMode = 'bgimage';
@@ -2422,6 +2438,17 @@
 
   function _resolveCompFromCanvasElement(el){
     if(!_editor || !el) return null;
+    if(el.nodeType === 3 && el.parentElement){
+      el = el.parentElement;
+    }
+    if(typeof _editor.getModelForEl === 'function'){
+      var current = el;
+      while(current && current.nodeType === 1){
+        var currentComp = _editor.getModelForEl(current);
+        if(_isHtmlRawComp(currentComp)) return currentComp;
+        current = current.parentElement;
+      }
+    }
     var editableFromTree = _findEditableTextCompFromElement(el);
     if(editableFromTree) return editableFromTree;
     if(typeof _editor.getModelForEl === 'function'){
@@ -2450,11 +2477,37 @@
 
   function _findEditableTextCompFromElement(el){
     if(!_editor || !el || typeof _editor.getModelForEl !== 'function') return null;
+    if(el.nodeType === 3 && el.parentElement){
+      el = el.parentElement;
+    }
     var current = el;
     while(current && current.nodeType === 1){
       var comp = _editor.getModelForEl(current);
       if(comp && _canEditText(comp)) return comp;
+      if(comp){
+        var nested = _findEditableTextCompInSubtree(comp, el);
+        if(nested) return nested;
+      }
       current = current.parentElement;
+    }
+    return null;
+  }
+
+  function _findEditableTextCompInSubtree(comp, originEl){
+    if(!comp) return null;
+    var ownEl = comp.getEl ? comp.getEl() : null;
+    if(ownEl === originEl && _canEditText(comp)) return comp;
+    if(ownEl && originEl && ownEl.contains && ownEl.contains(originEl) && _canEditText(comp) && _isTextLikeElement(originEl)){
+      return comp;
+    }
+    if(!comp.components) return null;
+    var children = comp.components();
+    if(!children || !children.length) return null;
+    for(var i = 0; i < children.length; i++){
+      var child = children.at ? children.at(i) : children[i];
+      if(!child) continue;
+      var found = _findEditableTextCompInSubtree(child, originEl);
+      if(found) return found;
     }
     return null;
   }
@@ -2506,6 +2559,17 @@
     canvasDoc.addEventListener('dblclick', function(e){
       var t = e.target;
       var comp = _resolveCompFromCanvasElement(t);
+      var htmlRawOwner = _findHtmlRawOwner(comp);
+      if(htmlRawOwner){
+        e.preventDefault(); e.stopPropagation();
+        window.openHtmlRawModal(htmlRawOwner);
+        return;
+      }
+      if(comp && _canEditText(comp)){
+        e.preventDefault(); e.stopPropagation();
+        _openTextEditor(comp);
+        return;
+      }
       /* Logo slot — cualquier elemento con data-sipet-logo */
       if(t && t.closest && t.closest('[data-sipet-logo]')){
         if(!comp) return;
@@ -2548,12 +2612,26 @@
   /* ── Menú contextual ────────────────────────────────────── */
   var _ctxComp = null;
 
+  function _isTextLikeElement(el){
+    if(!el || el.nodeType !== 1) return false;
+    var tag = el.tagName ? String(el.tagName).toUpperCase() : '';
+    if(['IMG', 'VIDEO', 'IFRAME', 'SVG', 'PATH', 'INPUT', 'TEXTAREA', 'SELECT', 'OPTION', 'STYLE', 'SCRIPT'].indexOf(tag) >= 0) return false;
+    if(el.classList && el.classList.contains('sipet-editable-text')) return true;
+    if(['A', 'BUTTON', 'P', 'SPAN', 'LABEL', 'LI', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'SMALL', 'STRONG', 'EM', 'B', 'I', 'DIV'].indexOf(tag) >= 0){
+      var text = typeof el.textContent === 'string' ? el.textContent.trim() : '';
+      return !!text;
+    }
+    return false;
+  }
+
   function _canEditText(comp){
     if(!comp) return false;
     var el = comp.getEl();
     var tag = el && el.tagName ? String(el.tagName).toUpperCase() : '';
     var typeName = String(comp.get('type') || '').toLowerCase();
     if(['IMG', 'VIDEO', 'IFRAME', 'SVG', 'PATH'].indexOf(tag) >= 0) return false;
+    if(comp.get && (comp.get('editable') === true || comp.get('textable') === true)) return true;
+    if(el && el.classList && el.classList.contains('sipet-editable-text')) return true;
     if(['text', 'textnode', 'link'].indexOf(typeName) >= 0) return true;
     if(tag && ['A', 'BUTTON', 'P', 'SPAN', 'LABEL', 'LI', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'SMALL', 'STRONG', 'EM', 'B', 'I'].indexOf(tag) >= 0) return true;
     if(comp.components && comp.components().length) return false;
@@ -2592,26 +2670,39 @@
     }
     _editor.select(target);
     var el = target.getEl ? target.getEl() : null;
-    var currentValue = '';
-    if(target.components && target.components().length){
-      currentValue = el && typeof el.textContent === 'string' ? el.textContent : '';
-    } else if(target.get) {
-      currentValue = String(target.get('content') || '');
-      if(!currentValue && el && typeof el.textContent === 'string') currentValue = el.textContent;
-    } else if(el && typeof el.textContent === 'string') {
-      currentValue = el.textContent;
+    if(!el) {
+      toast('No se pudo activar la edición de texto', false);
+      return;
     }
-    var nextValue = window.prompt('Editar texto', String(currentValue || '').trim());
-    if(nextValue == null) return;
-    var normalized = String(nextValue);
-    if(target.components && target.components().length){
-      target.components().reset([{ type:'textnode', content: normalized }]);
-    } else if(target.set) {
-      target.set('content', normalized);
+    if(!el.__sipetRichTextBound){
+      el.addEventListener('input', function(){
+        _setDirty(true);
+      });
+      el.addEventListener('blur', function(){
+        _setDirty(true);
+      });
+      el.__sipetRichTextBound = true;
     }
-    _editor.trigger('component:update', target);
-    _setDirty(true);
-    toast('Texto actualizado ✓');
+    try {
+      _editor.runCommand('core:component-text-edit', { target: target, event: { target: el } });
+    } catch(err) {
+      try {
+        _editor.runCommand('rte:enable', { target: el, event: { target: el } });
+      } catch(innerErr) {}
+    }
+    try {
+      if(window.getSelection && document.createRange){
+        var range = document.createRange();
+        range.selectNodeContents(el);
+        range.collapse(false);
+        var sel = window.getSelection();
+        if(sel){
+          sel.removeAllRanges();
+          sel.addRange(range);
+        }
+      }
+      el.focus();
+    } catch(err) {}
   }
 
   function _showCtxMenu(x, y, comp){
